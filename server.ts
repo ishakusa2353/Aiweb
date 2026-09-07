@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { licenseDb, LicenseRecord, parseDurationToMs } from "./server/db.ts";
 import { generateBookmarkletCode, generateRawScriptCode, generateOfflineSignedKey } from "./server/bookmarkletTemplate.ts";
+import { startTelegramBot } from "./server/telegramBot.ts";
 
 // Safe directory resolver for both dev tsx and bundled CJS production
 const getRootDir = () => process.cwd();
@@ -157,12 +158,12 @@ async function startServer() {
     return res.json({ success: true, token });
   });
 
-  app.post("/api/admin/change-password", (req, res) => {
+  app.post("/api/admin/change-password", async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ success: false, error: "বর্তমান এবং নতুন উভয় পাসওয়ার্ড দিন!" });
     }
-    const result = licenseDb.changeAdminPassword(oldPassword, newPassword);
+    const result = await licenseDb.changeAdminPassword(oldPassword, newPassword);
     if (!result.success) {
       return res.status(400).json({ success: false, error: result.error });
     }
@@ -447,6 +448,10 @@ ON CONFLICT (key) DO NOTHING;`
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Ishak AI Supabase Server running at http://0.0.0.0:${PORT}`);
+    // Start Telegram Bot Polling Engine
+    startTelegramBot().catch((err) => {
+      console.error("Failed to start Telegram Bot:", err);
+    });
   });
 }
 

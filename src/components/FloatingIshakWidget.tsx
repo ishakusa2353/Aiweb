@@ -3,6 +3,7 @@ import { playPhotostatScannerSound, playResultSound, playRiskWarningSound } from
 import { MARKETS_DATABASE, TIME_OPTIONS } from '../data/markets';
 import { SignalData } from '../types';
 import { Search, ShieldAlert, Sparkles, KeyRound } from 'lucide-react';
+import { supabaseService } from '../lib/supabaseService';
 
 interface FloatingIshakWidgetProps {
   soundEnabled: boolean;
@@ -50,7 +51,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     payout: string;
     investment: string;
     liveExecutionTime: string;
+    autoTradeSuccess?: boolean;
+    autoTradeStatus?: string;
   }) | null>(null);
+
+  const [autoTradeEnabled, setAutoTradeEnabled] = useState<boolean>(true);
+  const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
 
   // Expiration countdown
   const [remainingTimeStr, setRemainingTimeStr] = useState<string>('');
@@ -207,20 +213,15 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       return;
     }
 
-    // Check 3: LIVE CLOUD LICENSE VERIFICATION WITH SERVER ON EVERY SINGLE CLICK
+    // Check 3: LIVE CLOUD LICENSE VERIFICATION WITH SUPABASE
     setBadgeText('VERIFY..');
     try {
       const devId = localStorage.getItem('ISHAK_DEV_ID') || 'DEV_SIMULATOR_HOST';
-      const verifyRes = await fetch('/api/verify-license', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: activeLicense.key,
-          traderId: activeLicense.traderId || '',
-          deviceId: devId
-        }),
-      });
-      const verifyData = await verifyRes.json();
+      const verifyData = await supabaseService.verifyLicense(
+        activeLicense.key,
+        activeLicense.traderId || '',
+        devId
+      );
 
       if (!verifyData.valid) {
         localStorage.removeItem('ISHAK_AI_LICENSE');
@@ -230,7 +231,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         return;
       }
     } catch (e) {
-      console.warn('Backend check offline, proceed with local session');
+      console.warn('Direct check error, proceed with local session');
     }
 
     // All checks passed! Proceed with scanning & trade analysis
@@ -304,12 +305,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         durationLabel: tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`,
         payout: '+93%',
         investment: '$100',
-        liveExecutionTime
+        liveExecutionTime,
+        autoTradeSuccess: autoTradeEnabled,
+        autoTradeStatus: autoTradeEnabled ? 'QUOTEX AUTO-TRADE PLACED' : 'Auto-Trade OFF in Settings'
       };
 
       setHudResult(signal);
       if (onTradeSignal) {
         onTradeSignal(signal);
+      }
+
+      if (autoPilotMode) {
+        setTimeout(() => {
+          triggerScan();
+        }, ((tradeDuration || 60) * 1000) + 3000);
       }
     }, 3600);
   };
@@ -326,16 +335,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const devId = localStorage.getItem('ISHAK_DEV_ID') || 'DEV_' + Math.random().toString(36).substring(2, 8).toUpperCase();
       localStorage.setItem('ISHAK_DEV_ID', devId);
 
-      const res = await fetch('/api/verify-license', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: licenseInput.trim(),
-          traderId: traderIdInput.trim(),
-          deviceId: devId
-        }),
-      });
-      const data = await res.json();
+      const data = await supabaseService.verifyLicense(
+        licenseInput.trim(),
+        traderIdInput.trim(),
+        devId
+      );
       setVerifying(false);
 
       if (data.valid) {
@@ -357,9 +361,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       } else {
         showToast(data.reason || 'License verification failed.', true);
       }
-    } catch (err) {
+    } catch (err: any) {
       setVerifying(false);
-      showToast('Server connection failed.', true);
+      showToast('ডাটাবেস সংযোগে সমস্যা: ' + (err.message || 'ত্রুটি'), true);
     }
   };
 
@@ -518,6 +522,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 >
                   {hudResult.isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'}
                 </div>
+
+                {hudResult.autoTradeStatus && (
+                  <div className={`mt-2 py-1.5 px-2.5 rounded-lg text-center font-bold text-[10px] flex items-center justify-center gap-1.5 ${
+                    hudResult.autoTradeSuccess
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                  }`}>
+                    <span>⚡</span>
+                    <span>{hudResult.autoTradeStatus} ({hudResult.isCall ? 'CALL ⬆' : 'PUT ⬇'})</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -563,6 +578,37 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 <span className="text-gray-300">⏱️ Trade Duration</span>
                 <b className="text-amber-400 font-mono font-bold">
                   {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`) : 'Choose Time'}
+                </b>
+              </button>
+
+              <button
+                onClick={() => setAutoTradeEnabled(!autoTradeEnabled)}
+                className={`w-full p-2.5 rounded-xl bg-slate-900/90 border flex items-center justify-between text-xs transition ${
+                  autoTradeEnabled ? 'border-emerald-500/50' : 'border-red-500/40'
+                }`}
+              >
+                <span className="text-gray-300">⚡ Quotex Auto-Trade</span>
+                <b className={`font-bold ${autoTradeEnabled ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {autoTradeEnabled ? '🟢 ON (স্বয়ংক্রিয়)' : '🔴 OFF'}
+                </b>
+              </button>
+
+              <button
+                onClick={() => {
+                  const next = !autoPilotMode;
+                  setAutoPilotMode(next);
+                  if (next) {
+                    setShowHub(false);
+                    triggerScan();
+                  }
+                }}
+                className={`w-full p-2.5 rounded-xl bg-slate-900/90 border flex items-center justify-between text-xs transition ${
+                  autoPilotMode ? 'border-cyan-400' : 'border-slate-700'
+                }`}
+              >
+                <span className="text-gray-300">🤖 Auto-Pilot Mode</span>
+                <b className={`font-bold ${autoPilotMode ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED'}
                 </b>
               </button>
 

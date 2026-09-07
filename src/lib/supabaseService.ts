@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase, SUPABASE_URL } from './supabaseClient';
 import { LicenseRecord } from '../types';
 
 export function parseDurationToMs(str: string): number | null {
@@ -22,29 +22,26 @@ export function parseDurationToMs(str: string): number | null {
 }
 
 export const supabaseService = {
-  // 1. ADMIN LOGIN
+  // 0. HEALTH CHECK
+  async checkConnection(): Promise<{ active: boolean; count: number; error?: string }> {
+    try {
+      const { data, error, count } = await supabase
+        .from('ishak_licenses')
+        .select('*', { count: 'exact' });
+
+      if (error) {
+        return { active: false, count: 0, error: error.message };
+      }
+      return { active: true, count: count || (data?.length || 0) };
+    } catch (err: any) {
+      return { active: false, count: 0, error: err.message || 'Connection failed' };
+    }
+  },
+
+  // 1. ADMIN LOGIN (100% Direct to Supabase)
   async adminLogin(password: string): Promise<{ success: boolean; error?: string }> {
     const cleanPass = password.trim();
 
-    // First try backend if available
-    try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: cleanPass }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          localStorage.setItem('ishak_admin_auth', 'authenticated');
-          return { success: true };
-        }
-      }
-    } catch {
-      // Backend not running (e.g. Vercel static or Netlify) -> fallback to Supabase direct
-    }
-
-    // Direct Supabase Check
     try {
       const { data, error } = await supabase
         .from('ishak_licenses')
@@ -59,6 +56,7 @@ export const supabaseService = {
       const storedPass = data?.note || 'ishakdevos';
       if (cleanPass === storedPass || cleanPass === 'ishakdevos') {
         localStorage.setItem('ishak_admin_auth', 'authenticated');
+
         // Ensure __ADMIN_CONFIG__ row exists in Supabase
         if (!data) {
           await supabase.from('ishak_licenses').upsert({
@@ -75,34 +73,24 @@ export const supabaseService = {
 
       return { success: false, error: 'ভুল এডমিন পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিন।' };
     } catch (err: any) {
-      // Offline fallback: check default password
+      // Fallback: check default password
       if (cleanPass === 'ishakdevos') {
         localStorage.setItem('ishak_admin_auth', 'authenticated');
         return { success: true };
       }
-      return { success: false, error: 'সংযোগ ত্রুটি: পাসওয়ার্ড যাচাই করা যায়নি।' };
+      return { success: false, error: 'সংযোগ ত্রুটি: ' + (err.message || 'পাসওয়ার্ড যাচাই করা যায়নি।') };
     }
   },
 
-  // 2. CHANGE ADMIN PASSWORD
+  // 2. CHANGE ADMIN PASSWORD (100% Direct to Supabase)
   async changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     const cleanOld = oldPassword.trim();
     const cleanNew = newPassword.trim();
 
-    // Try backend first
-    try {
-      const res = await fetch('/api/admin/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oldPassword: cleanOld, newPassword: cleanNew }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) return { success: true };
-      }
-    } catch {}
+    if (!cleanNew) {
+      return { success: false, error: 'নতুন পাসওয়ার্ড খালি রাখা যাবে না।' };
+    }
 
-    // Direct Supabase Update
     try {
       const { data } = await supabase
         .from('ishak_licenses')
@@ -125,7 +113,7 @@ export const supabaseService = {
       }, { onConflict: 'key' });
 
       if (upsertErr) {
-        return { success: false, error: 'পাসওয়ার্ড আপডেটে সমস্যা হয়েছে।' };
+        return { success: false, error: 'পাসওয়ার্ড আপডেটে সমস্যা হয়েছে: ' + upsertErr.message };
       }
 
       return { success: true };
@@ -134,20 +122,8 @@ export const supabaseService = {
     }
   },
 
-  // 3. GET ALL LICENSES
+  // 3. GET ALL LICENSES (100% Direct to Supabase)
   async getAllLicenses(): Promise<LicenseRecord[]> {
-    // Try backend first
-    try {
-      const res = await fetch('/api/keys');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.keys)) {
-          return data.keys.filter((k: any) => k.key !== '__ADMIN_CONFIG__');
-        }
-      }
-    } catch {}
-
-    // Direct Supabase Fetch
     try {
       const { data, error } = await supabase
         .from('ishak_licenses')
@@ -180,7 +156,7 @@ export const supabaseService = {
     }
   },
 
-  // 4. CREATE NEW LICENSE
+  // 4. CREATE NEW LICENSE (100% Direct to Supabase)
   async createLicense(payload: {
     key?: string;
     tier: string;
@@ -216,26 +192,6 @@ export const supabaseService = {
       }
     }
 
-    // Try backend first
-    try {
-      const res = await fetch('/api/keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: finalKey,
-          tier: payload.tier,
-          duration: finalDuration,
-          traderId: payload.traderId,
-          note: payload.note,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) return { success: true };
-      }
-    } catch {}
-
-    // Direct Supabase Insert
     try {
       const { error } = await supabase.from('ishak_licenses').insert({
         key: finalKey,
@@ -265,14 +221,6 @@ export const supabaseService = {
   // 5. TOGGLE ACTIVE
   async toggleActive(key: string, currentActive: boolean): Promise<boolean> {
     try {
-      await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !currentActive }),
-      });
-    } catch {}
-
-    try {
       const { error } = await supabase
         .from('ishak_licenses')
         .update({ active: !currentActive })
@@ -285,14 +233,6 @@ export const supabaseService = {
 
   // 6. EXTEND LICENSE
   async extendLicense(key: string, days: number): Promise<boolean> {
-    try {
-      await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extendDays: days }),
-      });
-    } catch {}
-
     try {
       const { data } = await supabase
         .from('ishak_licenses')
@@ -322,10 +262,6 @@ export const supabaseService = {
   // 7. DELETE LICENSE
   async deleteLicense(key: string): Promise<boolean> {
     try {
-      await fetch(`/api/keys/${encodeURIComponent(key)}`, { method: 'DELETE' });
-    } catch {}
-
-    try {
       const { error } = await supabase.from('ishak_licenses').delete().eq('key', key);
       return !error;
     } catch {
@@ -336,14 +272,6 @@ export const supabaseService = {
   // 8. RESET DEVICE LOCK
   async resetDevice(key: string): Promise<boolean> {
     try {
-      await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resetDevice: true }),
-      });
-    } catch {}
-
-    try {
       const { error } = await supabase
         .from('ishak_licenses')
         .update({ device_id: '' })
@@ -351,6 +279,119 @@ export const supabaseService = {
       return !error;
     } catch {
       return false;
+    }
+  },
+
+  // 9. VERIFY LICENSE STATUS (Used by Floating Widget & Simulator)
+  async verifyLicense(
+    keyToTest: string,
+    traderId?: string,
+    deviceId?: string
+  ): Promise<{
+    valid: boolean;
+    reason?: string;
+    exp?: number | null;
+    duration?: string;
+    tier?: string;
+    traderId?: string;
+    deviceId?: string;
+  }> {
+    const key = (keyToTest || '').trim().toUpperCase();
+    if (!key) {
+      return { valid: false, reason: 'অনুগ্রহ করে একটি VIP লাইসেন্স কি দিন।' };
+    }
+
+    try {
+      const { data: row, error } = await supabase
+        .from('ishak_licenses')
+        .select('*')
+        .eq('key', key)
+        .maybeSingle();
+
+      if (error || !row) {
+        return { valid: false, reason: '❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি! @IshakVhai এ যোগাযোগ করুন।' };
+      }
+
+      if (row.active === false) {
+        return { valid: false, reason: '⛔ এই লাইসেন্সটি এডমিন দ্বারা ব্লক করা হয়েছে!' };
+      }
+
+      // Single Device Lock
+      const myDeviceId = deviceId || '';
+      if (row.device_id && row.device_id.trim() !== '') {
+        if (myDeviceId && row.device_id !== myDeviceId) {
+          return { valid: false, reason: '🔒 এই লাইসেন্সটি অলরেডি অন্য ডিভাইসে যুক্ত আছে! সিঙ্গেল ডিভাইস পলিসি সক্রিয়।' };
+        }
+      }
+
+      // Trader ID Lock
+      const inputTid = (traderId || '').trim();
+      if (row.trader_id && row.trader_id.trim() !== '') {
+        if (inputTid && row.trader_id !== inputTid) {
+          return { valid: false, reason: `🔒 এই লাইসেন্সটি ট্রেডার আইডি (${row.trader_id}) এর সাথে লক করা!` };
+        }
+      }
+
+      const now = Date.now();
+      let firstLogin = row.first_login_at ? Number(row.first_login_at) : null;
+      let exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
+      const durationMs = row.duration_ms ? Number(row.duration_ms) : parseDurationToMs(row.duration || '30d');
+
+      const updates: any = {};
+      let needPatch = false;
+
+      // First login countdown activation
+      if (!firstLogin) {
+        firstLogin = now;
+        updates.first_login_at = firstLogin;
+        if (row.duration !== 'lifetime' && durationMs) {
+          exp = firstLogin + durationMs;
+          updates.exp = exp;
+        }
+        needPatch = true;
+      }
+
+      // Bind device
+      if (!row.device_id && myDeviceId) {
+        updates.device_id = myDeviceId;
+        needPatch = true;
+      }
+
+      // Bind traderId
+      if (!row.trader_id && inputTid) {
+        updates.trader_id = inputTid;
+        needPatch = true;
+      }
+
+      updates.last_used_at = now;
+      needPatch = true;
+
+      // Check Expiration
+      if (exp && now > exp) {
+        return {
+          valid: false,
+          reason: '⏳ এই লাইসেন্সের মেয়াদ শেষ হয়ে গেছে! রিনিউ করতে @IshakVhai এ যোগাযোগ করুন।',
+        };
+      }
+
+      // Save updates to Supabase
+      if (needPatch) {
+        supabase.from('ishak_licenses').update(updates).eq('key', key).then();
+      }
+
+      return {
+        valid: true,
+        exp,
+        duration: row.duration || '30d',
+        tier: row.tier || 'VIP',
+        traderId: row.trader_id || inputTid || '',
+        deviceId: row.device_id || myDeviceId,
+      };
+    } catch (err: any) {
+      return {
+        valid: false,
+        reason: '❌ লাইভ ডাটাবেস সংযোগে সমস্যা: ' + (err.message || 'Network error'),
+      };
     }
   },
 };

@@ -66,43 +66,47 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
 
   const openSupabaseModal = async () => {
     setShowSupabaseModal(true);
-    try {
-      const res = await fetch('/api/supabase/status');
-      const data = await res.json();
-      if (data.schemaSql) setSupabaseSqlSnippet(data.schemaSql);
-      if (data.supabaseUrl) setSupabaseUrlInput(data.supabaseUrl);
-    } catch (err) {
-      console.warn('Failed to load supabase status:', err);
-    }
+    setSupabaseUrlInput('https://qbazzarqiplrqqfytajz.supabase.co');
+    setSupabaseSqlSnippet(`-- ⚡ ISHAK AI PRO - SUPABASE LICENSE DATABASE SCHEMA
+CREATE TABLE IF NOT EXISTS public.ishak_licenses (
+  key TEXT PRIMARY KEY,
+  active BOOLEAN NOT NULL DEFAULT true,
+  tier TEXT NOT NULL DEFAULT 'VIP',
+  duration TEXT NOT NULL DEFAULT '30d',
+  duration_ms BIGINT,
+  exp BIGINT,
+  first_login_at BIGINT,
+  device_id TEXT DEFAULT '',
+  trader_id TEXT DEFAULT '',
+  created_at BIGINT NOT NULL,
+  last_used_at BIGINT,
+  note TEXT
+);
+
+-- Enable RLS and public policies
+ALTER TABLE public.ishak_licenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Read" ON public.ishak_licenses FOR SELECT USING (true);
+CREATE POLICY "Public Insert" ON public.ishak_licenses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public Update" ON public.ishak_licenses FOR UPDATE USING (true);
+CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`);
   };
 
   const handleConnectSupabase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabaseUrlInput.trim() || !supabaseKeyInput.trim()) {
-      showActionToast('Supabase URL এবং Service Key উভয়ই দিতে হবে!', true);
-      return;
-    }
-
     setIsConnectingSupabase(true);
     try {
-      const res = await fetch('/api/supabase/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: supabaseUrlInput.trim(), key: supabaseKeyInput.trim() }),
-      });
-      const data = await res.json();
+      const conn = await supabaseService.checkConnection();
       setIsConnectingSupabase(false);
-
-      if (data.success) {
-        showActionToast('✅ Supabase ক্লাউড ডাটাবেস সফলভাবে কানেক্ট হয়েছে!');
+      if (conn.active) {
+        showActionToast('✅ Supabase ক্লাউড ডাটাবেস সক্রিয় ও সংযুক্ত!');
         setShowSupabaseModal(false);
         onRefresh();
       } else {
-        showActionToast(data.error || '❌ কানেক্ট হতে পারেনি, সঠিক কি দিন', true);
+        showActionToast('❌ সংযোগে সমস্যা: ' + (conn.error || 'চেক করুন'), true);
       }
-    } catch (err) {
+    } catch {
       setIsConnectingSupabase(false);
-      showActionToast('❌ সার্ভার সংযোগে ত্রুটি', true);
+      showActionToast('❌ সংযোগ যাচাই ব্যর্থ', true);
     }
   };
 
@@ -287,6 +291,40 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
             <span>{isSupabaseActive ? 'সুপাবেসে লাইভ কানেক্টেড' : 'ক্লিক করে কানেক্ট করুন'}</span>
             <ExternalLink className="w-3 h-3 text-gray-500 group-hover:text-cyan-400" />
           </div>
+        </div>
+      </div>
+
+      {/* 🤖 TELEGRAM BOT INTEGRATION BANNER (Supabase-TG Live) */}
+      <div className="bg-gradient-to-r from-blue-950/80 via-[#0B132B] to-cyan-950/80 border border-cyan-400/40 rounded-2xl p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-2xl shadow-inner shrink-0">
+            🤖
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black text-white flex items-center gap-1.5">
+                <span>টেলিগ্রাম বট লাইভ কানেক্টেড</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
+                  🟢 Supabase-TG Active
+                </span>
+              </h3>
+            </div>
+            <p className="text-xs text-gray-300 mt-0.5">
+              বট ইউজারনেম: <b className="text-cyan-300">@IshakTrading_bot</b> | এডমিন পাসওয়ার্ড: <code className="bg-slate-900 px-1.5 py-0.5 rounded text-amber-300 font-mono">ishakdevos</code> (বটের ভেতর পরিবর্তনযোগ্য)
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="https://t.me/IshakTrading_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-lg shadow-cyan-500/25 hover:brightness-110 flex items-center gap-1.5 transition"
+          >
+            <span>টেলিগ্রাম বট খুলুন</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
       </div>
 

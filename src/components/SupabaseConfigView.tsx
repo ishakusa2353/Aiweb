@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Database, ShieldCheck, Copy, Check, Terminal, KeyRound, Globe, Server, CheckCircle2, AlertCircle } from 'lucide-react';
+import { supabaseService } from '../lib/supabaseService';
 
 interface SupabaseConfigViewProps {
   supabaseStatus: {
@@ -20,43 +21,48 @@ export const SupabaseConfigView: React.FC<SupabaseConfigViewProps> = ({ supabase
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    fetch('/api/supabase/status')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.schemaSql) setSchemaSql(data.schemaSql);
-        if (data.supabaseUrl) setUrl(data.supabaseUrl);
-      })
-      .catch((err) => console.error(err));
-  }, []);
+    setUrl(supabaseStatus.supabaseUrl || 'https://qbazzarqiplrqqfytajz.supabase.co');
+    setSchemaSql(`-- ⚡ ISHAK AI PRO - SUPABASE LICENSE DATABASE SCHEMA
+CREATE TABLE IF NOT EXISTS public.ishak_licenses (
+  key TEXT PRIMARY KEY,
+  active BOOLEAN NOT NULL DEFAULT true,
+  tier TEXT NOT NULL DEFAULT 'VIP',
+  duration TEXT NOT NULL DEFAULT '30d',
+  duration_ms BIGINT,
+  exp BIGINT,
+  first_login_at BIGINT,
+  device_id TEXT DEFAULT '',
+  trader_id TEXT DEFAULT '',
+  created_at BIGINT NOT NULL,
+  last_used_at BIGINT,
+  note TEXT
+);
+
+-- Enable RLS and public policies
+ALTER TABLE public.ishak_licenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public Read" ON public.ishak_licenses FOR SELECT USING (true);
+CREATE POLICY "Public Insert" ON public.ishak_licenses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public Update" ON public.ishak_licenses FOR UPDATE USING (true);
+CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`);
+  }, [supabaseStatus.supabaseUrl]);
 
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim() || !key.trim()) {
-      setMessage({ type: 'error', text: 'অনুগ্রহ করে Supabase URL এবং Service Key উভয়ই প্রদান করুন!' });
-      return;
-    }
-
     setIsSaving(true);
     setMessage(null);
 
     try {
-      const res = await fetch('/api/supabase/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim(), key: key.trim() }),
-      });
-      const data = await res.json();
+      const conn = await supabaseService.checkConnection();
       setIsSaving(false);
-
-      if (data.success) {
-        setMessage({ type: 'success', text: '✅ Supabase ক্লাউড ডাটাবেসের সাথে সফলভাবে সংযুক্ত হয়েছে!' });
+      if (conn.active) {
+        setMessage({ type: 'success', text: `✅ Supabase ক্লাউড ডাটাবেস সক্রিয়! মোট ${conn.count}টি রেকর্ড রয়েছে।` });
         onRefresh();
       } else {
-        setMessage({ type: 'error', text: data.error || '❌ সংযোগ ব্যর্থ হয়েছে, সঠিক ক্রেডেনশিয়াল দিন।' });
+        setMessage({ type: 'error', text: '❌ সংযোগ যাচাইয়ে সমস্যা: ' + (conn.error || 'চেক করুন') });
       }
     } catch (err: any) {
       setIsSaving(false);
-      setMessage({ type: 'error', text: '❌ সার্ভারে সংযোগ পাঠাতে ত্রুটি হয়েছে।' });
+      setMessage({ type: 'error', text: '❌ ডাটাবেস যোগাযোগ ব্যর্থ: ' + (err?.message || 'Error') });
     }
   };
 

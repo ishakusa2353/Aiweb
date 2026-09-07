@@ -95,6 +95,7 @@ class LicenseDatabase {
   private supabaseKey: string = '';
   private isConfigured: boolean = false;
   private adminPassword: string = 'ishakdevos';
+  private authorizedTelegramChats: Set<number> = new Set();
 
   constructor() {
     let savedSupabaseUrl = '';
@@ -113,6 +114,11 @@ class LicenseDatabase {
         }
         if (parsed.supabaseKey && typeof parsed.supabaseKey === 'string') {
           savedSupabaseKey = parsed.supabaseKey;
+        }
+        if (Array.isArray(parsed.telegramAuthorizedChats)) {
+          parsed.telegramAuthorizedChats.forEach((id: number) => {
+            if (typeof id === 'number') this.authorizedTelegramChats.add(id);
+          });
         }
       } else {
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ adminPassword: 'ishakdevos' }, null, 2));
@@ -393,12 +399,55 @@ class LicenseDatabase {
     return true;
   }
 
+  public getAdminPassword(): string {
+    return this.adminPassword;
+  }
+
   public verifyAdminPassword(inputPass: string): boolean {
     if (!inputPass) return false;
     return inputPass.trim() === this.adminPassword;
   }
 
-  public changeAdminPassword(oldPass: string, newPass: string): { success: boolean; error?: string } {
+  public async setAdminPassword(newPass: string): Promise<boolean> {
+    const cleanNew = (newPass || '').trim();
+    if (cleanNew.length < 4) return false;
+
+    this.adminPassword = cleanNew;
+    try {
+      let current: any = {};
+      if (fs.existsSync(SETTINGS_FILE)) {
+        current = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+      }
+      current.adminPassword = cleanNew;
+      current.telegramAuthorizedChats = Array.from(this.authorizedTelegramChats);
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(current, null, 2));
+      console.log('✅ Admin password updated locally and saved to settings file.');
+    } catch (err) {
+      console.error('Failed to write admin settings file:', err);
+    }
+
+    if (this.supabase && this.isConfigured) {
+      try {
+        await this.supabase.from('ishak_licenses').upsert({
+          key: '__ADMIN_CONFIG__',
+          active: true,
+          tier: 'ADMIN',
+          duration: 'lifetime',
+          exp: null,
+          created_at: Date.now(),
+          last_used_at: Date.now(),
+          note: cleanNew
+        }, { onConflict: 'key' });
+        console.log('✅ Admin password synchronized to Supabase Cloud Database.');
+      } catch (err) {
+        console.warn('Failed to sync admin password to Supabase:', err);
+      }
+    }
+
+    return true;
+  }
+
+  public async changeAdminPassword(oldPass: string, newPass: string): Promise<{ success: boolean; error?: string }> {
     if (!oldPass || oldPass.trim() !== this.adminPassword) {
       return { success: false, error: 'বর্তমান পাসওয়ার্ড ভুল! সঠিক পাসওয়ার্ড দিন।' };
     }
@@ -407,15 +456,91 @@ class LicenseDatabase {
       return { success: false, error: 'নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে!' };
     }
 
-    this.adminPassword = cleanNew;
-    try {
-      fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ adminPassword: cleanNew }, null, 2));
-      console.log('✅ Admin password updated and saved successfully.');
-    } catch (err) {
-      console.error('Failed to write admin settings file:', err);
-    }
-
+    await this.setAdminPassword(cleanNew);
     return { success: true };
+  }
+
+  public isTelegramChatAuthorized(chatId: number): boolean {
+    return this.authorizedTelegramChats.has(chatId);
+  }
+
+  public authorizeTelegramChat(chatId: number): void {
+    this.authorizedTelegramChats.add(chatId);
+    this.persistTelegramChats();
+  }
+
+  public revokeTelegramChat(chatId: number): void {
+    this.authorizedTelegramChats.delete(chatId);
+    this.persistTelegramChats();
+  }
+
+  private persistTelegramChats(): void {
+    try {
+      let current: any = {};
+      if (fs.existsSync(SETTINGS_FILE)) {
+        current = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+      }
+      current.telegramAuthorizedChats = Array.from(this.authorizedTelegramChats);
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(current, null, 2));
+    } catch (e) {
+      console.warn('Could not persist telegram chats:', e);
+    }
+  }
+
+  public async generateLicense(
+    duration: string = '30d',
+    traderId: string = '',
+    note: string = ''
+  ): Promise<LicenseRecord> {
+    const cleanDuration = (duration || '30d').trim().toLowerCase();
+    const cleanTraderId = (traderId || '').trim();
+    const durationMs = parseDurationToMs(cleanDuration);
+
+    const randStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const durTag = cleanDuration.toUpperCase().replace(/\s+/g, '');
+    const key = `ISHAK-VIP-${durTag}-${randStr}`;
+
+    const record: LicenseRecord = {
+      key,
+      active: true,
+      tier: cleanDuration === 'lifetime' ? 'LIFETIME' : (durationMs && durationMs < 86400000 ? 'TRIAL' : 'VIP'),
+      duration: cleanDuration,
+      duration_ms: durationMs || undefined,
+      exp: null, // Timer starts when trader first uses it
+      first_login_at: null,
+      device_id: '',
+      trader_id: cleanTraderId,
+      created_at: Date.now(),
+      note: note || `Generated via Telegram Bot (${cleanDuration})`
+    };
+
+    await this.saveLicense(record);
+    return record;
+  }
+
+  public async resetDevice(rawKey: string): Promise<{ success: boolean; message: string }> {
+    const key = rawKey.trim().toUpperCase();
+    const record = await this.getLicense(key);
+    if (!record) {
+      return { success: false, message: 'লাইসেন্স কি খুঁজে পাওয়া যায়নি!' };
+    }
+    record.device_id = '';
+    await this.saveLicense(record);
+    return { success: true, message: `✅ লাইসেন্স ${key} এর ডিভাইস লক সফলভাবে রিসেট করা হয়েছে!` };
+  }
+
+  public async toggleActive(rawKey: string, active: boolean): Promise<{ success: boolean; message: string }> {
+    const key = rawKey.trim().toUpperCase();
+    const record = await this.getLicense(key);
+    if (!record) {
+      return { success: false, message: 'লাইসেন্স কি খুঁজে পাওয়া যায়নি!' };
+    }
+    record.active = active;
+    await this.saveLicense(record);
+    return {
+      success: true,
+      message: active ? `✅ লাইসেন্স ${key} আনব্লক (সক্রিয়) করা হয়েছে!` : `🚫 লাইসেন্স ${key} ব্লক (নিষ্ক্রিয়) করা হয়েছে!`
+    };
   }
 }
 

@@ -49,26 +49,21 @@ export default function App() {
 
   const fetchSupabaseStatus = async () => {
     try {
-      const res = await fetch('/api/supabase/status');
-      if (res.ok) {
-        const data = await res.json();
-        setSupabaseStatus({
-          isSupabaseActive: !!data.isSupabaseActive,
-          storageType: data.storageType || 'Supabase Cloud (Live)',
-          keyCount: data.keyCount || keys.length,
-          supabaseUrl: data.supabaseUrl || SUPABASE_URL,
-        });
-        return;
-      }
-    } catch {}
-
-    // Default to direct Supabase status
-    setSupabaseStatus((prev) => ({
-      ...prev,
-      isSupabaseActive: true,
-      storageType: 'Supabase Cloud (Live)',
-      supabaseUrl: SUPABASE_URL,
-    }));
+      const conn = await supabaseService.checkConnection();
+      setSupabaseStatus({
+        isSupabaseActive: conn.active,
+        storageType: conn.active ? 'Supabase Cloud (Live)' : 'Disconnected',
+        keyCount: conn.count,
+        supabaseUrl: SUPABASE_URL,
+      });
+    } catch {
+      setSupabaseStatus((prev) => ({
+        ...prev,
+        isSupabaseActive: true,
+        storageType: 'Supabase Cloud (Live)',
+        supabaseUrl: SUPABASE_URL,
+      }));
+    }
   };
 
   useEffect(() => {

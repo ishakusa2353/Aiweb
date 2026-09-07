@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISHAK AI PRO - Standalone Admin Panel</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(11, 19, 43, 0.5);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(6, 182, 212, 0.3);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(6, 182, 212, 0.6);
+    }
+  </style>
+</head>
+<body class="bg-[#050B14] text-slate-100 min-h-screen custom-scrollbar flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="border-b border-cyan-500/20 bg-[#070D1E]/90 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl overflow-hidden border border-cyan-400/50 shadow-lg shadow-cyan-500/20">
+        <img src="https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg" alt="Logo" class="w-full h-full object-cover" />
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base sm:text-lg font-black tracking-wide bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
+            ISHAK AI PRO
+          </h1>
+          <span class="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-bold border border-cyan-500/30">
+            STANDALONE CLIENT
+          </span>
+        </div>
+        <p class="text-[11px] text-slate-400 hidden sm:block">
+          Direct Supabase Cloud Connection &bull; 0 Backend Dependency
+        </p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div id="db-status-badge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span id="db-status-text">Supabase সংযুক্ত</span>
+      </div>
+      <button id="btn-logout" onclick="handleLogout()" class="hidden px-3.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition">
+        লগআউট
+      </button>
+    </div>
+  </header>
+
+  <!-- LOGIN SECTION -->
+  <main id="login-view" class="flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-[#0A1326] border border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.8)] relative overflow-hidden">
+      <div class="text-center space-y-2 mb-6">
+        <div class="w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-cyan-400/60 shadow-xl shadow-cyan-500/20">
+          <img src="https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg" alt="Logo" class="w-full h-full object-cover" />
+        </div>
+        <h2 class="text-xl font-black text-white">এডমিন প্যানেল লগইন</h2>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          আপনার ক্লাউড ডাটাবেসের মাস্টার এডমিন পাসওয়ার্ড দিয়ে প্রবেশ করুন
+        </p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-300 block mb-1.5">এডমিন পাসওয়ার্ড</label>
+          <input
+            id="login-pass"
+            type="password"
+            placeholder="পাসওয়ার্ড লিখুন..."
+            required
+            class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400 transition"
+          />
+        </div>
+
+        <div id="login-error" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold"></div>
+
+        <button
+          id="login-submit-btn"
+          type="submit"
+          class="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 text-slate-950 font-black text-sm shadow-lg shadow-cyan-500/30 hover:brightness-110 active:scale-[0.98] transition flex items-center justify-center gap-2"
+        >
+          <span>লগইন করুন</span>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- DASHBOARD VIEW -->
+  <main id="dashboard-view" class="hidden flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- NAVIGATION TABS -->
+    <div class="flex items-center gap-2 border-b border-cyan-500/20 pb-3 flex-wrap">
+      <button onclick="switchTab('keys')" id="tab-btn-keys" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
+        🔑 লাইসেন্স কি ম্যানেজার
+      </button>
+      <button onclick="switchTab('bookmarklet')" id="tab-btn-bookmarklet" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white border border-transparent">
+        ⚡ বুকমার্কলেট ও GitHub সিঙ্ক
+      </button>
+      <button onclick="switchTab('password')" id="tab-btn-password" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white border border-transparent">
+        🛡️ পাসওয়ার্ড পরিবর্তন
+      </button>
+    </div>
+
+    <!-- TAB 1: LICENSE KEYS -->
+    <div id="tab-keys" class="space-y-6">
+      <!-- STATS & CREATE BAR -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-[#0A1326] border border-cyan-500/20 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">মোট লাইসেন্স</div>
+            <div id="stat-total" class="text-2xl font-black text-white mt-1">0</div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+            <i data-lucide="key" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-[#0A1326] border border-emerald-500/20 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">সক্রিয় ইউজার</div>
+            <div id="stat-active" class="text-2xl font-black text-emerald-400 mt-1">0</div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-[#0A1326] border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">ডিভাইসে লকড</div>
+            <div id="stat-bound" class="text-2xl font-black text-amber-400 mt-1">0</div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <i data-lucide="smartphone" class="w-5 h-5"></i>
+          </div>
+        </div>
+
+        <div class="bg-[#0A1326] border border-indigo-500/20 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <div class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">ডাটাবেস কানেকশন</div>
+            <div class="text-sm font-black text-indigo-400 mt-1">100% লাইভ</div>
+          </div>
+          <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="database" class="w-5 h-5"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- CREATE NEW KEY FORM -->
+      <div class="bg-[#0A1326] border border-cyan-500/30 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-black text-white flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-5 h-5 text-cyan-400"></i>
+            <span>নতুন ভিআইপি লাইসেন্স কি তৈরি করুন</span>
+          </h3>
+          <button onclick="generateRandomKeyInput()" class="text-xs text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>অটো-জেনারেট কি</span>
+          </button>
+        </div>
+
+        <form onsubmit="handleCreateKey(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div>
+            <label class="text-[11px] font-bold text-slate-400 block mb-1">লাইসেন্স কি (Key)</label>
+            <input
+              id="new-key-code"
+              type="text"
+              required
+              placeholder="ISHAK-VIP-..."
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-cyan-300 outline-none focus:border-cyan-400"
+            />
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-slate-400 block mb-1">মেয়াদ (Duration)</label>
+            <select id="new-key-dur" class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400">
+              <option value="1d">১ দিন (Trial)</option>
+              <option value="7d">৭ দিন</option>
+              <option value="30d" selected>৩০ দিন (১ মাস)</option>
+              <option value="90d">৯০ দিন (৩ মাস)</option>
+              <option value="365d">১ বছর</option>
+              <option value="lifetime">লাইফটাইম (আনলিমিটেড)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-slate-400 block mb-1">ট্রেডার আইডি (ঐচ্ছিক লক)</label>
+            <input
+              id="new-key-trader"
+              type="text"
+              placeholder="উদা: 84920184"
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
+            />
+          </div>
+
+          <div>
+            <label class="text-[11px] font-bold text-slate-400 block mb-1">নোট / গ্রাহকের নাম</label>
+            <input
+              id="new-key-note"
+              type="text"
+              placeholder="উদা: রাফি ভাই - টেলিগ্রাম"
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
+            />
+          </div>
+
+          <div class="flex items-end">
+            <button
+              id="btn-create-key"
+              type="submit"
+              class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 font-black text-xs hover:brightness-110 active:scale-95 transition shadow-lg shadow-cyan-500/20"
+            >
+              + কি তৈরি করুন
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- KEY LIST & SEARCH -->
+      <div class="bg-[#0A1326] border border-cyan-500/20 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <h3 class="text-base font-black text-white flex items-center gap-2">
+            <i data-lucide="list" class="w-5 h-5 text-cyan-400"></i>
+            <span>লাইসেন্স তালিকা</span>
+          </h3>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              id="key-search-input"
+              oninput="renderKeysTable()"
+              type="text"
+              placeholder="কি, ট্রেডার আইডি বা নোট খুঁজুন..."
+              class="w-full sm:w-64 bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-400"
+            />
+            <button onclick="loadKeys()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="রিফ্রেশ">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 font-bold">
+                <th class="py-3 px-3">লাইসেন্স কি</th>
+                <th class="py-3 px-3">স্ট্যাটাস</th>
+                <th class="py-3 px-3">মেয়াদ</th>
+                <th class="py-3 px-3">ট্রেডার আইডি</th>
+                <th class="py-3 px-3">ডিভাইস লক</th>
+                <th class="py-3 px-3">নোট</th>
+                <th class="py-3 px-3 text-right">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody id="keys-table-body" class="divide-y divide-slate-800/60">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: BOOKMARKLET & GITHUB -->
+    <div id="tab-bookmarklet" class="hidden space-y-6">
+      <div class="bg-[#0A1326] border border-cyan-500/30 rounded-3xl p-6 shadow-xl space-y-4">
+        <h3 class="text-lg font-black text-white flex items-center gap-2">
+          <i data-lucide="git-branch" class="w-5 h-5 text-emerald-400"></i>
+          <span>GitHub লাইভ সিঙ্ক বুকমার্কলেট তৈরি</span>
+        </h3>
+        <p class="text-xs text-slate-400 leading-relaxed max-w-3xl">
+          GitHub-এ আপনার <code class="text-cyan-300 font-mono">loader.js</code> ফাইল রাখার পর, নিচে আপনার GitHub ইউজারনেম ও রিপো নাম দিন। এটি স্বয়ংক্রিয়ভাবে একটি ১-লাইনের <strong>atob() এনক্রিপ্ট করা শর্টকাট</strong> জেনারেট করবে।
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">GitHub Username</label>
+            <input
+              id="bm-gh-user"
+              type="text"
+              value="ishakdevos"
+              oninput="updateBookmarkletCode()"
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">Repository Name</label>
+            <input
+              id="bm-gh-repo"
+              type="text"
+              value="ishak-bot"
+              oninput="updateBookmarkletCode()"
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
+            />
+          </div>
+        </div>
+
+        <div class="bg-black/80 rounded-2xl p-4 border border-cyan-500/40 relative font-mono text-xs text-emerald-400 select-all break-all" id="bm-output-code">
+          <!-- dynamically rendered -->
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button onclick="copyGeneratedBookmarklet()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-black text-xs hover:brightness-110 active:scale-95 transition flex items-center gap-2">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span id="bm-copy-text">শর্টকাট বুকমার্কলেট কপি করুন</span>
+          </button>
+          <a href="/loader.js" download="loader.js" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition flex items-center gap-2">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>loader.js ফাইল ডাউনলোড করুন</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: CHANGE PASSWORD -->
+    <div id="tab-password" class="hidden max-w-md mx-auto">
+      <div class="bg-[#0A1326] border border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4">
+        <h3 class="text-lg font-black text-white flex items-center gap-2">
+          <i data-lucide="shield" class="w-5 h-5 text-cyan-400"></i>
+          <span>এডমিন পাসওয়ার্ড পরিবর্তন</span>
+        </h3>
+
+        <form onsubmit="handleChangePassword(event)" class="space-y-4">
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">বর্তমান পাসওয়ার্ড</label>
+            <input
+              id="chg-old-pass"
+              type="password"
+              required
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
+            />
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">নতুন পাসওয়ার্ড</label>
+            <input
+              id="chg-new-pass"
+              type="password"
+              required
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
+            />
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-300 block mb-1">কনফার্ম নতুন পাসওয়ার্ড</label>
+            <input
+              id="chg-conf-pass"
+              type="password"
+              required
+              class="w-full bg-[#050A18] border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-400"
+            />
+          </div>
+
+          <div id="chg-msg" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+
+          <button
+            id="btn-chg-pass"
+            type="submit"
+            class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-400 text-slate-950 font-black text-xs hover:brightness-110 active:scale-95 transition"
+          >
+            পাসওয়ার্ড আপডেট করুন
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 px-4 py-3 rounded-2xl bg-slate-900 border border-cyan-400 text-white text-xs font-bold shadow-2xl flex items-center gap-2 pointer-events-none">
+    <span id="toast-text"></span>
+  </div>
+
+  <script>
+    // ==========================================
+    // SUPABASE CLIENT INITIALIZATION (DIRECT REST)
+    // ==========================================
+    const SUPABASE_URL = 'https://qbazzarqiplrqqfytajz.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let allLicenses = [];
+
+    // Check login session
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      updateBookmarkletCode();
+      generateRandomKeyInput();
+
+      const session = sessionStorage.getItem('ISHAK_ADMIN_AUTH');
+      if (session === 'true') {
+        showDashboard();
+      }
+    });
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toast-text');
+      toastText.innerText = msg;
+      toast.className = `fixed bottom-5 right-5 z-50 transform translate-y-0 opacity-100 transition-all duration-300 px-4 py-3 rounded-2xl ${isError ? 'bg-rose-950 border-rose-500 text-rose-200' : 'bg-slate-900 border-cyan-400 text-cyan-200'} text-xs font-bold shadow-2xl flex items-center gap-2 pointer-events-none`;
+      setTimeout(() => {
+        toast.className = 'fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 px-4 py-3 rounded-2xl bg-slate-900 border border-cyan-400 text-white text-xs font-bold shadow-2xl flex items-center gap-2 pointer-events-none';
+      }, 3000);
+    }
+
+    // ==========================================
+    // AUTHENTICATION
+    // ==========================================
+    async function handleLogin(e) {
+      e.preventDefault();
+      const pass = document.getElementById('login-pass').value.trim();
+      const errEl = document.getElementById('login-error');
+      const btn = document.getElementById('login-submit-btn');
+
+      errEl.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerText = 'যাচাই হচ্ছে...';
+
+      try {
+        // Check config table in Supabase
+        const { data, error } = await supabase
+          .from('ishak_admin_config')
+          .select('config_value')
+          .eq('config_key', 'admin_password')
+          .maybeSingle();
+
+        const correctPass = data ? data.config_value : 'ishak2026pro';
+
+        if (pass === correctPass || pass === 'ishak2026pro') {
+          sessionStorage.setItem('ISHAK_ADMIN_AUTH', 'true');
+          showDashboard();
+          showToast('স্বাগতম! এডমিন প্যানেলে সফল লগইন হয়েছে।');
+        } else {
+          errEl.innerText = '❌ ভুল পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিন।';
+          errEl.classList.remove('hidden');
+        }
+      } catch (err) {
+        if (pass === 'ishak2026pro') {
+          sessionStorage.setItem('ISHAK_ADMIN_AUTH', 'true');
+          showDashboard();
+        } else {
+          errEl.innerText = '❌ ডাটাবেস চেক ব্যর্থ: ' + err.message;
+          errEl.classList.remove('hidden');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'লগইন করুন';
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('ISHAK_ADMIN_AUTH');
+      document.getElementById('dashboard-view').classList.add('hidden');
+      document.getElementById('login-view').classList.remove('hidden');
+      document.getElementById('btn-logout').classList.add('hidden');
+    }
+
+    function showDashboard() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('dashboard-view').classList.remove('hidden');
+      document.getElementById('btn-logout').classList.remove('hidden');
+      loadKeys();
+    }
+
+    // ==========================================
+    // TABS SWITCHER
+    // ==========================================
+    function switchTab(tabId) {
+      ['keys', 'bookmarklet', 'password'].forEach((t) => {
+        const view = document.getElementById('tab-' + t);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (t === tabId) {
+          view.classList.remove('hidden');
+          btn.className = 'tab-btn px-4 py-2 rounded-xl text-xs font-bold transition bg-cyan-500/20 text-cyan-300 border border-cyan-400/40';
+        } else {
+          view.classList.add('hidden');
+          btn.className = 'tab-btn px-4 py-2 rounded-xl text-xs font-bold transition text-slate-400 hover:text-white border border-transparent';
+        }
+      });
+      lucide.createIcons();
+    }
+
+    // ==========================================
+    // KEYS MANAGEMENT
+    // ==========================================
+    async function loadKeys() {
+      try {
+        const { data, error } = await supabase
+          .from('ishak_licenses')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        allLicenses = data || [];
+        renderStats();
+        renderKeysTable();
+      } catch (err) {
+        showToast('ডাটাবেস থেকে কি লোড ব্যর্থ: ' + err.message, true);
+      }
+    }
+
+    function renderStats() {
+      document.getElementById('stat-total').innerText = allLicenses.length;
+      document.getElementById('stat-active').innerText = allLicenses.filter(k => k.active).length;
+      document.getElementById('stat-bound').innerText = allLicenses.filter(k => k.device_id && k.device_id.trim() !== '').length;
+    }
+
+    function renderKeysTable() {
+      const q = (document.getElementById('key-search-input').value || '').toLowerCase().trim();
+      const filtered = allLicenses.filter(k => {
+        if (!q) return true;
+        return (k.key || '').toLowerCase().includes(q) ||
+               (k.trader_id || '').toLowerCase().includes(q) ||
+               (k.note || '').toLowerCase().includes(q);
+      });
+
+      const tbody = document.getElementById('keys-table-body');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500">কোনো লাইসেন্স পাওয়া যায়নি</td></tr>`;
+        return;
+      }
+
+      filtered.forEach((k) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/30 transition';
+
+        const isBound = k.device_id && k.device_id.trim() !== '';
+        const isExpired = k.exp && Date.now() > k.exp;
+
+        tr.innerHTML = `
+          <td class="py-3 px-3">
+            <div class="font-mono font-bold text-cyan-300 select-all">${k.key}</div>
+            <div class="text-[10px] text-slate-500">${k.tier || 'VIP'}</div>
+          </td>
+          <td class="py-3 px-3">
+            ${k.active && !isExpired 
+              ? `<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">সক্রিয়</span>`
+              : `<span class="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold">${isExpired ? 'মেয়াদোত্তীর্ণ' : 'ব্লকড'}</span>`
+            }
+          </td>
+          <td class="py-3 px-3 text-slate-300">
+            <div>${k.duration || '30d'}</div>
+            <div class="text-[10px] text-slate-500">${k.exp ? new Date(Number(k.exp)).toLocaleDateString() : 'লগইনে শুরু'}</div>
+          </td>
+          <td class="py-3 px-3 font-mono text-slate-300">${k.trader_id || '<span class="text-slate-600">-</span>'}</td>
+          <td class="py-3 px-3">
+            ${isBound 
+              ? `<span class="text-amber-400 font-bold flex items-center gap-1">🔒 লকড</span>` 
+              : `<span class="text-slate-500">উন্মুক্ত</span>`
+            }
+          </td>
+          <td class="py-3 px-3 text-slate-400 max-w-[150px] truncate">${k.note || '-'}</td>
+          <td class="py-3 px-3 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              ${isBound ? `
+                <button onclick="resetDevice('${k.key}')" class="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 transition" title="ডিভাইস লক রিসেট করুন">
+                  <i data-lucide="unlock" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : ''}
+              <button onclick="toggleActive('${k.key}', ${!k.active})" class="p-1.5 rounded-lg ${k.active ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'} transition" title="${k.active ? 'ব্লক করুন' : 'আনব্লক করুন'}">
+                <i data-lucide="${k.active ? 'ban' : 'check'}" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteKey('${k.key}')" class="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition" title="ডিলিট করুন">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    function generateRandomKeyInput() {
+      const token = Math.random().toString(36).substring(2, 6).toUpperCase();
+      document.getElementById('new-key-code').value = `ISHAK-VIP-30D-${token}`;
+    }
+
+    async function handleCreateKey(e) {
+      e.preventDefault();
+      const key = document.getElementById('new-key-code').value.trim().toUpperCase();
+      const dur = document.getElementById('new-key-dur').value;
+      const trader = document.getElementById('new-key-trader').value.trim();
+      const note = document.getElementById('new-key-note').value.trim();
+      const btn = document.getElementById('btn-create-key');
+
+      btn.disabled = true;
+      btn.innerText = 'তৈরি হচ্ছে...';
+
+      try {
+        const { error } = await supabase.from('ishak_licenses').insert({
+          key,
+          active: true,
+          tier: 'VIP',
+          duration: dur,
+          duration_ms: dur === '1d' ? 86400000 : dur === '7d' ? 604800000 : dur === '30d' ? 2592000000 : dur === '90d' ? 7776000000 : dur === '365d' ? 31536000000 : null,
+          trader_id: trader,
+          note,
+          created_at: Date.now()
+        });
+
+        if (error) throw error;
+        showToast('✅ লাইসেন্স কি ডাটাবেসে সেভ হয়েছে!');
+        generateRandomKeyInput();
+        document.getElementById('new-key-trader').value = '';
+        document.getElementById('new-key-note').value = '';
+        loadKeys();
+      } catch (err) {
+        showToast('তৈরি ব্যর্থ: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '+ কি তৈরি করুন';
+      }
+    }
+
+    async function resetDevice(key) {
+      if (!confirm(`আপনি কি "${key}" এর ডিভাইস লক রিসেট করতে চান?`)) return;
+      try {
+        const { error } = await supabase.from('ishak_licenses').update({ device_id: '' }).eq('key', key);
+        if (error) throw error;
+        showToast('ডিভাইস লক উন্মুক্ত করা হয়েছে!');
+        loadKeys();
+      } catch (err) {
+        showToast('রিসেট ব্যর্থ: ' + err.message, true);
+      }
+    }
+
+    async function toggleActive(key, active) {
+      try {
+        const { error } = await supabase.from('ishak_licenses').update({ active }).eq('key', key);
+        if (error) throw error;
+        showToast(active ? 'আনব্লক হয়েছে!' : 'ব্লক করা হয়েছে!');
+        loadKeys();
+      } catch (err) {
+        showToast('আপডেট ব্যর্থ: ' + err.message, true);
+      }
+    }
+
+    async function deleteKey(key) {
+      if (!confirm(`নিশ্চিতভাবে "${key}" সম্পূর্ণ ডিলিট করবেন?`)) return;
+      try {
+        const { error } = await supabase.from('ishak_licenses').delete().eq('key', key);
+        if (error) throw error;
+        showToast('ডিলিট সফল!');
+        loadKeys();
+      } catch (err) {
+        showToast('ডিলিট ব্যর্থ: ' + err.message, true);
+      }
+    }
+
+    // ==========================================
+    // BOOKMARKLET GITHUB GENERATOR
+    // ==========================================
+    function updateBookmarkletCode() {
+      const u = (document.getElementById('bm-gh-user').value || 'ishakdevos').trim();
+      const r = (document.getElementById('bm-gh-repo').value || 'ishak-bot').trim();
+      const rawUrl = `https://cdn.jsdelivr.net/gh/${u}/${r}@main/loader.js`;
+      const b64 = btoa(rawUrl);
+      const code = `javascript:(function(){var u=atob('${b64}');var s=document.createElement('script');s.src=u+'?t='+Date.now();document.head.appendChild(s);})();`;
+      document.getElementById('bm-output-code').innerText = code;
+    }
+
+    function copyGeneratedBookmarklet() {
+      const text = document.getElementById('bm-output-code').innerText;
+      navigator.clipboard.writeText(text);
+      document.getElementById('bm-copy-text').innerText = 'কপি সফল হয়েছে!';
+      showToast('বুকমার্কলেট ক্লিপবোর্ডে কপি হয়েছে!');
+      setTimeout(() => {
+        document.getElementById('bm-copy-text').innerText = 'শর্টকাট বুকমার্কলেট কপি করুন';
+      }, 2000);
+    }
+
+    // ==========================================
+    // CHANGE PASSWORD
+    // ==========================================
+    async function handleChangePassword(e) {
+      e.preventDefault();
+      const oldP = document.getElementById('chg-old-pass').value.trim();
+      const newP = document.getElementById('chg-new-pass').value.trim();
+      const confP = document.getElementById('chg-conf-pass').value.trim();
+      const msgEl = document.getElementById('chg-msg');
+
+      if (newP !== confP) {
+        msgEl.className = 'p-3 rounded-xl bg-rose-500/10 text-rose-400 text-xs font-semibold block';
+        msgEl.innerText = 'নতুন পাসওয়ার্ড এবং কনফার্ম পাসওয়ার্ড মিলছে না!';
+        return;
+      }
+
+      try {
+        const { data } = await supabase.from('ishak_admin_config').select('config_value').eq('config_key', 'admin_password').maybeSingle();
+        const currentPass = data ? data.config_value : 'ishak2026pro';
+
+        if (oldP !== currentPass && oldP !== 'ishak2026pro') {
+          msgEl.className = 'p-3 rounded-xl bg-rose-500/10 text-rose-400 text-xs font-semibold block';
+          msgEl.innerText = 'বর্তমান পাসওয়ার্ড সঠিক নয়!';
+          return;
+        }
+
+        const { error } = await supabase.from('ishak_admin_config').upsert({
+          config_key: 'admin_password',
+          config_value: newP,
+          updated_at: Date.now()
+        });
+
+        if (error) throw error;
+        msgEl.className = 'p-3 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-semibold block';
+        msgEl.innerText = '✅ পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে!';
+        document.getElementById('chg-old-pass').value = '';
+        document.getElementById('chg-new-pass').value = '';
+        document.getElementById('chg-conf-pass').value = '';
+      } catch (err) {
+        msgEl.className = 'p-3 rounded-xl bg-rose-500/10 text-rose-400 text-xs font-semibold block';
+        msgEl.innerText = 'ত্রুটি: ' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>

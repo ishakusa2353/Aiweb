@@ -249,21 +249,30 @@ export const BookmarkletView: React.FC = () => {
                 GitHub এর loader.js ফাইলে দেওয়ার জন্য সম্পূর্ণ সোর্স কোড ({Math.round((bookmarkletCode.length / 1024) * 10) / 10} KB)
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <a
+                href="/standalone-admin.html"
+                download="index.html"
+                className="px-3 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition text-xs font-bold flex items-center gap-1.5"
+                title="গিটহাবের জন্য একক index.html ফাইল ডাউনলোড করুন"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>GitHub index.html ডাউনলোড</span>
+              </a>
               <button
                 onClick={handleDownloadLoader}
                 className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition text-xs font-bold flex items-center gap-1.5"
                 title="সরাসরি loader.js ফাইল ডাউনলোড করুন"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>ফাইল ডাউনলোড (.js)</span>
+                <span>loader.js ডাউনলোড</span>
               </button>
               <button
                 onClick={() => handleCopy(bookmarkletCode.replace(/^javascript:/, ''), 'gh-raw')}
                 className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition text-xs font-bold flex items-center gap-1.5 font-mono"
               >
                 {copiedType === 'gh-raw' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedType === 'gh-raw' ? 'কপি সফল!' : 'কোড কপি করুন'}</span>
+                <span>{copiedType === 'gh-raw' ? 'কপি সফল!' : 'কোড কপি'}</span>
               </button>
             </div>
           </div>
