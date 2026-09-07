@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "framework": "vite",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/loader.js",
