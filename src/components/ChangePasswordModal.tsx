@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, KeyRound, Check, X, AlertCircle, Eye, EyeOff, ShieldCheck, Sparkles } from 'lucide-react';
+import { supabaseService } from '../lib/supabaseService';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -38,17 +39,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/admin/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          oldPassword: oldPassword.trim(),
-          newPassword: newPassword.trim(),
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const result = await supabaseService.changePassword(oldPassword.trim(), newPassword.trim());
+      if (result.success) {
         setSuccessMsg('এডমিন পাসওয়ার্ড সফলভাবে পরিবর্তিত ও ডাটাবেসে সেভ হয়েছে!');
         setOldPassword('');
         setNewPassword('');
@@ -57,7 +49,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
           onClose();
         }, 2000);
       } else {
-        setError(data.error || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে। বর্তমান পাসওয়ার্ড সঠিক দিন।');
+        setError(result.error || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে। বর্তমান পাসওয়ার্ড সঠিক দিন।');
       }
     } catch (err: any) {
       setError('সার্ভারে যোগাযোগ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।');

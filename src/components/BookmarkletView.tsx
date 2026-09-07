@@ -22,14 +22,31 @@ export const BookmarkletView: React.FC = () => {
   const generatedGhDirect = `javascript:(function(){var s=document.createElement('script');s.src='${ghJsdelivrUrl}?t='+Date.now();document.head.appendChild(s);})();`;
 
   useEffect(() => {
+    const domain = window.location.origin;
+    const defaultScriptUrl = `${domain}/loader.js`;
+    const defaultB64 = btoa(defaultScriptUrl);
+
+    setBaseUrl(domain);
+    setScriptUrl(defaultScriptUrl);
+    setEncodedUrl(defaultB64);
+    setShortLoader(`javascript:(function(){var s=document.createElement('script');s.src='${defaultScriptUrl}?t='+Date.now();document.body.appendChild(s);})();`);
+    const defaultObf = `javascript:(function(){var u=atob('${defaultB64}');var s=document.createElement('script');s.src=u+'?t='+Date.now();document.head.appendChild(s);})();`;
+    setObfuscatedLoader(defaultObf);
+    setFormattedObfuscated(`javascript:(function(){\n  var u = atob('${defaultB64}');\n  var s = document.createElement('script');\n  s.src = u + '?t=' + Date.now();\n  document.head.appendChild(s);\n})();`);
+    setCustomInputUrl(defaultScriptUrl);
+    setCustomGeneratedCode(defaultObf);
+
     fetch('/api/bookmarklet-code')
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('API not available');
+        return res.json();
+      })
       .then((data) => {
-        const domain = data.baseUrl || window.location.origin;
-        const liveScriptUrl = data.scriptUrl || `${domain}/loader.js`;
+        const liveDomain = data.baseUrl || domain;
+        const liveScriptUrl = data.scriptUrl || `${liveDomain}/loader.js`;
         const b64 = data.encodedUrl || btoa(liveScriptUrl);
 
-        setBaseUrl(domain);
+        setBaseUrl(liveDomain);
         setBookmarkletCode(data.code || '');
         setMinifiedCode(data.bookmarkletUrl || (data.code || '').replace(/\n\s*/g, ' '));
         setScriptUrl(liveScriptUrl);
@@ -44,7 +61,7 @@ export const BookmarkletView: React.FC = () => {
         setCustomGeneratedCode(obf);
       })
       .catch((err) => {
-        console.error(err);
+        console.log('Using static loader fallback:', err);
       });
   }, []);
 

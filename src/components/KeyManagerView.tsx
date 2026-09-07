@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal } from 'lucide-react';
 import { LicenseRecord } from '../types';
+import { supabaseService } from '../lib/supabaseService';
 
 interface KeyManagerViewProps {
   keys: LicenseRecord[];
@@ -154,15 +155,12 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
 
   const handleResetDevice = async (key: string) => {
     try {
-      const res = await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resetDevice: true }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const success = await supabaseService.resetDevice(key);
+      if (success) {
         onRefresh();
         showActionToast(`ডিভাইস আনলক হয়েছে: ${key}`);
+      } else {
+        showActionToast('ডিভাইস আনলক ব্যর্থ হয়েছে', true);
       }
     } catch (e) {
       showActionToast('ডিভাইস আনলক ব্যর্থ হয়েছে', true);

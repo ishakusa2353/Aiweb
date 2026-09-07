@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, KeyRound, ArrowRight, ShieldCheck, AlertCircle, Eye, EyeOff, Sparkles, Terminal } from 'lucide-react';
+import { supabaseService } from '../lib/supabaseService';
 
 interface AdminLoginModalProps {
   onLoginSuccess: (token: string) => void;
@@ -22,21 +23,14 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ onLoginSuccess
     setError(null);
 
     try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: password.trim() }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        localStorage.setItem('ishak_admin_auth', data.token || 'authenticated');
-        onLoginSuccess(data.token || 'authenticated');
+      const result = await supabaseService.adminLogin(password.trim());
+      if (result.success) {
+        onLoginSuccess('authenticated');
       } else {
-        setError(data.error || 'ভুল এডমিন পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিন।');
+        setError(result.error || 'ভুল এডমিন পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিন।');
       }
     } catch (err: any) {
-      setError('সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি। আবার চেষ্টা করুন।');
+      setError('পাসওয়ার্ড যাচাই করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
     } finally {
       setIsLoading(false);
     }

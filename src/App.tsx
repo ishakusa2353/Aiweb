@@ -7,6 +7,8 @@ import { AdminLoginModal } from './components/AdminLoginModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { FloatingIshakWidget } from './components/FloatingIshakWidget';
 import { LicenseRecord, SignalData } from './types';
+import { supabaseService } from './lib/supabaseService';
+import { SUPABASE_URL } from './lib/supabaseClient';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -23,19 +25,23 @@ export default function App() {
     keyCount: number;
     supabaseUrl?: string;
   }>({
-    isSupabaseActive: false,
-    storageType: 'Memory (Fallback)',
+    isSupabaseActive: true,
+    storageType: 'Supabase Cloud (Live)',
     keyCount: 0,
+    supabaseUrl: SUPABASE_URL,
   });
 
   const fetchKeys = async () => {
     try {
-      const res = await fetch('/api/keys');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.keys)) {
-        setKeys(data.keys);
-        setSupabaseStatus((prev) => ({ ...prev, keyCount: data.keys.length }));
-      }
+      const data = await supabaseService.getAllLicenses();
+      setKeys(data);
+      setSupabaseStatus((prev) => ({
+        ...prev,
+        isSupabaseActive: true,
+        storageType: 'Supabase Cloud (Live)',
+        keyCount: data.length,
+        supabaseUrl: SUPABASE_URL,
+      }));
     } catch (e) {
       console.error('Failed to load keys', e);
     }
@@ -44,16 +50,25 @@ export default function App() {
   const fetchSupabaseStatus = async () => {
     try {
       const res = await fetch('/api/supabase/status');
-      const data = await res.json();
-      setSupabaseStatus({
-        isSupabaseActive: !!data.isSupabaseActive,
-        storageType: data.storageType || 'Memory',
-        keyCount: data.keyCount || 0,
-        supabaseUrl: data.supabaseUrl,
-      });
-    } catch (e) {
-      console.error('Failed to fetch status', e);
-    }
+      if (res.ok) {
+        const data = await res.json();
+        setSupabaseStatus({
+          isSupabaseActive: !!data.isSupabaseActive,
+          storageType: data.storageType || 'Supabase Cloud (Live)',
+          keyCount: data.keyCount || keys.length,
+          supabaseUrl: data.supabaseUrl || SUPABASE_URL,
+        });
+        return;
+      }
+    } catch {}
+
+    // Default to direct Supabase status
+    setSupabaseStatus((prev) => ({
+      ...prev,
+      isSupabaseActive: true,
+      storageType: 'Supabase Cloud (Live)',
+      supabaseUrl: SUPABASE_URL,
+    }));
   };
 
   useEffect(() => {
@@ -67,16 +82,13 @@ export default function App() {
     key?: string;
     tier: string;
     duration: string;
+    customValue?: string;
+    customUnit?: string;
     traderId?: string;
     note?: string;
   }): Promise<boolean> => {
     try {
-      const res = await fetch('/api/keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
+      const result = await supabaseService.createLicense(data);
       if (result.success) {
         await fetchKeys();
         return true;
@@ -90,13 +102,8 @@ export default function App() {
 
   const handleToggleActive = async (key: string, currentActive: boolean): Promise<boolean> => {
     try {
-      const res = await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !currentActive }),
-      });
-      const result = await res.json();
-      if (result.success) {
+      const success = await supabaseService.toggleActive(key, currentActive);
+      if (success) {
         await fetchKeys();
         return true;
       }
@@ -109,13 +116,8 @@ export default function App() {
 
   const handleExtend = async (key: string, days: number): Promise<boolean> => {
     try {
-      const res = await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extendDays: days }),
-      });
-      const result = await res.json();
-      if (result.success) {
+      const success = await supabaseService.extendLicense(key, days);
+      if (success) {
         await fetchKeys();
         return true;
       }
@@ -128,11 +130,8 @@ export default function App() {
 
   const handleDeleteKey = async (key: string): Promise<boolean> => {
     try {
-      const res = await fetch(`/api/keys/${encodeURIComponent(key)}`, {
-        method: 'DELETE',
-      });
-      const result = await res.json();
-      if (result.success) {
+      const success = await supabaseService.deleteLicense(key);
+      if (success) {
         await fetchKeys();
         return true;
       }
