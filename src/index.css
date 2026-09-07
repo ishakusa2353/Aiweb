@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@keyframes ishakLaserSweepSlow {
+  0% {
+    top: 5%;
+    background: linear-gradient(90deg, transparent, #00E5FF, #00FF66, #00E5FF, transparent);
+    box-shadow: 0 0 25px #00E5FF, 0 0 50px #00E5FF;
+  }
+  45% {
+    top: 92%;
+    background: linear-gradient(90deg, transparent, #00FF66, #00E5FF, #00FF66, transparent);
+    box-shadow: 0 0 35px #00FF66, 0 0 65px #00FF66;
+  }
+  80% {
+    top: 12%;
+    background: linear-gradient(90deg, transparent, #D500F9, #00E5FF, #D500F9, transparent);
+    box-shadow: 0 0 35px #D500F9, 0 0 70px #D500F9;
+  }
+  92% {
+    top: 38%;
+    background: linear-gradient(90deg, transparent, #FFD600, #00E5FF, #FFD600, transparent);
+    box-shadow: 0 0 40px #FFD600, 0 0 80px #FFD600;
+  }
+  100% {
+    top: 42%;
+    background: linear-gradient(90deg, transparent, #FFFFFF, #00E5FF, #FFFFFF, transparent);
+    box-shadow: 0 0 50px #00E5FF, 0 0 95px #FFFFFF;
+  }
+}
+
+@keyframes ishakWorkingScale {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px #00E5FF);
+  }
+  50% {
+    transform: scale(1.14);
+    filter: drop-shadow(0 0 28px #00FF66);
+  }
+  100% {
+    transform: scale(0.96);
+    filter: drop-shadow(0 0 18px #00E5FF);
+  }
+}
+
+@keyframes ishakToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
