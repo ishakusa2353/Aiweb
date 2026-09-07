@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle } from 'lucide-react';
+import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal } from 'lucide-react';
 import { LicenseRecord } from '../types';
 
 interface KeyManagerViewProps {
@@ -54,6 +54,63 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
   const [note, setNote] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+
+  // Supabase quick connect modal state
+  const [showSupabaseModal, setShowSupabaseModal] = useState<boolean>(false);
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState<string>('');
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState<string>('');
+  const [supabaseSqlSnippet, setSupabaseSqlSnippet] = useState<string>('');
+  const [copiedSqlStatus, setCopiedSqlStatus] = useState<boolean>(false);
+  const [isConnectingSupabase, setIsConnectingSupabase] = useState<boolean>(false);
+
+  const openSupabaseModal = async () => {
+    setShowSupabaseModal(true);
+    try {
+      const res = await fetch('/api/supabase/status');
+      const data = await res.json();
+      if (data.schemaSql) setSupabaseSqlSnippet(data.schemaSql);
+      if (data.supabaseUrl) setSupabaseUrlInput(data.supabaseUrl);
+    } catch (err) {
+      console.warn('Failed to load supabase status:', err);
+    }
+  };
+
+  const handleConnectSupabase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabaseUrlInput.trim() || !supabaseKeyInput.trim()) {
+      showActionToast('Supabase URL এবং Service Key উভয়ই দিতে হবে!', true);
+      return;
+    }
+
+    setIsConnectingSupabase(true);
+    try {
+      const res = await fetch('/api/supabase/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: supabaseUrlInput.trim(), key: supabaseKeyInput.trim() }),
+      });
+      const data = await res.json();
+      setIsConnectingSupabase(false);
+
+      if (data.success) {
+        showActionToast('✅ Supabase ক্লাউড ডাটাবেস সফলভাবে কানেক্ট হয়েছে!');
+        setShowSupabaseModal(false);
+        onRefresh();
+      } else {
+        showActionToast(data.error || '❌ কানেক্ট হতে পারেনি, সঠিক কি দিন', true);
+      }
+    } catch (err) {
+      setIsConnectingSupabase(false);
+      showActionToast('❌ সার্ভার সংযোগে ত্রুটি', true);
+    }
+  };
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(supabaseSqlSnippet);
+    setCopiedSqlStatus(true);
+    showActionToast('Supabase SQL কোড কপি হয়েছে!');
+    setTimeout(() => setCopiedSqlStatus(false), 2000);
+  };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -212,15 +269,26 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
           <div className="text-[11px] text-gray-400 mt-1">শেয়ারিং রোধে লকড</div>
         </div>
 
-        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)]">
+        <div 
+          onClick={openSupabaseModal}
+          className="bg-[#0B132B] border border-cyan-500/30 hover:border-cyan-400 rounded-2xl p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)] cursor-pointer transition group"
+          title="Supabase ডাটাবেস সেটিংস ও SQL কোড দেখতে ক্লিক করুন"
+        >
           <div className="flex items-center justify-between text-gray-400 text-xs mb-1">
             <span>ডাটাবেস স্টোরেজ</span>
-            <ShieldCheck className="w-4 h-4 text-cyan-400" />
+            <div className="flex items-center gap-1">
+              <Database className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition" />
+              <span className="text-[10px] text-cyan-400 font-bold group-hover:underline">সেটিংস</span>
+            </div>
           </div>
-          <div className="text-base font-bold text-white truncate">
-            {isSupabaseActive ? 'Supabase Cloud' : 'Server Memory'}
+          <div className="text-base font-bold text-white truncate flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${isSupabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span>{isSupabaseActive ? 'Supabase Cloud' : 'Server Memory'}</span>
           </div>
-          <div className="text-[11px] text-emerald-400 mt-1">ইনফরমেশন হাইড সিকিউর</div>
+          <div className="text-[11px] text-cyan-400 mt-1 flex items-center justify-between">
+            <span>{isSupabaseActive ? 'সুপাবেসে লাইভ কানেক্টেড' : 'ক্লিক করে কানেক্ট করুন'}</span>
+            <ExternalLink className="w-3 h-3 text-gray-500 group-hover:text-cyan-400" />
+          </div>
         </div>
       </div>
 
@@ -565,6 +633,150 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
                   className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md hover:brightness-110 active:scale-98 transition disabled:opacity-50"
                 >
                   {isSubmitting ? 'তৈরি হচ্ছে...' : 'জেনারেট ও ডাটাবেসে সেভ করুন'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🗄️ SUPABASE CLOUD DATABASE CONNECTION MODAL & SQL VIEWER */}
+      {showSupabaseModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0B132B] border border-cyan-500/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-white font-black text-base sm:text-lg">
+                    Supabase ক্লাউড ডাটাবেস কানেকশন ও SQL কোড
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    আপনার লাইসেন্স ডাটাবেসে স্থায়ীভাবে সংরক্ষণ করতে নিচের SQL রান করুন ও তথ্য দিন
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSupabaseModal(false)}
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-400 hover:text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Status indicator */}
+            <div className={`p-3 rounded-2xl border flex items-center justify-between text-xs ${
+              isSupabaseActive
+                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                : 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${isSupabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                <span className="font-bold">
+                  {isSupabaseActive ? 'Supabase ক্লাউড ডাটাবেস বর্তমানে সংযুক্ত রয়েছে!' : 'বর্তমানে লোকাল সিকিউর মেমরিতে চলছে (Supabase কানেক্ট করুন)'}
+                </span>
+              </div>
+              <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-black/40">
+                {isSupabaseActive ? 'Cloud Live' : 'Not Connected'}
+              </span>
+            </div>
+
+            {/* 1. Supabase SQL Script Viewer with Copy */}
+            <div className="bg-black/80 rounded-2xl p-4 border border-cyan-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold">
+                  <Terminal className="w-4 h-4" />
+                  <span>১ম ধাপ: Supabase SQL Editor-এ রান করার জন্য ১০০% নির্ভুল SQL কোড:</span>
+                </div>
+                <button
+                  onClick={handleCopySql}
+                  className="px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 hover:bg-cyan-500/30 text-xs font-bold flex items-center gap-1.5 transition"
+                >
+                  {copiedSqlStatus ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSqlStatus ? 'SQL কপি হয়েছে!' : 'SQL কোড কপি'}</span>
+                </button>
+              </div>
+
+              <p className="text-[11px] text-gray-400">
+                👉 Supabase এ গিয়ে বামপাশের <strong>SQL Editor</strong> &gt; <strong>New query</strong> তে পেস্ট করে <strong>Run</strong> বাটনে চাপ দিন (কোনো ইরর আসবে না)।
+              </p>
+
+              <textarea
+                readOnly
+                rows={5}
+                value={supabaseSqlSnippet || `-- 🛡️ ISHAK AI VIP LICENSE DATABASE SCHEMA
+CREATE TABLE IF NOT EXISTS public.ishak_licenses (
+  key TEXT PRIMARY KEY,
+  active BOOLEAN DEFAULT true,
+  tier TEXT DEFAULT 'VIP',
+  duration TEXT DEFAULT '30d',
+  duration_ms BIGINT,
+  exp BIGINT,
+  first_login_at BIGINT,
+  device_id TEXT DEFAULT '',
+  trader_id TEXT DEFAULT '',
+  created_at BIGINT,
+  last_used_at BIGINT,
+  note TEXT
+);
+
+ALTER TABLE public.ishak_licenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow server service full access" ON public.ishak_licenses;
+CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR ALL USING (true) WITH CHECK (true);`}
+                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                className="w-full bg-[#050A18] border border-slate-800 rounded-xl p-3 font-mono text-[11px] text-emerald-300 outline-none select-all"
+              />
+            </div>
+
+            {/* 2. Connection Form */}
+            <form onSubmit={handleConnectSupabase} className="space-y-3 pt-1">
+              <div className="text-xs font-bold text-gray-200">
+                ২য় ধাপ: Supabase প্রজেক্টের Credentials দিন (কানেক্ট হলে সারা জীবন ডাটা থাকবে):
+              </div>
+
+              <div>
+                <label className="text-[11px] text-gray-400 block mb-1">
+                  Project URL (Settings &gt; API &gt; Project URL):
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://xyzcompany.supabase.co"
+                  value={supabaseUrlInput}
+                  onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-mono text-xs outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-gray-400 block mb-1">
+                  Service Role Secret / Anon Key (Settings &gt; API &gt; Project API keys):
+                </label>
+                <input
+                  type="password"
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  value={supabaseKeyInput}
+                  onChange={(e) => setSupabaseKeyInput(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-xs outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSupabaseModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-xs font-semibold"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={isConnectingSupabase}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md hover:brightness-110 transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isConnectingSupabase ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
+                  <span>{isConnectingSupabase ? 'কানেক্ট হচ্ছে...' : 'কানেক্ট ও সেভ করুন'}</span>
                 </button>
               </div>
             </form>

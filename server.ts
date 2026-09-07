@@ -1,12 +1,11 @@
 import express from "express";
 import path from "path";
-import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import { licenseDb, LicenseRecord, parseDurationToMs } from "./server/db.ts";
-import { generateBookmarkletCode, generateRawScriptCode } from "./server/bookmarkletTemplate.ts";
+import { generateBookmarkletCode, generateRawScriptCode, generateOfflineSignedKey } from "./server/bookmarkletTemplate.ts";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Safe directory resolver for both dev tsx and bundled CJS production
+const getRootDir = () => process.cwd();
 
 async function startServer() {
   const app = express();
@@ -186,8 +185,11 @@ async function startServer() {
 
       let finalKey = (key || "").trim().toUpperCase();
       if (!finalKey) {
-        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-        finalKey = `ISHAK-${(tier || "VIP").toUpperCase()}-${rand}-${Date.now().toString(36).substring(3).toUpperCase()}`;
+        let durCode = (duration || "30D").toUpperCase();
+        if (customUnit && customValue) {
+          durCode = customUnit === 'lifetime' ? 'LIFE' : `${customValue}${customUnit === 'minutes' ? 'M' : customUnit === 'hours' ? 'H' : 'D'}`.toUpperCase();
+        }
+        finalKey = generateOfflineSignedKey(tier || "VIP", durCode);
       }
 
       const existing = await licenseDb.getLicense(finalKey);
@@ -290,8 +292,13 @@ async function startServer() {
     const status = licenseDb.getStatus();
     res.json({
       ...status,
-      schemaSql: `-- Run this in your Supabase SQL Editor:
-CREATE TABLE IF NOT EXISTS ishak_licenses (
+      schemaSql: `-- ========================================================
+-- 🛡️ ISHAK AI VIP LICENSE DATABASE SCHEMA (SUPABASE)
+-- Run this entire script in Supabase -> SQL Editor -> New query -> Run
+-- ========================================================
+
+-- 1. Create the licenses table if not exists
+CREATE TABLE IF NOT EXISTS public.ishak_licenses (
   key TEXT PRIMARY KEY,
   active BOOLEAN DEFAULT true,
   tier TEXT DEFAULT 'VIP',
@@ -306,11 +313,26 @@ CREATE TABLE IF NOT EXISTS ishak_licenses (
   note TEXT
 );
 
--- Enable RLS:
-ALTER TABLE ishak_licenses ENABLE ROW LEVEL SECURITY;
+-- 2. Enable Row Level Security (RLS)
+ALTER TABLE public.ishak_licenses ENABLE ROW LEVEL SECURITY;
 
--- Allow server backend with service role:
-CREATE POLICY "Allow server service full access" ON ishak_licenses FOR ALL USING (true);`
+-- 3. Drop existing policy if it already exists to avoid "policy already exists" error
+DROP POLICY IF EXISTS "Allow server service full access" ON public.ishak_licenses;
+DROP POLICY IF EXISTS "Public access policy" ON public.ishak_licenses;
+
+-- 4. Create clean full access policy (for service role and backend proxy)
+CREATE POLICY "Allow server service full access" 
+  ON public.ishak_licenses 
+  FOR ALL 
+  USING (true) 
+  WITH CHECK (true);
+
+-- 5. Insert initial master keys safely (will not error if already exists)
+INSERT INTO public.ishak_licenses (key, active, tier, duration, exp, created_at, note)
+VALUES 
+  ('ISHAK-VIP-PRO-2025', true, 'VIP', '30d', NULL, EXTRACT(EPOCH FROM NOW()) * 1000, 'Master VIP Key'),
+  ('ISHAK-LIFETIME-DEMO', true, 'LIFETIME', 'lifetime', NULL, EXTRACT(EPOCH FROM NOW()) * 1000, 'Lifetime Key')
+ON CONFLICT (key) DO NOTHING;`
     });
   });
 
@@ -325,12 +347,33 @@ CREATE POLICY "Allow server service full access" ON ishak_licenses FOR ALL USING
 
   // 4. DIRECT JAVASCRIPT SERVING ENDPOINTS (/bot.js & /loader.js)
   // Allows loading the complete updated bot code from an external URL!
-  const serveBotScript = (req: express.Request, res: express.Response) => {
+  const serveBotScript = async (req: express.Request, res: express.Response) => {
     const host = req.get("host") || "localhost:3000";
     const protocol = req.protocol === "https" || req.get("x-forwarded-proto") === "https" ? "https" : "http";
     const baseUrl = `${protocol}://${host}`;
 
-    const rawCode = generateRawScriptCode(baseUrl);
+    const supabaseUrl = licenseDb.getSupabaseUrl();
+    const supabaseKey = licenseDb.getSupabaseKey();
+
+    // Fetch active licenses to bake into the script for offline / CSP-safe instant execution
+    const all = await licenseDb.getAllLicenses().catch(() => []);
+    const builtinLicenses: Record<string, any> = {};
+    for (const item of all) {
+      if (item.active) {
+        builtinLicenses[item.key.toUpperCase()] = {
+          active: item.active,
+          tier: item.tier,
+          duration: item.duration,
+          duration_ms: item.duration_ms,
+          exp: item.exp,
+          first_login_at: item.first_login_at,
+          trader_id: item.trader_id || '',
+          device_id: item.device_id || ''
+        };
+      }
+    }
+
+    const rawCode = generateRawScriptCode(baseUrl, supabaseUrl, supabaseKey, builtinLicenses);
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.send(rawCode);
@@ -340,12 +383,32 @@ CREATE POLICY "Allow server service full access" ON ishak_licenses FOR ALL USING
   app.get("/loader.js", serveBotScript);
 
   // 5. BOOKMARKLET GENERATION ENDPOINT
-  app.get("/api/bookmarklet-code", (req, res) => {
+  app.get("/api/bookmarklet-code", async (req, res) => {
     const host = req.get("host") || "localhost:3000";
     const protocol = req.protocol === "https" || req.get("x-forwarded-proto") === "https" ? "https" : "http";
     const baseUrl = `${protocol}://${host}`;
 
-    const code = generateBookmarkletCode(baseUrl);
+    const supabaseUrl = licenseDb.getSupabaseUrl();
+    const supabaseKey = licenseDb.getSupabaseKey();
+
+    const all = await licenseDb.getAllLicenses().catch(() => []);
+    const builtinLicenses: Record<string, any> = {};
+    for (const item of all) {
+      if (item.active) {
+        builtinLicenses[item.key.toUpperCase()] = {
+          active: item.active,
+          tier: item.tier,
+          duration: item.duration,
+          duration_ms: item.duration_ms,
+          exp: item.exp,
+          first_login_at: item.first_login_at,
+          trader_id: item.trader_id || '',
+          device_id: item.device_id || ''
+        };
+      }
+    }
+
+    const code = generateBookmarkletCode(baseUrl, supabaseUrl, supabaseKey, builtinLicenses);
     const scriptUrl = `${baseUrl}/loader.js`;
     const encodedUrl = Buffer.from(scriptUrl).toString("base64");
     

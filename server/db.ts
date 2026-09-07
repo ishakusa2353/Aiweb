@@ -97,13 +97,22 @@ class LicenseDatabase {
   private adminPassword: string = 'ishakdevos';
 
   constructor() {
-    // Load or initialize admin password
+    let savedSupabaseUrl = '';
+    let savedSupabaseKey = '';
+
+    // Load or initialize admin settings
     try {
       if (fs.existsSync(SETTINGS_FILE)) {
         const raw = fs.readFileSync(SETTINGS_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
         if (parsed.adminPassword && typeof parsed.adminPassword === 'string') {
           this.adminPassword = parsed.adminPassword;
+        }
+        if (parsed.supabaseUrl && typeof parsed.supabaseUrl === 'string') {
+          savedSupabaseUrl = parsed.supabaseUrl;
+        }
+        if (parsed.supabaseKey && typeof parsed.supabaseKey === 'string') {
+          savedSupabaseKey = parsed.supabaseKey;
         }
       } else {
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ adminPassword: 'ishakdevos' }, null, 2));
@@ -116,10 +125,10 @@ class LicenseDatabase {
       this.localStore.set(k.toUpperCase(), v);
     }
 
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    const url = process.env.SUPABASE_URL || savedSupabaseUrl;
+    const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || savedSupabaseKey;
     if (url && key) {
-      this.initSupabase(url, key);
+      this.initSupabase(url, key, false);
     }
 
     // Auto-clean expired licenses every 10 seconds
@@ -176,7 +185,7 @@ class LicenseDatabase {
     return expiredKeys.length;
   }
 
-  public initSupabase(url: string, key: string): boolean {
+  public initSupabase(url: string, key: string, saveToDisk = true): boolean {
     try {
       if (!url || !key) return false;
       this.supabaseUrl = url.trim();
@@ -185,7 +194,25 @@ class LicenseDatabase {
         auth: { persistSession: false }
       });
       this.isConfigured = true;
-      console.log('✅ Supabase client initialized successfully.');
+      console.log('✅ Supabase client initialized successfully with URL:', this.supabaseUrl);
+
+      if (saveToDisk) {
+        try {
+          let current: any = {};
+          if (fs.existsSync(SETTINGS_FILE)) {
+            current = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+          }
+          current.supabaseUrl = this.supabaseUrl;
+          current.supabaseKey = this.supabaseKey;
+          fs.writeFileSync(SETTINGS_FILE, JSON.stringify(current, null, 2));
+        } catch (e) {
+          console.warn('Failed to save supabase config to settings file:', e);
+        }
+      }
+
+      // Sync initial local licenses into Supabase table
+      this.syncInitialToSupabase().catch((err) => console.warn('Supabase sync initial error:', err));
+
       return true;
     } catch (err) {
       console.error('Failed to init Supabase client:', err);
@@ -195,14 +222,46 @@ class LicenseDatabase {
     }
   }
 
+  private async syncInitialToSupabase() {
+    if (!this.supabase) return;
+    for (const [_, item] of this.localStore.entries()) {
+      try {
+        await this.supabase.from('ishak_licenses').upsert({
+          key: item.key,
+          active: item.active,
+          tier: item.tier,
+          duration: item.duration,
+          duration_ms: item.duration_ms,
+          exp: item.exp,
+          first_login_at: item.first_login_at,
+          device_id: item.device_id || '',
+          trader_id: item.trader_id || '',
+          created_at: item.created_at,
+          last_used_at: item.last_used_at,
+          note: item.note || ''
+        }, { onConflict: 'key' });
+      } catch (err) {
+        // Table might not be created yet if user hasn't run the SQL script
+      }
+    }
+  }
+
   public isSupabaseActive(): boolean {
     return !!this.supabase && this.isConfigured;
+  }
+
+  public getSupabaseUrl(): string {
+    return this.supabaseUrl || '';
+  }
+
+  public getSupabaseKey(): string {
+    return this.supabaseKey || '';
   }
 
   public getStatus() {
     return {
       isSupabaseActive: !!this.supabase && this.isConfigured,
-      supabaseUrl: this.supabaseUrl ? `${this.supabaseUrl.substring(0, 18)}...` : '',
+      supabaseUrl: this.supabaseUrl || '',
       storageType: (this.supabase && this.isConfigured) ? 'Supabase Cloud Database' : 'Secure High-Performance Server Store',
       keyCount: this.localStore.size
     };

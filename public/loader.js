@@ -1,36 +1,4 @@
-import { QUOTEX_MARKETS } from '../src/data/markets';
-
-export const MASTER_SIGNING_SALT = "ISHAK_VIP_2026_MASTER";
-
-export function computeKeyChecksum(base: string): string {
-  const full = (base + ":" + MASTER_SIGNING_SALT).toUpperCase();
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < full.length; i++) {
-    hash ^= full.charCodeAt(i);
-    hash = (hash * 0x01000193) >>> 0;
-  }
-  return ('0000' + hash.toString(16).toUpperCase()).slice(-4);
-}
-
-export function generateOfflineSignedKey(tier: string = 'VIP', duration: string = '30D'): string {
-  const cleanTier = (tier || 'VIP').toUpperCase();
-  const cleanDur = (duration || '30D').toUpperCase();
-  const token = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const base = `ISHAK-${cleanTier}-${cleanDur}-${token}`;
-  const sig = computeKeyChecksum(base);
-  return `${base}-${sig}`;
-}
-
-export function generateBookmarkletCode(
-  baseUrl: string,
-  supabaseUrl: string = '',
-  supabaseKey: string = '',
-  builtinLicenses: Record<string, any> = {}
-): string {
-  const jsonMarkets = JSON.stringify(QUOTEX_MARKETS);
-  const jsonBuiltinLicenses = JSON.stringify(builtinLicenses);
-
-  const cleanScript = `(function(){
+(function(){
   try {
     var oldWrap = document.getElementById('ishak-trade-wrap');
     if (oldWrap) oldWrap.remove();
@@ -44,23 +12,10 @@ export function generateBookmarkletCode(
   } catch(e){}
 
   window.__ISHAK_AI_ACTIVE__ = true;
-  var API_BASE_URL = "${baseUrl}";
-  var SUPABASE_URL = "${supabaseUrl}";
-  var SUPABASE_KEY = "${supabaseKey}";
+  var API_BASE_URL = "http://localhost:3000";
+  var SUPABASE_URL = "https://qbazzarqiplrqqfytajz.supabase.co";
+  var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
   var LOGO_URL = "https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg";
-  var MASTER_SIGNING_SALT = "${MASTER_SIGNING_SALT}";
-
-  // Built-in License Vault (Offline & CSP-safe instant authentication)
-  var BUILTIN_LICENSES = ${jsonBuiltinLicenses};
-  if (!BUILTIN_LICENSES['ISHAK-TEST-5MIN']) {
-    BUILTIN_LICENSES['ISHAK-TEST-5MIN'] = { active: true, tier: 'TRIAL', duration: '5m', duration_ms: 300000 };
-  }
-  if (!BUILTIN_LICENSES['ISHAK-VIP-PRO-2025']) {
-    BUILTIN_LICENSES['ISHAK-VIP-PRO-2025'] = { active: true, tier: 'VIP', duration: '30d', duration_ms: 2592000000, trader_id: '84920184' };
-  }
-  if (!BUILTIN_LICENSES['ISHAK-LIFETIME-DEMO']) {
-    BUILTIN_LICENSES['ISHAK-LIFETIME-DEMO'] = { active: true, tier: 'LIFETIME', duration: 'lifetime' };
-  }
 
   // 1. FORCED FIRST-TIME CONFIGURATION (No Auto-detect!)
   var tradeDuration = null; // User MUST select duration
@@ -72,7 +27,7 @@ export function generateBookmarkletCode(
   var countdownInterval = null;
   var expiryHeartbeat = null;
 
-  var MARKETS_DATABASE = ${jsonMarkets};
+  var MARKETS_DATABASE = [{"category":"QUOTEX OTC CURRENCIES (২৪/৭)","items":["AUD/CAD (OTC)","AUD/CHF (OTC)","AUD/JPY (OTC)","AUD/NZD (OTC)","AUD/USD (OTC)","CAD/CHF (OTC)","CAD/JPY (OTC)","CHF/JPY (OTC)","EUR/AUD (OTC)","EUR/CAD (OTC)","EUR/CHF (OTC)","EUR/GBP (OTC)","EUR/JPY (OTC)","EUR/NZD (OTC)","EUR/USD (OTC)","GBP/AUD (OTC)","GBP/CAD (OTC)","GBP/CHF (OTC)","GBP/JPY (OTC)","GBP/NZD (OTC)","GBP/USD (OTC)","NZD/CAD (OTC)","NZD/CHF (OTC)","NZD/JPY (OTC)","NZD/USD (OTC)","USD/BDT (OTC)","USD/BRL (OTC)","USD/CAD (OTC)","USD/CHF (OTC)","USD/DZD (OTC)","USD/EGP (OTC)","USD/IDR (OTC)","USD/INR (OTC)","USD/JPY (OTC)","USD/MXN (OTC)","USD/MYR (OTC)","USD/NGN (OTC)","USD/PHP (OTC)","USD/PKR (OTC)","USD/RUB (OTC)","USD/THB (OTC)","USD/TRY (OTC)","USD/VND (OTC)","USD/ZAR (OTC)"]},{"category":"QUOTEX REAL FOREX (লাইভ মার্কেট)","items":["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD","EUR/JPY","GBP/JPY","EUR/GBP","AUD/CAD","AUD/CHF","AUD/JPY","CAD/JPY","EUR/AUD","EUR/CAD","EUR/CHF","GBP/AUD","GBP/CAD","GBP/CHF","NZD/JPY","USD/NOK","USD/SEK","USD/TRY","USD/SGD"]},{"category":"COMMODITIES & METALS (OTC & REAL)","items":["Gold (OTC)","Silver (OTC)","Crude Oil (OTC)","UKBrent (OTC)","USCrude (OTC)","GOLD (XAU/USD)","SILVER (XAG/USD)","UKBrent","USCrude"]},{"category":"CRYPTO & STOCKS OTC (QUOTEX)","items":["Bitcoin (OTC)","Ethereum (OTC)","Litecoin (OTC)","Ripple (OTC)","BTC/USD","ETH/USD","Boeing Company (OTC)","Intel (OTC)","Microsoft (OTC)","Apple (OTC)","Johnson & Johnson (OTC)","McDonald's (OTC)","Meta (OTC)","Pfizer (OTC)","American Express (OTC)"]}];
 
   // Device Fingerprint generator (Single Device Lock)
   function getOrCreateDeviceId() {
@@ -365,90 +320,7 @@ export function generateBookmarkletCode(
     }
   }
 
-  // 🔑 MASTER CLIENT VALIDATION HELPERS (CSP-Proof & Offline-First)
-  function computeClientChecksum(base) {
-    var full = (base + ":" + MASTER_SIGNING_SALT).toUpperCase();
-    var hash = 0x811c9dc5;
-    for (var i = 0; i < full.length; i++) {
-      hash ^= full.charCodeAt(i);
-      hash = (hash * 0x01000193) >>> 0;
-    }
-    return ('0000' + hash.toString(16).toUpperCase()).slice(-4);
-  }
-
-  function parseDurationString(durStr) {
-    var d = (durStr || '').trim().toUpperCase();
-    if (d === 'LIFE' || d === 'LIFETIME' || d === 'PERMANENT') return null;
-    var m = d.match(/^([0-9.]+)\s*(M|MIN|MINS|H|HR|HRS|D|DAY|DAYS|W|Y)?$/);
-    if (m) {
-      var val = parseFloat(m[1]);
-      var unit = m[2] || 'D';
-      if (unit.indexOf('M') === 0 && unit !== 'MONTH') return Math.round(val * 60 * 1000);
-      if (unit.indexOf('H') === 0) return Math.round(val * 3600 * 1000);
-      if (unit.indexOf('D') === 0) return Math.round(val * 86400 * 1000);
-      if (unit.indexOf('W') === 0) return Math.round(val * 7 * 86400 * 1000);
-      if (unit.indexOf('Y') === 0) return Math.round(val * 365 * 86400 * 1000);
-      return Math.round(val * 86400 * 1000);
-    }
-    return 30 * 86400 * 1000;
-  }
-
-  function verifyCryptographicKey(key, traderId, devId) {
-    var match = key.match(/^ISHAK-(VIP|PRO|TRIAL|LIFE)-([0-9]+[MHDWY]?|LIFE)-([A-Z0-9]{3,8})-([A-Z0-9]{4})$/);
-    if (!match) {
-      return { matched: false };
-    }
-    var tier = match[1];
-    var duration = match[2];
-    var token = match[3];
-    var sig = match[4];
-    var base = 'ISHAK-' + tier + '-' + duration + '-' + token;
-    var expectedSig = computeClientChecksum(base);
-    if (sig !== expectedSig) {
-      return { matched: true, valid: false, reason: 'Invalid signature on VIP License Key!' };
-    }
-
-    // Single Device Lock
-    var devLockKey = 'ISHAK_DEV_LOCK_' + key;
-    var boundDev = localStorage.getItem(devLockKey);
-    if (!boundDev) {
-      localStorage.setItem(devLockKey, devId);
-    } else if (boundDev !== devId) {
-      return { matched: true, valid: false, reason: 'This license is bound to another device! Single device lock active.' };
-    }
-
-    // First Login Countdown
-    var firstLoginKey = 'ISHAK_FIRST_LOGIN_' + key;
-    var firstLogin = localStorage.getItem(firstLoginKey);
-    var now = Date.now();
-    if (!firstLogin) {
-      firstLogin = now;
-      localStorage.setItem(firstLoginKey, String(firstLogin));
-    } else {
-      firstLogin = Number(firstLogin);
-    }
-
-    var durMs = parseDurationString(duration);
-    var exp = null;
-    if (durMs) {
-      exp = firstLogin + durMs;
-      if (now > exp) {
-        return { matched: true, valid: false, reason: 'This license key has expired! Please contact @IshakVhai.' };
-      }
-    }
-
-    return {
-      matched: true,
-      valid: true,
-      exp: exp,
-      duration: duration,
-      tier: tier,
-      traderId: traderId || '',
-      deviceId: devId
-    };
-  }
-
-  // 🛡️ MULTI-TIER RESILIENT VERIFICATION ENGINE (CSP-Proof & Offline-First)
+  // 🛡️ HYBRID LIVE CLOUD VERIFICATION ENGINE (SUPABASE REST + SERVER PROXY DUAL-FALLBACK)
   function verifyLicenseStatus(keyToTest, traderId) {
     return new Promise(function(resolve) {
       var key = (keyToTest || '').trim().toUpperCase();
@@ -457,95 +329,7 @@ export function generateBookmarkletCode(
         return;
       }
 
-      // =========================================================================
-      // TIER 1: Check Built-in License Vault (Zero network required, instant CSP-safe)
-      // =========================================================================
-      if (BUILTIN_LICENSES && BUILTIN_LICENSES[key]) {
-        var rec = BUILTIN_LICENSES[key];
-        if (rec.active === false) {
-          resolve({ valid: false, reason: 'This license key has been blocked by administrator.' });
-          return;
-        }
-
-        // Single Device Lock
-        var devLockKey = 'ISHAK_DEV_LOCK_' + key;
-        var boundDev = localStorage.getItem(devLockKey);
-        if (!boundDev) {
-          localStorage.setItem(devLockKey, myDeviceId);
-        } else if (boundDev !== myDeviceId) {
-          resolve({ valid: false, reason: 'This license is bound to another device! Single device lock active.' });
-          return;
-        }
-
-        // Trader ID Lock
-        var inputTid = (traderId || '').trim();
-        if (rec.trader_id && rec.trader_id.trim() !== '') {
-          if (inputTid && rec.trader_id.trim() !== inputTid) {
-            resolve({ valid: false, reason: 'This license is locked to Trader ID (' + rec.trader_id + ')!' });
-            return;
-          }
-        }
-
-        // First Login Countdown Activation
-        var firstLoginKey = 'ISHAK_FIRST_LOGIN_' + key;
-        var firstLogin = localStorage.getItem(firstLoginKey);
-        var now = Date.now();
-        if (!firstLogin) {
-          firstLogin = now;
-          localStorage.setItem(firstLoginKey, String(firstLogin));
-        } else {
-          firstLogin = Number(firstLogin);
-        }
-
-        // Expiration check
-        var exp = null;
-        var durMs = rec.duration_ms ? Number(rec.duration_ms) : parseDurationString(rec.duration || '30d');
-        if (rec.duration !== 'lifetime' && durMs) {
-          exp = firstLogin + durMs;
-          if (now > exp) {
-            resolve({ valid: false, reason: 'This license key has expired! Please renew with @IshakVhai.' });
-            return;
-          }
-        }
-
-        // Non-blocking background sync to cloud (if possible, silently caught)
-        try {
-          if (SUPABASE_URL && SUPABASE_KEY) {
-            fetch(SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key), {
-              method: 'PATCH',
-              headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ last_used_at: now, device_id: myDeviceId, trader_id: inputTid || undefined })
-            }).catch(function(){});
-          }
-        } catch(e){}
-
-        resolve({
-          valid: true,
-          exp: exp,
-          duration: rec.duration || '30d',
-          tier: rec.tier || 'VIP',
-          traderId: inputTid || rec.trader_id || '',
-          deviceId: myDeviceId
-        });
-        return;
-      }
-
-      // =========================================================================
-      // TIER 2: Check Cryptographically Signed Key (Zero network required)
-      // =========================================================================
-      var cryptoCheck = verifyCryptographicKey(key, traderId, myDeviceId);
-      if (cryptoCheck.matched) {
-        if (!cryptoCheck.valid) {
-          resolve(cryptoCheck);
-          return;
-        }
-        resolve(cryptoCheck);
-        return;
-      }
-
-      // =========================================================================
-      // TIER 3: Online Supabase Direct Verification (If allowed by browser/CSP)
-      // =========================================================================
+      // Method 1: Direct Supabase REST verification (100% reliable across any broker domain)
       function checkSupabaseDirect() {
         if (!SUPABASE_URL || !SUPABASE_KEY) {
           return Promise.reject(new Error('Supabase direct config not provided'));
@@ -566,7 +350,7 @@ export function generateBookmarkletCode(
         })
         .then(function(rows) {
           if (!rows || !rows.length) {
-            return { valid: false, reason: 'License key not found in VIP database! Contact @IshakVhai.' };
+            return { valid: false, reason: 'This license key was not found in the database!' };
           }
           var row = rows[0];
           if (row.active === false) {
@@ -591,7 +375,7 @@ export function generateBookmarkletCode(
           var now = Date.now();
           var firstLogin = row.first_login_at ? Number(row.first_login_at) : null;
           var exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
-          var durationMs = row.duration_ms ? Number(row.duration_ms) : parseDurationString(row.duration || '30d');
+          var durationMs = row.duration_ms ? Number(row.duration_ms) : (row.duration === 'lifetime' ? null : 30 * 86400 * 1000);
 
           var updates = {};
           var needPatch = false;
@@ -624,9 +408,18 @@ export function generateBookmarkletCode(
 
           // Check Expiration
           if (exp && now > exp) {
+            // Auto delete expired license from Supabase
+            fetch(SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key), {
+              method: 'DELETE',
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_KEY
+              }
+            }).catch(function(){});
+
             return {
               valid: false,
-              reason: 'This license key has expired! Please renew with @IshakVhai.'
+              reason: 'This license key has expired and has been deleted from database! Please renew with @IshakVhai.'
             };
           }
 
@@ -654,9 +447,7 @@ export function generateBookmarkletCode(
         });
       }
 
-      // =========================================================================
-      // TIER 4: Backend server proxy fallback
-      // =========================================================================
+      // Method 2: Backend server proxy fallback
       function checkBackendServer() {
         return fetch(API_BASE_URL + '/api/verify-license', {
           method: 'POST',
@@ -679,7 +470,7 @@ export function generateBookmarkletCode(
               deviceId: data.deviceId
             };
           } else {
-            var errorMsg = (data && data.reason) || 'Invalid VIP license key. Contact @IshakVhai.';
+            var errorMsg = (data && data.reason) || 'This license is bound to another device or has expired.';
             if (errorMsg.indexOf('অন্য ডিভাইসে') !== -1) {
               errorMsg = 'This license is bound to another device! Single device lock active.';
             } else if (errorMsg.indexOf('মেয়াদ শেষ') !== -1) {
@@ -701,7 +492,7 @@ export function generateBookmarkletCode(
             .catch(function(err2) {
               resolve({
                 valid: false,
-                reason: 'Invalid VIP Key! Key not found in VIP database. Contact @IshakVhai.'
+                reason: 'Network connection failed. Please check internet access or contact @IshakVhai.'
               });
             });
         });
@@ -1240,20 +1031,4 @@ export function generateBookmarkletCode(
     e.stopPropagation();
     showSettingsHub();
   });
-})();`;
-
-  return 'javascript:' + cleanScript;
-}
-
-export function generateRawScriptCode(
-  baseUrl: string,
-  supabaseUrl: string = '',
-  supabaseKey: string = '',
-  builtinLicenses: Record<string, any> = {}
-): string {
-  const bookmarkletCode = generateBookmarkletCode(baseUrl, supabaseUrl, supabaseKey, builtinLicenses);
-  // Strip the 'javascript:' prefix for standalone script file serving
-  return bookmarkletCode.startsWith('javascript:')
-    ? bookmarkletCode.substring('javascript:'.length)
-    : bookmarkletCode;
-}
+})();

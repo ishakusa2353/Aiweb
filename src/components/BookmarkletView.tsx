@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Code2, Copy, Check, ShieldCheck, AlertTriangle, Sparkles, Zap, Globe, FileCode, Lock, ArrowRight, Wand2 } from 'lucide-react';
+import { Code2, Copy, Check, ShieldCheck, AlertTriangle, Sparkles, Zap, Globe, FileCode, Lock, ArrowRight, Wand2, Download } from 'lucide-react';
 
 export const BookmarkletView: React.FC = () => {
   const [bookmarkletCode, setBookmarkletCode] = useState<string>('');
@@ -52,6 +52,19 @@ export const BookmarkletView: React.FC = () => {
     navigator.clipboard.writeText(text);
     setCopiedType(type);
     setTimeout(() => setCopiedType(null), 2500);
+  };
+
+  const handleDownloadLoader = () => {
+    const raw = bookmarkletCode.replace(/^javascript:/, '');
+    const blob = new Blob([raw], { type: 'application/javascript;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'loader.js';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleCustomUrlChange = (url: string) => {
@@ -212,20 +225,30 @@ export const BookmarkletView: React.FC = () => {
 
         {/* Full Long Code Box Preview with Expand/Collapse */}
         <div className="bg-black/90 border border-emerald-500/30 rounded-2xl p-4 space-y-2.5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <FileCode className="w-4 h-4 text-emerald-400" />
               <span className="text-white font-bold text-xs">
-                GitHub এর loader.js ফাইলে দেওয়ার জন্য সম্পূর্ণ সোর্স কোড (({Math.round((bookmarkletCode.length / 1024) * 10) / 10} KB)
+                GitHub এর loader.js ফাইলে দেওয়ার জন্য সম্পূর্ণ সোর্স কোড ({Math.round((bookmarkletCode.length / 1024) * 10) / 10} KB)
               </span>
             </div>
-            <button
-              onClick={() => handleCopy(bookmarkletCode.replace(/^javascript:/, ''), 'gh-raw')}
-              className="text-xs text-emerald-400 hover:text-emerald-300 underline font-mono flex items-center gap-1"
-            >
-              {copiedType === 'gh-raw' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedType === 'gh-raw' ? 'কপি সফল!' : 'কোড কপি করুন'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadLoader}
+                className="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition text-xs font-bold flex items-center gap-1.5"
+                title="সরাসরি loader.js ফাইল ডাউনলোড করুন"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>ফাইল ডাউনলোড (.js)</span>
+              </button>
+              <button
+                onClick={() => handleCopy(bookmarkletCode.replace(/^javascript:/, ''), 'gh-raw')}
+                className="px-3 py-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 transition text-xs font-bold flex items-center gap-1.5 font-mono"
+              >
+                {copiedType === 'gh-raw' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedType === 'gh-raw' ? 'কপি সফল!' : 'কোড কপি করুন'}</span>
+              </button>
+            </div>
           </div>
 
           <div className="relative">
