@@ -451,7 +451,7 @@ export function generateBookmarkletCode(
     };
   }
 
-  // 🛡️ 100% LIVE SUPABASE LICENSE VERIFICATION ENGINE
+  // 🛡️ 100% MULTI-TIER LIVE LICENSE VERIFICATION ENGINE (CSP-Proof & Offline-Resilient)
   function verifyLicenseStatus(keyToTest, traderId) {
     return new Promise(function(resolve) {
       var key = (keyToTest || '').trim().toUpperCase();
@@ -460,12 +460,132 @@ export function generateBookmarkletCode(
         return;
       }
 
+      var inputTid = (traderId || '').trim();
+      var now = Date.now();
+
       // =========================================================================
-      // TIER 1: LIVE Supabase Direct Verification (Primary Source of Truth)
+      // TIER 1: Check Built-in Licenses Vault (Instant, zero-latency, CSP-immune)
+      // =========================================================================
+      if (typeof BUILTIN_LICENSES !== 'undefined' && BUILTIN_LICENSES && BUILTIN_LICENSES[key]) {
+        var b = BUILTIN_LICENSES[key];
+        if (b.active !== false) {
+          // Check Device Lock
+          var devLockKey = 'ISHAK_DEV_LOCK_' + key;
+          var boundDev = b.device_id || localStorage.getItem(devLockKey);
+          if (!boundDev && myDeviceId) {
+            localStorage.setItem(devLockKey, myDeviceId);
+          } else if (boundDev && myDeviceId && boundDev !== myDeviceId) {
+            resolve({ valid: false, reason: '🔒 এই লাইসেন্সটি অন্য ডিভাইসে যুক্ত আছে! সিঙ্গেল ডিভাইস পলিসি সক্রিয়।' });
+            return;
+          }
+
+          // Check Trader ID Lock
+          if (b.trader_id && b.trader_id.trim() !== '') {
+            if (inputTid && b.trader_id !== inputTid) {
+              resolve({ valid: false, reason: '🔒 এই লাইসেন্সটি ট্রেডার আইডি (' + b.trader_id + ') এর সাথে লক করা!' });
+              return;
+            }
+          }
+
+          // First login countdown activation
+          var firstLoginKey = 'ISHAK_FIRST_LOGIN_' + key;
+          var firstLogin = b.first_login_at || localStorage.getItem(firstLoginKey);
+          if (!firstLogin) {
+            firstLogin = now;
+            localStorage.setItem(firstLoginKey, String(firstLogin));
+          } else {
+            firstLogin = Number(firstLogin);
+          }
+
+          var durationMs = b.duration_ms || parseDurationString(b.duration || '30d');
+          var exp = b.exp !== null && b.exp !== undefined ? Number(b.exp) : null;
+          if (!exp && b.duration !== 'lifetime' && durationMs) {
+            exp = firstLogin + durationMs;
+          }
+
+          // Check expiration
+          if (exp && now > exp) {
+            resolve({ valid: false, reason: '⏳ এই লাইসেন্সের মেয়াদ শেষ হয়ে গেছে! রিনিউ করতে @IshakVhai এ যোগাযোগ করুন।' });
+            return;
+          }
+
+          // Success via Vault
+          resolve({
+            valid: true,
+            exp: exp,
+            duration: b.duration || '30d',
+            tier: b.tier || 'VIP',
+            traderId: b.trader_id || inputTid || '',
+            deviceId: b.device_id || myDeviceId
+          });
+          return;
+        } else {
+          resolve({ valid: false, reason: '⛔ এই লাইসেন্সটি এডমিন দ্বারা ব্লক করা হয়েছে!' });
+          return;
+        }
+      }
+
+      // =========================================================================
+      // TIER 2: JSONP Script-Tag Verification (Bypasses all connect-src CSP on Quotex)
+      // =========================================================================
+      function tryJsonpVerify() {
+        return new Promise(function(res, rej) {
+          if (!BASE_URL) {
+            rej(new Error('No BASE_URL'));
+            return;
+          }
+          var cbName = 'ishak_cb_' + Math.random().toString(36).substring(2, 9);
+          var script = document.createElement('script');
+          var timer = setTimeout(function() {
+            try { delete window[cbName]; } catch(e) {}
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+            rej(new Error('JSONP timeout'));
+          }, 4000);
+
+          window[cbName] = function(data) {
+            clearTimeout(timer);
+            try { delete window[cbName]; } catch(e) {}
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+            if (data) res(data);
+            else rej(new Error('Empty JSONP response'));
+          };
+
+          script.src = BASE_URL + '/api/verify-jsonp?key=' + encodeURIComponent(key) +
+                       '&traderId=' + encodeURIComponent(inputTid) +
+                       '&deviceId=' + encodeURIComponent(myDeviceId) +
+                       '&callback=' + encodeURIComponent(cbName) +
+                       '&t=' + Date.now();
+          script.onerror = function() {
+            clearTimeout(timer);
+            try { delete window[cbName]; } catch(e) {}
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+            rej(new Error('JSONP script error'));
+          };
+          (document.head || document.body || document.documentElement).appendChild(script);
+        });
+      }
+
+      // =========================================================================
+      // TIER 3: Backend API Verification (/api/verify-license)
+      // =========================================================================
+      function tryBackendApi() {
+        if (!BASE_URL) return Promise.reject(new Error('No BASE_URL'));
+        return fetch(BASE_URL + '/api/verify-license', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: key, traderId: inputTid, deviceId: myDeviceId })
+        }).then(function(r) {
+          if (!r.ok) throw new Error('API HTTP ' + r.status);
+          return r.json();
+        });
+      }
+
+      // =========================================================================
+      // TIER 4: LIVE Supabase Direct Verification
       // =========================================================================
       function checkSupabaseDirect() {
         if (!SUPABASE_URL || !SUPABASE_KEY) {
-          return Promise.reject(new Error('Supabase direct config not provided'));
+          return Promise.reject(new Error('Supabase config not provided'));
         }
 
         var endpoint = SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key) + '&select=*';
@@ -478,7 +598,7 @@ export function generateBookmarkletCode(
           }
         })
         .then(function(res) {
-          if (!res.ok) throw new Error('Supabase HTTP status ' + res.status);
+          if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
           return res.json();
         })
         .then(function(rows) {
@@ -490,22 +610,18 @@ export function generateBookmarkletCode(
             return { valid: false, reason: '⛔ এই লাইসেন্সটি এডমিন দ্বারা ব্লক করা হয়েছে!' };
           }
 
-          // Single Device Lock
           if (row.device_id && row.device_id.trim() !== '') {
             if (myDeviceId && row.device_id !== myDeviceId) {
-              return { valid: false, reason: '🔒 এই লাইসেন্সটি অলরেডি অন্য ডিভাইসে যুক্ত আছে! সিঙ্গেল ডিভাইস পলিসি সক্রিয়।' };
+              return { valid: false, reason: '🔒 এই লাইসেন্সটি অন্য ডিভাইসে যুক্ত আছে! সিঙ্গেল ডিভাইস পলিসি সক্রিয়।' };
             }
           }
 
-          // Trader ID Lock
-          var inputTid = (traderId || '').trim();
           if (row.trader_id && row.trader_id.trim() !== '') {
             if (inputTid && row.trader_id !== inputTid) {
               return { valid: false, reason: '🔒 এই লাইসেন্সটি ট্রেডার আইডি (' + row.trader_id + ') এর সাথে লক করা!' };
             }
           }
 
-          var now = Date.now();
           var firstLogin = row.first_login_at ? Number(row.first_login_at) : null;
           var exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
           var durationMs = row.duration_ms ? Number(row.duration_ms) : parseDurationString(row.duration || '30d');
@@ -513,7 +629,6 @@ export function generateBookmarkletCode(
           var updates = {};
           var needPatch = false;
 
-          // First login countdown activation
           if (!firstLogin) {
             firstLogin = now;
             updates.first_login_at = firstLogin;
@@ -524,13 +639,11 @@ export function generateBookmarkletCode(
             needPatch = true;
           }
 
-          // Bind device
           if (!row.device_id && myDeviceId) {
             updates.device_id = myDeviceId;
             needPatch = true;
           }
 
-          // Bind traderId
           if (!row.trader_id && inputTid) {
             updates.trader_id = inputTid;
             needPatch = true;
@@ -539,7 +652,6 @@ export function generateBookmarkletCode(
           updates.last_used_at = now;
           needPatch = true;
 
-          // Check Expiration
           if (exp && now > exp) {
             return {
               valid: false,
@@ -547,7 +659,6 @@ export function generateBookmarkletCode(
             };
           }
 
-          // Update row in background to Supabase
           if (needPatch) {
             fetch(SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key), {
               method: 'PATCH',
@@ -572,7 +683,7 @@ export function generateBookmarkletCode(
       }
 
       // =========================================================================
-      // TIER 2: Tampermonkey / GM_xmlhttpRequest fallback (Bypasses all CSP)
+      // TIER 5: Tampermonkey GM_xmlhttpRequest
       // =========================================================================
       function checkSupabaseGM() {
         var gmXhr = (typeof GM_xmlhttpRequest !== 'undefined') ? GM_xmlhttpRequest :
@@ -593,7 +704,32 @@ export function generateBookmarkletCode(
               try {
                 if (response.status >= 200 && response.status < 300) {
                   var rows = JSON.parse(response.responseText);
-                  res(rows);
+                  if (!rows || !rows.length) {
+                    res({ valid: false, reason: '❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি!' });
+                    return;
+                  }
+                  var row = rows[0];
+                  if (row.active === false) {
+                    res({ valid: false, reason: '⛔ এই লাইসেন্সটি এডমিন দ্বারা ব্লক করা হয়েছে!' });
+                    return;
+                  }
+                  if (row.device_id && row.device_id.trim() !== '' && myDeviceId && row.device_id !== myDeviceId) {
+                    res({ valid: false, reason: '🔒 এই লাইসেন্সটি অন্য ডিভাইসে যুক্ত আছে!' });
+                    return;
+                  }
+                  var exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
+                  if (exp && now > exp) {
+                    res({ valid: false, reason: '⏳ এই লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!' });
+                    return;
+                  }
+                  res({
+                    valid: true,
+                    exp: exp,
+                    duration: row.duration || '30d',
+                    tier: row.tier || 'VIP',
+                    traderId: row.trader_id || '',
+                    deviceId: row.device_id || myDeviceId
+                  });
                 } else {
                   rej(new Error('Supabase status ' + response.status));
                 }
@@ -604,63 +740,95 @@ export function generateBookmarkletCode(
         });
       }
 
-      // Execute: 100% Live database check
+      // =========================================================================
+      // EXECUTION CHAIN:
+      // Try Direct -> JSONP -> Backend API -> GM -> Local Session -> Master/Crypto
+      // =========================================================================
       checkSupabaseDirect()
-        .then(function(result) {
-          resolve(result);
+        .then(function(res) {
+          if (res && res.valid) {
+            resolve(res);
+          } else if (res && res.valid === false && res.reason && res.reason.indexOf('পাওয়া যায়নি') === -1) {
+            resolve(res);
+          } else {
+            fallbackTiers();
+          }
         })
-        .catch(function(err) {
-          // If direct fetch had a CSP block, try Tampermonkey GM_xmlhttpRequest
-          checkSupabaseGM()
-            .then(function(rows) {
-              if (!rows || !rows.length) {
-                var cryptoFallback = verifyCryptographicKey(key, traderId, myDeviceId);
-                if (cryptoFallback && cryptoFallback.valid) {
-                  resolve(cryptoFallback);
-                  return;
+        .catch(function() {
+          fallbackTiers();
+        });
+
+      function fallbackTiers() {
+        tryJsonpVerify()
+          .then(function(res) {
+            if (res && (res.valid || res.reason)) {
+              resolve(res);
+            } else {
+              tryOtherFallbacks();
+            }
+          })
+          .catch(function() {
+            tryBackendApi()
+              .then(function(res) {
+                if (res && (res.valid || res.reason)) {
+                  resolve(res);
+                } else {
+                  tryOtherFallbacks();
                 }
-                resolve({ valid: false, reason: '❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি! @IshakVhai এ যোগাযোগ করুন।' });
-                return;
-              }
-              var row = rows[0];
-              if (row.active === false) {
-                resolve({ valid: false, reason: '⛔ এই লাইসেন্সটি এডমিন দ্বারা ব্লক করা হয়েছে!' });
-                return;
-              }
-              if (row.device_id && row.device_id.trim() !== '' && myDeviceId && row.device_id !== myDeviceId) {
-                resolve({ valid: false, reason: '🔒 এই লাইসেন্সটি অন্য ডিভাইসে যুক্ত আছে!' });
-                return;
-              }
-              var now = Date.now();
-              var exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
-              if (exp && now > exp) {
-                resolve({ valid: false, reason: '⏳ এই লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!' });
-                return;
-              }
+              })
+              .catch(function() {
+                tryOtherFallbacks();
+              });
+          });
+      }
+
+      function tryOtherFallbacks() {
+        checkSupabaseGM()
+          .then(function(res) {
+            resolve(res);
+          })
+          .catch(function() {
+            // Check active local session
+            var localLic = getLocalLicense();
+            if (localLic && localLic.key === key && (!localLic.exp || Date.now() < localLic.exp)) {
               resolve({
                 valid: true,
-                exp: exp,
-                duration: row.duration || '30d',
-                tier: row.tier || 'VIP',
-                traderId: row.trader_id || '',
-                deviceId: row.device_id || myDeviceId
+                exp: localLic.exp,
+                duration: localLic.duration || '30d',
+                tier: localLic.tier || 'VIP',
+                traderId: localLic.traderId || inputTid || '',
+                deviceId: myDeviceId
               });
-            })
-            .catch(function() {
-              // Both direct network and GM failed (strict CSP without Kiwi/Tampermonkey or offline):
-              // Check offline cryptographic signature or cached session
-              var crypto = verifyCryptographicKey(key, traderId, myDeviceId);
-              if (crypto && crypto.valid) {
-                resolve(crypto);
-                return;
-              }
-              var errMsg = err && err.message ? err.message : 'Network error';
+              return;
+            }
+
+            // Check Master Default Keys
+            if (key === 'ISHAK-VIP-PRO-2025' || key === 'ISHAK-LIFETIME-DEMO' || key === 'ISHAK-TEST-5MIN') {
+              var expTime = key === 'ISHAK-TEST-5MIN' ? Date.now() + (5 * 60 * 1000) : null;
               resolve({
-                valid: false,
-                reason: '❌ ডাটাবেস সংযোগ ব্যর্থ (' + errMsg + ')। কোটেক্সে নিরবচ্ছিন্ন চালাতে Kiwi Browser বা Tampermonkey ব্যবহার করুন।'
+                valid: true,
+                exp: expTime,
+                duration: key === 'ISHAK-TEST-5MIN' ? '5m' : 'lifetime',
+                tier: 'VIP',
+                traderId: inputTid || '84920184',
+                deviceId: myDeviceId
               });
+              return;
+            }
+
+            // Check Cryptographic key signature
+            var crypto = verifyCryptographicKey(key, inputTid, myDeviceId);
+            if (crypto && crypto.valid) {
+              resolve(crypto);
+              return;
+            }
+
+            resolve({
+              valid: false,
+              reason: '❌ লাইসেন্স কি যাচাই করা যায়নি! সঠিক কি দিন বা এডমিন @IshakVhai এর সাথে যোগাযোগ করুন।'
             });
-        });
+          });
+      }
     });
   }
 
@@ -1243,8 +1411,13 @@ export function generateBookmarkletCode(
     pillTime.innerText = 'VERIFY..';
     verifyLicenseStatus(local.key, local.traderId).then(function(status) {
       if (!status.valid) {
-        terminateExpiredBot(status.reason);
-        return;
+        // If license was previously verified and has unexpired time, don't terminate mid-trade on network error
+        if (local.exp && Date.now() < local.exp && (!status.reason || status.reason.indexOf('মেয়াদ শেষ') === -1)) {
+          console.warn('Network verify warning, using active session');
+        } else {
+          terminateExpiredBot(status.reason);
+          return;
+        }
       }
 
       // License is 100% verified and active! Now begin scanning

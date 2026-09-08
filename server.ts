@@ -145,6 +145,80 @@ async function startServer() {
     }
   });
 
+  // 🛡️ JSONP verification endpoint (bypasses browser connect-src CSP on Quotex)
+  app.get("/api/verify-jsonp", async (req, res) => {
+    const rawCallback = req.query.callback;
+    const callbackName = typeof rawCallback === "string" ? rawCallback.replace(/[^a-zA-Z0-9_$.]/g, "") : "ishak_cb";
+    const inputKey = typeof req.query.key === "string" ? req.query.key.trim().toUpperCase() : "";
+    const inputTraderId = typeof req.query.traderId === "string" ? req.query.traderId.trim() : "";
+    const inputDeviceId = typeof req.query.deviceId === "string" ? req.query.deviceId.trim() : "";
+
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+
+    if (!inputKey) {
+      return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "License key is required" })});`);
+    }
+
+    try {
+      const license = await licenseDb.getLicense(inputKey);
+      if (!license) {
+        return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি!" })});`);
+      }
+      if (!license.active) {
+        return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "এই লাইসেন্সটি ব্লক বা নিষ্ক্রিয় করা হয়েছে!" })});`);
+      }
+      if (license.device_id && inputDeviceId && license.device_id !== inputDeviceId) {
+        return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "সিঙ্গেল ডিভাইস লক সক্রিয়! এই কি অন্য ডিভাইসে যুক্ত আছে।" })});`);
+      }
+      if (license.trader_id && inputTraderId && license.trader_id !== inputTraderId) {
+        return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: `এই লাইসেন্সটি ট্রেডার আইডি (${license.trader_id}) এর সাথে লক করা!` })});`);
+      }
+
+      let needSave = false;
+      if (!license.first_login_at) {
+        license.first_login_at = Date.now();
+        if (license.duration !== 'lifetime' && license.duration_ms) {
+          license.exp = license.first_login_at + license.duration_ms;
+        }
+        needSave = true;
+      }
+      if (!license.device_id && inputDeviceId) {
+        license.device_id = inputDeviceId;
+        needSave = true;
+      }
+      if (!license.trader_id && inputTraderId) {
+        license.trader_id = inputTraderId;
+        needSave = true;
+      }
+      license.last_used_at = Date.now();
+      needSave = true;
+
+      if (needSave) {
+        await licenseDb.saveLicense(license);
+      }
+
+      if (license.exp && Date.now() > license.exp) {
+        await licenseDb.deleteLicense(license.key);
+        return res.send(`${callbackName}(${JSON.stringify({ valid: false, expired: true, reason: "এই লাইসেন্স কিটির মেয়াদ শেষ হয়ে গেছে!" })});`);
+      }
+
+      return res.send(`${callbackName}(${JSON.stringify({
+        valid: true,
+        key: license.key,
+        exp: license.exp,
+        duration: license.duration,
+        tier: license.tier || "VIP",
+        traderId: license.trader_id || inputTraderId || "",
+        deviceId: license.device_id || inputDeviceId || "",
+        isLifetime: license.duration === 'lifetime' || license.exp === null,
+        serverTime: Date.now()
+      })});`);
+    } catch (err: any) {
+      return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "সার্ভার যাচাই ত্রুটি: " + err.message })});`);
+    }
+  });
+
   // 1.5 ADMIN AUTHENTICATION ENDPOINTS
   app.post("/api/admin/login", (req, res) => {
     const { password } = req.body;
