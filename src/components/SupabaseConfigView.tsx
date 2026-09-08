@@ -52,13 +52,25 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
     setMessage(null);
 
     try {
-      const conn = await supabaseService.checkConnection();
-      setIsSaving(false);
-      if (conn.active) {
-        setMessage({ type: 'success', text: `✅ Supabase ক্লাউড ডাটাবেস সক্রিয়! মোট ${conn.count}টি রেকর্ড রয়েছে।` });
-        onRefresh();
+      const cleanUrl = url.trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+      const resp = await fetch('/api/supabase/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: cleanUrl, key: key.trim() }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        setIsSaving(false);
+        if (data.success) {
+          setMessage({ type: 'success', text: `✅ Supabase ক্লাউড ক্রেডেনশিয়াল সফলভাবে সংযুক্ত হয়েছে!` });
+          onRefresh();
+        } else {
+          setMessage({ type: 'error', text: '❌ সংযোগ যাচাইয়ে সমস্যা: ' + (data.error || 'চেক করুন') });
+        }
       } else {
-        setMessage({ type: 'error', text: '❌ সংযোগ যাচাইয়ে সমস্যা: ' + (conn.error || 'চেক করুন') });
+        setIsSaving(false);
+        setMessage({ type: 'error', text: '❌ সার্ভার রেসপন্স ব্যর্থ!' });
       }
     } catch (err: any) {
       setIsSaving(false);

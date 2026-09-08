@@ -435,7 +435,8 @@
           return Promise.reject(new Error('Supabase direct config not provided'));
         }
 
-        var endpoint = SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key) + '&select=*';
+        var baseSupa = SUPABASE_URL.replace(/\/+$/, '').replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+        var endpoint = baseSupa + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key) + '&select=*';
         return fetch(endpoint, {
           method: 'GET',
           headers: {

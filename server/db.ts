@@ -88,6 +88,15 @@ const initialLocalLicenses: Record<string, LicenseRecord> = {
   }
 };
 
+export function sanitizeSupabaseUrl(rawUrl?: string): string {
+  if (!rawUrl) return '';
+  let url = rawUrl.trim();
+  url = url.replace(/\/+$/, '');
+  url = url.replace(/\/rest\/v1\/?$/i, '');
+  url = url.replace(/\/+$/, '');
+  return url;
+}
+
 class LicenseDatabase {
   private supabase: SupabaseClient | null = null;
   private localStore: Map<string, LicenseRecord> = new Map();
@@ -194,7 +203,7 @@ class LicenseDatabase {
   public initSupabase(url: string, key: string, saveToDisk = true): boolean {
     try {
       if (!url || !key) return false;
-      this.supabaseUrl = url.trim();
+      this.supabaseUrl = sanitizeSupabaseUrl(url);
       this.supabaseKey = key.trim();
       this.supabase = createClient(this.supabaseUrl, this.supabaseKey, {
         auth: { persistSession: false }

@@ -19,7 +19,8 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ valid: false, reason: 'No VIP License Key provided!' });
     }
 
-    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qbazzarqiplrqqfytajz.supabase.co';
+    const rawSupabaseUrl = process.env.SUPABASE_URL || 'https://qbazzarqiplrqqfytajz.supabase.co';
+    const SUPABASE_URL = rawSupabaseUrl.trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
     const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
     if (!SUPABASE_KEY) {

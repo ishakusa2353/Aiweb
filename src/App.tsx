@@ -37,10 +37,7 @@ export default function App() {
       setKeys(data);
       setSupabaseStatus((prev) => ({
         ...prev,
-        isSupabaseActive: true,
-        storageType: 'Supabase Cloud (Live)',
         keyCount: data.length,
-        supabaseUrl: SUPABASE_URL,
       }));
     } catch (e) {
       console.error('Failed to load keys', e);
@@ -49,20 +46,31 @@ export default function App() {
 
   const fetchSupabaseStatus = async () => {
     try {
-      const conn = await supabaseService.checkConnection();
-      setSupabaseStatus({
-        isSupabaseActive: conn.active,
-        storageType: conn.active ? 'Supabase Cloud (Live)' : 'Disconnected',
-        keyCount: conn.count,
-        supabaseUrl: SUPABASE_URL,
-      });
+      const resp = await fetch('/api/supabase/status');
+      if (resp.ok) {
+        const data = await resp.json();
+        setSupabaseStatus({
+          isSupabaseActive: data.isSupabaseActive,
+          storageType: data.isSupabaseActive ? 'Supabase Cloud (Live)' : 'Server Secure Store',
+          keyCount: data.keyCount || 0,
+          supabaseUrl: data.supabaseUrl || SUPABASE_URL,
+        });
+        return;
+      }
     } catch {
+      // fallback
+    }
+
+    try {
+      const conn = await supabaseService.checkConnection();
       setSupabaseStatus((prev) => ({
         ...prev,
-        isSupabaseActive: true,
-        storageType: 'Supabase Cloud (Live)',
-        supabaseUrl: SUPABASE_URL,
+        isSupabaseActive: conn.active,
+        storageType: conn.active ? 'Supabase Cloud (Live)' : 'Server Secure Store',
+        keyCount: conn.count,
       }));
+    } catch {
+      // ignore
     }
   };
 

@@ -95,14 +95,25 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
     e.preventDefault();
     setIsConnectingSupabase(true);
     try {
-      const conn = await supabaseService.checkConnection();
+      const cleanUrl = supabaseUrlInput.trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+      const resp = await fetch('/api/supabase/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: cleanUrl, key: supabaseKeyInput.trim() }),
+      });
+
       setIsConnectingSupabase(false);
-      if (conn.active) {
-        showActionToast('✅ Supabase ক্লাউড ডাটাবেস সক্রিয় ও সংযুক্ত!');
-        setShowSupabaseModal(false);
-        onRefresh();
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.success) {
+          showActionToast('✅ Supabase ক্লাউড ডাটাবেস সফলভাবে সংযুক্ত হয়েছে!');
+          setShowSupabaseModal(false);
+          onRefresh();
+        } else {
+          showActionToast('❌ সংযোগে সমস্যা: ' + (data.error || 'চেক করুন'), true);
+        }
       } else {
-        showActionToast('❌ সংযোগে সমস্যা: ' + (conn.error || 'চেক করুন'), true);
+        showActionToast('❌ সার্ভারে সংযোগ ব্যর্থ', true);
       }
     } catch {
       setIsConnectingSupabase(false);

@@ -27,6 +27,7 @@ export function generateBookmarkletCode(
   supabaseKey: string = process.env.SUPABASE_ANON_KEY || '',
   builtinLicenses: Record<string, any> = {}
 ): string {
+  const cleanSupabaseUrl = (supabaseUrl || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
   const jsonMarkets = JSON.stringify(QUOTEX_MARKETS);
   const jsonBuiltinLicenses = JSON.stringify(builtinLicenses);
 
@@ -44,7 +45,7 @@ export function generateBookmarkletCode(
   } catch(e){}
 
   window.__ISHAK_AI_ACTIVE__ = true;
-  var SUPABASE_URL = "${supabaseUrl || ''}";
+  var SUPABASE_URL = "${cleanSupabaseUrl}";
   var SUPABASE_KEY = "${supabaseKey || ''}";
   var LOGO_URL = "https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg";
   var MASTER_SIGNING_SALT = "${MASTER_SIGNING_SALT}";
