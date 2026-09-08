@@ -7,8 +7,8 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  const SUPABASE_URL = 'https://qbazzarqiplrqqfytajz.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo';
+  const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qbazzarqiplrqqfytajz.supabase.co';
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
   try {
     const resp = await fetch(`${SUPABASE_URL}/rest/v1/ishak_licenses?select=count`, {

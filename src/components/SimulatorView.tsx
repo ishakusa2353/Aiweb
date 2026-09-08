@@ -21,9 +21,42 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
   const [payout, setPayout] = useState<number>(93);
   const [livePrice, setLivePrice] = useState<number>(0.5742);
   const [candles, setCandles] = useState<Candle[]>([]);
-  const [tradeLogs, setTradeLogs] = useState<Array<{ id: string; type: 'CALL' | 'PUT'; amount: number; price: number; time: string; status: string }>>([]);
+  const [tradeLogs, setTradeLogs] = useState<Array<{ id: string; type: 'CALL' | 'PUT' | 'HOLD'; amount: number; price: number; time: string; status: string }>>([]);
   const [callButtonFlash, setCallButtonFlash] = useState(false);
   const [putButtonFlash, setPutButtonFlash] = useState(false);
+  const executedSignalsRef = useRef<Set<string>>(new Set());
+
+  // Strict Rule: ONE SIGNAL = ONE TRADE
+  useEffect(() => {
+    if (!lastSignal) return;
+
+    const sigId = lastSignal.signalId || `${lastSignal.liveExecutionTime}_${lastSignal.isCall}`;
+    if (executedSignalsRef.current.has(sigId)) {
+      return;
+    }
+    executedSignalsRef.current.add(sigId);
+
+    // If low confidence or risk detected: capital preservation, NO TRADE
+    if (lastSignal.isLowConfidence || lastSignal.isRiskDetected || lastSignal.isCall === null) {
+      const log = {
+        id: sigId.substring(0, 8),
+        type: 'HOLD' as const,
+        amount: 0,
+        price: livePrice,
+        time: new Date().toLocaleTimeString(),
+        status: 'LOW CONFIDENCE — TRADE WITHHELD',
+      };
+      setTradeLogs((prev) => [log, ...prev.slice(0, 7)]);
+      return;
+    }
+
+    // Execute single trade
+    if (lastSignal.isCall === true) {
+      handleCallTrade();
+    } else if (lastSignal.isCall === false) {
+      handlePutTrade();
+    }
+  }, [lastSignal]);
 
   // Generate initial candle history
   useEffect(() => {
@@ -338,8 +371,16 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
                     key={log.id}
                     className="flex items-center justify-between text-[10px] p-1.5 rounded bg-slate-900/90 border border-slate-800"
                   >
-                    <span className={log.type === 'CALL' ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                      {log.type} ${log.amount}
+                    <span
+                      className={
+                        log.type === 'CALL'
+                          ? 'text-emerald-400 font-bold'
+                          : log.type === 'PUT'
+                          ? 'text-rose-400 font-bold'
+                          : 'text-amber-400 font-bold'
+                      }
+                    >
+                      {log.type === 'HOLD' ? 'HOLD ⚠️ (Withheld)' : `${log.type} $${log.amount}`}
                     </span>
                     <span className="text-gray-400 font-mono">{log.time}</span>
                   </div>

@@ -1,5 +1,6 @@
 {
   "adminPassword": "ishakdevos",
-  "supabaseUrl": "https://qbazzarqiplrqqfytajz.supabase.co",
-  "supabaseKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo"
+  "telegramAuthorizedChats": [
+    8274806813
+  ]
 }

@@ -12,8 +12,8 @@
   } catch(e){}
 
   window.__ISHAK_AI_ACTIVE__ = true;
-  var SUPABASE_URL = "https://qbazzarqiplrqqfytajz.supabase.co";
-  var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
+  var SUPABASE_URL = "";
+  var SUPABASE_KEY = "";
   var LOGO_URL = "https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg";
   var MASTER_SIGNING_SALT = "ISHAK_VIP_2026_MASTER";
 

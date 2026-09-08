@@ -21,21 +21,23 @@ export default async function handler(req: any, res: any) {
     }
 
     // Direct Supabase password check for __ADMIN_CONFIG__
-    const SUPABASE_URL = 'https://qbazzarqiplrqqfytajz.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo';
+    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qbazzarqiplrqqfytajz.supabase.co';
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/ishak_licenses?key=eq.__ADMIN_CONFIG__&select=note`, {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`
-      }
-    });
+    if (SUPABASE_KEY) {
+      const resp = await fetch(`${SUPABASE_URL}/rest/v1/ishak_licenses?key=eq.__ADMIN_CONFIG__&select=note`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
 
-    if (resp.ok) {
-      const data = await resp.json();
-      const storedPass = data?.[0]?.note || 'ishakdevos';
-      if (cleanPass === storedPass) {
-        return res.status(200).json({ success: true, message: 'এডমিন লগইন সফল হয়েছে।' });
+      if (resp.ok) {
+        const data = await resp.json();
+        const storedPass = data?.[0]?.note || 'ishakdevos';
+        if (cleanPass === storedPass) {
+          return res.status(200).json({ success: true, message: 'এডমিন লগইন সফল হয়েছে।' });
+        }
       }
     }
 

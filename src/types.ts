@@ -37,10 +37,12 @@ export interface MarketCategory {
 }
 
 export interface SignalData {
-  isCall: boolean;
+  isCall: boolean | null;
   isRiskDetected?: boolean;
+  isLowConfidence?: boolean;
   riskReason?: string;
-  accuracy: string;
+  confidence?: string;
+  accuracy?: string;
   rsi: number;
   pattern: string;
   logic: string;
@@ -49,4 +51,11 @@ export interface SignalData {
   ema13: number;
   ema30: number;
   livePrice: number;
+  signalId?: string;
+  durationLabel?: string;
+  finishTime?: string;
+  payout?: string;
+  investment?: string;
+  liveExecutionTime?: string;
+  statusLabel?: string;
 }

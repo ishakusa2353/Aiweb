@@ -19,8 +19,12 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ valid: false, reason: 'No VIP License Key provided!' });
     }
 
-    const SUPABASE_URL = 'https://qbazzarqiplrqqfytajz.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo';
+    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://qbazzarqiplrqqfytajz.supabase.co';
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+    if (!SUPABASE_KEY) {
+      return res.status(503).json({ valid: false, reason: 'Verification service temporarily unavailable. Please try again.' });
+    }
 
     const resp = await fetch(`${SUPABASE_URL}/rest/v1/ishak_licenses?key=eq.${encodeURIComponent(cleanKey)}&select=*`, {
       headers: {
@@ -30,28 +34,28 @@ export default async function handler(req: any, res: any) {
     });
 
     if (!resp.ok) {
-      return res.status(502).json({ valid: false, reason: 'Supabase service unreachable' });
+      return res.status(503).json({ valid: false, reason: 'Service temporarily unavailable. Please try again.' });
     }
 
     const rows = await resp.json();
     if (!rows || !rows.length) {
-      return res.status(404).json({ valid: false, reason: '❌ লাইসেন্স ডাটাবেসে পাওয়া যায়নি!' });
+      return res.status(404).json({ valid: false, reason: 'Invalid or unrecognized VIP License Key!' });
     }
 
     const row = rows[0];
     if (row.active === false) {
-      return res.status(403).json({ valid: false, reason: '⛔ এই লাইসেন্সটি ব্লক করা আছে!' });
+      return res.status(403).json({ valid: false, reason: 'This license has been deactivated.' });
     }
 
     // Device check
     if (row.device_id && deviceId && row.device_id !== deviceId) {
-      return res.status(403).json({ valid: false, reason: '🔒 এই লাইসেন্সটি অন্য ডিভাইসে যুক্ত আছে!' });
+      return res.status(403).json({ valid: false, reason: 'This license is linked to another device.' });
     }
 
     const now = Date.now();
     const exp = row.exp ? Number(row.exp) : null;
     if (exp && now > exp) {
-      return res.status(403).json({ valid: false, reason: '⏳ লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!' });
+      return res.status(403).json({ valid: false, reason: 'This license key has expired.' });
     }
 
     return res.status(200).json({
@@ -61,6 +65,7 @@ export default async function handler(req: any, res: any) {
       duration: row.duration || '30d'
     });
   } catch (err: any) {
-    return res.status(500).json({ valid: false, reason: err.message || 'Verification error' });
+    console.error('License verification error:', err);
+    return res.status(500).json({ valid: false, reason: 'Service temporarily unavailable. Please try again.' });
   }
 }
