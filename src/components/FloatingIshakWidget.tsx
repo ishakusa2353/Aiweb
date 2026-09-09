@@ -367,7 +367,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           else if (!tradeDuration) setShowTimeModal(true);
         }, 1100);
       } else {
-        showToast(data.reason || 'License verification failed.', true);
+        const rawReason = data.reason || '';
+        const isWrong = !rawReason || rawReason.includes('পাওয়া যায়নি') || rawReason.includes('not found') || rawReason.includes('Invalid') || rawReason.includes('WRONG') || rawReason.includes('যাচাই করা যায়নি');
+        showToast(isWrong ? '❌ WRONG LICENCES! (ভুল লাইসেন্স কি!)' : rawReason, true);
       }
     } catch (err: any) {
       setVerifying(false);
@@ -534,7 +536,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 {hudResult.isCall !== null && (
                   <div className="mt-2 py-1.5 px-2.5 rounded-lg text-center font-bold text-[10px] flex items-center justify-center gap-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                     <span>⚡</span>
-                    <span>TRADE PLACED ({hudResult.isCall ? 'CALL ⬆' : 'PUT ⬇'}) — ONE SIGNAL = ONE TRADE</span>
+                    <span>AUTO-TRADE EXECUTED ({hudResult.isCall ? 'CALL ⬆' : 'PUT ⬇'}) — ১ টি ট্রেড সম্পন্ন</span>
                   </div>
                 )}
               </div>

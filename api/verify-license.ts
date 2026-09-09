@@ -40,7 +40,7 @@ export default async function handler(req: any, res: any) {
 
     const rows = await resp.json();
     if (!rows || !rows.length) {
-      return res.status(404).json({ valid: false, reason: 'Invalid or unrecognized VIP License Key!' });
+      return res.status(404).json({ valid: false, reason: '❌ WRONG LICENCES! (ভুল লাইসেন্স কি! সঠিক কি দিয়ে আবার চেষ্টা করুন)' });
     }
 
     const row = rows[0];

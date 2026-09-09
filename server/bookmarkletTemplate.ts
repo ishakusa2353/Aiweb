@@ -603,7 +603,7 @@ export function generateBookmarkletCode(
         })
         .then(function(rows) {
           if (!rows || !rows.length) {
-            return { valid: false, reason: '❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি! সঠিক কি দিন বা @IshakVhai এ যোগাযোগ করুন।' };
+            return { valid: false, reason: '❌ WRONG LICENCES! (ভুল লাইসেন্স কি! সঠিক কি দিয়ে আবার চেষ্টা করুন)' };
           }
           var row = rows[0];
           if (row.active === false) {
@@ -705,7 +705,7 @@ export function generateBookmarkletCode(
                 if (response.status >= 200 && response.status < 300) {
                   var rows = JSON.parse(response.responseText);
                   if (!rows || !rows.length) {
-                    res({ valid: false, reason: '❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি!' });
+                    res({ valid: false, reason: '❌ WRONG LICENCES! (ভুল লাইসেন্স কি! সঠিক কি দিয়ে আবার চেষ্টা করুন)' });
                     return;
                   }
                   var row = rows[0];
@@ -825,7 +825,7 @@ export function generateBookmarkletCode(
 
             resolve({
               valid: false,
-              reason: '❌ লাইসেন্স কি যাচাই করা যায়নি! সঠিক কি দিন বা এডমিন @IshakVhai এর সাথে যোগাযোগ করুন।'
+              reason: '❌ WRONG LICENCES! (ভুল লাইসেন্স কি! সঠিক কি দিয়ে আবার চেষ্টা করুন বা @IshakVhai এ যোগাযোগ করুন)'
             });
           });
       }
@@ -1068,6 +1068,7 @@ export function generateBookmarkletCode(
       '<input id="t-input" type="text" placeholder="e.g. 84920184" style="width:100%;box-sizing:border-box;background:#070D1E;border:1.5px solid #00E5FF;border-radius:8px;padding:8px 10px;color:#FFD600;font-weight:bold;font-size:12px;letter-spacing:1px;text-align:center;outline:none;" />' +
       '</div>' +
       (local && local.exp ? '<div style="background:rgba(255,214,0,0.1);border:1px dashed #FFD600;border-radius:8px;padding:6px;text-align:center;margin-bottom:8px;"><span style="color:#A0AEC0;font-size:10px;">⌛ Live Expiry Remaining: </span><b id="k-live-timer" style="color:#FFD600;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
+      '<div id="k-error-box" style="display:none;margin-bottom:8px;padding:7px 10px;border-radius:8px;background:rgba(213,0,0,0.22);border:1.5px solid #FF1744;color:#FF5252;font-size:11px;font-weight:bold;text-align:center;animation:ishakToastIn 0.2s ease-out;"></div>' +
       '<div style="display:flex;gap:6px;margin-bottom:10px;">' +
       '<button id="k-submit-btn" style="flex:1;background:linear-gradient(135deg,#00E5FF,#00B0FF);color:#070D1E;border:none;padding:9px;border-radius:8px;font-weight:900;font-size:11px;cursor:pointer;">Verify & Unlock</button>' +
       (local && local.key ? '<button id="k-logout-btn" style="background:rgba(255,23,68,0.15);color:#FF5252;border:1.5px solid #FF1744;padding:9px 12px;border-radius:8px;font-weight:900;font-size:11px;cursor:pointer;">Logout</button>' : '') +
@@ -1116,8 +1117,15 @@ export function generateBookmarkletCode(
       e.stopPropagation();
       var val = inputEl.value.trim().toUpperCase();
       var tId = traderEl.value.trim();
+      var errBox = document.getElementById('k-error-box');
+      if (errBox) errBox.style.display = 'none';
+
       if (!val) {
         showModalToast(km, 'Please enter a license key!', true);
+        if (errBox) {
+          errBox.style.display = 'block';
+          errBox.innerText = '⚠️ Please enter a license key!';
+        }
         return;
       }
       var submitBtn = document.getElementById('k-submit-btn');
@@ -1133,7 +1141,20 @@ export function generateBookmarkletCode(
           }, 1100);
         } else {
           submitBtn.innerText = 'Verify & Unlock';
-          showModalToast(km, result.reason, true);
+          var rawReason = result.reason || '';
+          var isWrongLic = !rawReason || rawReason.indexOf('পাওয়া যায়নি') !== -1 || rawReason.indexOf('ভুল') !== -1 || rawReason.indexOf('not found') !== -1 || rawReason.indexOf('Invalid') !== -1 || rawReason.indexOf('WRONG') !== -1 || rawReason.indexOf('যাচাই করা যায়নি') !== -1;
+          var displayMsg = isWrongLic ? '❌ WRONG LICENCES! (ভুল লাইসেন্স কি!)' : result.reason;
+
+          showModalToast(km, displayMsg, true);
+          if (errBox) {
+            errBox.style.display = 'block';
+            errBox.innerHTML = displayMsg;
+          }
+          inputEl.style.borderColor = '#FF1744';
+          inputEl.focus();
+          setTimeout(function() {
+            inputEl.style.borderColor = '#00E5FF';
+          }, 3500);
         }
       });
     };
@@ -1248,7 +1269,7 @@ export function generateBookmarkletCode(
       return { success: false, reason: 'NO_TRADE_SIGNAL' };
     }
 
-    // Rule: ONE SIGNAL = ONE TRADE
+    // Rule: STRICT ONE SIGNAL = ONE TRADE
     if (!signalId) {
       signalId = 'SIG_' + Date.now();
     }
@@ -1261,43 +1282,79 @@ export function generateBookmarkletCode(
       return { success: false, reason: 'LOCKED' };
     }
     var now = Date.now();
-    if (now - lastTradeTimestamp < 3500) {
+    if (now - lastTradeTimestamp < 3000) {
       console.warn('[Ishak AI] Trade debounce active. Ignoring rapid execution.');
       return { success: false, reason: 'DEBOUNCED' };
     }
 
-    // Acquire lock and record signal execution
+    // Acquire lock and record signal execution immediately to guarantee exactly 1 trade
     activeTradeLock = true;
     executedSignalIds[signalId] = true;
     lastTradeTimestamp = now;
 
     try {
+      function isElementVisible(el) {
+        if (!el) return false;
+        if (el.closest('#ishak-main-widget') || el.closest('.ishak-dialog-modal')) return false;
+        try {
+          var style = window.getComputedStyle(el);
+          if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        } catch(e){}
+        try {
+          var rect = el.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return false;
+          if (rect.bottom < 0 || rect.right < 0) return false;
+        } catch(e){}
+        return true;
+      }
+
       var candidateButtons = [];
 
+      // 1. Direct Quotex Deal Button Selectors (Desktop & Mobile responsive views)
       var directSelectors = isCall ? [
-        '[data-test="call-btn"]',
-        '[data-test-id="call-btn"]',
+        'button.section-deal__button--call',
+        'button.section-deal__button--up',
         '.section-deal__button--call',
         '.section-deal__button--up',
+        'button[data-test="call-btn"]',
+        'button[data-test-id="call-btn"]',
+        'button[data-test-id="call-button"]',
+        'button[data-qa="call-button"]',
+        'button.deal-form__button-call',
+        'button.deal-form__button--call',
+        'button.deal-form__button--up',
         '.deal-form__button-call',
+        '.deal-form__button--call',
         '.deal-form__button--up',
         'button.call-btn',
         'button.btn-call',
+        'button[class*="deal-button_up"]',
         'button[class*="button--call"]',
         'button[class*="button--up"]',
+        'button[class*="button-call"]',
         'button.button--green',
         '#platform-call-button'
       ] : [
-        '[data-test="put-btn"]',
-        '[data-test-id="put-btn"]',
+        'button.section-deal__button--put',
+        'button.section-deal__button--down',
         '.section-deal__button--put',
         '.section-deal__button--down',
+        'button[data-test="put-btn"]',
+        'button[data-test-id="put-btn"]',
+        'button[data-test-id="put-button"]',
+        'button[data-qa="put-button"]',
+        'button.deal-form__button-put',
+        'button.deal-form__button--put',
+        'button.deal-form__button--down',
         '.deal-form__button-put',
+        '.deal-form__button--put',
         '.deal-form__button--down',
         'button.put-btn',
         'button.btn-put',
+        'button[class*="deal-button_down"]',
         'button[class*="button--put"]',
         'button[class*="button--down"]',
+        'button[class*="button-put"]',
         'button.button--red',
         '#platform-put-button'
       ];
@@ -1306,65 +1363,169 @@ export function generateBookmarkletCode(
         var foundList = document.querySelectorAll(directSelectors[s]);
         for (var j = 0; j < foundList.length; j++) {
           var el = foundList[j];
-          if (!el.closest('#ishak-main-widget') && !el.closest('.ishak-dialog-modal')) {
+          if (isElementVisible(el)) {
             candidateButtons.push(el);
           }
         }
       }
 
+      // 2. Comprehensive Container Search if not found directly
       if (candidateButtons.length === 0) {
-        var dealContainers = document.querySelectorAll('.section-deal, .deal-form, .panel-deal, [class*="deal"], aside');
+        var dealContainers = document.querySelectorAll(
+          '.section-deal, .deal-form, .panel-deal, [class*="section-deal"], [class*="deal-form"], [class*="dealForm"], [class*="trading-panel"], aside, [class*="sidebar"]'
+        );
         for (var d = 0; d < dealContainers.length; d++) {
-          var containerBtns = dealContainers[d].querySelectorAll('button, .button, div[role="button"]');
+          var containerBtns = dealContainers[d].querySelectorAll('button, .button, div[role="button"], a[role="button"]');
           for (var cb = 0; cb < containerBtns.length; cb++) {
             var b = containerBtns[cb];
-            if (b.closest('#ishak-main-widget') || b.closest('.ishak-dialog-modal')) continue;
+            if (!isElementVisible(b)) continue;
+
             var text = (b.textContent || '').trim().toUpperCase();
             var cls = (b.className || '').toString().toLowerCase();
 
             if (isCall) {
-              if (
-                text === 'UP' || text === 'CALL' || text === 'HIGHER' || text.indexOf('ВВЕРХ') !== -1 || text.indexOf('ВЫШЕ') !== -1 ||
-                cls.indexOf('call') !== -1 || cls.indexOf('--up') !== -1 || cls.indexOf('green') !== -1
-              ) {
-                candidateButtons.push(b);
-              }
+              var isCallMatch =
+                text.indexOf('UP') !== -1 ||
+                text.indexOf('CALL') !== -1 ||
+                text.indexOf('HIGHER') !== -1 ||
+                text.indexOf('BUY') !== -1 ||
+                text.indexOf('ВВЕРХ') !== -1 ||
+                text.indexOf('ВЫШЕ') !== -1 ||
+                text.indexOf('হায়ার') !== -1 ||
+                text.indexOf('কল') !== -1 ||
+                cls.indexOf('call') !== -1 ||
+                cls.indexOf('--up') !== -1 ||
+                cls.indexOf('green') !== -1;
+              if (isCallMatch) candidateButtons.push(b);
             } else {
-              if (
-                text === 'DOWN' || text === 'PUT' || text === 'LOWER' || text.indexOf('ВНИЗ') !== -1 || text.indexOf('НИЖЕ') !== -1 ||
-                cls.indexOf('put') !== -1 || cls.indexOf('--down') !== -1 || cls.indexOf('red') !== -1
-              ) {
-                candidateButtons.push(b);
-              }
+              var isPutMatch =
+                text.indexOf('DOWN') !== -1 ||
+                text.indexOf('PUT') !== -1 ||
+                text.indexOf('LOWER') !== -1 ||
+                text.indexOf('SELL') !== -1 ||
+                text.indexOf('ВНИЗ') !== -1 ||
+                text.indexOf('НИЖЕ') !== -1 ||
+                text.indexOf('লোয়ার') !== -1 ||
+                text.indexOf('পুট') !== -1 ||
+                cls.indexOf('put') !== -1 ||
+                cls.indexOf('--down') !== -1 ||
+                cls.indexOf('red') !== -1;
+              if (isPutMatch) candidateButtons.push(b);
+            }
+          }
+        }
+      }
+
+      // 3. Fallback search across all visible buttons on page
+      if (candidateButtons.length === 0) {
+        var allButtons = document.querySelectorAll('button');
+        for (var ab = 0; ab < allButtons.length; ab++) {
+          var anyBtn = allButtons[ab];
+          if (!isElementVisible(anyBtn)) continue;
+          var anyText = (anyBtn.textContent || '').trim().toUpperCase();
+          var anyCls = (anyBtn.className || '').toString().toLowerCase();
+          if (isCall) {
+            if (anyCls.indexOf('call') !== -1 || anyCls.indexOf('--up') !== -1 || anyText === 'UP' || anyText.indexOf('CALL') !== -1) {
+              candidateButtons.push(anyBtn);
+            }
+          } else {
+            if (anyCls.indexOf('put') !== -1 || anyCls.indexOf('--down') !== -1 || anyText === 'DOWN' || anyText.indexOf('PUT') !== -1) {
+              candidateButtons.push(anyBtn);
             }
           }
         }
       }
 
       if (candidateButtons.length > 0) {
+        // Pick the single BEST visible Quotex button
         var targetBtn = candidateButtons[0];
 
-        // Highlight visual confirmation glow
-        var origOutline = targetBtn.style.outline;
-        var origBoxShadow = targetBtn.style.boxShadow;
-        targetBtn.style.outline = isCall ? '3px solid #00FF66' : '3px solid #FF1744';
-        targetBtn.style.boxShadow = isCall ? '0 0 25px #00FF66' : '0 0 25px #FF1744';
-        setTimeout(function() {
-          targetBtn.style.outline = origOutline;
-          targetBtn.style.boxShadow = origBoxShadow;
-        }, 1200);
+        // Highlight button visually
+        try {
+          var origOutline = targetBtn.style.outline;
+          var origBoxShadow = targetBtn.style.boxShadow;
+          targetBtn.style.outline = isCall ? '3px solid #00FF66' : '3px solid #FF1744';
+          targetBtn.style.boxShadow = isCall ? '0 0 25px #00FF66' : '0 0 25px #FF1744';
+          setTimeout(function() {
+            try {
+              targetBtn.style.outline = origOutline;
+              targetBtn.style.boxShadow = origBoxShadow;
+            } catch(e){}
+          }, 1200);
+        } catch(e){}
 
-        // Dispatches EXACTLY ONE single native click event
-        targetBtn.click();
+        try { targetBtn.focus(); } catch(e){}
 
+        // Dispatches complete interaction sequence (Touch + Pointer + Mouse + Native Click)
+        // Ensures Quotex's React event listeners trigger reliably on both mobile & desktop
+        var rect = targetBtn.getBoundingClientRect();
+        var clientX = rect.left + rect.width / 2;
+        var clientY = rect.top + rect.height / 2;
+        var evtOpts = {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          detail: 1,
+          clientX: clientX,
+          clientY: clientY,
+          screenX: clientX,
+          screenY: clientY,
+          buttons: 1,
+          button: 0
+        };
+
+        // Mobile touch dispatch for Kiwi / Chrome Mobile
+        try {
+          if (typeof Touch !== 'undefined' && typeof TouchEvent !== 'undefined') {
+            var touch = new Touch({
+              identifier: Date.now(),
+              target: targetBtn,
+              clientX: clientX,
+              clientY: clientY,
+              radiusX: 2.5,
+              radiusY: 2.5,
+              rotationAngle: 10,
+              force: 0.5
+            });
+            targetBtn.dispatchEvent(new TouchEvent('touchstart', { cancelable: true, bubbles: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
+            targetBtn.dispatchEvent(new TouchEvent('touchend', { cancelable: true, bubbles: true, touches: [], targetTouches: [], changedTouches: [touch] }));
+          }
+        } catch(e){}
+
+        try {
+          if (typeof PointerEvent !== 'undefined') {
+            targetBtn.dispatchEvent(new PointerEvent('pointerdown', evtOpts));
+          }
+        } catch(e){}
+        try {
+          targetBtn.dispatchEvent(new MouseEvent('mousedown', evtOpts));
+        } catch(e){}
+        try {
+          if (typeof PointerEvent !== 'undefined') {
+            targetBtn.dispatchEvent(new PointerEvent('pointerup', evtOpts));
+          }
+        } catch(e){}
+        try {
+          targetBtn.dispatchEvent(new MouseEvent('mouseup', evtOpts));
+        } catch(e){}
+        try {
+          targetBtn.dispatchEvent(new MouseEvent('click', evtOpts));
+        } catch(e){}
+        try {
+          targetBtn.click();
+        } catch(e){}
+
+        console.log('[Ishak AI] ✅ Auto-trade executed successfully (EXACTLY 1 TRADE on visible button):', targetBtn);
         return { success: true };
       } else {
+        console.warn('[Ishak AI] ⚠️ Visible Quotex button not found for direction:', isCall ? 'CALL' : 'PUT');
         return { success: false, reason: 'NOT_FOUND' };
       }
     } catch(err) {
+      console.error('[Ishak AI] Auto-trade error:', err);
       return { success: false, reason: err.message };
     } finally {
-      // Cooldown timer to safely release execution lock
+      // Cooldown timer to safely release lock for the NEXT signal
       setTimeout(function() {
         activeTradeLock = false;
       }, 3000);
@@ -1496,9 +1657,13 @@ export function generateBookmarkletCode(
 
           // Execute EXACTLY ONE trade with strict lock & unique signal ID
           var tradeRes = executeQuotexTrade(isCall, signalId);
-          var tradeFeedback = '<div style="background:rgba(0,255,102,0.18);border:1.5px solid #00FF66;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:900;font-size:10.5px;color:#00FF66;display:flex;align-items:center;justify-content:center;gap:5px;">' +
-            '<span>⚡</span><span>TRADE EXECUTED (' + (isCall ? 'CALL ⬆' : 'PUT ⬇') + ') — ONE SIGNAL = ONE TRADE</span>' +
-            '</div>';
+          var tradeFeedback = tradeRes.success
+            ? '<div style="background:rgba(0,255,102,0.18);border:1.5px solid #00FF66;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:900;font-size:10.5px;color:#00FF66;display:flex;align-items:center;justify-content:center;gap:5px;">' +
+              '<span>⚡</span><span>AUTO-TRADE EXECUTED (' + (isCall ? 'CALL ⬆' : 'PUT ⬇') + ') — ১ টি ট্রেড সম্পন্ন</span>' +
+              '</div>'
+            : '<div style="background:rgba(255,171,0,0.18);border:1.5px solid #FFD600;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:900;font-size:10.5px;color:#FFD600;">' +
+              '<span>⚠️ সিগন্যাল প্রস্তুত (' + (isCall ? 'CALL ⬆' : 'PUT ⬇') + ') — কোটেক্স বোতামে ১টি ক্লিক করুন</span>' +
+              '</div>';
 
           hudBody.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-bottom:1px solid rgba(0,229,255,0.25);padding-bottom:4px;">' +
             '<span style="font-weight:900;color:#fff;font-size:11px;">' + currentMarket + '</span>' +

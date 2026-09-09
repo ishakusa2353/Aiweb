@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal } from 'lucide-react';
+import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2 } from 'lucide-react';
 import { LicenseRecord } from '../types';
 import { supabaseService } from '../lib/supabaseService';
 
@@ -55,6 +55,56 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
   const [note, setNote] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+
+  // Customer delivery message modal state
+  const [showDeliveryModal, setShowDeliveryModal] = useState<boolean>(false);
+  const [deliveryLicense, setDeliveryLicense] = useState<{
+    key: string;
+    tier?: string;
+    duration?: string;
+    trader_id?: string;
+    note?: string;
+  } | null>(null);
+  const [copiedDeliveryStatus, setCopiedDeliveryStatus] = useState<boolean>(false);
+  const [copiedCodeStatus, setCopiedCodeStatus] = useState<boolean>(false);
+
+  const getBookmarkletCode = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ais-dev-pzmtmbqgru6e7exmxhaddk-83110597495.asia-east1.run.app';
+    return `javascript:(function(){var s=document.createElement('script');s.src='${origin}/bookmarklet.js?t='+Date.now();document.head.appendChild(s);})();`;
+  };
+
+  const getDeliveryMessage = (lic: {
+    key: string;
+    tier?: string;
+    duration?: string;
+    trader_id?: string;
+    note?: string;
+  }) => {
+    const code = getBookmarkletCode();
+    const durLabel = lic.duration === 'lifetime' ? 'আজীবন (Lifetime)' : (lic.duration || '30 Days');
+    return `⚡ ISHAK AI PRO - VIP লাইসেন্স ডেলিভারি ⚡
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+অভিনন্দন! আপনার Quotex VIP ট্রেডিং বট লাইসেন্স সফলভাবে প্রস্তুত করা হয়েছে।
+
+🔑 আপনার লাইসেন্স কি: ${lic.key}
+💎 মেম্বারশিপ টিয়ার: ${(lic.tier || 'VIP').toUpperCase()}
+⏱️ লাইসেন্স মেয়াদ: ${durLabel} (প্রথম লগইনে শুরু হবে)
+🔒 সিঙ্গেল ডিভাইস পলিসি: সক্রিয় (এক কি দিয়ে ১ টি ডিভাইসে চলবে)
+${lic.trader_id ? `👤 ট্রেডার আইডি: ${lic.trader_id}\n` : ''}${lic.note ? `📝 নোট: ${lic.note}\n` : ''}
+📲 কিউটেক্সে (Quotex) বট চালু করার নিয়ম:
+১. Kiwi Browser বা Chrome এ Quotex লগইন করে লাইভ ট্রেডিং চার্ট ওপেন করুন।
+২. ব্রাউজারের বুকমার্ক বা URL বারে নিচের লোডার কোডটি পেস্ট করে এন্টার চাপুন:
+
+${code}
+
+৩. স্ক্রিনে 3D গোল রোবট লোগো আসবে। সেখানে ক্লিক করে আপনার লাইসেন্স কি-টি দিয়ে "Verify & Unlock" চাপুন।
+৪. আপনার পছন্দের মার্কেট ও টাইম সিলেক্ট করে সিগন্যাল অনুযায়ী অটো ট্রেড শুরু করুন!
+
+⚡ যেকোনো প্রয়োজনে যোগাযোগ করুন:
+টেলিগ্রাম সাপোর্ট: @IshakVhai
+অফিসিয়াল টেলিগ্রাম বট: @IshakTrading_bot
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  };
 
   // Supabase quick connect modal state
   const [showSupabaseModal, setShowSupabaseModal] = useState<boolean>(false);
@@ -158,11 +208,26 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
     setIsSubmitting(false);
 
     if (success) {
+      const generatedKey = customKey.trim().toUpperCase() || 'ISHAK-' + selectedTier.toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const generatedDuration = payload.duration;
+      const genTraderId = traderId.trim() || undefined;
+      const genNote = note.trim() || undefined;
+
       setCustomKey('');
       setTraderId('');
       setNote('');
       setShowCreateModal(false);
-      showActionToast('✅ নতুন VIP লাইসেন্স সফলভাবে তৈরি হয়েছে!');
+      showActionToast('✅ নতুন VIP লাইসেন্স তৈরি হয়েছে! কাস্টমার ডেলিভারি মেসেজ প্রস্তুত।');
+
+      // Auto-open Customer Delivery Modal
+      setDeliveryLicense({
+        key: generatedKey,
+        tier: selectedTier,
+        duration: generatedDuration,
+        trader_id: genTraderId,
+        note: genNote,
+      });
+      setShowDeliveryModal(true);
     } else {
       showActionToast('❌ লাইসেন্স তৈরিতে সমস্যা হয়েছে!', true);
     }
@@ -522,6 +587,19 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+
+                {/* Customer Delivery Message Button */}
+                <button
+                  onClick={() => {
+                    setDeliveryLicense(k);
+                    setShowDeliveryModal(true);
+                  }}
+                  className="w-full mt-2.5 py-1.5 px-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
+                  title="কাস্টমার ডেলিভারি মেসেজ"
+                >
+                  <Send className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>কাস্টমার ডেলিভারি মেসেজ</span>
+                </button>
               </div>
             );
           })
@@ -827,6 +905,119 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📦 CUSTOMER DELIVERY MESSAGE MODAL */}
+      {showDeliveryModal && deliveryLicense && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999998] flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-5 shadow-2xl relative max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/30">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📦</span>
+                <div>
+                  <h3 className="text-sm font-black text-white">কাস্টমার ডেলিভারি মেসেজ (Ready-to-Send)</h3>
+                  <p className="text-[11px] text-cyan-400">এই মেসেজটি কপি করে কাস্টমারকে সরাসরি পাঠিয়ে দিন</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDeliveryModal(false)}
+                className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs font-bold hover:bg-red-500 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Quick Key Banner */}
+            <div className="bg-slate-950 p-3 rounded-xl border border-cyan-500/40 mb-3 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-gray-400 block font-semibold">ডেলিভারি লাইসেন্স কি:</span>
+                <span className="text-cyan-300 font-mono font-black text-sm select-all">{deliveryLicense.key}</span>
+              </div>
+              <button
+                onClick={() => handleCopy(deliveryLicense.key)}
+                className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 font-bold text-xs flex items-center gap-1.5 transition"
+              >
+                {copiedKey === deliveryLicense.key ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>শুধু কী কপি</span>
+              </button>
+            </div>
+
+            {/* Message Preview Textarea */}
+            <div className="flex-1 overflow-y-auto mb-3">
+              <div className="relative">
+                <textarea
+                  readOnly
+                  rows={13}
+                  value={getDeliveryMessage(deliveryLicense)}
+                  className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-700 text-gray-200 text-xs font-mono leading-relaxed outline-none focus:border-cyan-400 select-all"
+                />
+              </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="space-y-2 pt-2 border-t border-slate-800">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    const msg = getDeliveryMessage(deliveryLicense);
+                    navigator.clipboard.writeText(msg);
+                    setCopiedDeliveryStatus(true);
+                    showActionToast('📋 সম্পূর্ণ কাস্টমার মেসেজ কপি হয়েছে!');
+                    setTimeout(() => setCopiedDeliveryStatus(false), 2500);
+                  }}
+                  className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-2 transition"
+                >
+                  {copiedDeliveryStatus ? <Check className="w-4 h-4 text-emerald-950" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedDeliveryStatus ? 'মেসেজ কপি হয়েছে!' : '📋 সম্পূর্ণ মেসেজ কপি করুন'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const code = getBookmarkletCode();
+                    navigator.clipboard.writeText(code);
+                    setCopiedCodeStatus(true);
+                    showActionToast('📜 লোডার কোড কপি হয়েছে!');
+                    setTimeout(() => setCopiedCodeStatus(false), 2500);
+                  }}
+                  className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs border border-cyan-500/30 flex items-center justify-center gap-2 transition"
+                >
+                  {copiedCodeStatus ? <Check className="w-4 h-4 text-emerald-400" /> : <Terminal className="w-4 h-4 text-cyan-400" />}
+                  <span>{copiedCodeStatus ? 'কোড কপি হয়েছে!' : '📜 শুধু লোডার কোড কপি'}</span>
+                </button>
+              </div>
+
+              {/* Direct Social Share Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <a
+                  href={`https://t.me/share/url?url=&text=${encodeURIComponent(getDeliveryMessage(deliveryLicense))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-1.5 px-3 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/40 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>টেলিগ্রামে পাঠান</span>
+                </a>
+
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(getDeliveryMessage(deliveryLicense))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>হোয়াটসঅ্যাপে পাঠান</span>
+                </a>
+
+                <button
+                  onClick={() => setShowDeliveryModal(false)}
+                  className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-300 text-[11px] font-semibold transition"
+                >
+                  বন্ধ করুন
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

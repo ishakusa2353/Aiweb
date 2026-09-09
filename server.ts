@@ -52,7 +52,7 @@ async function startServer() {
       if (!license) {
         return res.status(404).json({
           valid: false,
-          reason: "This license key was not found or has been deleted from the database!"
+          reason: "❌ WRONG LICENCES! (ভুল লাইসেন্স কি! সঠিক কি দিয়ে আবার চেষ্টা করুন)"
         });
       }
 
@@ -163,7 +163,7 @@ async function startServer() {
     try {
       const license = await licenseDb.getLicense(inputKey);
       if (!license) {
-        return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি!" })});`);
+        return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "❌ WRONG LICENCES! (ভুল লাইসেন্স কি! সঠিক কি দিয়ে আবার চেষ্টা করুন)" })});`);
       }
       if (!license.active) {
         return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "এই লাইসেন্সটি ব্লক বা নিষ্ক্রিয় করা হয়েছে!" })});`);
