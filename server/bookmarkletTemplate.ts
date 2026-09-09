@@ -142,7 +142,9 @@ export function generateBookmarkletCode(
 
   function formatCountdown(targetMs) {
     if (!targetMs) return 'Lifetime Access';
-    var diff = targetMs - Date.now();
+    var num = Number(targetMs);
+    if (isNaN(num) || num <= 0) return 'Lifetime Access';
+    var diff = num - Date.now();
     if (diff <= 0) return 'Expired';
     var d = Math.floor(diff / 86400000);
     var h = Math.floor((diff % 86400000) / 3600000);
@@ -150,7 +152,8 @@ export function generateBookmarkletCode(
     var s = Math.floor((diff % 60000) / 1000);
     if (d > 0) return d + 'd ' + h + 'h ' + m + 'm ' + s + 's';
     if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
-    return m + 'm ' + s + 's';
+    if (m > 0) return m + 'm ' + s + 's';
+    return s + 's';
   }
 
   // 🔊 PHOTOSTAT / PHOTOCOPIER CARRIAGE SCANNER SOUND SYNTHESIZER
@@ -627,6 +630,8 @@ export function generateBookmarkletCode(
             .filter(Boolean);
           var devLimit = row.device_limit !== undefined && row.device_limit !== null ? Number(row.device_limit) : 1;
           var isUnlimited = devLimit === 0 || devLimit === -1;
+          var updates = {};
+          var needPatch = false;
 
           if (myDeviceId) {
             var alreadyRegistered = registeredDevices.indexOf(myDeviceId) !== -1;
@@ -1254,7 +1259,7 @@ export function generateBookmarkletCode(
       '<button id="hub-btn-license" style="background:#111F43;color:#fff;border:1.5px solid rgba(0,229,255,0.4);padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
       '<span>🔑 VIP Key & Logout</span><b style="color:#00E5FF;">' + (local && local.key ? local.key.substring(0, 11) + '..' : 'Not Set') + '</b>' +
       '</button>' +
-      (local && local.exp ? '<div style="background:rgba(0,229,255,0.08);border:1.5px solid rgba(0,229,255,0.35);border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#A0AEC0;font-size:10px;">⌛ Live Expiry:</span><b style="color:#FFD600;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
+      (local && local.exp ? '<div style="background:rgba(0,229,255,0.08);border:1.5px solid rgba(0,229,255,0.35);border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#A0AEC0;font-size:10px;">⌛ Live Expiry:</span><b id="hub-live-timer" style="color:#FFD600;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
       '<a href="https://t.me/IshakVhai" target="_blank" style="color:#00E5FF;text-align:center;font-size:11px;font-weight:bold;text-decoration:none;padding:7px;border:1px dashed #00E5FF;border-radius:8px;background:rgba(0,229,255,0.08);">⚡ Telegram Support (@IshakVhai)</a>' +
       '</div>';
 
@@ -1363,232 +1368,70 @@ export function generateBookmarkletCode(
     lastTradeTimestamp = now;
 
     try {
-      function isElementVisible(el) {
-        if (!el) return false;
-        if (el.closest('#ishak-main-widget') || el.closest('.ishak-dialog-modal')) return false;
-        try {
-          var style = window.getComputedStyle(el);
-          if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-        } catch(e){}
-        try {
-          var rect = el.getBoundingClientRect();
-          if (rect.width <= 0 || rect.height <= 0) return false;
-          if (rect.bottom < 0 || rect.right < 0) return false;
-        } catch(e){}
-        return true;
-      }
+      // 🎯 Auto-trade system integration (exact logic from user snippet)
+      var cBtn = document.querySelector('.btn-call, .button-call, .section-deal__button--up, button.call, div[class*="call"]');
+      var pBtn = document.querySelector('.btn-put, .button-put, .section-deal__button--down, button.put, div[class*="put"]');
 
-      var candidateButtons = [];
-
-      // 1. Direct Quotex Deal Button Selectors (Desktop & Mobile responsive views)
-      var directSelectors = isCall ? [
-        'button.section-deal__button--call',
-        'button.section-deal__button--up',
-        '.section-deal__button--call',
-        '.section-deal__button--up',
-        'button[data-test="call-btn"]',
-        'button[data-test-id="call-btn"]',
-        'button[data-test-id="call-button"]',
-        'button[data-qa="call-button"]',
-        'button.deal-form__button-call',
-        'button.deal-form__button--call',
-        'button.deal-form__button--up',
-        '.deal-form__button-call',
-        '.deal-form__button--call',
-        '.deal-form__button--up',
-        'button.call-btn',
-        'button.btn-call',
-        'button[class*="deal-button_up"]',
-        'button[class*="button--call"]',
-        'button[class*="button--up"]',
-        'button[class*="button-call"]',
-        'button.button--green',
-        '#platform-call-button'
-      ] : [
-        'button.section-deal__button--put',
-        'button.section-deal__button--down',
-        '.section-deal__button--put',
-        '.section-deal__button--down',
-        'button[data-test="put-btn"]',
-        'button[data-test-id="put-btn"]',
-        'button[data-test-id="put-button"]',
-        'button[data-qa="put-button"]',
-        'button.deal-form__button-put',
-        'button.deal-form__button--put',
-        'button.deal-form__button--down',
-        '.deal-form__button-put',
-        '.deal-form__button--put',
-        '.deal-form__button--down',
-        'button.put-btn',
-        'button.btn-put',
-        'button[class*="deal-button_down"]',
-        'button[class*="button--put"]',
-        'button[class*="button--down"]',
-        'button[class*="button-put"]',
-        'button.button--red',
-        '#platform-put-button'
-      ];
-
-      for (var s = 0; s < directSelectors.length; s++) {
-        var foundList = document.querySelectorAll(directSelectors[s]);
-        for (var j = 0; j < foundList.length; j++) {
-          var el = foundList[j];
-          if (isElementVisible(el)) {
-            candidateButtons.push(el);
+      if (!cBtn || !pBtn) {
+        var clickables = Array.from(document.querySelectorAll('button, div[role="button"], div[class*="button"], a[role="button"]'));
+        for (var i = 0; i < clickables.length; i++) {
+          var b = clickables[i];
+          if (b.closest('#ishak-trade-wrap') || b.closest('#ishak-hud-panel') || b.closest('.ishak-dialog-modal')) continue;
+          var txt = b.innerText ? b.innerText.toLowerCase() : '';
+          var bg = '';
+          try { bg = window.getComputedStyle(b).backgroundColor || ''; } catch(e){}
+          if (!cBtn && (txt.includes('up') || txt.includes('call') || txt.includes('higher') || bg.includes('0, 192, 108'))) {
+            cBtn = b;
+          }
+          if (!pBtn && (txt.includes('down') || txt.includes('put') || txt.includes('lower') || bg.includes('255, 98, 89'))) {
+            pBtn = b;
           }
         }
       }
 
-      // 2. Comprehensive Container Search if not found directly
-      if (candidateButtons.length === 0) {
-        var dealContainers = document.querySelectorAll(
-          '.section-deal, .deal-form, .panel-deal, [class*="section-deal"], [class*="deal-form"], [class*="dealForm"], [class*="trading-panel"], aside, [class*="sidebar"]'
-        );
-        for (var d = 0; d < dealContainers.length; d++) {
-          var containerBtns = dealContainers[d].querySelectorAll('button, .button, div[role="button"], a[role="button"]');
-          for (var cb = 0; cb < containerBtns.length; cb++) {
-            var b = containerBtns[cb];
-            if (!isElementVisible(b)) continue;
+      var target = isCall ? cBtn : pBtn;
 
-            var text = (b.textContent || '').trim().toUpperCase();
-            var cls = (b.className || '').toString().toLowerCase();
-
-            if (isCall) {
-              var isCallMatch =
-                text.indexOf('UP') !== -1 ||
-                text.indexOf('CALL') !== -1 ||
-                text.indexOf('HIGHER') !== -1 ||
-                text.indexOf('BUY') !== -1 ||
-                text.indexOf('ВВЕРХ') !== -1 ||
-                text.indexOf('ВЫШЕ') !== -1 ||
-                text.indexOf('হায়ার') !== -1 ||
-                text.indexOf('কল') !== -1 ||
-                cls.indexOf('call') !== -1 ||
-                cls.indexOf('--up') !== -1 ||
-                cls.indexOf('green') !== -1;
-              if (isCallMatch) candidateButtons.push(b);
-            } else {
-              var isPutMatch =
-                text.indexOf('DOWN') !== -1 ||
-                text.indexOf('PUT') !== -1 ||
-                text.indexOf('LOWER') !== -1 ||
-                text.indexOf('SELL') !== -1 ||
-                text.indexOf('ВНИЗ') !== -1 ||
-                text.indexOf('НИЖЕ') !== -1 ||
-                text.indexOf('লোয়ার') !== -1 ||
-                text.indexOf('পুট') !== -1 ||
-                cls.indexOf('put') !== -1 ||
-                cls.indexOf('--down') !== -1 ||
-                cls.indexOf('red') !== -1;
-              if (isPutMatch) candidateButtons.push(b);
-            }
-          }
-        }
-      }
-
-      // 3. Fallback search across all visible buttons on page
-      if (candidateButtons.length === 0) {
-        var allButtons = document.querySelectorAll('button');
-        for (var ab = 0; ab < allButtons.length; ab++) {
-          var anyBtn = allButtons[ab];
-          if (!isElementVisible(anyBtn)) continue;
-          var anyText = (anyBtn.textContent || '').trim().toUpperCase();
-          var anyCls = (anyBtn.className || '').toString().toLowerCase();
-          if (isCall) {
-            if (anyCls.indexOf('call') !== -1 || anyCls.indexOf('--up') !== -1 || anyText === 'UP' || anyText.indexOf('CALL') !== -1) {
-              candidateButtons.push(anyBtn);
-            }
-          } else {
-            if (anyCls.indexOf('put') !== -1 || anyCls.indexOf('--down') !== -1 || anyText === 'DOWN' || anyText.indexOf('PUT') !== -1) {
-              candidateButtons.push(anyBtn);
-            }
-          }
-        }
-      }
-
-      if (candidateButtons.length > 0) {
-        // Pick the single BEST visible Quotex button
-        var targetBtn = candidateButtons[0];
-
-        // Highlight button visually
+      if (target) {
+        // Highlighting button effect
         try {
-          var origOutline = targetBtn.style.outline;
-          var origBoxShadow = targetBtn.style.boxShadow;
-          targetBtn.style.outline = isCall ? '3px solid #00FF66' : '3px solid #FF1744';
-          targetBtn.style.boxShadow = isCall ? '0 0 25px #00FF66' : '0 0 25px #FF1744';
+          var origOutline = target.style.outline;
+          var origBoxShadow = target.style.boxShadow;
+          target.style.outline = isCall ? '3px solid #00FF66' : '3px solid #FF1744';
+          target.style.boxShadow = isCall ? '0 0 25px #00FF66' : '0 0 25px #FF1744';
           setTimeout(function() {
             try {
-              targetBtn.style.outline = origOutline;
-              targetBtn.style.boxShadow = origBoxShadow;
+              target.style.outline = origOutline;
+              target.style.boxShadow = origBoxShadow;
             } catch(e){}
           }, 1200);
         } catch(e){}
 
-        try { targetBtn.focus(); } catch(e){}
-
-        // Dispatches complete interaction sequence (Touch + Pointer + Mouse + Native Click)
-        // Ensures Quotex's React event listeners trigger reliably on both mobile & desktop
-        var rect = targetBtn.getBoundingClientRect();
-        var clientX = rect.left + rect.width / 2;
-        var clientY = rect.top + rect.height / 2;
-        var evtOpts = {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          detail: 1,
-          clientX: clientX,
-          clientY: clientY,
-          screenX: clientX,
-          screenY: clientY,
-          buttons: 1,
-          button: 0
-        };
-
-        // Mobile touch dispatch for Kiwi / Chrome Mobile
-        try {
-          if (typeof Touch !== 'undefined' && typeof TouchEvent !== 'undefined') {
-            var touch = new Touch({
-              identifier: Date.now(),
-              target: targetBtn,
-              clientX: clientX,
-              clientY: clientY,
-              radiusX: 2.5,
-              radiusY: 2.5,
-              rotationAngle: 10,
-              force: 0.5
-            });
-            targetBtn.dispatchEvent(new TouchEvent('touchstart', { cancelable: true, bubbles: true, touches: [touch], targetTouches: [touch], changedTouches: [touch] }));
-            targetBtn.dispatchEvent(new TouchEvent('touchend', { cancelable: true, bubbles: true, touches: [], targetTouches: [], changedTouches: [touch] }));
-          }
-        } catch(e){}
-
+        // Exact dispatch sequence from user snippet: PointerEvent + MouseEvent + click
+        var opts = { bubbles: true, cancelable: true, view: window };
         try {
           if (typeof PointerEvent !== 'undefined') {
-            targetBtn.dispatchEvent(new PointerEvent('pointerdown', evtOpts));
+            target.dispatchEvent(new PointerEvent('pointerdown', opts));
           }
         } catch(e){}
         try {
-          targetBtn.dispatchEvent(new MouseEvent('mousedown', evtOpts));
+          target.dispatchEvent(new MouseEvent('mousedown', opts));
         } catch(e){}
         try {
           if (typeof PointerEvent !== 'undefined') {
-            targetBtn.dispatchEvent(new PointerEvent('pointerup', evtOpts));
+            target.dispatchEvent(new PointerEvent('pointerup', opts));
           }
         } catch(e){}
         try {
-          targetBtn.dispatchEvent(new MouseEvent('mouseup', evtOpts));
+          target.dispatchEvent(new MouseEvent('mouseup', opts));
         } catch(e){}
         try {
-          targetBtn.dispatchEvent(new MouseEvent('click', evtOpts));
-        } catch(e){}
-        try {
-          targetBtn.click();
+          target.click();
         } catch(e){}
 
-        console.log('[Ishak AI] ✅ Auto-trade executed successfully (EXACTLY 1 TRADE on visible button):', targetBtn);
+        console.log('[Ishak AI] ✅ Auto-trade executed successfully (EXACTLY 1 TRADE on Quotex target button):', target);
         return { success: true };
       } else {
-        console.warn('[Ishak AI] ⚠️ Visible Quotex button not found for direction:', isCall ? 'CALL' : 'PUT');
+        console.warn('[Ishak AI] ⚠️ Quotex deal button not found for direction:', isCall ? 'CALL' : 'PUT');
         return { success: false, reason: 'NOT_FOUND' };
       }
     } catch(err) {

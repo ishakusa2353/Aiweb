@@ -105,8 +105,10 @@ async function startServer() {
       if (!license.first_login_at) {
         license.first_login_at = Date.now();
         // If not a lifetime key, calculate exp from duration_ms starting NOW
-        if (license.duration !== 'lifetime' && license.duration_ms) {
-          license.exp = license.first_login_at + license.duration_ms;
+        const durMs = license.duration_ms || parseDurationToMs(license.duration || '30d');
+        if (license.duration !== 'lifetime' && durMs) {
+          license.duration_ms = durMs;
+          license.exp = license.first_login_at + durMs;
         }
         needSave = true;
       }
@@ -204,8 +206,10 @@ async function startServer() {
 
       if (!license.first_login_at) {
         license.first_login_at = Date.now();
-        if (license.duration !== 'lifetime' && license.duration_ms) {
-          license.exp = license.first_login_at + license.duration_ms;
+        const durMs = license.duration_ms || parseDurationToMs(license.duration || '30d');
+        if (license.duration !== 'lifetime' && durMs) {
+          license.duration_ms = durMs;
+          license.exp = license.first_login_at + durMs;
         }
         needSave = true;
       }
