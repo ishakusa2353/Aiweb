@@ -12,7 +12,8 @@ export interface LicenseRecord {
   duration_ms?: number;
   exp: number | null; // epoch timestamp ms (calculated upon first device login, or null for lifetime)
   first_login_at?: number | null; // recorded when first activated on device
-  device_id?: string; // locked to the first device
+  device_id?: string; // registered device IDs (comma-separated if multiple)
+  device_limit?: number; // 1, 2, 3, custom N, or 0 for unlimited (default 1)
   trader_id?: string;
   created_at: number;
   last_used_at?: number;
@@ -45,48 +46,8 @@ export function parseDurationToMs(durationStr: string): number | null {
   return 30 * 86400 * 1000;
 }
 
-// Initial seed licenses for instant testing
-const initialLocalLicenses: Record<string, LicenseRecord> = {
-  'ISHAK-VIP-PRO-2025': {
-    key: 'ISHAK-VIP-PRO-2025',
-    active: true,
-    tier: 'VIP',
-    duration: '30d',
-    duration_ms: 30 * 86400000,
-    exp: Date.now() + 30 * 86400000,
-    first_login_at: Date.now(),
-    device_id: '',
-    trader_id: '84920184',
-    created_at: Date.now(),
-    note: 'Master VIP Key (Pre-configured)'
-  },
-  'ISHAK-LIFETIME-DEMO': {
-    key: 'ISHAK-LIFETIME-DEMO',
-    active: true,
-    tier: 'LIFETIME',
-    duration: 'lifetime',
-    duration_ms: undefined,
-    exp: null,
-    first_login_at: null,
-    device_id: '',
-    trader_id: '',
-    created_at: Date.now(),
-    note: 'Lifetime Demo Key (Permanent)'
-  },
-  'ISHAK-TEST-5MIN': {
-    key: 'ISHAK-TEST-5MIN',
-    active: true,
-    tier: 'TRIAL',
-    duration: '5m',
-    duration_ms: 5 * 60000,
-    exp: null, // Starts when logged in
-    first_login_at: null,
-    device_id: '',
-    trader_id: '',
-    created_at: Date.now(),
-    note: '5 Minutes Custom Trial Key (Countdown starts on login)'
-  }
-};
+// Strictly NO hardcoded default licenses. Only legitimately generated licenses in DB work!
+const initialLocalLicenses: Record<string, LicenseRecord> = {};
 
 export function sanitizeSupabaseUrl(rawUrl?: string): string {
   if (!rawUrl) return '';
@@ -302,6 +263,7 @@ class LicenseDatabase {
             exp: d.exp !== null && d.exp !== undefined ? Number(d.exp) : null,
             first_login_at: d.first_login_at ? Number(d.first_login_at) : null,
             device_id: d.device_id || '',
+            device_limit: d.device_limit !== undefined && d.device_limit !== null ? Number(d.device_limit) : 1,
             trader_id: d.trader_id || '',
             created_at: d.created_at ? Number(d.created_at) : Date.now(),
             last_used_at: d.last_used_at ? Number(d.last_used_at) : undefined,
@@ -337,6 +299,7 @@ class LicenseDatabase {
             exp: data.exp !== null && data.exp !== undefined ? Number(data.exp) : null,
             first_login_at: data.first_login_at ? Number(data.first_login_at) : null,
             device_id: data.device_id || '',
+            device_limit: data.device_limit !== undefined && data.device_limit !== null ? Number(data.device_limit) : 1,
             trader_id: data.trader_id || '',
             created_at: data.created_at ? Number(data.created_at) : Date.now(),
             last_used_at: data.last_used_at ? Number(data.last_used_at) : undefined,
@@ -355,7 +318,8 @@ class LicenseDatabase {
     const key = record.key.trim().toUpperCase();
     const formatted: LicenseRecord = {
       ...record,
-      key
+      key,
+      device_limit: record.device_limit !== undefined ? Number(record.device_limit) : 1
     };
 
     this.localStore.set(key, formatted);
@@ -373,6 +337,7 @@ class LicenseDatabase {
             exp: formatted.exp,
             first_login_at: formatted.first_login_at,
             device_id: formatted.device_id || '',
+            device_limit: formatted.device_limit,
             trader_id: formatted.trader_id || '',
             created_at: formatted.created_at,
             last_used_at: formatted.last_used_at,
@@ -499,7 +464,8 @@ class LicenseDatabase {
   public async generateLicense(
     duration: string = '30d',
     traderId: string = '',
-    note: string = ''
+    note: string = '',
+    deviceLimit: number = 1
   ): Promise<LicenseRecord> {
     const cleanDuration = (duration || '30d').trim().toLowerCase();
     const cleanTraderId = (traderId || '').trim();
@@ -518,6 +484,7 @@ class LicenseDatabase {
       exp: null, // Timer starts when trader first uses it
       first_login_at: null,
       device_id: '',
+      device_limit: deviceLimit !== undefined ? Number(deviceLimit) : 1,
       trader_id: cleanTraderId,
       created_at: Date.now(),
       note: note || `Generated via Telegram Bot (${cleanDuration})`

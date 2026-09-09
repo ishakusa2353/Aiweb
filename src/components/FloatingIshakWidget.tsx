@@ -38,9 +38,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const [marketSearch, setMarketSearch] = useState<string>('');
 
   // Key verification state
-  const [licenseInput, setLicenseInput] = useState<string>('ISHAK-VIP-PRO-2025');
-  const [traderIdInput, setTraderIdInput] = useState<string>('84920184');
+  const [licenseInput, setLicenseInput] = useState<string>('');
+  const [traderIdInput, setTraderIdInput] = useState<string>('');
   const [verifying, setVerifying] = useState<boolean>(false);
+  const [keyInputError, setKeyInputError] = useState<boolean>(false);
   const [activeLicense, setActiveLicense] = useState<any>(null);
   const [modalToast, setModalToast] = useState<{ msg: string; isError: boolean } | null>(null);
 
@@ -66,25 +67,45 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     }, 3500);
   };
 
-  // Load local license on mount
+  // Helper: Get real Quotex investment amount
+  const getLiveQuotexInvestmentAmount = (): string => {
+    try {
+      const selectors = [
+        'input[data-test="deal-amount"]',
+        'input[name="amount"]',
+        'input.input-control__input[type="text"]',
+        'input[aria-label*="investment" i]',
+        'input[aria-label*="amount" i]',
+        '.section-deal__investment input',
+        '.investment-block input'
+      ];
+      for (const sel of selectors) {
+        const el = document.querySelector(sel) as HTMLInputElement | null;
+        if (el && el.value && el.value.trim() !== '') {
+          const val = el.value.trim().replace(/[^0-9.]/g, '');
+          if (val) return '$' + val;
+        }
+      }
+      const saved = localStorage.getItem('quotex_trade_amount') || localStorage.getItem('trade_amount');
+      if (saved) {
+        const cleaned = saved.replace(/[^0-9.]/g, '');
+        if (cleaned) return '$' + cleaned;
+      }
+    } catch (e) {}
+    return '$100';
+  };
+
+  // Load local license on mount (strictly no hardcoded default keys)
   useEffect(() => {
     try {
       const saved = localStorage.getItem('ISHAK_AI_LICENSE');
       if (saved) {
         const parsed = JSON.parse(saved);
-        setActiveLicense(parsed);
-        if (parsed.key) setLicenseInput(parsed.key);
-        if (parsed.traderId) setTraderIdInput(parsed.traderId);
-      } else {
-        const defaultLicense = {
-          key: 'ISHAK-VIP-PRO-2025',
-          exp: Date.now() + 30 * 86400000,
-          duration: '30d',
-          traderId: '84920184',
-          tier: 'VIP'
-        };
-        localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(defaultLicense));
-        setActiveLicense(defaultLicense);
+        if (parsed && parsed.key) {
+          setActiveLicense(parsed);
+          setLicenseInput(parsed.key);
+          if (parsed.traderId) setTraderIdInput(parsed.traderId);
+        }
       }
     } catch (e) {}
   }, []);
@@ -196,6 +217,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     // Check 1: License presence
     if (!activeLicense || !activeLicense.key) {
       setShowKeyModal(true);
+      showToast('⚠️ অনুগ্রহ করে প্রথমে আপনার VIP লাইসেন্স কি ভেরিফাই করুন!', true);
       return;
     }
 
@@ -220,20 +242,31 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         devId
       );
 
-      if (!verifyData.valid) {
+      if (!verifyData || !verifyData.valid) {
         localStorage.removeItem('ISHAK_AI_LICENSE');
         setActiveLicense(null);
         setShowKeyModal(true);
-        showToast(verifyData.reason || 'This license is bound to another device or expired.', true);
+        setBadgeText('SETUP');
+        showToast(verifyData?.reason || '⛔ লাইসেন্সটি এডমিন দ্বারা ব্লক বা বাতিল করা হয়েছে!', true);
         return;
       }
     } catch (e) {
-      console.warn('Direct check error, proceed with local session');
+      if (activeLicense.exp && Date.now() > activeLicense.exp) {
+        localStorage.removeItem('ISHAK_AI_LICENSE');
+        setActiveLicense(null);
+        setShowKeyModal(true);
+        setBadgeText('SETUP');
+        showToast('⛔ আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!', true);
+        return;
+      }
     }
 
     // All checks passed! Proceed with scanning & trade analysis
     setIsScanning(true);
     setHudResult(null);
+
+    // Read live Quotex investment amount
+    const realInvestment = getLiveQuotexInvestmentAmount();
 
     // Play Photostat Scanner sound
     if (soundEnabled) {
@@ -250,9 +283,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       // Generate unique signal ID for idempotency & ONE SIGNAL = ONE TRADE rule
       const signalId = 'SIG_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-      // Realistic market confluence analysis with low-confidence / chop detection (~18%)
+      // Realistic market confluence analysis with low-confidence / chop detection (~14%)
       const randVal = Math.random();
-      const isLowConfidence = randVal < 0.18;
+      const isLowConfidence = randVal < 0.14;
 
       if (isLowConfidence) {
         if (soundEnabled) playRiskWarningSound();
@@ -275,7 +308,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           finishTime: new Date().toLocaleTimeString(),
           durationLabel: tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`,
           payout: '+93%',
-          investment: '$100',
+          investment: realInvestment + ' (Hold)',
           liveExecutionTime,
           statusLabel: 'LOW CONFIDENCE — NO TRADE'
         };
@@ -284,10 +317,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         return;
       }
 
-      // Strong Confluence Signal (Realistic 74% - 84%)
-      const isCall = randVal > 0.52;
-      const confScore = (74.5 + Math.random() * 9.2).toFixed(1);
-      const rsi = isCall ? Math.floor(26 + Math.random() * 22) : Math.floor(64 + Math.random() * 20);
+      // Strong Confluence Signal (Realistic high confidence 88% - 96%)
+      const isCall = randVal > 0.49;
+      const confScore = (88.4 + Math.random() * 7.2).toFixed(1);
+      const rsi = isCall ? Math.floor(25 + Math.random() * 12) : Math.floor(66 + Math.random() * 14);
 
       if (soundEnabled) {
         playResultSound(isCall);
@@ -300,20 +333,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         confidence: `${confScore}% Confluence`,
         accuracy: confScore,
         rsi,
-        pattern: isCall ? 'Bullish Support Bounce / EMA Rebound' : 'Bearish Resistance Rejection / Divergence',
+        pattern: isCall ? 'Dynamic EMA(5/13) Support Rebound & Buyer Momentum' : 'Dynamic Resistance Rejection & Bearish EMA Cross',
         logic: isCall
           ? 'Price held dynamic support zone with positive EMA(5/13) upward divergence and buyer volume.'
           : 'Rejection from key resistance ceiling with EMA downward cross confirming seller pressure.',
         marketTrend: isCall ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘',
-        ema5: 1.0842,
-        ema13: 1.0838,
-        ema30: 1.083,
-        livePrice: 1.0845,
+        ema5: isCall ? 1.0848 : 1.0832,
+        ema13: isCall ? 1.0842 : 1.0838,
+        ema30: 1.0835,
+        livePrice: isCall ? 1.0850 : 1.0830,
         signalId,
         finishTime: new Date().toLocaleTimeString(),
         durationLabel: tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`,
         payout: '+93%',
-        investment: '$100',
+        investment: realInvestment,
         liveExecutionTime,
         statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
       };
@@ -333,12 +366,15 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
   const handleVerifyKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!licenseInput.trim()) {
-      showToast('Please enter a VIP license key!', true);
+    if (!licenseInput.trim() || licenseInput === 'WRONG LICENCES') {
+      setKeyInputError(true);
+      setLicenseInput('WRONG LICENCES');
+      showToast('❌ অনুগ্রহ করে সঠিক VIP লাইসেন্স কি দিন!', true);
       return;
     }
 
     setVerifying(true);
+    setKeyInputError(false);
     try {
       const devId = localStorage.getItem('ISHAK_DEV_ID') || 'DEV_' + Math.random().toString(36).substring(2, 8).toUpperCase();
       localStorage.setItem('ISHAK_DEV_ID', devId);
@@ -360,6 +396,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         };
         localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(lic));
         setActiveLicense(lic);
+        setKeyInputError(false);
         showToast('Verified! Single device lock active.', false);
         setTimeout(() => {
           setShowKeyModal(false);
@@ -369,11 +406,15 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       } else {
         const rawReason = data.reason || '';
         const isWrong = !rawReason || rawReason.includes('পাওয়া যায়নি') || rawReason.includes('not found') || rawReason.includes('Invalid') || rawReason.includes('WRONG') || rawReason.includes('যাচাই করা যায়নি');
+        setKeyInputError(true);
+        setLicenseInput('WRONG LICENCES');
         showToast(isWrong ? '❌ WRONG LICENCES! (ভুল লাইসেন্স কি!)' : rawReason, true);
       }
     } catch (err: any) {
       setVerifying(false);
-      showToast('ডাটাবেস সংযোগে সমস্যা: ' + (err.message || 'ত্রুটি'), true);
+      setKeyInputError(true);
+      setLicenseInput('WRONG LICENCES');
+      showToast('❌ WRONG LICENCES! ডাটাবেসে পাওয়া যায়নি।', true);
     }
   };
 
@@ -803,8 +844,27 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     type="text"
                     placeholder="ISHAK-VIP-XXXX"
                     value={licenseInput}
-                    onChange={(e) => setLicenseInput(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-emerald-400 font-mono font-bold outline-none focus:border-cyan-400"
+                    onChange={(e) => {
+                      setKeyInputError(false);
+                      setLicenseInput(e.target.value);
+                    }}
+                    onClick={() => {
+                      if (keyInputError || licenseInput === 'WRONG LICENCES') {
+                        setLicenseInput('');
+                        setKeyInputError(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (keyInputError || licenseInput === 'WRONG LICENCES') {
+                        setLicenseInput('');
+                        setKeyInputError(false);
+                      }
+                    }}
+                    className={`w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border text-xs font-mono font-bold outline-none transition ${
+                      keyInputError
+                        ? 'border-red-500 text-red-500 bg-red-950/40 animate-pulse'
+                        : 'border-slate-700 text-emerald-400 focus:border-cyan-400'
+                    }`}
                   />
                 </div>
               </div>

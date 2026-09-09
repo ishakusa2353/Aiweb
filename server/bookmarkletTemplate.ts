@@ -105,28 +105,39 @@ export function generateBookmarkletCode(
 
   var myDeviceId = getOrCreateDeviceId();
 
-  // Helper to detect real trade amount from Quotex DOM
+  // Helper to detect real trade amount dynamically from Quotex DOM
   function getLiveQuotexInvestment() {
     try {
       var amtSelectors = [
         'input[name="amount"]',
+        'input[aria-label*="amount" i]',
+        'input[aria-label*="investment" i]',
         'input.input-control__input',
         '.section-deal__investment input',
         '.section-deal__form-input input',
+        '[class*="deal-form"] input[type="text"]',
+        '[class*="deal-form"] input[type="number"]',
         '.amount-block input',
-        'input[data-test="deal-amount"]'
+        'input[data-test="deal-amount"]',
+        'input[data-test-id="deal-amount"]'
       ];
       for (var i = 0; i < amtSelectors.length; i++) {
-        var inp = document.querySelector(amtSelectors[i]);
-        if (inp && inp.value) {
-          var val = inp.value.trim();
-          if (val) {
-            return val.indexOf('$') !== -1 ? val : '$' + val;
+        var inps = document.querySelectorAll(amtSelectors[i]);
+        for (var j = 0; j < inps.length; j++) {
+          var inp = inps[j];
+          if (inp && inp.value) {
+            var val = inp.value.trim();
+            if (val && !isNaN(parseFloat(val.replace(/[^0-9.]/g, '')))) {
+              var num = parseFloat(val.replace(/[^0-9.]/g, ''));
+              return '$' + num;
+            }
           }
         }
       }
+      var saved = localStorage.getItem('ISHAK_INVESTMENT');
+      if (saved) return saved;
     } catch(e){}
-    return '$100'; // Default fallback
+    return '$5'; // Sensible standard Quotex default stake
   }
 
   function formatCountdown(targetMs) {
@@ -610,9 +621,22 @@ export function generateBookmarkletCode(
             return { valid: false, reason: '⛔ এই লাইসেন্সটি এডমিন দ্বারা ব্লক করা হয়েছে!' };
           }
 
-          if (row.device_id && row.device_id.trim() !== '') {
-            if (myDeviceId && row.device_id !== myDeviceId) {
-              return { valid: false, reason: '🔒 এই লাইসেন্সটি অন্য ডিভাইসে যুক্ত আছে! সিঙ্গেল ডিভাইস পলিসি সক্রিয়।' };
+          var registeredDevices = (row.device_id || '')
+            .split(',')
+            .map(function(d) { return d.trim(); })
+            .filter(Boolean);
+          var devLimit = row.device_limit !== undefined && row.device_limit !== null ? Number(row.device_limit) : 1;
+          var isUnlimited = devLimit === 0 || devLimit === -1;
+
+          if (myDeviceId) {
+            var alreadyRegistered = registeredDevices.indexOf(myDeviceId) !== -1;
+            if (!alreadyRegistered) {
+              if (!isUnlimited && registeredDevices.length >= devLimit) {
+                return { valid: false, reason: '🔒 ডিভাইস লিমিট শেষ! এই লাইসেন্সটি সর্বোচ্চ ' + devLimit + ' টি ডিভাইসের জন্য অনুমোদিত।' };
+              }
+              registeredDevices.push(myDeviceId);
+              updates.device_id = registeredDevices.join(',');
+              needPatch = true;
             }
           }
 
@@ -626,9 +650,6 @@ export function generateBookmarkletCode(
           var exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
           var durationMs = row.duration_ms ? Number(row.duration_ms) : parseDurationString(row.duration || '30d');
 
-          var updates = {};
-          var needPatch = false;
-
           if (!firstLogin) {
             firstLogin = now;
             updates.first_login_at = firstLogin;
@@ -636,11 +657,6 @@ export function generateBookmarkletCode(
               exp = firstLogin + durationMs;
               updates.exp = exp;
             }
-            needPatch = true;
-          }
-
-          if (!row.device_id && myDeviceId) {
-            updates.device_id = myDeviceId;
             needPatch = true;
           }
 
@@ -898,17 +914,28 @@ export function generateBookmarkletCode(
     e.stopPropagation(); hudPanel.style.display = 'none';
   };
 
-  // Dragging Circular Button
+  // Dragging Circular Button (Desktop Mouse + Mobile Touch)
   var isDragging = false, startX, startY, initX, initY;
+
+  function onCircleDragStart(clientX, clientY) {
+    isDragging = false;
+    startX = clientX;
+    startY = clientY;
+    initX = mainWrap.offsetLeft;
+    initY = mainWrap.offsetTop;
+  }
+
+  function onCircleDragMove(clientX, clientY) {
+    if (Math.abs(clientX - startX) > 6 || Math.abs(clientY - startY) > 6) isDragging = true;
+    mainWrap.style.left = (initX + clientX - startX) + 'px';
+    mainWrap.style.top = (initY + clientY - startY) + 'px';
+    mainWrap.style.bottom = 'auto';
+    mainWrap.style.right = 'auto';
+  }
+
   circleBtn.addEventListener('mousedown', function(e) {
-    isDragging = false; startX = e.clientX; startY = e.clientY;
-    initX = mainWrap.offsetLeft; initY = mainWrap.offsetTop;
-    function onMove(ev) {
-      if (Math.abs(ev.clientX - startX) > 6 || Math.abs(ev.clientY - startY) > 6) isDragging = true;
-      mainWrap.style.left = (initX + ev.clientX - startX) + 'px';
-      mainWrap.style.top = (initY + ev.clientY - startY) + 'px';
-      mainWrap.style.bottom = 'auto'; mainWrap.style.right = 'auto';
-    }
+    onCircleDragStart(e.clientX, e.clientY);
+    function onMove(ev) { onCircleDragMove(ev.clientX, ev.clientY); }
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
@@ -917,18 +944,43 @@ export function generateBookmarkletCode(
     document.addEventListener('mouseup', onUp);
   });
 
-  // Dragging Independent HUD Banner
+  circleBtn.addEventListener('touchstart', function(e) {
+    if (e.touches && e.touches.length === 1) {
+      var t = e.touches[0];
+      onCircleDragStart(t.clientX, t.clientY);
+    }
+  }, { passive: true });
+
+  circleBtn.addEventListener('touchmove', function(e) {
+    if (e.touches && e.touches.length === 1) {
+      var t = e.touches[0];
+      onCircleDragMove(t.clientX, t.clientY);
+      if (isDragging) e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Dragging Independent HUD Banner (Desktop Mouse + Mobile Touch)
   var isHudDragging = false, hudStartX, hudStartY, hudInitX, hudInitY;
   var hudDragHandle = document.getElementById('ishak-hud-drag-handle');
+
+  function onHudDragStart(clientX, clientY) {
+    isHudDragging = false;
+    hudStartX = clientX;
+    hudStartY = clientY;
+    hudInitX = hudPanel.offsetLeft;
+    hudInitY = hudPanel.offsetTop;
+  }
+
+  function onHudDragMove(clientX, clientY) {
+    if (Math.abs(clientX - hudStartX) > 4 || Math.abs(clientY - hudStartY) > 4) isHudDragging = true;
+    hudPanel.style.left = (hudInitX + clientX - hudStartX) + 'px';
+    hudPanel.style.top = (hudInitY + clientY - hudStartY) + 'px';
+    hudPanel.style.right = 'auto';
+  }
+
   hudDragHandle.addEventListener('mousedown', function(e) {
-    isHudDragging = false; hudStartX = e.clientX; hudStartY = e.clientY;
-    hudInitX = hudPanel.offsetLeft; hudInitY = hudPanel.offsetTop;
-    function onMove(ev) {
-      if (Math.abs(ev.clientX - hudStartX) > 4 || Math.abs(ev.clientY - hudStartY) > 4) isHudDragging = true;
-      hudPanel.style.left = (hudInitX + ev.clientX - hudStartX) + 'px';
-      hudPanel.style.top = (hudInitY + ev.clientY - hudStartY) + 'px';
-      hudPanel.style.right = 'auto';
-    }
+    onHudDragStart(e.clientX, e.clientY);
+    function onMove(ev) { onHudDragMove(ev.clientX, ev.clientY); }
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
@@ -936,6 +988,21 @@ export function generateBookmarkletCode(
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   });
+
+  hudDragHandle.addEventListener('touchstart', function(e) {
+    if (e.touches && e.touches.length === 1) {
+      var t = e.touches[0];
+      onHudDragStart(t.clientX, t.clientY);
+    }
+  }, { passive: true });
+
+  hudDragHandle.addEventListener('touchmove', function(e) {
+    if (e.touches && e.touches.length === 1) {
+      var t = e.touches[0];
+      onHudDragMove(t.clientX, t.clientY);
+      if (isHudDragging) e.preventDefault();
+    }
+  }, { passive: false });
 
   function updateBadgeLabel() {
     if (!currentMarket || !tradeDuration) {
@@ -1083,6 +1150,18 @@ export function generateBookmarkletCode(
     var traderEl = document.getElementById('t-input');
     if (local && local.key) inputEl.value = local.key;
     if (local && local.traderId) traderEl.value = local.traderId;
+
+    // Reset input styling and clear text on click/focus if previously invalid
+    function clearIfInvalid() {
+      if (inputEl.getAttribute('data-invalid') === 'true' || inputEl.value === 'Invalid License Key') {
+        inputEl.value = '';
+        inputEl.style.color = '#00FF66';
+        inputEl.style.borderColor = '#00E5FF';
+        inputEl.removeAttribute('data-invalid');
+      }
+    }
+    inputEl.onfocus = clearIfInvalid;
+    inputEl.onclick = clearIfInvalid;
     inputEl.focus();
 
     // Live timer tick
@@ -1120,12 +1199,11 @@ export function generateBookmarkletCode(
       var errBox = document.getElementById('k-error-box');
       if (errBox) errBox.style.display = 'none';
 
-      if (!val) {
-        showModalToast(km, 'Please enter a license key!', true);
-        if (errBox) {
-          errBox.style.display = 'block';
-          errBox.innerText = '⚠️ Please enter a license key!';
-        }
+      if (!val || val === 'INVALID LICENSE KEY') {
+        inputEl.value = 'Invalid License Key';
+        inputEl.style.color = '#FF1744';
+        inputEl.style.borderColor = '#FF1744';
+        inputEl.setAttribute('data-invalid', 'true');
         return;
       }
       var submitBtn = document.getElementById('k-submit-btn');
@@ -1141,20 +1219,12 @@ export function generateBookmarkletCode(
           }, 1100);
         } else {
           submitBtn.innerText = 'Verify & Unlock';
-          var rawReason = result.reason || '';
-          var isWrongLic = !rawReason || rawReason.indexOf('পাওয়া যায়নি') !== -1 || rawReason.indexOf('ভুল') !== -1 || rawReason.indexOf('not found') !== -1 || rawReason.indexOf('Invalid') !== -1 || rawReason.indexOf('WRONG') !== -1 || rawReason.indexOf('যাচাই করা যায়নি') !== -1;
-          var displayMsg = isWrongLic ? '❌ WRONG LICENCES! (ভুল লাইসেন্স কি!)' : result.reason;
-
-          showModalToast(km, displayMsg, true);
-          if (errBox) {
-            errBox.style.display = 'block';
-            errBox.innerHTML = displayMsg;
-          }
+          // Exactly as requested: inside input box in red, no outside error message, clear on click
+          inputEl.value = 'Invalid License Key';
+          inputEl.style.color = '#FF1744';
           inputEl.style.borderColor = '#FF1744';
-          inputEl.focus();
-          setTimeout(function() {
-            inputEl.style.borderColor = '#00E5FF';
-          }, 3500);
+          inputEl.setAttribute('data-invalid', 'true');
+          if (errBox) errBox.style.display = 'none';
         }
       });
     };

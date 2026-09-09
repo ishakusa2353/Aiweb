@@ -47,10 +47,14 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
   // Custom key generation modal state
   const [customKey, setCustomKey] = useState<string>('');
   const [selectedTier, setSelectedTier] = useState<string>('VIP');
-  const [durationType, setDurationType] = useState<'preset' | 'custom'>('custom');
-  const [presetDuration, setPresetDuration] = useState<string>('30d');
+  const [timePreset, setTimePreset] = useState<'5m' | '10m' | '1h' | '1d' | 'lifetime' | 'custom'>('5m');
   const [customValue, setCustomValue] = useState<string>('5');
   const [customUnit, setCustomUnit] = useState<'minutes' | 'hours' | 'days' | 'lifetime'>('minutes');
+  
+  // Device limit state
+  const [deviceLimitMode, setDeviceLimitMode] = useState<'1' | '2' | '3' | 'unlimited' | 'custom'>('1');
+  const [customDeviceLimit, setCustomDeviceLimit] = useState<string>('4');
+
   const [traderId, setTraderId] = useState<string>('');
   const [note, setNote] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -62,47 +66,62 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
     key: string;
     tier?: string;
     duration?: string;
+    exp?: number;
+    first_login_at?: number;
+    device_id?: string;
+    device_limit?: number;
     trader_id?: string;
     note?: string;
   } | null>(null);
   const [copiedDeliveryStatus, setCopiedDeliveryStatus] = useState<boolean>(false);
-  const [copiedCodeStatus, setCopiedCodeStatus] = useState<boolean>(false);
-
-  const getBookmarkletCode = () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ais-dev-pzmtmbqgru6e7exmxhaddk-83110597495.asia-east1.run.app';
-    return `javascript:(function(){var s=document.createElement('script');s.src='${origin}/bookmarklet.js?t='+Date.now();document.head.appendChild(s);})();`;
-  };
 
   const getDeliveryMessage = (lic: {
     key: string;
     tier?: string;
     duration?: string;
+    exp?: number;
+    first_login_at?: number;
+    device_id?: string;
+    device_limit?: number;
     trader_id?: string;
     note?: string;
   }) => {
-    const code = getBookmarkletCode();
-    const durLabel = lic.duration === 'lifetime' ? 'আজীবন (Lifetime)' : (lic.duration || '30 Days');
-    return `⚡ ISHAK AI PRO - VIP লাইসেন্স ডেলিভারি ⚡
+    let durLabel = '30 Days';
+    if (lic.duration === 'lifetime') durLabel = 'Lifetime (আজীবন)';
+    else if (lic.duration === '5m') durLabel = '5 Minutes';
+    else if (lic.duration === '10m') durLabel = '10 Minutes';
+    else if (lic.duration === '1h') durLabel = '1 Hour';
+    else if (lic.duration === '1d' || lic.duration === '24h') durLabel = '1 Day (24 Hours)';
+    else if (lic.duration) durLabel = lic.duration;
+
+    const devLimit = lic.device_limit !== undefined && lic.device_limit !== null ? Number(lic.device_limit) : 1;
+    const devLimitLabel = devLimit === 0 || devLimit === -1
+      ? 'Unlimited Devices'
+      : `${devLimit} Device${devLimit > 1 ? 's' : ''}`;
+
+    const expiryInfo = lic.first_login_at && lic.exp
+      ? `Active (Expires: ${new Date(lic.exp).toLocaleString('en-US')})`
+      : lic.duration === 'lifetime'
+      ? 'Lifetime Access'
+      : 'Countdown starts upon first login in the bot';
+
+    return `⚡ ISHAK AI PRO - VIP LICENSE DELIVERY ⚡
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-অভিনন্দন! আপনার Quotex VIP ট্রেডিং বট লাইসেন্স সফলভাবে প্রস্তুত করা হয়েছে।
+Congratulations! Your Quotex VIP Trading Bot License is ready.
 
-🔑 আপনার লাইসেন্স কি: ${lic.key}
-💎 মেম্বারশিপ টিয়ার: ${(lic.tier || 'VIP').toUpperCase()}
-⏱️ লাইসেন্স মেয়াদ: ${durLabel} (প্রথম লগইনে শুরু হবে)
-🔒 সিঙ্গেল ডিভাইস পলিসি: সক্রিয় (এক কি দিয়ে ১ টি ডিভাইসে চলবে)
-${lic.trader_id ? `👤 ট্রেডার আইডি: ${lic.trader_id}\n` : ''}${lic.note ? `📝 নোট: ${lic.note}\n` : ''}
-📲 কিউটেক্সে (Quotex) বট চালু করার নিয়ম:
-১. Kiwi Browser বা Chrome এ Quotex লগইন করে লাইভ ট্রেডিং চার্ট ওপেন করুন।
-২. ব্রাউজারের বুকমার্ক বা URL বারে নিচের লোডার কোডটি পেস্ট করে এন্টার চাপুন:
-
-${code}
-
-৩. স্ক্রিনে 3D গোল রোবট লোগো আসবে। সেখানে ক্লিক করে আপনার লাইসেন্স কি-টি দিয়ে "Verify & Unlock" চাপুন।
-৪. আপনার পছন্দের মার্কেট ও টাইম সিলেক্ট করে সিগন্যাল অনুযায়ী অটো ট্রেড শুরু করুন!
-
-⚡ যেকোনো প্রয়োজনে যোগাযোগ করুন:
-টেলিগ্রাম সাপোর্ট: @IshakVhai
-অফিসিয়াল টেলিগ্রাম বট: @IshakTrading_bot
+🔑 License Key: ${lic.key}
+💎 Membership Tier: ${(lic.tier || 'VIP').toUpperCase()}
+⏱️ Time Limit: ${durLabel}
+⌛ Expiry Status: ${expiryInfo}
+📱 Device Limit: ${devLimitLabel}
+${lic.trader_id ? `👤 Trader ID: ${lic.trader_id}\n` : ''}${lic.note ? `📝 Note: ${lic.note}\n` : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 How to Activate & Trade in Quotex:
+1. Open Quotex in Kiwi Browser or Chrome.
+2. Launch the Ishak AI Trading Bot widget on your chart.
+3. Click the circular Bot Logo / VIP Key button.
+4. Enter your VIP License Key and click "Verify & Unlock".
+5. Choose your desired Market & Timeframe to start receiving 1-trade auto signals!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   };
 
@@ -189,19 +208,35 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
     e.preventDefault();
     setIsSubmitting(true);
 
+    let finalDeviceLimit = 1;
+    if (deviceLimitMode === '1') finalDeviceLimit = 1;
+    else if (deviceLimitMode === '2') finalDeviceLimit = 2;
+    else if (deviceLimitMode === '3') finalDeviceLimit = 3;
+    else if (deviceLimitMode === 'unlimited') finalDeviceLimit = 0;
+    else if (deviceLimitMode === 'custom') finalDeviceLimit = Math.max(1, parseInt(customDeviceLimit || '1', 10));
+
+    let finalDuration = '30d';
+    if (timePreset === '5m') finalDuration = '5m';
+    else if (timePreset === '10m') finalDuration = '10m';
+    else if (timePreset === '1h') finalDuration = '1h';
+    else if (timePreset === '1d') finalDuration = '1d';
+    else if (timePreset === 'lifetime') finalDuration = 'lifetime';
+    else if (timePreset === 'custom') {
+      finalDuration = customUnit === 'lifetime' ? 'lifetime' : `${customValue}${customUnit === 'minutes' ? 'm' : customUnit === 'hours' ? 'h' : 'd'}`;
+    }
+
     const payload: any = {
       key: customKey.trim() || undefined,
       tier: selectedTier,
+      duration: finalDuration,
+      deviceLimit: finalDeviceLimit,
       traderId: traderId.trim() || undefined,
       note: note.trim() || undefined,
     };
 
-    if (durationType === 'preset') {
-      payload.duration = presetDuration;
-    } else {
+    if (timePreset === 'custom' && customUnit !== 'lifetime') {
       payload.customValue = customValue;
       payload.customUnit = customUnit;
-      payload.duration = customUnit === 'lifetime' ? 'lifetime' : `${customValue}${customUnit === 'minutes' ? 'm' : customUnit === 'hours' ? 'h' : 'd'}`;
     }
 
     const success = await onGenerateKey(payload);
@@ -209,7 +244,6 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
 
     if (success) {
       const generatedKey = customKey.trim().toUpperCase() || 'ISHAK-' + selectedTier.toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-      const generatedDuration = payload.duration;
       const genTraderId = traderId.trim() || undefined;
       const genNote = note.trim() || undefined;
 
@@ -223,7 +257,8 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
       setDeliveryLicense({
         key: generatedKey,
         tier: selectedTier,
-        duration: generatedDuration,
+        duration: finalDuration,
+        device_limit: finalDeviceLimit,
         trader_id: genTraderId,
         note: genNote,
       });
@@ -439,8 +474,8 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       </div>
 
-      {/* License Keys Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* License Keys Grid - Compact, Modern, High-Density Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
         {filteredKeys.length === 0 ? (
           <div className="col-span-full py-12 text-center text-gray-500 text-xs bg-[#0B132B]/50 rounded-2xl border border-slate-800">
             কোনো লাইসেন্স কি পাওয়া যায়নি
@@ -448,35 +483,47 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         ) : (
           filteredKeys.map((k) => {
             const remaining = formatRemaining(k.exp, k.first_login_at, k.duration);
-            const isBound = !!k.device_id;
+            const registeredDevices = (k.device_id || '')
+              .split(',')
+              .map((d) => d.trim())
+              .filter(Boolean);
+            const devLimit = k.device_limit !== undefined && k.device_limit !== null ? Number(k.device_limit) : 1;
+            const isUnlimitedDev = devLimit === 0 || devLimit === -1;
+            const isBound = registeredDevices.length > 0;
 
             return (
               <div
                 key={k.key}
-                className={`rounded-2xl p-4 border transition flex flex-col justify-between shadow-lg ${
+                className={`rounded-xl p-3 border transition-all duration-200 flex flex-col justify-between shadow-md hover:shadow-cyan-950/40 ${
                   !k.active
-                    ? 'bg-red-950/10 border-red-500/30'
+                    ? 'bg-red-950/20 border-red-500/40'
                     : remaining.isExpired
-                    ? 'bg-amber-950/10 border-amber-500/30'
+                    ? 'bg-amber-950/20 border-amber-500/40'
                     : 'bg-[#0B132B] border-cyan-500/30 hover:border-cyan-400'
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                        k.tier === 'LIFETIME'
-                          ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                          : k.tier === 'TRIAL'
-                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      }`}
-                    >
-                      {k.tier}
-                    </span>
+                  {/* Card Header: Tier & Status */}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                          k.tier === 'LIFETIME'
+                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                            : k.tier === 'TRIAL'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                        }`}
+                      >
+                        {k.tier}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        {k.duration === 'lifetime' ? '♾️ Lifetime' : k.duration || '30d'}
+                      </span>
+                    </div>
 
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1 ${
                         !k.active
                           ? 'bg-red-500/20 text-red-400'
                           : remaining.isExpired
@@ -484,78 +531,83 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                           : 'bg-emerald-500/20 text-emerald-400'
                       }`}
                     >
-                      {!k.active ? 'ব্লকড' : remaining.isExpired ? 'মেয়াদ শেষ' : 'সক্রিয়'}
+                      <span className={`w-1.5 h-1.5 rounded-full ${!k.active ? 'bg-red-400' : remaining.isExpired ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                      <span>{!k.active ? 'ব্লকড' : remaining.isExpired ? 'মেয়াদ শেষ' : 'সক্রিয়'}</span>
                     </span>
                   </div>
 
-                  {/* Key Code & Copy */}
-                  <div className="flex items-center justify-between bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 mb-3">
+                  {/* Key Code & Instant Copy */}
+                  <div className="flex items-center justify-between bg-slate-950/90 px-2.5 py-1.5 rounded-lg border border-slate-800 mb-2.5">
                     <span className="text-cyan-300 font-mono font-bold text-xs select-all truncate">
                       {k.key}
                     </span>
                     <button
                       onClick={() => handleCopy(k.key)}
-                      className="text-gray-400 hover:text-cyan-400 transition ml-2 shrink-0"
+                      className="text-gray-400 hover:text-cyan-400 transition ml-2 shrink-0 p-1"
                       title="কপি করুন"
                     >
                       {copiedKey === k.key ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
 
-                  {/* Device & Trader ID Info */}
-                  <div className="space-y-1 text-[11px] text-gray-300 mb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 flex items-center gap-1">
-                        <Smartphone className="w-3 h-3" />
-                        <span>ডিভাইস লক:</span>
+                  {/* Compact Info Grid */}
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10.5px] text-gray-300 mb-2.5 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80">
+                    <div className="flex items-center justify-between col-span-2">
+                      <span className="text-gray-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-cyan-400" />
+                        <span>মেয়াদ:</span>
+                      </span>
+                      <b className={remaining.isExpired ? 'text-red-400 font-mono' : remaining.notStarted ? 'text-cyan-400' : 'text-emerald-400 font-mono'}>
+                        {remaining.text}
+                      </b>
+                    </div>
+
+                    <div className="flex items-center justify-between col-span-2">
+                      <span className="text-gray-400 flex items-center gap-1">
+                        <Smartphone className="w-3 h-3 text-amber-400" />
+                        <span>ডিভাইস:</span>
                       </span>
                       <div className="flex items-center gap-1">
-                        <b className={isBound ? 'text-amber-400 font-mono text-[10px]' : 'text-gray-500 text-[10px]'}>
-                          {isBound ? 'লকড (Locked)' : 'আনলক (Open)'}
+                        <b className={isBound ? 'text-amber-300 font-mono text-[10px]' : 'text-gray-400 text-[10px]'}>
+                          {isUnlimitedDev
+                            ? `${registeredDevices.length} / Unlimited`
+                            : `${registeredDevices.length} / ${devLimit} Dev`}
                         </b>
                         {isBound && (
                           <button
                             onClick={() => handleResetDevice(k.key)}
                             title="ডিভাইস লক রিসেট করুন"
-                            className="p-1 hover:text-cyan-400 text-gray-400"
+                            className="p-0.5 hover:text-cyan-400 text-gray-400"
                           >
-                            <RotateCcw className="w-3 h-3" />
+                            <RotateCcw className="w-2.5 h-2.5" />
                           </button>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500">ট্রেডার আইডি:</span>
-                      <b className="text-white font-mono">{k.trader_id || 'মুক্ত (Open)'}</b>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>মেয়াদ বাকি:</span>
-                      </span>
-                      <b className={remaining.isExpired ? 'text-red-400' : remaining.notStarted ? 'text-cyan-400' : 'text-emerald-400 font-mono'}>
-                        {remaining.text}
-                      </b>
-                    </div>
+                    {k.trader_id && (
+                      <div className="flex items-center justify-between col-span-2">
+                        <span className="text-gray-400">ট্রেডার ID:</span>
+                        <b className="text-amber-400 font-mono">{k.trader_id}</b>
+                      </div>
+                    )}
 
                     {k.note && (
-                      <div className="text-[10px] text-gray-400 italic pt-1 truncate">
+                      <div className="col-span-2 text-[10px] text-gray-400 italic truncate pt-0.5 border-t border-slate-800">
                         "{k.note}"
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-800 text-xs">
+                {/* Compact Actions Toolbar */}
+                <div className="flex items-center gap-1.5 pt-2 border-t border-slate-800/90 text-xs">
                   <button
                     onClick={async () => {
                       await onToggleActive(k.key, k.active);
                       showActionToast(k.active ? 'কী ব্লক করা হয়েছে' : 'কী আনব্লক করা হয়েছে');
                     }}
-                    className={`flex-1 py-1.5 rounded-lg font-bold flex items-center justify-center gap-1 transition ${
+                    className={`flex-1 py-1 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition ${
                       k.active
                         ? 'bg-red-950/40 text-red-400 hover:bg-red-900/40 border border-red-500/30'
                         : 'bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/40 border border-emerald-500/30'
@@ -570,10 +622,22 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                       await onExtend(k.key, 30);
                       showActionToast('মেয়াদ +৩০ দিন বৃদ্ধি করা হয়েছে');
                     }}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold"
+                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-[11px] border border-cyan-500/20"
                     title="+৩০ দিন বাড়ান"
                   >
                     +30d
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setDeliveryLicense(k);
+                      setShowDeliveryModal(true);
+                    }}
+                    className="px-2 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-[11px] font-bold flex items-center gap-1 transition"
+                    title="কাস্টমার ডেলিভারি মেসেজ"
+                  >
+                    <Send className="w-3 h-3 text-cyan-400" />
+                    <span>মেসেজ</span>
                   </button>
 
                   <button
@@ -584,36 +648,23 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                     className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-500/20"
                     title="ডিলিট করুন"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
-
-                {/* Customer Delivery Message Button */}
-                <button
-                  onClick={() => {
-                    setDeliveryLicense(k);
-                    setShowDeliveryModal(true);
-                  }}
-                  className="w-full mt-2.5 py-1.5 px-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
-                  title="কাস্টমার ডেলিভারি মেসেজ"
-                >
-                  <Send className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>কাস্টমার ডেলিভারি মেসেজ</span>
-                </button>
               </div>
             );
           })
         )}
       </div>
 
-      {/* CREATE NEW KEY MODAL WITH CUSTOM MINUTES/HOURS/DAYS */}
+      {/* CREATE NEW KEY MODAL WITH TIME LIMIT & DEVICE LIMIT OPTIONS */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-5 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-cyan-500/30">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-5 shadow-2xl relative max-h-[95vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-cyan-500/30">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-sm font-black text-white">কাস্টম VIP লাইসেন্স তৈরি (Supabase Cloud)</h3>
+                <h3 className="text-sm font-black text-white">নতুন VIP লাইসেন্স তৈরি (Device & Time Controls)</h3>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -625,112 +676,196 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
 
             <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="text-gray-300 block mb-1">কাস্টম কী কোড (ঐচ্ছিক):</label>
+                <label className="text-gray-300 block mb-1 font-medium">কাস্টম কী কোড (ঐচ্ছিক):</label>
                 <input
                   type="text"
-                  placeholder="ফাঁকা রাখলে অটোমেটিক কোড তৈরি হবে"
+                  placeholder="ফাঁকা রাখলে অটোমেটিক VIP কোড তৈরি হবে"
                   value={customKey}
                   onChange={(e) => setCustomKey(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-mono outline-none focus:border-cyan-400"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-gray-300 block mb-1">লাইসেন্স টিয়ার:</label>
-                  <select
-                    value={selectedTier}
-                    onChange={(e) => setSelectedTier(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400"
-                  >
-                    <option value="VIP">VIP</option>
-                    <option value="PRO">PRO</option>
-                    <option value="TRIAL">TRIAL</option>
-                    <option value="LIFETIME">LIFETIME</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-gray-300 block mb-1">মেয়াদ মোড:</label>
-                  <div className="grid grid-cols-2 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => setDurationType('custom')}
-                      className={`py-1 rounded-lg font-bold text-[10px] ${
-                        durationType === 'custom' ? 'bg-cyan-500 text-[#070D1E]' : 'text-gray-400'
-                      }`}
-                    >
-                      কাস্টম টাইম
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDurationType('preset')}
-                      className={`py-1 rounded-lg font-bold text-[10px] ${
-                        durationType === 'preset' ? 'bg-cyan-500 text-[#070D1E]' : 'text-gray-400'
-                      }`}
-                    >
-                      প্রিসেট দিন
-                    </button>
-                  </div>
-                </div>
+              <div>
+                <label className="text-gray-300 block mb-1 font-medium">লাইসেন্স টিয়ার:</label>
+                <select
+                  value={selectedTier}
+                  onChange={(e) => setSelectedTier(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400"
+                >
+                  <option value="VIP">VIP (ফুল ফিচার)</option>
+                  <option value="PRO">PRO (প্রো)</option>
+                  <option value="TRIAL">TRIAL (ট্রায়াল)</option>
+                  <option value="LIFETIME">LIFETIME (আজীবন)</option>
+                </select>
               </div>
 
-              {/* Custom Duration Selector (Minutes, Hours, Days, Lifetime) */}
-              {durationType === 'custom' ? (
-                <div className="bg-slate-900/90 p-3 rounded-xl border border-cyan-500/30 space-y-2">
-                  <label className="text-[11px] text-cyan-300 font-bold block">
-                    কাস্টম সময় সেট করুন (মিনিট / ঘণ্টা / দিন / পার্মানেন্ট):
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {customUnit !== 'lifetime' ? (
+              {/* ⏱️ TIME LIMIT SELECTION (5m, 10m, 1h, 1d, Lifetime, Custom) */}
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 space-y-2">
+                <label className="text-gray-300 block font-medium flex items-center justify-between">
+                  <span>⏱️ টাইম লিমিট (Time Limit):</span>
+                  <span className="text-[10px] text-cyan-300 font-bold uppercase">
+                    {timePreset === 'custom' ? `${customValue} ${customUnit}` : timePreset}
+                  </span>
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setTimePreset('5m')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      timePreset === '5m' ? 'bg-cyan-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    ⚡ 5 Minutes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimePreset('10m')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      timePreset === '10m' ? 'bg-cyan-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    ⏱️ 10 Minutes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimePreset('1h')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      timePreset === '1h' ? 'bg-cyan-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    ⏳ 1 Hour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimePreset('1d')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      timePreset === '1d' ? 'bg-cyan-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    📅 1 Day
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimePreset('lifetime')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      timePreset === 'lifetime' ? 'bg-purple-500 text-white' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    ♾️ Lifetime
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimePreset('custom')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      timePreset === 'custom' ? 'bg-cyan-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    🛠️ Custom
+                  </button>
+                </div>
+
+                {timePreset === 'custom' && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {customUnit !== 'lifetime' && (
                       <input
                         type="number"
                         min="1"
-                        placeholder="সংখ্যা (উদা: ২, ৫, ১০)"
+                        placeholder="সংখ্যা (উদা: ২, ১৫)"
                         value={customValue}
                         onChange={(e) => setCustomValue(e.target.value)}
                         className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white font-mono outline-none focus:border-cyan-400"
                       />
-                    ) : (
-                      <div className="px-3 py-1.5 rounded-lg bg-slate-950 border border-purple-500/40 text-purple-300 font-bold text-center">
-                        আনলিমিটেড লাইফটাইম
-                      </div>
                     )}
                     <select
                       value={customUnit}
                       onChange={(e: any) => setCustomUnit(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-cyan-300 font-bold outline-none focus:border-cyan-400"
+                      className="px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-cyan-300 font-bold outline-none focus:border-cyan-400 col-span-1"
                     >
                       <option value="minutes">মিনিট (Minutes)</option>
                       <option value="hours">ঘণ্টা (Hours)</option>
                       <option value="days">দিন (Days)</option>
-                      <option value="lifetime">পার্মানেন্ট (Lifetime)</option>
+                      <option value="lifetime">লাইফটাইম (Lifetime)</option>
                     </select>
                   </div>
-                  <p className="text-[10px] text-amber-400/90 leading-tight">
-                    * লাইসেন্স এর মেয়াদ ১ম ডিভাইস থেকে লগইন করার পর থেকে শেষ হতে শুরু করবে!
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <label className="text-gray-300 block mb-1">প্রিসেট মেয়াদ:</label>
-                  <select
-                    value={presetDuration}
-                    onChange={(e) => setPresetDuration(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400"
+                )}
+                <p className="text-[10px] text-amber-400/90 leading-tight">
+                  * লাইসেন্সের সময় ১ম বার বটে ব্যবহারের পর থেকে কাউন্টডাউন শুরু হবে!
+                </p>
+              </div>
+
+              {/* 📱 DEVICE LIMIT SELECTION (1, 2, 3, Custom, Unlimited) */}
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-cyan-500/30 space-y-2">
+                <label className="text-gray-300 block font-medium flex items-center justify-between">
+                  <span>📱 ডিভাইস লিমিট (Device Limit):</span>
+                  <span className="text-[10px] text-amber-400 font-bold">
+                    {deviceLimitMode === 'unlimited' ? 'Unlimited Devices' : deviceLimitMode === 'custom' ? `${customDeviceLimit} Devices` : `${deviceLimitMode} Device`}
+                  </span>
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDeviceLimitMode('1')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      deviceLimitMode === '1' ? 'bg-amber-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
                   >
-                    <option value="24h">২৪ ঘণ্টা (1 Day)</option>
-                    <option value="7d">৭ দিন (1 Week)</option>
-                    <option value="30d">৩০ দিন (1 Month)</option>
-                    <option value="90d">৯০ দিন (3 Months)</option>
-                    <option value="1y">১ বছর (1 Year)</option>
-                    <option value="lifetime">লাইফটাইম (Lifetime)</option>
-                  </select>
+                    📱 1 Device
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeviceLimitMode('2')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      deviceLimitMode === '2' ? 'bg-amber-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    📱 2 Devices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeviceLimitMode('3')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      deviceLimitMode === '3' ? 'bg-amber-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    📱 3 Devices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeviceLimitMode('unlimited')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      deviceLimitMode === 'unlimited' ? 'bg-emerald-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    🌐 Unlimited
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeviceLimitMode('custom')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] col-span-2 transition ${
+                      deviceLimitMode === 'custom' ? 'bg-amber-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    ⚙️ Custom Limit
+                  </button>
                 </div>
-              )}
+
+                {deviceLimitMode === 'custom' && (
+                  <div className="pt-1">
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="সর্বোচ্চ অনুমোদিত ডিভাইস সংখ্যা (যেমন: 4, 5, 10)"
+                      value={customDeviceLimit}
+                      onChange={(e) => setCustomDeviceLimit(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-amber-400 font-mono outline-none focus:border-cyan-400"
+                    />
+                  </div>
+                )}
+              </div>
 
               <div>
-                <label className="text-gray-300 block mb-1">ট্রেডার আইডি (ঐচ্ছিক, ফাঁকা রাখলে ১ম ব্যবহারে লক হবে):</label>
+                <label className="text-gray-300 block mb-1">ট্রেডার আইডি (ঐচ্ছিক, নির্দিষ্ট আইডিতে লক করতে):</label>
                 <input
                   type="text"
                   placeholder="উদা: 84920184"
@@ -744,7 +879,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                 <label className="text-gray-300 block mb-1">নোট / ক্লায়েন্ট নাম (ঐচ্ছিক):</label>
                 <input
                   type="text"
-                  placeholder="উদা: রহিম ভাই - PocketOption / Quotex"
+                  placeholder="উদা: রহিম ভাই - Quotex VIP"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white outline-none focus:border-cyan-400"
@@ -755,9 +890,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md hover:brightness-110 active:scale-98 transition disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md hover:brightness-110 active:scale-98 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? 'তৈরি হচ্ছে...' : 'জেনারেট ও ডাটাবেসে সেভ করুন'}
+                  <Plus className="w-4 h-4" />
+                  <span>{isSubmitting ? 'তৈরি হচ্ছে...' : 'জেনারেট ও লাইসেন্স ডেলিভারি তৈরি'}</span>
                 </button>
               </div>
             </form>
@@ -958,37 +1094,21 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
 
             {/* Action Bar */}
             <div className="space-y-2 pt-2 border-t border-slate-800">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  onClick={() => {
-                    const msg = getDeliveryMessage(deliveryLicense);
-                    navigator.clipboard.writeText(msg);
-                    setCopiedDeliveryStatus(true);
-                    showActionToast('📋 সম্পূর্ণ কাস্টমার মেসেজ কপি হয়েছে!');
-                    setTimeout(() => setCopiedDeliveryStatus(false), 2500);
-                  }}
-                  className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-2 transition"
-                >
-                  {copiedDeliveryStatus ? <Check className="w-4 h-4 text-emerald-950" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedDeliveryStatus ? 'মেসেজ কপি হয়েছে!' : '📋 সম্পূর্ণ মেসেজ কপি করুন'}</span>
-                </button>
+              <button
+                onClick={() => {
+                  const msg = getDeliveryMessage(deliveryLicense);
+                  navigator.clipboard.writeText(msg);
+                  setCopiedDeliveryStatus(true);
+                  showActionToast('📋 সম্পূর্ণ কাস্টমার মেসেজ কপি হয়েছে!');
+                  setTimeout(() => setCopiedDeliveryStatus(false), 2500);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-2 transition"
+              >
+                {copiedDeliveryStatus ? <Check className="w-4 h-4 text-emerald-950" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedDeliveryStatus ? 'মেসেজ কপি হয়েছে!' : '📋 এক ক্লিকে সম্পূর্ণ মেসেজ কপি করুন'}</span>
+              </button>
 
-                <button
-                  onClick={() => {
-                    const code = getBookmarkletCode();
-                    navigator.clipboard.writeText(code);
-                    setCopiedCodeStatus(true);
-                    showActionToast('📜 লোডার কোড কপি হয়েছে!');
-                    setTimeout(() => setCopiedCodeStatus(false), 2500);
-                  }}
-                  className="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-xs border border-cyan-500/30 flex items-center justify-center gap-2 transition"
-                >
-                  {copiedCodeStatus ? <Check className="w-4 h-4 text-emerald-400" /> : <Terminal className="w-4 h-4 text-cyan-400" />}
-                  <span>{copiedCodeStatus ? 'কোড কপি হয়েছে!' : '📜 শুধু লোডার কোড কপি'}</span>
-                </button>
-              </div>
-
-              {/* Direct Social Share Buttons */}
+              {/* Direct Share Buttons */}
               <div className="flex items-center justify-between gap-2 pt-1">
                 <a
                   href={`https://t.me/share/url?url=&text=${encodeURIComponent(getDeliveryMessage(deliveryLicense))}`}

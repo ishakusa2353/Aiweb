@@ -6,7 +6,8 @@ export interface LicenseRecord {
   duration_ms?: number; // total duration in milliseconds
   exp: number | null; // epoch ms (null if not started or lifetime)
   first_login_at?: number | null; // recorded when first activated on device
-  device_id?: string; // single device lock
+  device_id?: string; // device lock (supports comma-separated device IDs)
+  device_limit?: number; // 1, 2, 3, custom N, or 0/unlimited
   trader_id?: string;
   created_at?: number;
   last_used_at?: number;

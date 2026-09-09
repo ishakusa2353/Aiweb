@@ -193,6 +193,7 @@ export const supabaseService = {
             exp: d.exp !== null && d.exp !== undefined ? Number(d.exp) : null,
             first_login_at: d.first_login_at ? Number(d.first_login_at) : null,
             device_id: d.device_id || '',
+            device_limit: d.device_limit !== undefined && d.device_limit !== null ? Number(d.device_limit) : 1,
             trader_id: d.trader_id || '',
             created_at: d.created_at ? Number(d.created_at) : Date.now(),
             last_used_at: d.last_used_at ? Number(d.last_used_at) : undefined,
@@ -223,6 +224,7 @@ export const supabaseService = {
             exp: d.exp !== null && d.exp !== undefined ? Number(d.exp) : null,
             first_login_at: d.first_login_at ? Number(d.first_login_at) : null,
             device_id: d.device_id || '',
+            device_limit: d.device_limit !== undefined && d.device_limit !== null ? Number(d.device_limit) : 1,
             trader_id: d.trader_id || '',
             created_at: d.created_at ? Number(d.created_at) : Date.now(),
             last_used_at: d.last_used_at ? Number(d.last_used_at) : undefined,
@@ -246,6 +248,7 @@ export const supabaseService = {
     customUnit?: string;
     traderId?: string;
     note?: string;
+    deviceLimit?: number;
   }): Promise<{ success: boolean; error?: string }> {
     // 1. Send to server API first
     try {
@@ -298,6 +301,8 @@ export const supabaseService = {
       }
     }
 
+    const deviceLimit = payload.deviceLimit !== undefined ? Number(payload.deviceLimit) : 1;
+
     if (isSupabaseConfigured) {
       try {
         const { error } = await supabase.from('ishak_licenses').insert({
@@ -309,6 +314,7 @@ export const supabaseService = {
           exp: null,
           first_login_at: null,
           device_id: '',
+          device_limit: deviceLimit,
           trader_id: (payload.traderId || '').trim(),
           created_at: Date.now(),
           last_used_at: null,
@@ -518,9 +524,25 @@ export const supabaseService = {
         }
 
         const myDeviceId = deviceId || '';
-        if (row.device_id && row.device_id.trim() !== '') {
-          if (myDeviceId && row.device_id !== myDeviceId) {
-            return { valid: false, reason: '🔒 এই লাইসেন্সটি অলরেডি অন্য ডিভাইসে যুক্ত আছে! সিঙ্গেল ডিভাইস পলিসি সক্রিয়।' };
+        const registeredDevices = (row.device_id || '')
+          .split(',')
+          .map((d: string) => d.trim())
+          .filter(Boolean);
+
+        const devLimit = row.device_limit !== undefined && row.device_limit !== null ? Number(row.device_limit) : 1;
+        const isUnlimited = devLimit === 0 || devLimit === -1;
+        const updates: any = {};
+        let needPatch = false;
+
+        if (myDeviceId) {
+          const alreadyRegistered = registeredDevices.includes(myDeviceId);
+          if (!alreadyRegistered) {
+            if (!isUnlimited && registeredDevices.length >= devLimit) {
+              return { valid: false, reason: `🔒 ডিভাইস লিমিট শেষ! এই লাইসেন্সটি সর্বোচ্চ ${devLimit} টি ডিভাইসের জন্য অনুমোদিত।` };
+            }
+            registeredDevices.push(myDeviceId);
+            updates.device_id = registeredDevices.join(',');
+            needPatch = true;
           }
         }
 
@@ -536,9 +558,6 @@ export const supabaseService = {
         let exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
         const durationMs = row.duration_ms ? Number(row.duration_ms) : parseDurationToMs(row.duration || '30d');
 
-        const updates: any = {};
-        let needPatch = false;
-
         if (!firstLogin) {
           firstLogin = now;
           updates.first_login_at = firstLogin;
@@ -546,11 +565,6 @@ export const supabaseService = {
             exp = firstLogin + durationMs;
             updates.exp = exp;
           }
-          needPatch = true;
-        }
-
-        if (!row.device_id && myDeviceId) {
-          updates.device_id = myDeviceId;
           needPatch = true;
         }
 

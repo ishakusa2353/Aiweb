@@ -63,14 +63,30 @@ async function startServer() {
         });
       }
 
-      // 🔒 DEVICE LOCK DETECTION:
-      // Single device policy: If already logged in on a device, reject other devices.
-      if (license.device_id && license.device_id.trim() !== "") {
-        if (inputDeviceId && license.device_id !== inputDeviceId) {
-          return res.status(403).json({
-            valid: false,
-            reason: "This license is already bound to another device! Single device lock active."
-          });
+      // 🔒 DEVICE LIMIT ENFORCEMENT:
+      // Supports 1 Device, 2 Devices, 3 Devices, Custom N Devices, or 0 (Unlimited)
+      const registeredDevices = (license.device_id || "")
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean);
+
+      const deviceLimit = license.device_limit !== undefined ? Number(license.device_limit) : 1;
+      const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1;
+      let needSave = false;
+
+      if (inputDeviceId) {
+        const alreadyRegistered = registeredDevices.includes(inputDeviceId);
+        if (!alreadyRegistered) {
+          if (!isUnlimitedDevices && registeredDevices.length >= deviceLimit) {
+            return res.status(403).json({
+              valid: false,
+              reason: `🔒 Device limit exceeded! This license is restricted to ${deviceLimit} device(s).`
+            });
+          }
+          // Register this device
+          registeredDevices.push(inputDeviceId);
+          license.device_id = registeredDevices.join(",");
+          needSave = true;
         }
       }
 
@@ -86,19 +102,12 @@ async function startServer() {
 
       // ⏱️ FIRST LOGIN ACTIVATION:
       // License countdown starts strictly upon first device login!
-      let needSave = false;
       if (!license.first_login_at) {
         license.first_login_at = Date.now();
         // If not a lifetime key, calculate exp from duration_ms starting NOW
         if (license.duration !== 'lifetime' && license.duration_ms) {
           license.exp = license.first_login_at + license.duration_ms;
         }
-        needSave = true;
-      }
-
-      // Bind deviceId if not bound yet
-      if (!license.device_id && inputDeviceId) {
-        license.device_id = inputDeviceId;
         needSave = true;
       }
 
@@ -168,23 +177,36 @@ async function startServer() {
       if (!license.active) {
         return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "এই লাইসেন্সটি ব্লক বা নিষ্ক্রিয় করা হয়েছে!" })});`);
       }
-      if (license.device_id && inputDeviceId && license.device_id !== inputDeviceId) {
-        return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "সিঙ্গেল ডিভাইস লক সক্রিয়! এই কি অন্য ডিভাইসে যুক্ত আছে।" })});`);
+      // 🔒 DEVICE LIMIT ENFORCEMENT:
+      const registeredDevices = (license.device_id || "")
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean);
+
+      const deviceLimit = license.device_limit !== undefined ? Number(license.device_limit) : 1;
+      const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1;
+      let needSave = false;
+
+      if (inputDeviceId) {
+        const alreadyRegistered = registeredDevices.includes(inputDeviceId);
+        if (!alreadyRegistered) {
+          if (!isUnlimitedDevices && registeredDevices.length >= deviceLimit) {
+            return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: `ডিভাইস লিমিট শেষ! এই লাইসেন্সটি সর্বোচ্চ ${deviceLimit} টি ডিভাইসের জন্য অনুমোদিত।` })});`);
+          }
+          registeredDevices.push(inputDeviceId);
+          license.device_id = registeredDevices.join(",");
+          needSave = true;
+        }
       }
       if (license.trader_id && inputTraderId && license.trader_id !== inputTraderId) {
         return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: `এই লাইসেন্সটি ট্রেডার আইডি (${license.trader_id}) এর সাথে লক করা!` })});`);
       }
 
-      let needSave = false;
       if (!license.first_login_at) {
         license.first_login_at = Date.now();
         if (license.duration !== 'lifetime' && license.duration_ms) {
           license.exp = license.first_login_at + license.duration_ms;
         }
-        needSave = true;
-      }
-      if (!license.device_id && inputDeviceId) {
-        license.device_id = inputDeviceId;
         needSave = true;
       }
       if (!license.trader_id && inputTraderId) {
@@ -257,7 +279,7 @@ async function startServer() {
 
   app.post("/api/keys", async (req, res) => {
     try {
-      const { key, tier, duration, customValue, customUnit, traderId, note } = req.body;
+      const { key, tier, duration, customValue, customUnit, traderId, note, deviceLimit } = req.body;
 
       let finalKey = (key || "").trim().toUpperCase();
       if (!finalKey) {
@@ -295,6 +317,8 @@ async function startServer() {
         parsedDurationMs = parseDurationToMs(finalDurationStr);
       }
 
+      const parsedDeviceLimit = deviceLimit !== undefined ? Number(deviceLimit) : 1;
+
       const newRecord: LicenseRecord = {
         key: finalKey,
         active: true,
@@ -304,6 +328,7 @@ async function startServer() {
         exp: null, // Calculated strictly on first login!
         first_login_at: null,
         device_id: "",
+        device_limit: parsedDeviceLimit,
         trader_id: (traderId || "").trim(),
         created_at: Date.now(),
         last_used_at: null,
@@ -325,7 +350,7 @@ async function startServer() {
         return res.status(404).json({ success: false, error: "Key not found" });
       }
 
-      const { active, traderId, extendDays, extendMinutes, resetDevice, note } = req.body;
+      const { active, traderId, extendDays, extendMinutes, resetDevice, note, deviceLimit } = req.body;
 
       if (typeof active === "boolean") {
         existing.active = active;
@@ -338,6 +363,9 @@ async function startServer() {
       }
       if (resetDevice === true) {
         existing.device_id = "";
+      }
+      if (deviceLimit !== undefined) {
+        existing.device_limit = Number(deviceLimit);
       }
       if (extendDays && existing.exp) {
         existing.exp += Number(extendDays) * 86400000;
