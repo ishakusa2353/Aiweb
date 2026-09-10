@@ -1291,48 +1291,146 @@ javascript:(function(){
     };
   }
 
-  // ⚡ 6.5. QUOTEX AUTO-TRADE BULLETPROOF NATIVE CLICK DISPATCHER (USER'S EXACT AUTO-TRADE COMMAND)
+  // ⚡ 6.5. QUOTEX AUTO-TRADE BULLETPROOF NATIVE CLICK DISPATCHER (STRICT TRADING BUTTONS ONLY)
+  function findQuotexTradeButtons() {
+    var cBtn = null;
+    var pBtn = null;
+
+    function isSafeTradeBtn(el) {
+      if (!el || !(el instanceof Element)) return false;
+      if (el.tagName === 'A' || el.closest('a')) return false;
+      if (el.closest('header, nav, .header, #header, [class*="header"], [class*="navbar"], #ishak-trade-wrap, .ishak-modal-overlay')) return false;
+
+      var txt = (el.textContent || '').trim().toLowerCase();
+      var cls = (el.className || '').toString().toLowerCase();
+      var id = (el.id || '').toLowerCase();
+      var testId = (el.getAttribute('data-test-id') || '').toLowerCase();
+      var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+      var combo = txt + ' ' + cls + ' ' + id + ' ' + testId + ' ' + aria;
+
+      // Strictly reject non-trading navigation / account / deposit actions
+      if (combo.includes('top-up') || combo.includes('topup') || combo.includes('deposit') ||
+          combo.includes('sign') || combo.includes('register') || combo.includes('login') ||
+          combo.includes('logout') || combo.includes('account') || combo.includes('profile') ||
+          combo.includes('wallet') || combo.includes('cashier') || combo.includes('withdraw') ||
+          combo.includes('support') || combo.includes('help') || combo.includes('close') ||
+          combo.includes('upload') || combo.includes('upgrade') || combo.includes('bonus')) {
+        return false;
+      }
+      return true;
+    }
+
+    // Step 1: Search inside dedicated Quotex trade/deal panels first
+    var dealPanels = document.querySelectorAll(
+      '.deal-form, .section-deal, aside.deal-form, .trade-panel, .panel-deal, ' +
+      'div[class*="deal-form"], div[class*="section-deal"], div[class*="trade-box"], [class*="deal-panel"]'
+    );
+
+    for (var i = 0; i < dealPanels.length; i++) {
+      var panel = dealPanels[i];
+      if (panel.closest('#ishak-trade-wrap')) continue;
+
+      var upCandidate = panel.querySelector(
+        '.section-deal__button--up button, .deal-form__button--up button, ' +
+        'button.btn-call, button.call, button.button-call, ' +
+        '.section-deal__button--up, .deal-form__button--up, ' +
+        '#platform-call-button'
+      );
+      var downCandidate = panel.querySelector(
+        '.section-deal__button--down button, .deal-form__button--down button, ' +
+        'button.btn-put, button.put, button.button-put, ' +
+        '.section-deal__button--down, .deal-form__button--down, ' +
+        '#platform-put-button'
+      );
+
+      if (upCandidate && isSafeTradeBtn(upCandidate)) cBtn = upCandidate;
+      if (downCandidate && isSafeTradeBtn(downCandidate)) pBtn = downCandidate;
+
+      if (cBtn && pBtn) break;
+    }
+
+    // Step 2: Global specific trading selectors (excluding dangerous substrings)
+    if (!cBtn) {
+      var gUp = document.querySelector(
+        '#platform-call-button, ' +
+        '.deal-form .btn-call, .section-deal .btn-call, ' +
+        '.deal-form__button--up button, .section-deal__button--up button, ' +
+        '.section-deal__button--up, .deal-form__button--up, ' +
+        'button.btn-call, button.button-call'
+      );
+      if (gUp && isSafeTradeBtn(gUp)) cBtn = gUp;
+    }
+    if (!pBtn) {
+      var gDown = document.querySelector(
+        '#platform-put-button, ' +
+        '.deal-form .btn-put, .section-deal .btn-put, ' +
+        '.deal-form__button--down button, .section-deal__button--down button, ' +
+        '.section-deal__button--down, .deal-form__button--down, ' +
+        'button.btn-put, button.button-put'
+      );
+      if (gDown && isSafeTradeBtn(gDown)) pBtn = gDown;
+    }
+
+    // Step 3: Scan buttons inside trading areas by exact wording and verified theme colors
+    if (!cBtn || !pBtn) {
+      var candidates = document.querySelectorAll(
+        '.deal-form button, .section-deal button, aside button, .trade-panel button, ' +
+        'button, div[role="button"]'
+      );
+      for (var j = 0; j < candidates.length; j++) {
+        var b = candidates[j];
+        if (!isSafeTradeBtn(b)) continue;
+
+        var text = (b.textContent || '').trim().toLowerCase();
+        var style = window.getComputedStyle(b);
+        var bg = style.backgroundColor || '';
+
+        // UP / CALL:
+        var isGreen = bg.includes('0, 192, 108') || bg.includes('0, 176, 116') || bg.includes('38, 166, 154') || bg.includes('5, 150, 105') || bg.includes('16, 185, 129');
+        var isExactUpWord = /(^|\s)(up|call|higher|বাই|কল)($|\s)/i.test(text);
+
+        if (!cBtn && (isGreen || isExactUpWord)) {
+          cBtn = b;
+        }
+
+        // DOWN / PUT:
+        var isRed = bg.includes('255, 98, 89') || bg.includes('235, 64, 52') || bg.includes('242, 54, 69') || bg.includes('255, 75, 75') || bg.includes('225, 29, 72') || bg.includes('244, 63, 94');
+        var isExactDownWord = /(^|\s)(down|put|lower|সেল|পুট)($|\s)/i.test(text);
+
+        if (!pBtn && (isRed || isExactDownWord)) {
+          pBtn = b;
+        }
+
+        if (cBtn && pBtn) break;
+      }
+    }
+
+    return { up: cBtn, down: pBtn };
+  }
+
   function executeQuotexTrade(isCall, signalId) {
     if (!autoTradeEnabled) {
       return { success: false, reason: 'AUTO_TRADE_DISABLED' };
     }
     try {
-      var cBtn = document.querySelector(
-        '.btn-call, .button-call, .section-deal__button--up, .deal-form__button--up, ' +
-        'button.call, button.up, [data-test-id*="call"], [data-test-id*="up"], ' +
-        '[class*="button--call"], [class*="button--up"], [class*="deal__button--up"]'
-      );
-      var pBtn = document.querySelector(
-        '.btn-put, .button-put, .section-deal__button--down, .deal-form__button--down, ' +
-        'button.put, button.down, [data-test-id*="put"], [data-test-id*="down"], ' +
-        '[class*="button--put"], [class*="button--down"], [class*="deal__button--down"]'
-      );
-      if (!cBtn || !pBtn) {
-        Array.from(document.querySelectorAll('button, div[role="button"], a[role="button"]')).forEach(function(b) {
-          var txt = (b.innerText || b.textContent || '').trim().toLowerCase();
-          var bg = window.getComputedStyle(b).backgroundColor || '';
-          var aria = (b.getAttribute('aria-label') || '').toLowerCase();
+      var pair = findQuotexTradeButtons();
+      var rawTarget = isCall ? pair.up : pair.down;
 
-          if (!cBtn && (txt.includes('up') || txt.includes('call') || txt.includes('higher') || aria.includes('call') || aria.includes('up') || bg.includes('0, 192, 108') || bg.includes('0, 176, 116') || bg.includes('38, 166, 154'))) {
-            cBtn = b;
-          }
-          if (!pBtn && (txt.includes('down') || txt.includes('put') || txt.includes('lower') || aria.includes('put') || aria.includes('down') || bg.includes('255, 98, 89') || bg.includes('235, 64, 52') || bg.includes('242, 54, 69') || bg.includes('255, 75, 75'))) {
-            pBtn = b;
-          }
-        });
-      }
-      var target = isCall ? cBtn : pBtn;
-      if (target) {
-        var opts = { bubbles: true, cancelable: true, view: window };
-        target.dispatchEvent(new PointerEvent('pointerdown', opts));
-        target.dispatchEvent(new MouseEvent('mousedown', opts));
-        target.dispatchEvent(new PointerEvent('pointerup', opts));
-        target.dispatchEvent(new MouseEvent('mouseup', opts));
-        target.click();
-        return { success: true, element: target };
-      } else {
+      if (!rawTarget) {
         return { success: false, reason: 'BUTTON_NOT_FOUND' };
       }
+
+      // If target is a wrapper element containing a button, click the button
+      var target = (rawTarget.tagName === 'BUTTON') ? rawTarget : (rawTarget.querySelector('button') || rawTarget);
+
+      var opts = { bubbles: true, cancelable: true, view: window };
+      target.dispatchEvent(new PointerEvent('pointerdown', opts));
+      target.dispatchEvent(new MouseEvent('mousedown', opts));
+      target.dispatchEvent(new PointerEvent('pointerup', opts));
+      target.dispatchEvent(new MouseEvent('mouseup', opts));
+      target.click();
+
+      return { success: true, element: target, isCall: isCall };
     } catch(err) {
       return { success: false, reason: err.message };
     }
