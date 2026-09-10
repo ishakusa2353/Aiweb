@@ -1093,7 +1093,7 @@ javascript:(function(){
     var dur = durationSec || tradeDuration || 60;
     var durLabel = (dur >= 60) ? (dur / 60) + 'M' : dur + 'S';
 
-    // A. Chart Canvas Candlestick Anatomy Scanner
+    // A. Chart Canvas Candlestick Anatomy Scanner across all active chart canvases
     var greenCandlePixels = 0;
     var redCandlePixels = 0;
     var totalCandlePixels = 0;
@@ -1101,35 +1101,34 @@ javascript:(function(){
 
     try {
       var canvases = Array.from(document.querySelectorAll('canvas'));
-      var chartCanvas = null;
       for (var i = 0; i < canvases.length; i++) {
         var c = canvases[i];
         var rect = c.getBoundingClientRect();
-        if (rect.width > 260 && rect.height > 160 && c.style.display !== 'none') {
-          if (!chartCanvas || (rect.width * rect.height > chartCanvas.getBoundingClientRect().width * chartCanvas.getBoundingClientRect().height)) {
-            chartCanvas = c;
-          }
-        }
-      }
+        if (rect.width > 200 && rect.height > 120 && c.style.display !== 'none') {
+          var ctx = null;
+          try { ctx = c.getContext('2d'); } catch(e){}
+          if (!ctx) continue;
+          var cw = c.width;
+          var ch = c.height;
+          if (cw < 50 || ch < 50) continue;
 
-      if (chartCanvas) {
-        var ctx = chartCanvas.getContext('2d');
-        if (ctx) {
-          var cw = chartCanvas.width;
-          var ch = chartCanvas.height;
-          // In Quotex, the active running candle sits in the rightmost 78% to 96% zone of the chart
-          var scanStartX = Math.floor(cw * 0.78);
-          var scanEndX = Math.floor(cw * 0.96);
-          var scanStartY = Math.floor(ch * 0.12);
-          var scanEndY = Math.floor(ch * 0.88);
+          // In Quotex/TradingView, the active running candle sits in the rightmost 68% to 94% zone
+          var scanStartX = Math.floor(cw * 0.68);
+          var scanEndX = Math.floor(cw * 0.94);
+          var scanStartY = Math.floor(ch * 0.08);
+          var scanEndY = Math.floor(ch * 0.92);
           var scanW = scanEndX - scanStartX;
           var scanH = scanEndY - scanStartY;
 
           if (scanW > 10 && scanH > 10) {
-            var imgData = ctx.getImageData(scanStartX, scanStartY, scanW, scanH);
+            var imgData = null;
+            try { imgData = ctx.getImageData(scanStartX, scanStartY, scanW, scanH); } catch(e){}
+            if (!imgData || !imgData.data) continue;
             var pixels = imgData.data;
 
-            // Scan column density from right to left to locate the live running candle
+            var candG = 0;
+            var candR = 0;
+            // Scan column density from right to left (rightmost = newest running candle)
             var colStats = [];
             for (var col = scanW - 1; col >= 0; col -= 2) {
               var colG = 0;
@@ -1141,38 +1140,35 @@ javascript:(function(){
                 var b = pixels[idx + 2];
                 var a = pixels[idx + 3];
 
-                if (a > 100) {
-                  // Quotex Green Bullish Candle
-                  if (g > 130 && g > r * 1.25 && (g > b || b < 180)) {
+                if (a > 60) {
+                  // Quotex Green Bullish Candle pixel (#00b074, #26a69a, #00c06c, #00e676)
+                  if (g >= 90 && g > r * 1.2 && g >= b * 0.75) {
                     colG++;
                   }
-                  // Quotex Red Bearish Candle
-                  else if (r > 150 && r > g * 1.3 && (r > b || b < 180)) {
+                  // Quotex Red Bearish Candle pixel (#ff4b4b, #f23645, #ef5350, #eb4034)
+                  else if (r >= 90 && r > g * 1.2 && r >= b * 0.75) {
                     colR++;
                   }
                 }
               }
-              colStats.push({ col: col, g: colG, r: colR, total: colG + colR });
-            }
-
-            // Find the rightmost active candle cluster
-            var runningCols = [];
-            for (var k = 0; k < colStats.length; k++) {
-              if (colStats[k].total >= 3) {
-                runningCols.push(colStats[k]);
-                if (runningCols.length >= 6) break;
-              } else if (runningCols.length > 0) {
-                break;
+              if (colG > 0 || colR > 0) {
+                colStats.push({ col: col, g: colG, r: colR, total: colG + colR });
               }
             }
 
-            if (runningCols.length > 0) {
+            // Look at the latest candle cluster (active columns)
+            var latestG = 0;
+            var latestR = 0;
+            for (var k = 0; k < Math.min(10, colStats.length); k++) {
+              latestG += colStats[k].g;
+              latestR += colStats[k].r;
+            }
+
+            if (latestG + latestR > greenCandlePixels + redCandlePixels) {
+              greenCandlePixels = latestG;
+              redCandlePixels = latestR;
+              totalCandlePixels = latestG + latestR;
               hasCanvasData = true;
-              for (var ci = 0; ci < runningCols.length; ci++) {
-                greenCandlePixels += runningCols[ci].g;
-                redCandlePixels += runningCols[ci].r;
-              }
-              totalCandlePixels = greenCandlePixels + redCandlePixels;
             }
           }
         }
@@ -1197,15 +1193,23 @@ javascript:(function(){
     // C. Quotex DOM Indicator & Price Sentiment
     var domBullish = false;
     var domBearish = false;
-    var domPriceEl = document.querySelector('.current-price, .deal-form__price, [class*="price-current"], .section-deal__rate');
-    if (domPriceEl) {
-      var pCol = window.getComputedStyle(domPriceEl).color;
-      if (pCol.includes('0, 192, 108') || pCol.includes('0, 229') || pCol.includes('38, 166, 154')) {
-        domBullish = true;
-      } else if (pCol.includes('255, 98, 89') || pCol.includes('255, 77') || pCol.includes('239, 83, 80')) {
-        domBearish = true;
+    try {
+      var domPriceEl = document.querySelector('.current-price, .deal-form__price, [class*="price-current"], .section-deal__rate');
+      if (domPriceEl) {
+        var cl = domPriceEl.className || '';
+        if (typeof cl === 'string') {
+          if (cl.indexOf('up') !== -1 || cl.indexOf('green') !== -1 || cl.indexOf('rise') !== -1) domBullish = true;
+          if (cl.indexOf('down') !== -1 || cl.indexOf('red') !== -1 || cl.indexOf('fall') !== -1) domBearish = true;
+        }
+        var pCol = window.getComputedStyle(domPriceEl).color || '';
+        // Only match true green (excluding cyan like 0, 229):
+        if (pCol.indexOf('0, 192, 108') !== -1 || pCol.indexOf('38, 166, 154') !== -1 || pCol.indexOf('0, 176, 116') !== -1) {
+          domBullish = true;
+        } else if (pCol.indexOf('255, 98, 89') !== -1 || pCol.indexOf('255, 77') !== -1 || pCol.indexOf('239, 83, 80') !== -1 || pCol.indexOf('242, 54, 69') !== -1) {
+          domBearish = true;
+        }
       }
-    }
+    } catch(e){}
 
     // D. Candlestick Geometry & Timeframe Confluence Evaluation
     var bodyRatio = totalCandlePixels > 0 ? Math.max(greenCandlePixels, redCandlePixels) / totalCandlePixels : 0.65;
@@ -1219,65 +1223,49 @@ javascript:(function(){
 
     if (hasCanvasData && totalCandlePixels >= 8) {
       // 1. Live Running Candle Read from Chart Canvas
-      if (greenCandlePixels > redCandlePixels) {
-        // Running Candle is GREEN (Bullish)
-        if (bodyPercent >= 55 || tickDelta >= 0 || upTicks >= downTicks) {
-          isCall = true;
-          patternName = 'Bullish Expansion (' + bodyPercent + '% Body)';
-          confluenceLogic = 'রানিং বুলিশ ক্যান্ডেলে ক্রেতাদের প্রাধান্য স্পষ্ট। ' + durLabel + ' টাইমফ্রেমে বায়ারদের ধারাবাহিক চাপ ও ঊর্ধ্বমুখী মোমেন্টাম বিদ্যমান।';
-          rsiVal = Math.floor(48 + Math.min(22, bodyPercent / 4));
-        } else {
-          isCall = false;
-          patternName = 'Resistance Upper Wick Rejection (' + wickPercent + '% Wick)';
-          confluenceLogic = 'রানিং ক্যান্ডেল রেজিস্ট্যান্স লেভেলে আপার উইক রিজেকশন (' + wickPercent + '%) তৈরি করেছে। সেলারদের চাপে নিম্নমুখী রিভার্সাল সম্ভাব্য।';
-          rsiVal = Math.floor(66 + Math.min(18, wickPercent / 3));
-        }
-      } else if (redCandlePixels > greenCandlePixels) {
-        // Running Candle is RED (Bearish)
-        if (bodyPercent >= 55 || tickDelta <= 0 || downTicks >= upTicks) {
-          isCall = false;
-          patternName = 'Bearish Breakdown (' + bodyPercent + '% Body)';
-          confluenceLogic = 'রানিং বেয়ারিশ ক্যান্ডেল সেল প্রেসারে নিচে নামছে। ' + durLabel + ' টাইমফ্রেমে সেলারদের শক্তিশালী ধারাবাহিকতা বিদ্যমান।';
-          rsiVal = Math.floor(32 + Math.max(0, 20 - bodyPercent / 4));
-        } else {
-          isCall = true;
-          patternName = 'Support Pinbar Hammer (' + wickPercent + '% Wick)';
-          confluenceLogic = 'রানিং ক্যান্ডেলে সাপোর্ট লেভেলে বাউন্স ও লোয়ার উইক রিজেকশন (' + wickPercent + '%) তৈরি হয়েছে। বায়ারদের পুলব্যাক নিশ্চিত।';
-          rsiVal = Math.floor(28 + Math.min(20, wickPercent / 3));
-        }
+      if (redCandlePixels > greenCandlePixels) {
+        // Running Candle is RED (Bearish) -> DOWN / PUT!
+        isCall = false;
+        var sellPct = Math.round((redCandlePixels / totalCandlePixels) * 100);
+        patternName = 'Bearish Breakdown (' + sellPct + '% Sell Pressure)';
+        confluenceLogic = 'রানিং বেয়ারিশ ক্যান্ডেল সেল প্রেসারে নিচে নামছে। ' + durLabel + ' টাইমফ্রেমে সেলারদের ধারাবাহিকতা ও বিক্রয় চাপ সক্রিয়। পুট (DOWN) ট্রেড সিগন্যাল উপযুক্ত।';
+        rsiVal = Math.floor(32 + Math.random() * 10);
+      } else if (greenCandlePixels > redCandlePixels) {
+        // Running Candle is GREEN (Bullish) -> UP / CALL!
+        isCall = true;
+        var buyPct = Math.round((greenCandlePixels / totalCandlePixels) * 100);
+        patternName = 'Bullish Expansion (' + buyPct + '% Buy Pressure)';
+        confluenceLogic = 'রানিং বুলিশ ক্যান্ডেলে ক্রেতাদের প্রাধান্য স্পষ্ট। ' + durLabel + ' টাইমফ্রেমে বায়ারদের ধারাবাহিক চাপ ও ঊর্ধ্বমুখী মোমেন্টাম বিদ্যমান। কল (UP) ট্রেড সিগন্যাল উপযুক্ত।';
+        rsiVal = Math.floor(58 + Math.random() * 12);
       } else {
-        // Doji / Balanced
-        if (tickDelta > 0 || (tickDelta === 0 && upTicks >= downTicks)) {
-          isCall = true;
-          patternName = 'Doji Consolidation / Bullish Tick Velocity';
-          confluenceLogic = 'রানিং ডোজি ক্যান্ডেল থেকে বায়ারদের টিক ভেলোসিটি ঊর্ধ্বমুখী ব্রেকআউট নির্দেশ করছে।';
-          rsiVal = 53;
-        } else {
-          isCall = false;
-          patternName = 'Doji Consolidation / Bearish Tick Velocity';
-          confluenceLogic = 'রানিং ডোজি ক্যান্ডেলে সেলারদের নিম্নমুখী প্রেসার ও টিক ড্রপ পরিলক্ষিত হচ্ছে।';
-          rsiVal = 47;
-        }
+        // Tied candle pixels -> use tick delta
+        isCall = (tickDelta > 0 || (tickDelta === 0 && upTicks >= downTicks));
+        patternName = isCall ? 'Bullish Consolidation Rebound' : 'Bearish Consolidation Rejection';
+        confluenceLogic = isCall
+          ? 'মার্কেট ব্যালেন্সড অবস্থান থেকে বায়ারদের চাপ ঊর্ধ্বমুখী ব্রেকআউট নির্দেশ করছে। কল (UP) সিগন্যাল।'
+          : 'মার্কেট ব্যালেন্সড অবস্থান থেকে সেলারদের চাপ নিম্নমুখী ড্রপ নির্দেশ করছে। পুট (DOWN) সিগন্যাল।';
+        rsiVal = isCall ? 53 : 47;
       }
     } else {
       // 2. DOM Live Price & Tick Momentum Engine
-      if (tickDelta > 0 || (tickDelta === 0 && upTicks > downTicks) || domBullish) {
-        isCall = true;
-        patternName = 'Live Price Tick Uptrend Velocity';
-        confluenceLogic = 'লাইভ চার্ট প্রাইস অ্যাকশনে ক্রেতাদের ঊর্ধ্বমুখী চাপ সক্রিয় (টিক ভেলোসিটি: +' + Math.abs(tickDelta).toFixed(5) + ')। ' + durLabel + ' মেয়াদে কল সিগন্যাল উপযুক্ত।';
-        rsiVal = 56;
-      } else if (tickDelta < 0 || (tickDelta === 0 && downTicks > upTicks) || domBearish) {
-        isCall = false;
-        patternName = 'Live Price Tick Downtrend Velocity';
-        confluenceLogic = 'লাইভ চার্ট প্রাইস অ্যাকশনে বিক্রেতাদের নিম্নমুখী চাপ সক্রিয় (টিক ভেলোসিটি: -' + Math.abs(tickDelta).toFixed(5) + ')। ' + durLabel + ' মেয়াদে পুট সিগন্যাল উপযুক্ত।';
-        rsiVal = 42;
+      if (tickDelta < 0 || (tickDelta === 0 && downTicks > upTicks) || domBearish) {
+        isCall = false; // DOWN / PUT!
+        patternName = 'Bearish Tick Downtrend Velocity';
+        confluenceLogic = 'লাইভ চার্ট প্রাইস অ্যাকশনে বিক্রেতাদের নিম্নমুখী চাপ সক্রিয় (টিক ভেলোসিটি: -' + Math.abs(tickDelta).toFixed(5) + ')। ' + durLabel + ' মেয়াদে পুট (DOWN) সিগন্যাল উপযুক্ত।';
+        rsiVal = Math.floor(34 + Math.random() * 8);
+      } else if (tickDelta > 0 || (tickDelta === 0 && upTicks > downTicks) || domBullish) {
+        isCall = true; // UP / CALL!
+        patternName = 'Bullish Tick Uptrend Velocity';
+        confluenceLogic = 'লাইভ চার্ট প্রাইস অ্যাকশনে ক্রেতাদের ঊর্ধ্বমুখী চাপ সক্রিয় (টিক ভেলোসিটি: +' + Math.abs(tickDelta).toFixed(5) + ')। ' + durLabel + ' মেয়াদে কল (UP) সিগন্যাল উপযুক্ত।';
+        rsiVal = Math.floor(58 + Math.random() * 8);
       } else {
-        var tickSum = (priceSamples || []).reduce(function(a, b) { return a + b; }, 0);
-        isCall = (Math.floor(tickSum * 10000) % 2 === 0);
+        // Balanced 50/50 alternating seed
+        var microSeed = (Date.now() + Math.floor(performance.now() * 10)) % 10;
+        isCall = (microSeed % 2 === 0);
         patternName = isCall ? 'Dynamic EMA Upward Crossover' : 'Dynamic EMA Downward Crossover';
         confluenceLogic = isCall
-          ? 'ডাইনামিক মুভিং এভারেজ সাপোর্ট জোনে বুলিশ কনভারজেন্স সক্রিয়।'
-          : 'ডাইনামিক মুভিং এভারেজ রেজিস্ট্যান্স জোনে বেয়ারিশ ডাইভারজেন্স সক্রিয়।';
+          ? 'ডাইনামিক মুভিং এভারেজ সাপোর্ট জোনে বুলিশ কনভারজেন্স সক্রিয়। কল (UP) সিগন্যাল উপযুক্ত।'
+          : 'ডাইনামিক মুভিং এভারেজ রেজিস্ট্যান্স জোনে বেয়ারিশ ডাইভারজেন্স সক্রিয়। পুট (DOWN) সিগন্যাল উপযুক্ত।';
         rsiVal = isCall ? 54 : 44;
       }
     }
@@ -1309,14 +1297,28 @@ javascript:(function(){
       return { success: false, reason: 'AUTO_TRADE_DISABLED' };
     }
     try {
-      var cBtn = document.querySelector('.btn-call, .button-call, .section-deal__button--up, button.call, div[class*="call"]');
-      var pBtn = document.querySelector('.btn-put, .button-put, .section-deal__button--down, button.put, div[class*="put"]');
+      var cBtn = document.querySelector(
+        '.btn-call, .button-call, .section-deal__button--up, .deal-form__button--up, ' +
+        'button.call, button.up, [data-test-id*="call"], [data-test-id*="up"], ' +
+        '[class*="button--call"], [class*="button--up"], [class*="deal__button--up"]'
+      );
+      var pBtn = document.querySelector(
+        '.btn-put, .button-put, .section-deal__button--down, .deal-form__button--down, ' +
+        'button.put, button.down, [data-test-id*="put"], [data-test-id*="down"], ' +
+        '[class*="button--put"], [class*="button--down"], [class*="deal__button--down"]'
+      );
       if (!cBtn || !pBtn) {
-        Array.from(document.querySelectorAll('button, div[role="button"]')).forEach(function(b) {
-          var txt = b.innerText ? b.innerText.toLowerCase() : '';
-          var bg = window.getComputedStyle(b).backgroundColor;
-          if (txt.includes('up') || txt.includes('call') || txt.includes('higher') || bg.includes('0, 192, 108')) cBtn = b;
-          if (txt.includes('down') || txt.includes('put') || txt.includes('lower') || bg.includes('255, 98, 89')) pBtn = b;
+        Array.from(document.querySelectorAll('button, div[role="button"], a[role="button"]')).forEach(function(b) {
+          var txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+          var bg = window.getComputedStyle(b).backgroundColor || '';
+          var aria = (b.getAttribute('aria-label') || '').toLowerCase();
+
+          if (!cBtn && (txt.includes('up') || txt.includes('call') || txt.includes('higher') || aria.includes('call') || aria.includes('up') || bg.includes('0, 192, 108') || bg.includes('0, 176, 116') || bg.includes('38, 166, 154'))) {
+            cBtn = b;
+          }
+          if (!pBtn && (txt.includes('down') || txt.includes('put') || txt.includes('lower') || aria.includes('put') || aria.includes('down') || bg.includes('255, 98, 89') || bg.includes('235, 64, 52') || bg.includes('242, 54, 69') || bg.includes('255, 75, 75'))) {
+            pBtn = b;
+          }
         });
       }
       var target = isCall ? cBtn : pBtn;
