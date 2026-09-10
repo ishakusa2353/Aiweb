@@ -212,6 +212,8 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
     if (deviceLimitMode === '1') finalDeviceLimit = 1;
     else if (deviceLimitMode === '2') finalDeviceLimit = 2;
     else if (deviceLimitMode === '3') finalDeviceLimit = 3;
+    else if (deviceLimitMode === '4') finalDeviceLimit = 4;
+    else if (deviceLimitMode === '5') finalDeviceLimit = 5;
     else if (deviceLimitMode === 'unlimited') finalDeviceLimit = 0;
     else if (deviceLimitMode === 'custom') finalDeviceLimit = Math.max(1, parseInt(customDeviceLimit || '1', 10));
 
@@ -832,6 +834,24 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                   </button>
                   <button
                     type="button"
+                    onClick={() => setDeviceLimitMode('4')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      deviceLimitMode === '4' ? 'bg-amber-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    📱 4 Devices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeviceLimitMode('5')}
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
+                      deviceLimitMode === '5' ? 'bg-amber-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    📱 5 Devices
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setDeviceLimitMode('unlimited')}
                     className={`py-1.5 px-2 rounded-lg font-bold text-[11px] transition ${
                       deviceLimitMode === 'unlimited' ? 'bg-emerald-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
@@ -842,7 +862,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                   <button
                     type="button"
                     onClick={() => setDeviceLimitMode('custom')}
-                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] col-span-2 transition ${
+                    className={`py-1.5 px-2 rounded-lg font-bold text-[11px] col-span-3 transition ${
                       deviceLimitMode === 'custom' ? 'bg-amber-500 text-[#070D1E]' : 'bg-slate-950 text-gray-300 hover:text-white border border-slate-800'
                     }`}
                   >

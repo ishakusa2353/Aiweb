@@ -64,13 +64,17 @@ async function startServer() {
       }
 
       // 🔒 DEVICE LIMIT ENFORCEMENT:
-      // Supports 1 Device, 2 Devices, 3 Devices, Custom N Devices, or 0 (Unlimited)
+      // Supports 1 Device, 2 Devices, 3 Devices, 4, 5, Custom N Devices, or 0 (Unlimited)
       const registeredDevices = (license.device_id || "")
         .split(",")
         .map((d) => d.trim())
         .filter(Boolean);
 
-      const deviceLimit = license.device_limit !== undefined ? Number(license.device_limit) : 1;
+      let deviceLimit = license.device_limit !== undefined && license.device_limit !== null ? Number(license.device_limit) : 1;
+      if (license.note && license.note.includes('[DEV_LIMIT:')) {
+        const mDev = license.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+        if (mDev) deviceLimit = Number(mDev[1]);
+      }
       const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1;
       let needSave = false;
 
@@ -476,7 +480,9 @@ ON CONFLICT (key) DO NOTHING;`
           exp: item.exp,
           first_login_at: item.first_login_at,
           trader_id: item.trader_id || '',
-          device_id: item.device_id || ''
+          device_id: item.device_id || '',
+          device_limit: item.device_limit !== undefined && item.device_limit !== null ? item.device_limit : 1,
+          note: item.note || ''
         };
       }
     }
@@ -511,7 +517,9 @@ ON CONFLICT (key) DO NOTHING;`
           exp: item.exp,
           first_login_at: item.first_login_at,
           trader_id: item.trader_id || '',
-          device_id: item.device_id || ''
+          device_id: item.device_id || '',
+          device_limit: item.device_limit !== undefined && item.device_limit !== null ? item.device_limit : 1,
+          note: item.note || ''
         };
       }
     }
