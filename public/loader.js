@@ -475,6 +475,9 @@ javascript:(function(){
           }
           var isUnlimited = (devLimit === 0 || devLimit === -1);
 
+          var updates = {};
+          var needPatch = false;
+
           if (myDeviceId) {
             var alreadyRegistered = registeredDevices.indexOf(myDeviceId) !== -1;
             if (!alreadyRegistered) {

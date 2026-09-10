@@ -161,7 +161,7 @@ async function startServer() {
   });
 
   // 🛡️ JSONP verification endpoint (bypasses browser connect-src CSP on Quotex)
-  app.get("/api/verify-jsonp", async (req, res) => {
+  const jsonpVerificationHandler = async (req: any, res: any) => {
     const rawCallback = req.query.callback;
     const callbackName = typeof rawCallback === "string" ? rawCallback.replace(/[^a-zA-Z0-9_$.]/g, "") : "ishak_cb";
     const inputKey = typeof req.query.key === "string" ? req.query.key.trim().toUpperCase() : "";
@@ -186,10 +186,14 @@ async function startServer() {
       // 🔒 DEVICE LIMIT ENFORCEMENT:
       const registeredDevices = (license.device_id || "")
         .split(",")
-        .map((d) => d.trim())
+        .map((d: string) => d.trim())
         .filter(Boolean);
 
-      const deviceLimit = license.device_limit !== undefined ? Number(license.device_limit) : 1;
+      let deviceLimit = license.device_limit !== undefined && license.device_limit !== null ? Number(license.device_limit) : 1;
+      if (license.note && license.note.includes('[DEV_LIMIT:')) {
+        const mDev = license.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+        if (mDev) deviceLimit = Number(mDev[1]);
+      }
       const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1;
       let needSave = false;
 
@@ -247,7 +251,10 @@ async function startServer() {
     } catch (err: any) {
       return res.send(`${callbackName}(${JSON.stringify({ valid: false, reason: "সার্ভার যাচাই ত্রুটি: " + err.message })});`);
     }
-  });
+  };
+
+  app.get("/api/verify-jsonp", jsonpVerificationHandler);
+  app.get("/api/verify-license-jsonp", jsonpVerificationHandler);
 
   // 1.5 ADMIN AUTHENTICATION ENDPOINTS
   app.post("/api/admin/login", (req, res) => {
@@ -282,6 +289,53 @@ async function startServer() {
       res.json({ success: true, keys, isSupabaseActive: licenseDb.isSupabaseActive() });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get("/api/keys/:key", async (req, res) => {
+    try {
+      const cleanKey = (req.params.key || "").trim().toUpperCase();
+      if (!cleanKey) {
+        return res.status(400).json({ valid: false, success: false, reason: "No key provided" });
+      }
+      const license = await licenseDb.getLicense(cleanKey);
+      if (!license) {
+        return res.status(404).json({
+          valid: false,
+          success: false,
+          reason: "❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি! সঠিক কি দিন বা @IshakVhai এ যোগাযোগ করুন।"
+        });
+      }
+      return res.json({
+        valid: license.active !== false,
+        success: true,
+        key: license.key,
+        active: license.active,
+        tier: license.tier || "VIP",
+        duration: license.duration || "30d",
+        duration_ms: license.duration_ms,
+        exp: license.exp,
+        first_login_at: license.first_login_at,
+        traderId: license.trader_id || "",
+        deviceId: license.device_id || "",
+        deviceLimit: license.device_limit !== undefined ? license.device_limit : 1,
+        note: license.note || "",
+        license: {
+          key: license.key,
+          active: license.active,
+          tier: license.tier,
+          duration: license.duration,
+          duration_ms: license.duration_ms,
+          exp: license.exp,
+          first_login_at: license.first_login_at,
+          trader_id: license.trader_id || '',
+          device_id: license.device_id || '',
+          device_limit: license.device_limit !== undefined ? license.device_limit : 1,
+          note: license.note || ''
+        }
+      });
+    } catch (err: any) {
+      return res.status(500).json({ valid: false, success: false, error: err.message });
     }
   });
 

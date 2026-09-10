@@ -101,8 +101,11 @@ class LicenseDatabase {
       this.localStore.set(k.toUpperCase(), v);
     }
 
-    const url = process.env.SUPABASE_URL || savedSupabaseUrl;
-    const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || savedSupabaseKey;
+    const DEFAULT_SUPABASE_URL = "https://qbazzarqiplrqqfytajz.supabase.co";
+    const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
+
+    const url = process.env.SUPABASE_URL || savedSupabaseUrl || DEFAULT_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || savedSupabaseKey || DEFAULT_SUPABASE_KEY;
     if (url && key) {
       this.initSupabase(url, key, false);
     }
