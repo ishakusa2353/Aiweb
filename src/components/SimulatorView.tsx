@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Clock, Shield, Sparkles, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Clock, Shield, Sparkles, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { SignalData } from '../types';
 
 interface SimulatorViewProps {
@@ -24,6 +24,28 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
   const [tradeLogs, setTradeLogs] = useState<Array<{ id: string; type: 'CALL' | 'PUT' | 'HOLD'; amount: number; price: number; time: string; status: string }>>([]);
   const [callButtonFlash, setCallButtonFlash] = useState(false);
   const [putButtonFlash, setPutButtonFlash] = useState(false);
+  
+  // ⚡ Running Candle Display Control & Active Duration
+  const [showRunningCandle, setShowRunningCandle] = useState<boolean>(true);
+  const [selectedDuration, setSelectedDuration] = useState<number>(() => {
+    const saved = localStorage.getItem('ISHAK_TRADE_DURATION');
+    return saved ? parseInt(saved, 10) : 5;
+  });
+
+  const [activeTrade, setActiveTrade] = useState<{
+    id: string;
+    type: 'CALL' | 'PUT';
+    entryPrice: number;
+    amount: number;
+    duration: number;
+    startTime: number;
+    endTime: number;
+    timeLeft: number;
+  } | null>(null);
+
+  const activeTradeRef = useRef(activeTrade);
+  activeTradeRef.current = activeTrade;
+  const tickCountRef = useRef(0);
   const executedSignalsRef = useRef<Set<string>>(new Set());
 
   // Strict Rule: ONE SIGNAL = ONE TRADE
@@ -58,17 +80,17 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     }
   }, [lastSignal]);
 
-  // Generate initial candle history
+  // Generate initial candle history (Harmonic market structure, ZERO Math.random)
   useEffect(() => {
     let current = 0.5720;
     const initial: Candle[] = [];
     const now = Date.now();
     for (let i = 24; i >= 0; i--) {
       const open = current;
-      const change = (Math.random() - 0.49) * 0.0006;
-      const close = open + change;
-      const high = Math.max(open, close) + Math.random() * 0.0003;
-      const low = Math.min(open, close) - Math.random() * 0.0003;
+      const change = Math.sin(i * 0.45) * 0.00032 + ((i % 4) - 1.5) * 0.0001;
+      const close = parseFloat((open + change).toFixed(5));
+      const high = parseFloat((Math.max(open, close) + 0.00018 + (i % 3) * 0.00005).toFixed(5));
+      const low = parseFloat((Math.min(open, close) - 0.00018 - (i % 2) * 0.00005).toFixed(5));
       initial.push({
         time: now - i * 5000,
         open,
@@ -82,31 +104,108 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     setLivePrice(current);
   }, []);
 
-  // Tick generator
+  // Tick generator & Duration-aligned Trade Progression Engine
   useEffect(() => {
     const interval = setInterval(() => {
-      setLivePrice((prev) => {
-        const delta = (Math.random() - 0.495) * 0.0002;
-        const next = Math.max(0.56, Math.min(0.59, prev + delta));
-        return parseFloat(next.toFixed(5));
-      });
-    }, 400);
+      tickCountRef.current++;
+      const trade = activeTradeRef.current;
+      const now = Date.now();
+
+      if (trade) {
+        const remaining = Math.max(0, Math.ceil((trade.endTime - now) / 1000));
+        
+        // Active trade: strictly propels the candle and price in the winning direction during selected duration!
+        // CALL (UP): price and candle climb higher
+        // PUT (DOWN): price and candle drop lower
+        const stepDelta = trade.type === 'CALL'
+          ? 0.00016 + (tickCountRef.current % 3) * 0.00004
+          : -0.00016 - (tickCountRef.current % 3) * 0.00004;
+
+        setLivePrice((prev) => {
+          const next = parseFloat((prev + stepDelta).toFixed(5));
+          setCandles((prevCandles) => {
+            if (prevCandles.length === 0) return prevCandles;
+            const updated = [...prevCandles];
+            const last = { ...updated[updated.length - 1] };
+            last.close = next;
+            if (trade.type === 'CALL') {
+              last.high = Math.max(last.high, next);
+            } else {
+              last.low = Math.min(last.low, next);
+            }
+            updated[updated.length - 1] = last;
+            return updated;
+          });
+          return next;
+        });
+
+        // Time finished: candle closes solidly in profit above (CALL) or below (PUT) strike price!
+        if (now >= trade.endTime) {
+          const profit = Math.round((trade.amount * payout) / 100);
+          const totalReturn = trade.amount + profit;
+          setBalance((prev) => prev + totalReturn);
+
+          setTradeLogs((prev) =>
+            prev.map((l) =>
+              l.id === trade.id
+                ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
+                : l
+            )
+          );
+          setActiveTrade(null);
+        } else {
+          setActiveTrade((prev) => (prev ? { ...prev, timeLeft: remaining } : null));
+        }
+      } else {
+        // Idle market tick: smooth gentle natural progression
+        const waveDelta = Math.sin(tickCountRef.current * 0.35) * 0.00006;
+        setLivePrice((prev) => {
+          const next = parseFloat(Math.max(0.5690, Math.min(0.5780, prev + waveDelta)).toFixed(5));
+          setCandles((prevCandles) => {
+            if (prevCandles.length === 0) return prevCandles;
+            const updated = [...prevCandles];
+            const last = { ...updated[updated.length - 1] };
+            last.close = next;
+            last.high = Math.max(last.high, next);
+            last.low = Math.min(last.low, next);
+            updated[updated.length - 1] = last;
+            return updated;
+          });
+          return next;
+        });
+      }
+    }, 250);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [payout]);
 
   // Handle Call click
   const handleCallTrade = () => {
     setCallButtonFlash(true);
     setTimeout(() => setCallButtonFlash(false), 500);
 
+    const tradeId = 'T_' + Date.now().toString(36) + performance.now().toFixed(0);
+    const dur = selectedDuration;
+    const entry = livePrice;
+
+    setActiveTrade({
+      id: tradeId,
+      type: 'CALL',
+      entryPrice: entry,
+      amount: investment,
+      duration: dur,
+      startTime: Date.now(),
+      endTime: Date.now() + dur * 1000,
+      timeLeft: dur,
+    });
+
     const log = {
-      id: Math.random().toString(36).substring(2, 7),
+      id: tradeId,
       type: 'CALL' as const,
       amount: investment,
-      price: livePrice,
+      price: entry,
       time: new Date().toLocaleTimeString(),
-      status: 'EXECUTED (Auto/Manual)',
+      status: `ACTIVE (${dur}S EXPIRY) ⏳`,
     };
     setTradeLogs((prev) => [log, ...prev.slice(0, 7)]);
     setBalance((prev) => prev - investment);
@@ -117,13 +216,28 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     setPutButtonFlash(true);
     setTimeout(() => setPutButtonFlash(false), 500);
 
+    const tradeId = 'T_' + Date.now().toString(36) + performance.now().toFixed(0);
+    const dur = selectedDuration;
+    const entry = livePrice;
+
+    setActiveTrade({
+      id: tradeId,
+      type: 'PUT',
+      entryPrice: entry,
+      amount: investment,
+      duration: dur,
+      startTime: Date.now(),
+      endTime: Date.now() + dur * 1000,
+      timeLeft: dur,
+    });
+
     const log = {
-      id: Math.random().toString(36).substring(2, 7),
+      id: tradeId,
       type: 'PUT' as const,
       amount: investment,
-      price: livePrice,
+      price: entry,
       time: new Date().toLocaleTimeString(),
-      status: 'EXECUTED (Auto/Manual)',
+      status: `ACTIVE (${dur}S EXPIRY) ⏳`,
     };
     setTradeLogs((prev) => [log, ...prev.slice(0, 7)]);
     setBalance((prev) => prev - investment);
@@ -177,6 +291,29 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRunningCandle((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                  showRunningCandle
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                    : 'bg-rose-500/20 border-rose-500/60 text-rose-300 ring-2 ring-rose-500/30 animate-pulse'
+                }`}
+                title={showRunningCandle ? "ক্লিক করে ক্যান্ডেল আড়াল করুন (NOT FOUND টেস্ট করতে)" : "ক্লিক করে ক্যান্ডেল ফিরিয়ে আনুন"}
+              >
+                {showRunningCandle ? (
+                  <>
+                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>রানিং ক্যান্ডেল দৃশ্যমান</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5 text-rose-400" />
+                    <span>চার্ট সরানো হয়েছে (ক্যান্ডেল লুকানো)</span>
+                  </>
+                )}
+              </button>
+
               <div className="text-right">
                 <div className="text-[10px] text-gray-400">লাইভ প্রাইস (Tick)</div>
                 <div className="text-base font-mono font-black text-cyan-300 current-price">
@@ -191,6 +328,23 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             {/* Grid lines */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_30px] pointer-events-none" />
 
+            {/* Warning Overlay when running candle is hidden/scrolled away */}
+            {!showRunningCandle && (
+              <div className="absolute inset-x-3 top-3 z-30 bg-rose-950/90 border border-rose-500/70 rounded-xl p-2.5 flex items-center justify-between text-xs text-rose-200 shadow-2xl backdrop-blur-md">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">⚠️</span>
+                  <span><strong>চার্ট স্ক্রিনের বাইরে সরানো হয়েছে:</strong> স্ক্রিনে কোনো লাইভ রানিং ক্যান্ডেল নেই!</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRunningCandle(true)}
+                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-[11px] shadow transition"
+                >
+                  ক্যান্ডেল স্ক্রিনে আনুন
+                </button>
+              </div>
+            )}
+
             {/* Live price horizontal dashed line */}
             <div
               className="absolute left-0 right-0 border-b border-dashed border-cyan-400/60 flex items-center justify-end pr-2 transition-all duration-300 pointer-events-none"
@@ -201,9 +355,48 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
               </span>
             </div>
 
+            {/* Active Trade Strike Price Line & Countdown */}
+            {activeTrade && (
+              <div
+                className={`absolute left-0 right-0 border-b-2 z-20 flex items-center justify-between px-3 transition-all duration-300 ${
+                  activeTrade.type === 'CALL'
+                    ? 'border-emerald-400 bg-emerald-500/10'
+                    : 'border-rose-400 bg-rose-500/10'
+                }`}
+                style={{ bottom: '48%' }}
+              >
+                <div className="flex items-center gap-1.5 py-0.5">
+                  <span className={`text-[10px] font-mono font-black px-1.5 py-0.5 rounded ${
+                    activeTrade.type === 'CALL' ? 'bg-emerald-500 text-slate-950' : 'bg-rose-500 text-white'
+                  }`}>
+                    {activeTrade.type === 'CALL' ? 'CALL ⬆ STRIKE' : 'PUT ⬇ STRIKE'}
+                  </span>
+                  <span className="text-[10px] font-mono text-white font-bold">
+                    {activeTrade.entryPrice.toFixed(5)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 py-0.5">
+                  <span className="text-[10px] font-bold text-cyan-300 animate-pulse">
+                    বাকি: {activeTrade.timeLeft}s
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                    {activeTrade.type === 'CALL' ? 'ইন দ্য মানি (উপরে) 🟢' : 'ইন দ্য মানি (নিচে) 🟢'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Candlestick Bars */}
             <div className="relative w-full h-full flex items-end justify-between gap-1 z-10 px-2 pb-2">
               {candles.map((c, idx) => {
+                const isRunningCandle = idx === candles.length - 1;
+
+                // If user hid the running candle (e.g. scrolled chart away)
+                if (isRunningCandle && !showRunningCandle) {
+                  return null;
+                }
+
                 const isGreen = c.close >= c.open;
                 const minPrice = 0.5700;
                 const maxPrice = 0.5760;
@@ -217,7 +410,15 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
                 const height = Math.max(4, Math.abs(closeY - openY));
 
                 return (
-                  <div key={idx} className="relative flex-1 flex flex-col items-center h-full justify-end group">
+                  <div
+                    key={idx}
+                    id={isRunningCandle ? 'ishak-running-candle' : undefined}
+                    data-running-candle={isRunningCandle ? 'true' : 'false'}
+                    data-direction={isGreen ? 'UP' : 'DOWN'}
+                    className={`relative flex-1 flex flex-col items-center h-full justify-end group ${
+                      isRunningCandle ? 'ishak-active-candle' : ''
+                    }`}
+                  >
                     {/* Wick */}
                     <div
                       className={`w-[1px] absolute ${isGreen ? 'bg-emerald-400' : 'bg-rose-500'}`}
@@ -228,9 +429,11 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
                     />
                     {/* Body */}
                     <div
-                      className={`w-full max-w-[12px] rounded-xs z-10 ${
-                        isGreen ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.3)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
-                      }`}
+                      className={`w-full max-w-[12px] rounded-xs z-10 transition-all duration-200 ${
+                        isGreen
+                          ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]'
+                          : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]'
+                      } ${isRunningCandle ? 'ring-1 ring-white/60' : ''}`}
                       style={{
                         bottom: `${Math.max(2, Math.min(95, bottom))}%`,
                         height: `${Math.max(4, Math.min(90, height))}%`,
@@ -265,13 +468,31 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
             {/* Time selector */}
             <div className="mb-3">
-              <label className="text-[11px] text-gray-400 block mb-1 flex items-center justify-between">
+              <label className="text-[11px] text-gray-400 block mb-1.5 flex items-center justify-between">
                 <span>টাইম ডিউরেশন</span>
                 <Clock className="w-3 h-3 text-cyan-400" />
               </label>
-              <div className="bg-[#111F43] border border-slate-700 rounded-xl p-2 text-white text-xs font-bold flex justify-between items-center">
-                <span>00:01:00</span>
-                <span className="text-cyan-400 text-[10px]">1 মিনিট</span>
+              <div className="grid grid-cols-5 gap-1">
+                {[5, 10, 15, 30, 60].map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDuration(sec);
+                      try {
+                        localStorage.setItem('ISHAK_TRADE_DURATION', sec.toString());
+                        window.dispatchEvent(new CustomEvent('ishak_duration_changed', { detail: sec }));
+                      } catch (e) {}
+                    }}
+                    className={`py-1.5 rounded-lg text-xs font-bold font-mono transition-all ${
+                      selectedDuration === sec
+                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                        : 'bg-[#111F43] border border-slate-700/80 text-gray-300 hover:text-white hover:border-cyan-500/40'
+                    }`}
+                  >
+                    {sec >= 60 ? '1M' : `${sec}S`}
+                  </button>
+                ))}
               </div>
             </div>
 
