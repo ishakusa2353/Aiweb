@@ -153,12 +153,43 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             )
           );
           setActiveTrade(null);
+
+          // ⚡ Open a fresh new candle from the closing price level so future trades have clean, unskewed momentum!
+          setCandles((prev) => {
+            if (prev.length === 0) return prev;
+            const lastClosed = prev[prev.length - 1];
+            const freshCandle: Candle = {
+              time: now,
+              open: lastClosed.close,
+              high: lastClosed.close,
+              low: lastClosed.close,
+              close: lastClosed.close,
+            };
+            return [...prev.slice(1), freshCandle];
+          });
         } else {
           setActiveTrade((prev) => (prev ? { ...prev, timeLeft: remaining } : null));
         }
       } else {
-        // Idle market tick: smooth gentle natural progression
-        const waveDelta = Math.sin(tickCountRef.current * 0.35) * 0.00006;
+        // Dynamic market timeframe: every 20 ticks (5s), seal current candle and open a fresh one
+        if (tickCountRef.current % 20 === 0) {
+          setCandles((prev) => {
+            if (prev.length === 0) return prev;
+            const lastClosed = prev[prev.length - 1];
+            const freshCandle: Candle = {
+              time: now,
+              open: lastClosed.close,
+              high: lastClosed.close,
+              low: lastClosed.close,
+              close: lastClosed.close,
+            };
+            return [...prev.slice(1), freshCandle];
+          });
+        }
+
+        // Idle market tick: harmonic dual-wave producing balanced UP (bullish) and DOWN (bearish) cycles
+        const t = tickCountRef.current;
+        const waveDelta = Math.sin(t * 0.22) * 0.00010 + Math.cos(t * 0.38) * 0.00007;
         setLivePrice((prev) => {
           const next = parseFloat(Math.max(0.5690, Math.min(0.5780, prev + waveDelta)).toFixed(5));
           setCandles((prevCandles) => {
