@@ -324,7 +324,10 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           </div>
 
           {/* SVG Candlestick Simulation Canvas */}
-          <div className="relative my-4 flex-1 h-64 bg-slate-950/50 rounded-xl border border-slate-800/60 p-2 overflow-hidden flex items-end">
+          <div
+            data-running-candle-state={showRunningCandle ? 'visible' : 'hidden'}
+            className="relative my-4 flex-1 h-64 bg-slate-950/50 rounded-xl border border-slate-800/60 p-2 overflow-hidden flex items-end"
+          >
             {/* Grid lines */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_30px] pointer-events-none" />
 
