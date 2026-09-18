@@ -745,7 +745,19 @@ javascript:(function(){
     '#ishak-fly-signal.flying-active { display: block; animation: ishakUpDownFly 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }' +
     '#ishak-fly-text { font-size: 72px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }' +
     '#ishak-fly-text.up-glow { color: #00FF66; text-shadow: 0 0 25px #00FF66, 0 0 50px #00FF66, 0 0 85px rgba(0,255,102,0.9), 0 4px 15px rgba(0,0,0,0.95); }' +
-    '#ishak-fly-text.down-glow { color: #FF1744; text-shadow: 0 0 25px #FF1744, 0 0 50px #FF1744, 0 0 85px rgba(255,23,68,0.9), 0 4px 15px rgba(0,0,0,0.95); }';
+    '#ishak-fly-text.down-glow { color: #FF1744; text-shadow: 0 0 25px #FF1744, 0 0 50px #FF1744, 0 0 85px rgba(255,23,68,0.9), 0 4px 15px rgba(0,0,0,0.95); }' +
+    '@keyframes ishakCandleTargetSnap { ' +
+      '0% { transform: scale(1.6); opacity: 0; } ' +
+      '20% { transform: scale(1); opacity: 1; } ' +
+      '80% { transform: scale(1); opacity: 1; } ' +
+      '100% { transform: scale(1.18); opacity: 0; } ' +
+    '}' +
+    '.ishak-candle-zoomed { ' +
+      'transform: scale(1.22) !important; ' +
+      'z-index: 50 !important; ' +
+      'filter: drop-shadow(0 0 16px #00E5FF) !important; ' +
+      'transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease !important; ' +
+    '}';
   document.head.appendChild(styleTag);
 
   // Flying UP/DOWN Signal Element
@@ -771,6 +783,77 @@ javascript:(function(){
     setTimeout(function() {
       fly.classList.remove('flying-active');
     }, 1800);
+  }
+
+  // Running Candle Selection Glow Box & Zoom Effect
+  function highlightRunningCandleTarget(direction) {
+    try {
+      var candleEl = document.getElementById('ishak-running-candle') ||
+                     document.querySelector('[data-running-candle="true"], .ishak-active-candle');
+      var targetRect = null;
+      if (candleEl) {
+        targetRect = candleEl.getBoundingClientRect();
+        candleEl.classList.add('ishak-candle-zoomed');
+        setTimeout(function() {
+          candleEl.classList.remove('ishak-candle-zoomed');
+        }, 1300);
+      } else {
+        // Fallback for canvas trading charts (Quotex etc.)
+        var canvases = Array.from(document.querySelectorAll('canvas'));
+        for (var i = 0; i < canvases.length; i++) {
+          var cr = canvases[i].getBoundingClientRect();
+          if (cr.width > 120 && cr.height > 80 && cr.bottom > 40 && cr.top < window.innerHeight) {
+            var w = 40;
+            var h = Math.min(130, cr.height * 0.45);
+            var l = cr.left + (cr.width * 0.86) - (w / 2);
+            var t = cr.top + (cr.height * 0.48) - (h / 2);
+            targetRect = { left: l, top: t, width: w, height: h };
+            break;
+          }
+        }
+      }
+
+      if (!targetRect) return;
+
+      var lockBox = document.getElementById('ishak-candle-lock-box');
+      if (!lockBox) {
+        lockBox = document.createElement('div');
+        lockBox.id = 'ishak-candle-lock-box';
+        document.body.appendChild(lockBox);
+      }
+
+      var isUp = direction === 'UP';
+      var borderColor = isUp ? '#00FF66' : '#FF1744';
+      var glowColor = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
+      var bgGlow = isUp ? 'rgba(0,255,102,0.12)' : 'rgba(255,23,68,0.12)';
+
+      var boxW = Math.max(38, targetRect.width + 18);
+      var boxH = Math.max(72, targetRect.height + 26);
+      var boxL = targetRect.left + (targetRect.width / 2) - (boxW / 2);
+      var boxT = targetRect.top + (targetRect.height / 2) - (boxH / 2);
+
+      lockBox.style.cssText = 'position:fixed; pointer-events:none; z-index:2147483646; user-select:none; ' +
+        'left:' + boxL + 'px; top:' + boxT + 'px; width:' + boxW + 'px; height:' + boxH + 'px; ' +
+        'animation:ishakCandleTargetSnap 1.3s cubic-bezier(0.2,0.9,0.3,1) forwards;';
+
+      lockBox.innerHTML =
+        '<div style="position:absolute;inset:0;border:2px solid ' + borderColor + ';border-radius:8px;box-shadow:0 0 25px ' + glowColor + ',inset 0 0 15px ' + bgGlow + ';background:' + bgGlow + ';"></div>' +
+        '<div style="position:absolute;top:-2px;left:-2px;width:12px;height:12px;border-top:3px solid ' + borderColor + ';border-left:3px solid ' + borderColor + ';"></div>' +
+        '<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-top:3px solid ' + borderColor + ';border-right:3px solid ' + borderColor + ';"></div>' +
+        '<div style="position:absolute;bottom:-2px;left:-2px;width:12px;height:12px;border-bottom:3px solid ' + borderColor + ';border-left:3px solid ' + borderColor + ';"></div>' +
+        '<div style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-bottom:3px solid ' + borderColor + ';border-right:3px solid ' + borderColor + ';"></div>' +
+        '<div style="position:absolute;top:-28px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:2px 8px;border-radius:20px;background:#070D1E;border:1px solid ' + borderColor + ';color:' + borderColor + ';font-size:9px;font-weight:900;letter-spacing:1px;box-shadow:0 0 12px ' + glowColor + ';display:flex;align-items:center;gap:4px;font-family:system-ui,sans-serif;">' +
+          '<span style="width:6px;height:6px;border-radius:50%;background:' + borderColor + ';display:inline-block;"></span>' +
+          '<span>' + direction + ' CANDLE LOCKED 🎯</span>' +
+        '</div>';
+
+      setTimeout(function() {
+        if (lockBox && lockBox.parentNode) {
+          lockBox.innerHTML = '';
+          lockBox.style.cssText = 'display:none;';
+        }
+      }, 1300);
+    } catch(e){}
   }
 
   // Laser with Trailing Smoky Mist, Grid, Scan Title Elements
@@ -1724,7 +1807,10 @@ javascript:(function(){
             '</div>';
         }
 
-        // NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
+        // 1. CANDLE SELECTION GLOW BOX & ZOOM EFFECT (1 second AI lock)
+        highlightRunningCandleTarget(isCall ? 'UP' : 'DOWN');
+
+        // 2. NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
         if (hudPanel) hudPanel.style.display = 'none';
         showFlySignalAnimation(isCall ? 'UP' : 'DOWN');
 

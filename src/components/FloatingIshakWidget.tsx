@@ -54,6 +54,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     liveExecutionTime: string;
   }) | null>(null);
   const [flySignal, setFlySignal] = useState<'UP' | 'DOWN' | null>(null);
+  const [candleTargetRect, setCandleTargetRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+    direction: 'UP' | 'DOWN';
+  } | null>(null);
 
   const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
 
@@ -344,7 +351,30 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
       };
 
-      // NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
+      // 1. CANDLE SELECTION GLOW BOX & ZOOM EFFECT (1 second AI lock)
+      if (candleEl) {
+        const rect = candleEl.getBoundingClientRect();
+        const boxWidth = Math.max(38, rect.width + 18);
+        const boxHeight = Math.max(72, rect.height + 26);
+        const boxLeft = rect.left + (rect.width / 2) - (boxWidth / 2);
+        const boxTop = rect.top + (rect.height / 2) - (boxHeight / 2);
+
+        setCandleTargetRect({
+          top: boxTop,
+          left: boxLeft,
+          width: boxWidth,
+          height: boxHeight,
+          direction: isCall ? 'UP' : 'DOWN'
+        });
+
+        candleEl.classList.add('ishak-candle-zoomed');
+        setTimeout(() => {
+          candleEl.classList.remove('ishak-candle-zoomed');
+          setCandleTargetRect(null);
+        }, 1300);
+      }
+
+      // 2. NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
       setFlySignal(isCall ? 'UP' : 'DOWN');
       setTimeout(() => {
         setFlySignal(null);
@@ -527,6 +557,68 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           </span>
         </div>
       </div>
+
+      {/* RUNNING CANDLE ANIMATED GLOW SELECTION BOX & CORNER HUD */}
+      {candleTargetRect && (
+        <div
+          id="ishak-candle-lock-box"
+          className="fixed pointer-events-none z-[999998] select-none"
+          style={{
+            top: `${candleTargetRect.top}px`,
+            left: `${candleTargetRect.left}px`,
+            width: `${candleTargetRect.width}px`,
+            height: `${candleTargetRect.height}px`,
+            animation: 'ishakCandleTargetSnap 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) forwards'
+          }}
+        >
+          {/* Glowing Border Frame */}
+          <div
+            className={`absolute inset-0 rounded-lg border-2 ${
+              candleTargetRect.direction === 'UP'
+                ? 'border-[#00FF66] shadow-[0_0_25px_rgba(0,255,102,0.85),inset_0_0_15px_rgba(0,255,102,0.3)] bg-emerald-500/10'
+                : 'border-[#FF1744] shadow-[0_0_25px_rgba(255,23,68,0.85),inset_0_0_15px_rgba(255,23,68,0.3)] bg-red-500/10'
+            }`}
+          />
+
+          {/* 4 Hi-Tech Corner Brackets */}
+          <div
+            className={`absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 ${
+              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
+            }`}
+          />
+          <div
+            className={`absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 ${
+              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
+            }`}
+          />
+          <div
+            className={`absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 ${
+              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
+            }`}
+          />
+          <div
+            className={`absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 ${
+              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
+            }`}
+          />
+
+          {/* Floating HUD Badge */}
+          <div
+            className={`absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full bg-[#070D1E] border text-[9px] font-black tracking-wider flex items-center gap-1 shadow-lg ${
+              candleTargetRect.direction === 'UP'
+                ? 'border-[#00FF66] text-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.6)]'
+                : 'border-[#FF1744] text-[#FF1744] shadow-[0_0_12px_rgba(255,23,68,0.6)]'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full animate-ping ${
+                candleTargetRect.direction === 'UP' ? 'bg-[#00FF66]' : 'bg-[#FF1744]'
+              }`}
+            />
+            <span>{candleTargetRect.direction} CANDLE LOCKED 🎯</span>
+          </div>
+        </div>
+      )}
 
       {/* STYLISH FLYING UP / DOWN NOTIFICATION (NO BANNER) */}
       {flySignal && (
