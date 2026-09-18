@@ -16,13 +16,9 @@ javascript:(function(){
   var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
   var LOGO_URL = "https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg";
 
-  // 1. CONFIGURATION & STATE
-  var savedDur = null;
-  try { savedDur = localStorage.getItem('ISHAK_TRADE_DURATION'); } catch(e){}
-  var tradeDuration = savedDur ? parseInt(savedDur, 10) : 5; // Default 5s or user selected
-  var savedMkt = null;
-  try { savedMkt = localStorage.getItem('ISHAK_CURRENT_MARKET'); } catch(e){}
-  var currentMarket = savedMkt || 'AUD/CHF (OTC)'; // Default OTC Market
+  // 1. CONFIGURATION & STATE (Mandatory selection required on load)
+  var tradeDuration = null;
+  var currentMarket = null;
   var isScanning = false;
   var isBotTerminated = false;
   var singleClickTimer = null;
@@ -736,8 +732,46 @@ javascript:(function(){
     '#ishak-hud-drag-handle:active { cursor: grabbing; }' +
     '.ishak-close-btn { width: 22px; height: 22px; border-radius: 50%; background: #FF1744; color: #fff; border: 1px solid #fff; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }' +
     '.ishak-close-btn:hover { transform: scale(1.1); background: #D50000; }' +
-    '.ishak-dialog-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0B132B; border: 2px solid #00E5FF; padding: 16px; border-radius: 16px; z-index: 2147483647; color: #fff; box-shadow: 0 25px 60px rgba(0,0,0,0.95), inset 0 1px 1px rgba(255,255,255,0.15); width: 330px; max-width: 92vw; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; box-sizing: border-box; }';
+    '.ishak-dialog-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0B132B; border: 2px solid #00E5FF; padding: 16px; border-radius: 16px; z-index: 2147483647; color: #fff; box-shadow: 0 25px 60px rgba(0,0,0,0.95), inset 0 1px 1px rgba(255,255,255,0.15); width: 330px; max-width: 92vw; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; box-sizing: border-box; }' +
+    '@keyframes ishakUpDownFly { ' +
+      '0% { transform: translate(-50%, 100vh) scale(0.65); opacity: 0; } ' +
+      '20% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; } ' +
+      '24% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
+      '78% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
+      '84% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } ' +
+      '100% { transform: translate(-50%, -100vh) scale(0.7); opacity: 0; } ' +
+    '}' +
+    '#ishak-fly-signal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, 100vh); z-index: 2147483647; pointer-events: none; user-select: none; display: none; text-align: center; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
+    '#ishak-fly-signal.flying-active { display: block; animation: ishakUpDownFly 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }' +
+    '#ishak-fly-text { font-size: 72px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }' +
+    '#ishak-fly-text.up-glow { color: #00FF66; text-shadow: 0 0 25px #00FF66, 0 0 50px #00FF66, 0 0 85px rgba(0,255,102,0.9), 0 4px 15px rgba(0,0,0,0.95); }' +
+    '#ishak-fly-text.down-glow { color: #FF1744; text-shadow: 0 0 25px #FF1744, 0 0 50px #FF1744, 0 0 85px rgba(255,23,68,0.9), 0 4px 15px rgba(0,0,0,0.95); }';
   document.head.appendChild(styleTag);
+
+  // Flying UP/DOWN Signal Element
+  var flySignalEl = document.createElement('div');
+  flySignalEl.id = 'ishak-fly-signal';
+  flySignalEl.innerHTML = '<div id="ishak-fly-text"></div>';
+  document.body.appendChild(flySignalEl);
+
+  function showFlySignalAnimation(direction) {
+    var fly = document.getElementById('ishak-fly-signal');
+    var txt = document.getElementById('ishak-fly-text');
+    if (!fly || !txt) return;
+    fly.classList.remove('flying-active');
+    void fly.offsetWidth;
+    if (direction === 'UP') {
+      txt.innerText = 'UP ⬆';
+      txt.className = 'up-glow';
+    } else {
+      txt.innerText = 'DOWN ⬇';
+      txt.className = 'down-glow';
+    }
+    fly.classList.add('flying-active');
+    setTimeout(function() {
+      fly.classList.remove('flying-active');
+    }, 1800);
+  }
 
   // Laser with Trailing Smoky Mist, Grid, Scan Title Elements
   var laserEl = document.createElement('div');
@@ -1690,25 +1724,9 @@ javascript:(function(){
             '</div>';
         }
 
-        var hudBody = document.getElementById('ishak-hud-body');
-        hudBody.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-bottom:1px solid rgba(0,229,255,0.25);padding-bottom:4px;">' +
-          '<span style="font-weight:900;color:#fff;font-size:11px;">' + currentMarket + '</span>' +
-          '<span style="background:rgba(0,229,255,0.2);color:#00E5FF;font-weight:900;padding:2px 6px;border-radius:4px;font-size:9px;">' + signal.confidence + '</span>' +
-          '</div>' +
-          '<div style="grid-template-columns:1fr 1fr;display:grid;gap:3px;color:#CBD5E0;font-size:9.5px;margin-bottom:6px;">' +
-          '<div>Entry Time: <b style="color:#00E5FF;font-mono;">' + liveExecutionTime + '</b></div>' +
-          '<div>Investment: <b style="color:#00FF66;font-mono;">' + realInvestment + '</b></div>' +
-          '<div>Duration: <b style="color:#FFD600;font-mono;">' + (tradeDuration >= 60 ? (tradeDuration / 60) + ' Min' : tradeDuration + ' Sec') + '</b></div>' +
-          '<div>Payout: <b style="color:#00E5FF;">' + realPayout + '</b></div>' +
-          '<div>RSI(14): <b style="color:' + (isCall ? '#00FF66' : '#FF1744') + ';">' + signal.rsi + '</b></div>' +
-          '<div>Trend: <b style="color:' + (isCall ? '#00FF66' : '#FF1744') + ';">' + (isCall ? 'BULLISH ↗' : 'BEARISH ↘') + '</b></div>' +
-          '</div>' +
-          '<div style="background:rgba(0,255,102,0.06);border:1px solid rgba(0,255,102,0.25);padding:5px 7px;border-radius:6px;color:#fff;font-size:9.5px;margin-bottom:6px;line-height:13px;">' +
-          '<b style="color:#00FF66;">💡 AI Confluence:</b> ' + signal.logic + '</div>' +
-          '<div style="padding:8px;border-radius:8px;text-align:center;font-weight:900;font-size:13px;letter-spacing:0.5px;background:' + (isCall ? 'linear-gradient(135deg,#00C853,#00E676)' : 'linear-gradient(135deg,#D50000,#FF1744)') + ';color:#fff;box-shadow:0 4px 14px ' + (isCall ? 'rgba(0,200,83,0.5)' : 'rgba(213,0,0,0.5)') + ';">' + (isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇') + '</div>' +
-          tradeStatusHtml;
-
-        hudPanel.style.display = 'block';
+        // NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
+        if (hudPanel) hudPanel.style.display = 'none';
+        showFlySignalAnimation(isCall ? 'UP' : 'DOWN');
 
         if (autoPilotMode) {
           pillTime.innerText = 'AUTO 🤖';
@@ -1754,4 +1772,18 @@ javascript:(function(){
     e.stopPropagation();
     showSettingsHub();
   });
+
+  // MANDATORY MARKET & TIME SELECTION ON FIRST BOT LOAD:
+  updateBadgeLabel();
+  setTimeout(function() {
+    if (!currentMarket) {
+      showMarketSelectionModal(function(mkt) {
+        if (!tradeDuration) {
+          showDurationSelectionModal(function(dur) {
+            updateBadgeLabel();
+          });
+        }
+      });
+    }
+  }, 600);
 })();

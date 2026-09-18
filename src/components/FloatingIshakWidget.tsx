@@ -53,6 +53,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     investment: string;
     liveExecutionTime: string;
   }) | null>(null);
+  const [flySignal, setFlySignal] = useState<'UP' | 'DOWN' | null>(null);
 
   const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
 
@@ -108,6 +109,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         }
       }
     } catch (e) {}
+
+    // 2. BOT FIRST LOAD: Mandatory Market & Time Selection
+    setShowMarketModal(true);
   }, []);
 
   // Countdown timer
@@ -340,7 +344,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
       };
 
-      setHudResult(signal);
+      // NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
+      setFlySignal(isCall ? 'UP' : 'DOWN');
+      setTimeout(() => {
+        setFlySignal(null);
+      }, 1800);
+
       if (onTradeSignal) {
         onTradeSignal(signal);
       }
@@ -519,87 +528,33 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       </div>
 
-      {/* INDEPENDENT 3D COMPACT DRAGGABLE HUD BANNER */}
-      {hudResult && (
+      {/* STYLISH FLYING UP / DOWN NOTIFICATION (NO BANNER) */}
+      {flySignal && (
         <div
-          id="ishak-hud-banner-box"
-          className="fixed z-[999995] w-72 rounded-2xl bg-[#0B132B] border-2 border-cyan-400 text-white shadow-[0_25px_60px_rgba(0,0,0,0.95),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-xl overflow-hidden touch-none"
-          style={{ left: `${hudPosition.x}px`, top: `${hudPosition.y}px` }}
+          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[999999] select-none text-center"
+          style={{
+            animation: 'ishakUpDownFly 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards',
+            fontFamily: '"Orbitron", "Rajdhani", system-ui, sans-serif'
+          }}
         >
-          {/* Draggable Header */}
-          <div
-            onMouseDown={handleHudMouseDown}
-            className="px-3 py-2 bg-gradient-to-r from-[#070D1E] to-[#111F43] border-b border-cyan-500/30 flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
-          >
-            <div className="flex items-center gap-1.5">
-              <span className="text-cyan-400 text-xs">❖</span>
-              <span className="text-[11px] font-black text-cyan-300 tracking-wide">ISHAK AI PRO 3D HUD</span>
-            </div>
-            <button
-              onClick={() => setHudResult(null)}
-              className="w-5 h-5 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center text-[10px] font-bold shadow transition hover:scale-110"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="p-3">
-            {hudResult.isRiskDetected ? (
-              /* Risk Detected / Safety Banner */
-              <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/50 text-center">
-                <div className="flex items-center justify-center gap-1.5 text-red-500 font-black text-xs mb-1">
-                  <ShieldAlert className="w-4 h-4" />
-                  <span>RISK DETECTED - NO TRADE</span>
-                </div>
-                <div className="text-amber-400 text-[10px] font-bold mb-1.5">Capital Protection Active</div>
-                <p className="text-gray-300 text-[10px] leading-relaxed mb-2">
-                  {hudResult.riskReason}
-                </p>
-                <div className="flex items-center justify-between text-[9px] text-gray-400 border-t border-red-500/20 pt-1.5">
-                  <span>Market: <b className="text-white">{currentMarket}</b></span>
-                  <span>Time: <b className="text-amber-400 font-mono">{hudResult.liveExecutionTime}</b></span>
-                </div>
+          <div className="flex flex-col items-center justify-center">
+            {flySignal === 'UP' ? (
+              <div
+                className="text-6xl sm:text-7xl md:text-8xl font-black tracking-widest text-[#00FF66]"
+                style={{
+                  textShadow: '0 0 25px #00FF66, 0 0 50px #00FF66, 0 0 85px rgba(0,255,102,0.9), 0 4px 15px rgba(0,0,0,0.95)'
+                }}
+              >
+                UP ⬆
               </div>
             ) : (
-              /* Optimal Signal Banner with live time and investment */
-              <div>
-                <div className="flex items-center justify-between pb-2 mb-2 border-b border-cyan-500/20">
-                  <span className="font-black text-white text-xs">{currentMarket}</span>
-                  <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono font-black text-[9px]">
-                    {hudResult.accuracy}% ACC
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-1.5 text-[9.5px] text-gray-300 mb-2.5">
-                  <div>Entry Time: <b className="text-cyan-400 font-mono">{hudResult.liveExecutionTime}</b></div>
-                  <div>Investment: <b className="text-emerald-400 font-mono">{hudResult.investment}</b></div>
-                  <div>Duration: <b className="text-amber-400 font-mono">{hudResult.durationLabel}</b></div>
-                  <div>Payout: <b className="text-cyan-400 font-mono">{hudResult.payout}</b></div>
-                  <div>RSI (14): <b className={hudResult.isCall ? 'text-emerald-400 font-mono' : 'text-red-400 font-mono'}>{hudResult.rsi}</b></div>
-                  <div>Trend: <b className={hudResult.isCall ? 'text-emerald-400' : 'text-red-400'}>{hudResult.isCall ? 'BULLISH' : 'BEARISH'}</b></div>
-                </div>
-
-                <div className="p-2 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[9.5px] text-gray-200 mb-2.5 leading-snug">
-                  <span className="text-emerald-400 font-bold">💡 AI Logic: </span>
-                  {hudResult.logic}
-                </div>
-
-                <div
-                  className={`py-2 px-3 rounded-xl text-center font-black text-xs tracking-wider shadow-lg ${
-                    hudResult.isCall
-                      ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-emerald-500/40'
-                      : 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-red-500/40'
-                  }`}
-                >
-                  {hudResult.isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'}
-                </div>
-
-                {hudResult.isCall !== null && (
-                  <div className="mt-2 py-1.5 px-2.5 rounded-lg text-center font-bold text-[10px] flex items-center justify-center gap-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                    <span>⚡</span>
-                    <span>AUTO-TRADE EXECUTED ({hudResult.isCall ? 'CALL ⬆' : 'PUT ⬇'}) — ১ টি ট্রেড সম্পন্ন</span>
-                  </div>
-                )}
+              <div
+                className="text-6xl sm:text-7xl md:text-8xl font-black tracking-widest text-[#FF1744]"
+                style={{
+                  textShadow: '0 0 25px #FF1744, 0 0 50px #FF1744, 0 0 85px rgba(255,23,68,0.9), 0 4px 15px rgba(0,0,0,0.95)'
+                }}
+              >
+                DOWN ⬇
               </div>
             )}
           </div>
