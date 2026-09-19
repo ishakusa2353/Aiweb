@@ -447,8 +447,13 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
                   <div
                     key={idx}
                     id={isRunningCandle ? 'ishak-running-candle' : undefined}
+                    data-candle="true"
                     data-running-candle={isRunningCandle ? 'true' : 'false'}
                     data-direction={isGreen ? 'UP' : 'DOWN'}
+                    data-open={c.open}
+                    data-close={c.close}
+                    data-high={c.high}
+                    data-low={c.low}
                     className={`relative flex-1 flex flex-col items-center h-full justify-end group ${
                       isRunningCandle ? 'ishak-active-candle' : ''
                     }`}
