@@ -550,8 +550,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 />
               </svg>
             </div>
-            <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-widest mb-2 bg-gradient-to-r from-white via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
-              SCANNING MARKET BY <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-fuchsia-500 bg-clip-text text-transparent">ISHAK AI</span>
+            <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-widest mb-2 bg-gradient-to-r from-white via-cyan-400 to-emerald-400 bg-clip-text text-transparent animate-[ishakSignalSeekingMotion_1.8s_ease-in-out_infinite]">
+              <span className="inline-flex items-center gap-2">
+                <span className="text-cyan-400 animate-[ishakSignalRadarWaves_1s_infinite]">📡</span>
+                <span>SCANNING MARKET BY</span>
+                <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-fuchsia-500 bg-clip-text text-transparent">ISHAK AI</span>
+                <span className="text-emerald-400 animate-[ishakSignalRadarWaves_1s_infinite]">⚡</span>
+              </span>
             </h2>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#070D1E]/95 border border-emerald-400 text-emerald-400 font-black text-xs shadow-lg shadow-emerald-500/30">
               <Sparkles className="w-3.5 h-3.5" />
@@ -696,7 +701,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         />
       )}
 
-      {/* STYLISH FLYING UP / DOWN NOTIFICATION (3D CYBER HOLOGRAPHIC ENERGY CREST) */}
+      {/* STYLISH FLYING UP / DOWN NOTIFICATION (COMPACT HIGH-TECH CYBER CAPSULE) */}
       {flySignal && (
         <div
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[999999] select-none text-center"
@@ -706,41 +711,52 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           }}
         >
           <div
-            className="relative inline-flex flex-col items-center bg-[#070D1E]/90 backdrop-blur-xl border-2 rounded-3xl px-12 py-6 shadow-2xl"
+            className="relative inline-flex flex-col items-center bg-[#070D1E]/92 backdrop-blur-xl border-[1.8px] rounded-2xl px-6 py-2.5 sm:px-8 sm:py-3 shadow-2xl max-w-[260px]"
             style={{
               borderColor: flySignal === 'UP' ? '#00FF66' : '#FF1744',
               boxShadow: flySignal === 'UP'
-                ? '0 0 50px rgba(0,255,102,0.85), inset 0 0 35px rgba(0,255,102,0.3)'
-                : '0 0 50px rgba(255,23,68,0.85), inset 0 0 35px rgba(255,23,68,0.3)'
+                ? '0 0 28px rgba(0,255,102,0.65), inset 0 0 16px rgba(0,255,102,0.18)'
+                : '0 0 28px rgba(255,23,68,0.65), inset 0 0 16px rgba(255,23,68,0.18)'
             }}
           >
-            {/* Corner Tech Brackets */}
-            <div className={`absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 ${flySignal === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'}`} />
-            <div className={`absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 ${flySignal === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'}`} />
-            <div className={`absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 ${flySignal === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'}`} />
-            <div className={`absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 ${flySignal === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'}`} />
+            {/* Top Indicator */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-ping"
+                style={{ backgroundColor: flySignal === 'UP' ? '#00FF66' : '#FF1744' }}
+              />
+              <span
+                className="text-[9px] font-black tracking-widest uppercase opacity-90"
+                style={{ color: flySignal === 'UP' ? '#00FF66' : '#FF1744' }}
+              >
+                AI SIGNAL CONFIRMED
+              </span>
+            </div>
 
+            {/* Main Direction Text (Compact & Crisp) */}
             <div
-              className={`text-6xl sm:text-7xl md:text-8xl font-black tracking-widest leading-none ${
+              className={`text-2xl sm:text-3xl font-black tracking-wider leading-none ${
                 flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
               }`}
               style={{
                 textShadow: flySignal === 'UP'
-                  ? '0 0 25px #00FF66, 0 0 50px #00FF66, 0 0 85px rgba(0,255,102,0.9), 0 4px 15px rgba(0,0,0,0.95)'
-                  : '0 0 25px #FF1744, 0 0 50px #FF1744, 0 0 85px rgba(255,23,68,0.9), 0 4px 15px rgba(0,0,0,0.95)'
+                  ? '0 0 14px #00FF66, 0 0 28px rgba(0,255,102,0.8), 0 2px 8px rgba(0,0,0,0.9)'
+                  : '0 0 14px #FF1744, 0 0 28px rgba(255,23,68,0.8), 0 2px 8px rgba(0,0,0,0.9)'
               }}
             >
               {flySignal === 'UP' ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'}
             </div>
+
+            {/* Accuracy Pill */}
             <div
-              className={`mt-3 px-4 py-1 rounded-full text-xs font-black tracking-wider ${
-                flySignal === 'UP' ? 'bg-[#00FF66] text-[#070D1E]' : 'bg-[#FF1744] text-white'
-              }`}
+              className="mt-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider"
               style={{
-                boxShadow: flySignal === 'UP' ? '0 0 20px rgba(0,255,102,0.8)' : '0 0 20px rgba(255,23,68,0.8)'
+                backgroundColor: flySignal === 'UP' ? 'rgba(0,255,102,0.15)' : 'rgba(255,23,68,0.15)',
+                border: `1px solid ${flySignal === 'UP' ? '#00FF66' : '#FF1744'}`,
+                color: flySignal === 'UP' ? '#00FF66' : '#FF1744'
               }}
             >
-              ★ 99.4% AI CONFLUENCE LOCKED ★
+              ★ 99.4% VIP ACCURACY ★
             </div>
           </div>
         </div>

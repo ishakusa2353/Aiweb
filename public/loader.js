@@ -681,6 +681,15 @@ javascript:(function(){
     '@keyframes ishakRadarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
     '@keyframes ishakDataBlink { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.35; } }' +
     '@keyframes ishakPathDraw { 0% { stroke-dashoffset: 300; } 100% { stroke-dashoffset: 0; } }' +
+    '@keyframes ishakSignalSeekingMotion { ' +
+      '0% { transform: translateY(0px) translateX(0px) scale(1); filter: drop-shadow(0 0 10px #00E5FF); } ' +
+      '20% { transform: translateY(-4px) translateX(6px) scale(1.02); filter: drop-shadow(0 0 20px #00FF66); } ' +
+      '40% { transform: translateY(3px) translateX(-6px) scale(0.98); filter: drop-shadow(0 0 16px #00E5FF); } ' +
+      '60% { transform: translateY(-5px) translateX(-3px) scale(1.03); filter: drop-shadow(0 0 22px #00FFCC); } ' +
+      '80% { transform: translateY(3px) translateX(5px) scale(0.99); filter: drop-shadow(0 0 16px #00E5FF); } ' +
+      '100% { transform: translateY(0px) translateX(0px) scale(1); filter: drop-shadow(0 0 10px #00E5FF); } ' +
+    '}' +
+    '@keyframes ishakSignalRadarWaves { 0% { transform: scale(0.92); opacity: 0.3; } 50% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(0.92); opacity: 0.3; } }' +
     '@keyframes ishakLaserSweepFull { ' +
       '0% { top: -25px; } ' +
       '48% { top: calc(100vh - 20px); } ' +
@@ -696,7 +705,7 @@ javascript:(function(){
     '}' +
     '@keyframes ishakSmokeBottomSweep { ' +
       '0% { opacity: 0; transform: scaleY(0.2); } ' +
-      '46% { opacity: 0; transform: scaleY(0.2); } ' +
+      '46% { opacity: 0.95; transform: scaleY(0.2); } ' +
       '50% { opacity: 0.95; transform: scaleY(1); } ' +
       '96% { opacity: 0.95; transform: scaleY(1); } ' +
       '100% { opacity: 0; transform: scaleY(0.2); } ' +
@@ -719,7 +728,7 @@ javascript:(function(){
     '#scan-grid { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 2147483645; display: none; }' +
     '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: rgba(7,13,30,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 2px solid rgba(0,229,255,0.6); border-radius: 24px; padding: 22px 36px; box-shadow: 0 15px 45px rgba(0,0,0,0.9), 0 0 35px rgba(0,229,255,0.3); }' +
     '#ishak-screen-scan-box.scanning-active { display: block; }' +
-    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 2.5px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; background: linear-gradient(135deg, #FFFFFF 0%, #00E5FF 60%, #00FF66 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }' +
+    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; background: linear-gradient(135deg, #FFFFFF 0%, #00E5FF 60%, #00FF66 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: ishakSignalSeekingMotion 1.8s ease-in-out infinite; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }' +
     '.ishak-ai-text-span { display: inline-block; background: linear-gradient(135deg, #00FFCC 0%, #00E5FF 40%, #D500F9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }' +
     '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 8px; background: rgba(7,13,30,0.95); border: 1.5px solid #00FF66; border-radius: 20px; padding: 6px 18px; color: #00FF66; font-weight: 900; font-size: 11px; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(0,255,102,0.35); }' +
     '.ishak-corner-hud { position: fixed; z-index: 2147483646; pointer-events: none; display: none; font-family: "Orbitron", monospace; font-size: 9px; font-weight: 900; color: #00E5FF; padding: 4px 8px; border-radius: 6px; background: rgba(7,13,30,0.8); border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 0 10px rgba(0,229,255,0.25); animation: ishakDataBlink 2s infinite ease-in-out; }' +
@@ -786,16 +795,16 @@ javascript:(function(){
     var innerGlow = isUp ? 'rgba(0,255,102,0.3)' : 'rgba(255,23,68,0.3)';
 
     fly.innerHTML =
-      '<div style="position:relative; display:inline-flex; flex-direction:column; align-items:center; background:rgba(7,13,30,0.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:2.5px solid ' + themeColor + '; border-radius:24px; padding:22px 50px; box-shadow:0 0 50px ' + glowShadow + ', inset 0 0 35px ' + innerGlow + '; user-select:none;">' +
-        '<div style="position:absolute; top:-3px; left:-3px; width:18px; height:18px; border-top:3.5px solid ' + themeColor + '; border-left:3.5px solid ' + themeColor + ';"></div>' +
-        '<div style="position:absolute; top:-3px; right:-3px; width:18px; height:18px; border-top:3.5px solid ' + themeColor + '; border-right:3.5px solid ' + themeColor + ';"></div>' +
-        '<div style="position:absolute; bottom:-3px; left:-3px; width:18px; height:18px; border-bottom:3.5px solid ' + themeColor + '; border-left:3.5px solid ' + themeColor + ';"></div>' +
-        '<div style="position:absolute; bottom:-3px; right:-3px; width:18px; height:18px; border-bottom:3.5px solid ' + themeColor + '; border-right:3.5px solid ' + themeColor + ';"></div>' +
-        '<div style="font-size:76px; font-weight:900; letter-spacing:4px; color:' + themeColor + '; text-shadow:0 0 25px ' + themeColor + ', 0 0 50px ' + themeColor + ', 0 0 85px ' + glowShadow + ', 0 4px 15px rgba(0,0,0,0.95); line-height:1;">' +
+      '<div style="position:relative; display:inline-flex; flex-direction:column; align-items:center; background:rgba(7,13,30,0.92); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1.8px solid ' + themeColor + '; border-radius:18px; padding:12px 28px; box-shadow:0 0 28px ' + glowShadow + ', inset 0 0 16px ' + innerGlow + '; user-select:none; max-width:250px;">' +
+        '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
+          '<span style="width:6px; height:6px; border-radius:50%; background:' + themeColor + '; display:inline-block; box-shadow:0 0 8px ' + themeColor + ';"></span>' +
+          '<span style="font-size:9px; font-weight:900; letter-spacing:1px; color:' + themeColor + '; opacity:0.9;">AI SIGNAL CONFIRMED</span>' +
+        '</div>' +
+        '<div style="font-size:28px; font-weight:900; letter-spacing:2px; color:' + themeColor + '; text-shadow:0 0 14px ' + themeColor + ', 0 0 28px ' + glowShadow + '; line-height:1.1;">' +
           (isUp ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇') +
         '</div>' +
-        '<div style="margin-top:12px; padding:5px 18px; border-radius:20px; background:' + themeColor + '; color:' + (isUp ? '#070D1E' : '#FFFFFF') + '; font-size:11px; font-weight:900; letter-spacing:1px; box-shadow:0 0 22px ' + glowShadow + ';">' +
-          '★ 99.4% AI CONFLUENCE LOCKED ★' +
+        '<div style="margin-top:6px; padding:2px 12px; border-radius:12px; background:' + (isUp ? 'rgba(0,255,102,0.15)' : 'rgba(255,23,68,0.15)') + '; border:1px solid ' + themeColor + '; color:' + themeColor + '; font-size:9px; font-weight:900; letter-spacing:0.5px;">' +
+          '★ 99.4% VIP ACCURACY ★' +
         '</div>' +
       '</div>';
 
@@ -906,7 +915,7 @@ javascript:(function(){
         '<path d="M0 14 L40 14 L50 3 L60 25 L70 6 L80 20 L90 14 L130 14 L140 4 L150 24 L160 14 L190 14" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px #00E5FF); stroke-dasharray:350; stroke-dashoffset:350; animation:ishakPathDraw 2s linear infinite;" />' +
       '</svg>' +
     '</div>' +
-    '<div id="ishak-screen-scan-title">SCANNING MARKET BY <span class="ishak-ai-text-span">ISHAK AI</span></div>' +
+    '<div id="ishak-screen-scan-title"><span style="color:#00E5FF;font-size:14px;animation:ishakSignalRadarWaves 1s infinite;display:inline-block;">📡</span><span>SCANNING MARKET BY</span> <span class="ishak-ai-text-span">ISHAK AI</span><span style="color:#00FF66;font-size:14px;animation:ishakSignalRadarWaves 1s infinite;display:inline-block;">⚡</span></div>' +
     '<div id="ishak-screen-scan-sub"><span>⚡</span><span id="ishak-scan-sub-text">AI MULTI-FACTOR ENGINE</span></div>';
   document.body.appendChild(screenScanBox);
 
