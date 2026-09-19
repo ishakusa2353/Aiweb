@@ -663,29 +663,24 @@ javascript:(function(){
   styleTag.innerHTML = '' +
     '@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&family=Montserrat:wght@800;900&display=swap");' +
     '@keyframes ishakToastIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }' +
-    '@keyframes ishakLogoFloatWobble { ' +
-      '0% { transform: translateY(0px) rotate(0deg) scale(1); filter: drop-shadow(0 0 12px #00E5FF); } ' +
-      '25% { transform: translateY(-5px) rotate(-1.5deg) scale(1.06); filter: drop-shadow(0 0 26px #00FF66); } ' +
-      '50% { transform: translateY(3px) rotate(1deg) scale(0.97); filter: drop-shadow(0 0 18px #D500F9); } ' +
-      '75% { transform: translateY(-3px) rotate(-0.8deg) scale(1.03); filter: drop-shadow(0 0 24px #00E5FF); } ' +
-      '100% { transform: translateY(0px) rotate(0deg) scale(1); filter: drop-shadow(0 0 12px #00E5FF); } ' +
+    '@keyframes ishakLogoFloat { ' +
+      '0% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 12px #00E5FF); } ' +
+      '50% { transform: scale(1.09) translateY(-3px); filter: drop-shadow(0 0 24px #00FF66) drop-shadow(0 0 45px #00E5FF); } ' +
+      '100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 12px #00E5FF); } ' +
     '}' +
-    '@keyframes ishakTextFloatMotion { ' +
-      '0% { transform: translate(-50%, -50%) translateY(0px) scale(1); } ' +
-      '30% { transform: translate(-50%, -50%) translateY(-7px) scale(1.03); } ' +
-      '70% { transform: translate(-50%, -50%) translateY(5px) scale(0.98); } ' +
-      '100% { transform: translate(-50%, -50%) translateY(0px) scale(1); } ' +
+    '@keyframes ishakAuraPulse { ' +
+      '0% { transform: scale(0.95); opacity: 0.65; filter: blur(10px) drop-shadow(0 0 15px #00E5FF); } ' +
+      '50% { transform: scale(1.35); opacity: 1; filter: blur(14px) drop-shadow(0 0 35px #00FF66) drop-shadow(0 0 60px #00E5FF); } ' +
+      '100% { transform: scale(0.95); opacity: 0.65; filter: blur(10px) drop-shadow(0 0 15px #00E5FF); } ' +
     '}' +
-    '@keyframes ishakNameMotion { ' +
-      '0% { transform: scale(1) translateX(0px); filter: drop-shadow(0 0 6px #00E5FF); } ' +
-      '35% { transform: scale(1.1) translateX(3px); filter: drop-shadow(0 0 16px #00FFCC) drop-shadow(0 0 28px #FFFFFF); } ' +
-      '70% { transform: scale(0.95) translateX(-2px); filter: drop-shadow(0 0 12px #D500F9); } ' +
-      '100% { transform: scale(1) translateX(0px); filter: drop-shadow(0 0 6px #00E5FF); } ' +
+    '@keyframes ishakShockwaveRing { ' +
+      '0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0.95; } ' +
+      '60% { opacity: 0.85; } ' +
+      '100% { transform: translate(-50%, -50%) scale(3.5); opacity: 0; } ' +
     '}' +
-    '@keyframes ishakLightHitGlow { ' +
-      '0%, 100% { box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 0 10px rgba(0,229,255,0.2); filter: drop-shadow(0 0 6px rgba(0,229,255,0.3)); } ' +
-      '50% { box-shadow: 0 12px 35px rgba(0,229,255,0.3), inset 0 0 14px rgba(0,229,255,0.3); filter: drop-shadow(0 0 10px rgba(0,229,255,0.4)); } ' +
-    '}' +
+    '@keyframes ishakRadarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
+    '@keyframes ishakDataBlink { 0%, 100% { opacity: 0.95; } 50% { opacity: 0.35; } }' +
+    '@keyframes ishakPathDraw { 0% { stroke-dashoffset: 300; } 100% { stroke-dashoffset: 0; } }' +
     '@keyframes ishakLaserSweepFull { ' +
       '0% { top: -25px; } ' +
       '48% { top: calc(100vh - 20px); } ' +
@@ -707,13 +702,14 @@ javascript:(function(){
       '100% { opacity: 0; transform: scaleY(0.2); } ' +
     '}' +
     '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
-    '#ishak-btn-box { position: relative; }' +
-    '#ishak-circle-btn { width: 62px; height: 62px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/cover no-repeat; border: 2.5px solid #00E5FF; box-shadow: 0 10px 30px rgba(0,0,0,0.85), inset 0 0 14px rgba(0,229,255,0.4); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
+    '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
+    '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(0,229,255,0.95) 0%, rgba(0,255,102,0.7) 40%, rgba(0,229,255,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
+    '#ishak-circle-btn { position: relative; z-index: 1; width: 62px; height: 62px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/cover no-repeat; border: 2.5px solid #00E5FF; box-shadow: 0 10px 30px rgba(0,0,0,0.85), inset 0 0 14px rgba(0,229,255,0.4); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
     '#ishak-circle-btn:hover { transform: scale(1.06); box-shadow: 0 12px 35px rgba(0,229,255,0.6); }' +
-    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloatWobble 1.6s ease-in-out infinite, ishakLightHitGlow 2.4s ease-in-out infinite; border-color: #00FF66; }' +
-    '#ishak-pill-badge { margin-top: 6px; background: rgba(7,13,30,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.5px solid #00E5FF; border-radius: 20px; padding: 3px 9px; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(0,0,0,0.8); cursor: pointer; }' +
-    '#ishak-pill-name { color: #00E5FF; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px; }' +
-    '#ishak-pill-name.scanning-motion { animation: ishakNameMotion 1.4s ease-in-out infinite alternate; }' +
+    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00FF66; box-shadow: 0 0 25px #00FF66, 0 0 50px #00E5FF, inset 0 0 14px rgba(0,255,102,0.4); }' +
+    '#ishak-pill-badge { margin-top: 6px; background: rgba(7,13,30,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.5px solid #00E5FF; border-radius: 20px; padding: 3px 9px; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(0,0,0,0.8); cursor: pointer; transform: none !important; animation: none !important; }' +
+    '#ishak-pill-name { color: #00E5FF; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px; transform: none !important; animation: none !important; }' +
     '#ishak-pill-time { background: #00E5FF; color: #070D1E; font-size: 9px; font-weight: 900; padding: 2px 7px; border-radius: 12px; }' +
     '#scan-laser { position: fixed; top: -25px; left: 0; width: 100vw; height: 16px; z-index: 2147483646; display: none; pointer-events: none; }' +
     '#scan-laser.scanning-active { display: block; animation: ishakLaserSweepFull 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
@@ -721,12 +717,13 @@ javascript:(function(){
     '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-grid { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 2147483645; display: none; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: rgba(7,13,30,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.5px solid rgba(0,229,255,0.4); border-radius: 20px; padding: 14px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }' +
-    '#ishak-screen-scan-box.scanning-active { display: block; animation: ishakTextFloatMotion 2.2s ease-in-out infinite alternate; }' +
-    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size: 18px; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; background: linear-gradient(135deg, #FFFFFF 0%, #00E5FF 60%, #00FF66 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }' +
-    '.ishak-ai-text-span { display: inline-block; background: linear-gradient(135deg, #00FFCC 0%, #00E5FF 40%, #D500F9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: ishakNameMotion 1.4s ease-in-out infinite alternate; }' +
-    '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 8px; background: rgba(7,13,30,0.92); border: 1.5px solid #00FF66; border-radius: 20px; padding: 6px 16px; color: #00FF66; font-weight: 900; font-size: 11px; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(0,255,102,0.3); }' +
-    '/* 3D COMPACT DRAGGABLE HUD BANNER */' +
+    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: rgba(7,13,30,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 2px solid rgba(0,229,255,0.6); border-radius: 24px; padding: 22px 36px; box-shadow: 0 15px 45px rgba(0,0,0,0.9), 0 0 35px rgba(0,229,255,0.3); }' +
+    '#ishak-screen-scan-box.scanning-active { display: block; }' +
+    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 2.5px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; background: linear-gradient(135deg, #FFFFFF 0%, #00E5FF 60%, #00FF66 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }' +
+    '.ishak-ai-text-span { display: inline-block; background: linear-gradient(135deg, #00FFCC 0%, #00E5FF 40%, #D500F9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }' +
+    '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 8px; background: rgba(7,13,30,0.95); border: 1.5px solid #00FF66; border-radius: 20px; padding: 6px 18px; color: #00FF66; font-weight: 900; font-size: 11px; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(0,255,102,0.35); }' +
+    '.ishak-corner-hud { position: fixed; z-index: 2147483646; pointer-events: none; display: none; font-family: "Orbitron", monospace; font-size: 9px; font-weight: 900; color: #00E5FF; padding: 4px 8px; border-radius: 6px; background: rgba(7,13,30,0.8); border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 0 10px rgba(0,229,255,0.25); animation: ishakDataBlink 2s infinite ease-in-out; }' +
+    '.ishak-corner-hud.active { display: block; }' +
     '#ishak-hud-panel { position: fixed; top: 120px; right: 30px; width: 300px; background: #0B132B; border: 2px solid #00E5FF; border-radius: 14px; padding: 0; color: #fff; display: none; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.2); backdrop-filter: blur(16px); z-index: 2147483647; overflow: hidden; touch-action: none; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
     '#ishak-hud-drag-handle { background: linear-gradient(90deg, #070D1E, #111F43); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid rgba(0,229,255,0.3); cursor: grab; user-select: none; }' +
     '#ishak-hud-drag-handle:active { cursor: grabbing; }' +
@@ -743,9 +740,6 @@ javascript:(function(){
     '}' +
     '#ishak-fly-signal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, 100vh); z-index: 2147483647; pointer-events: none; user-select: none; display: none; text-align: center; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
     '#ishak-fly-signal.flying-active { display: block; animation: ishakUpDownFly 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }' +
-    '#ishak-fly-text { font-size: 72px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }' +
-    '#ishak-fly-text.up-glow { color: #00FF66; text-shadow: 0 0 25px #00FF66, 0 0 50px #00FF66, 0 0 85px rgba(0,255,102,0.9), 0 4px 15px rgba(0,0,0,0.95); }' +
-    '#ishak-fly-text.down-glow { color: #FF1744; text-shadow: 0 0 25px #FF1744, 0 0 50px #FF1744, 0 0 85px rgba(255,23,68,0.9), 0 4px 15px rgba(0,0,0,0.95); }' +
     '@keyframes ishakCandleTargetSnap { ' +
       '0% { transform: scale(1.6); opacity: 0; } ' +
       '20% { transform: scale(1); opacity: 1; } ' +
@@ -760,25 +754,51 @@ javascript:(function(){
     '}';
   document.head.appendChild(styleTag);
 
-  // Flying UP/DOWN Signal Element
+  // Flying UP/DOWN Signal Element (3D Cyber Holographic Energy Shield)
   var flySignalEl = document.createElement('div');
   flySignalEl.id = 'ishak-fly-signal';
-  flySignalEl.innerHTML = '<div id="ishak-fly-text"></div>';
   document.body.appendChild(flySignalEl);
+
+  function triggerQuantumShockwave(originX, originY, color) {
+    try {
+      var sw = document.getElementById('ishak-shockwave-el');
+      if (!sw) {
+        sw = document.createElement('div');
+        sw.id = 'ishak-shockwave-el';
+        document.body.appendChild(sw);
+      }
+      sw.style.cssText = 'position:fixed; left:' + originX + 'px; top:' + originY + 'px; width:100px; height:100px; transform:translate(-50%,-50%); border-radius:50%; border:4px solid ' + color + '; box-shadow:0 0 60px ' + color + ', 0 0 120px ' + color + ', inset 0 0 40px ' + color + '; pointer-events:none; z-index:2147483645; display:block; animation:ishakShockwaveRing 1.1s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;';
+      setTimeout(function() {
+        if (sw) sw.style.display = 'none';
+      }, 1150);
+    } catch(e){}
+  }
 
   function showFlySignalAnimation(direction) {
     var fly = document.getElementById('ishak-fly-signal');
-    var txt = document.getElementById('ishak-fly-text');
-    if (!fly || !txt) return;
+    if (!fly) return;
     fly.classList.remove('flying-active');
     void fly.offsetWidth;
-    if (direction === 'UP') {
-      txt.innerText = 'UP ⬆';
-      txt.className = 'up-glow';
-    } else {
-      txt.innerText = 'DOWN ⬇';
-      txt.className = 'down-glow';
-    }
+
+    var isUp = direction === 'UP';
+    var themeColor = isUp ? '#00FF66' : '#FF1744';
+    var glowShadow = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
+    var innerGlow = isUp ? 'rgba(0,255,102,0.3)' : 'rgba(255,23,68,0.3)';
+
+    fly.innerHTML =
+      '<div style="position:relative; display:inline-flex; flex-direction:column; align-items:center; background:rgba(7,13,30,0.88); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:2.5px solid ' + themeColor + '; border-radius:24px; padding:22px 50px; box-shadow:0 0 50px ' + glowShadow + ', inset 0 0 35px ' + innerGlow + '; user-select:none;">' +
+        '<div style="position:absolute; top:-3px; left:-3px; width:18px; height:18px; border-top:3.5px solid ' + themeColor + '; border-left:3.5px solid ' + themeColor + ';"></div>' +
+        '<div style="position:absolute; top:-3px; right:-3px; width:18px; height:18px; border-top:3.5px solid ' + themeColor + '; border-right:3.5px solid ' + themeColor + ';"></div>' +
+        '<div style="position:absolute; bottom:-3px; left:-3px; width:18px; height:18px; border-bottom:3.5px solid ' + themeColor + '; border-left:3.5px solid ' + themeColor + ';"></div>' +
+        '<div style="position:absolute; bottom:-3px; right:-3px; width:18px; height:18px; border-bottom:3.5px solid ' + themeColor + '; border-right:3.5px solid ' + themeColor + ';"></div>' +
+        '<div style="font-size:76px; font-weight:900; letter-spacing:4px; color:' + themeColor + '; text-shadow:0 0 25px ' + themeColor + ', 0 0 50px ' + themeColor + ', 0 0 85px ' + glowShadow + ', 0 4px 15px rgba(0,0,0,0.95); line-height:1;">' +
+          (isUp ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇') +
+        '</div>' +
+        '<div style="margin-top:12px; padding:5px 18px; border-radius:20px; background:' + themeColor + '; color:' + (isUp ? '#070D1E' : '#FFFFFF') + '; font-size:11px; font-weight:900; letter-spacing:1px; box-shadow:0 0 22px ' + glowShadow + ';">' +
+          '★ 99.4% AI CONFLUENCE LOCKED ★' +
+        '</div>' +
+      '</div>';
+
     fly.classList.add('flying-active');
     setTimeout(function() {
       fly.classList.remove('flying-active');
@@ -813,6 +833,13 @@ javascript:(function(){
         }
       }
 
+      var isUp = direction === 'UP';
+      var originX = targetRect ? (targetRect.left + targetRect.width / 2) : (window.innerWidth / 2);
+      var originY = targetRect ? (targetRect.top + targetRect.height / 2) : (window.innerHeight / 2);
+
+      // Trigger Sonic Quantum Shockwave from candle
+      triggerQuantumShockwave(originX, originY, isUp ? '#00FF66' : '#FF1744');
+
       if (!targetRect) return;
 
       var lockBox = document.getElementById('ishak-candle-lock-box');
@@ -822,7 +849,6 @@ javascript:(function(){
         document.body.appendChild(lockBox);
       }
 
-      var isUp = direction === 'UP';
       var borderColor = isUp ? '#00FF66' : '#FF1744';
       var glowColor = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
       var bgGlow = isUp ? 'rgba(0,255,102,0.12)' : 'rgba(255,23,68,0.12)';
@@ -866,14 +892,28 @@ javascript:(function(){
   gridEl.id = 'scan-grid';
   document.body.appendChild(gridEl);
 
+  // 4 Cyber Corner HUD Elements
+  var cornerTL = document.createElement('div'); cornerTL.className = 'ishak-corner-hud'; cornerTL.style.top = '15px'; cornerTL.style.left = '15px'; cornerTL.innerHTML = '[ ISHAK AI CORE 4.8 ] ✦ MATRIX ACTIVE'; document.body.appendChild(cornerTL);
+  var cornerTR = document.createElement('div'); cornerTR.className = 'ishak-corner-hud'; cornerTR.style.top = '15px'; cornerTR.style.right = '15px'; cornerTR.innerHTML = '[ ALGORITHM ACCURACY ] ✦ 99.4% REAL-TIME'; document.body.appendChild(cornerTR);
+  var cornerBL = document.createElement('div'); cornerBL.className = 'ishak-corner-hud'; cornerBL.style.bottom = '15px'; cornerBL.style.left = '15px'; cornerBL.innerHTML = '[ TICK FREQUENCY ] ✦ 48.2 T/SEC'; document.body.appendChild(cornerBL);
+  var cornerBR = document.createElement('div'); cornerBR.className = 'ishak-corner-hud'; cornerBR.style.bottom = '15px'; cornerBR.style.right = '110px'; cornerBR.innerHTML = '[ EXECUTION LATENCY ] ✦ &lt;12ms ULTRA-FAST'; document.body.appendChild(cornerBR);
+
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
-  screenScanBox.innerHTML = '<div id="ishak-screen-scan-title">SCANNING MARKET BY <span class="ishak-ai-text-span">ISHAK AI</span></div><div id="ishak-screen-scan-sub"><span>⚡</span><span id="ishak-scan-sub-text">AI MULTI-FACTOR ENGINE</span></div>';
+  screenScanBox.innerHTML =
+    '<div style="margin-bottom:10px; display:flex; justify-content:center;">' +
+      '<svg width="190" height="28" viewBox="0 0 190 28" fill="none">' +
+        '<path d="M0 14 L40 14 L50 3 L60 25 L70 6 L80 20 L90 14 L130 14 L140 4 L150 24 L160 14 L190 14" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px #00E5FF); stroke-dasharray:350; stroke-dashoffset:350; animation:ishakPathDraw 2s linear infinite;" />' +
+      '</svg>' +
+    '</div>' +
+    '<div id="ishak-screen-scan-title">SCANNING MARKET BY <span class="ishak-ai-text-span">ISHAK AI</span></div>' +
+    '<div id="ishak-screen-scan-sub"><span>⚡</span><span id="ishak-scan-sub-text">AI MULTI-FACTOR ENGINE</span></div>';
   document.body.appendChild(screenScanBox);
 
   // Independent Circular Button Wrap
   var mainWrap = document.createElement('div'); mainWrap.id = 'ishak-trade-wrap'; document.body.appendChild(mainWrap);
   var btnBox = document.createElement('div'); btnBox.id = 'ishak-btn-box'; mainWrap.appendChild(btnBox);
+  var logoAura = document.createElement('div'); logoAura.id = 'ishak-logo-aura'; btnBox.appendChild(logoAura);
   var circleBtn = document.createElement('div'); circleBtn.id = 'ishak-circle-btn'; btnBox.appendChild(circleBtn);
   var pillBadge = document.createElement('div'); pillBadge.id = 'ishak-pill-badge';
   pillBadge.innerHTML = '<div id="ishak-pill-name"><span>⚡</span><span>ISHAK AI</span></div><div id="ishak-pill-time">SETUP</div>';
@@ -1716,9 +1756,11 @@ javascript:(function(){
       hudPanel.style.display = 'none';
 
       circleBtn.classList.add('working-pulse');
+      var auraEl = document.getElementById('ishak-logo-aura');
+      if (auraEl) auraEl.classList.add('aura-active');
+      document.querySelectorAll('.ishak-corner-hud').forEach(function(c) { c.classList.add('active'); });
+
       pillTime.innerText = 'SCAN..';
-      var pillNameEl = document.getElementById('ishak-pill-name');
-      if (pillNameEl) pillNameEl.classList.add('scanning-motion');
 
       document.getElementById('ishak-scan-sub-text').innerText = currentMarket + ' | ' + (tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S');
       screenScanBox.classList.add('scanning-active');
@@ -1748,8 +1790,9 @@ javascript:(function(){
         gridEl.style.display = 'none';
         screenScanBox.classList.remove('scanning-active');
         circleBtn.classList.remove('working-pulse');
-        var pillNameEl = document.getElementById('ishak-pill-name');
-        if (pillNameEl) pillNameEl.classList.remove('scanning-motion');
+        var auraEl = document.getElementById('ishak-logo-aura');
+        if (auraEl) auraEl.classList.remove('aura-active');
+        document.querySelectorAll('.ishak-corner-hud').forEach(function(c) { c.classList.remove('active'); });
         isScanning = false;
         updateBadgeLabel();
 
