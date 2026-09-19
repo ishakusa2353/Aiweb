@@ -726,11 +726,11 @@ javascript:(function(){
     '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-grid { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 2147483645; display: none; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: rgba(7,13,30,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 2px solid rgba(0,229,255,0.6); border-radius: 24px; padding: 22px 36px; box-shadow: 0 15px 45px rgba(0,0,0,0.9), 0 0 35px rgba(0,229,255,0.3); }' +
+    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(7,13,30,0.95) 0%, rgba(13,27,62,0.9) 100%); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(0,229,255,0.45); border-radius: 16px; padding: 10px 20px; box-shadow: 0 10px 35px rgba(0,0,0,0.85), 0 0 20px rgba(0,229,255,0.25); max-width: 320px; user-select: none; animation: ishakSignalSeekingMotion 1.8s ease-in-out infinite; }' +
     '#ishak-screen-scan-box.scanning-active { display: block; }' +
-    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; font-size: 19px; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; background: linear-gradient(135deg, #FFFFFF 0%, #00E5FF 60%, #00FF66 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: ishakSignalSeekingMotion 1.8s ease-in-out infinite; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }' +
-    '.ishak-ai-text-span { display: inline-block; background: linear-gradient(135deg, #00FFCC 0%, #00E5FF 40%, #D500F9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }' +
-    '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 8px; background: rgba(7,13,30,0.95); border: 1.5px solid #00FF66; border-radius: 20px; padding: 6px 18px; color: #00FF66; font-weight: 900; font-size: 11px; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(0,255,102,0.35); }' +
+    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 1px; margin-bottom: 5px; color: #FFFFFF; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; }' +
+    '.ishak-ai-text-span { display: inline-block; color: #00E5FF; }' +
+    '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); border-radius: 12px; padding: 2px 10px; color: #00E5FF; font-weight: 700; font-size: 9px; font-family: "Orbitron", monospace; letter-spacing: 0.5px; }' +
     '.ishak-corner-hud { position: fixed; z-index: 2147483646; pointer-events: none; display: none; font-family: "Orbitron", monospace; font-size: 9px; font-weight: 900; color: #00E5FF; padding: 4px 8px; border-radius: 6px; background: rgba(7,13,30,0.8); border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 0 10px rgba(0,229,255,0.25); animation: ishakDataBlink 2s infinite ease-in-out; }' +
     '.ishak-corner-hud.active { display: block; }' +
     '#ishak-hud-panel { position: fixed; top: 120px; right: 30px; width: 300px; background: #0B132B; border: 2px solid #00E5FF; border-radius: 14px; padding: 0; color: #fff; display: none; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.2); backdrop-filter: blur(16px); z-index: 2147483647; overflow: hidden; touch-action: none; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
@@ -910,13 +910,12 @@ javascript:(function(){
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.innerHTML =
-    '<div style="margin-bottom:10px; display:flex; justify-content:center;">' +
-      '<svg width="190" height="28" viewBox="0 0 190 28" fill="none">' +
-        '<path d="M0 14 L40 14 L50 3 L60 25 L70 6 L80 20 L90 14 L130 14 L140 4 L150 24 L160 14 L190 14" stroke="#00E5FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 8px #00E5FF); stroke-dasharray:350; stroke-dashoffset:350; animation:ishakPathDraw 2s linear infinite;" />' +
-      '</svg>' +
+    '<div id="ishak-screen-scan-title">' +
+      '<span style="width:6px;height:6px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;display:inline-block;"></span>' +
+      '<span>SCANNING MARKET BY <span class="ishak-ai-text-span">ISHAK AI</span></span>' +
+      '<span style="color:#00FF66;font-size:11px;">⚡</span>' +
     '</div>' +
-    '<div id="ishak-screen-scan-title"><span style="color:#00E5FF;font-size:14px;animation:ishakSignalRadarWaves 1s infinite;display:inline-block;">📡</span><span>SCANNING MARKET BY</span> <span class="ishak-ai-text-span">ISHAK AI</span><span style="color:#00FF66;font-size:14px;animation:ishakSignalRadarWaves 1s infinite;display:inline-block;">⚡</span></div>' +
-    '<div id="ishak-screen-scan-sub"><span>⚡</span><span id="ishak-scan-sub-text">AI MULTI-FACTOR ENGINE</span></div>';
+    '<div id="ishak-screen-scan-sub"><span style="width:4px;height:4px;border-radius:50%;background:#00FF66;display:inline-block;"></span><span id="ishak-scan-sub-text">AI MULTI-FACTOR ENGINE</span></div>';
   document.body.appendChild(screenScanBox);
 
   // Independent Circular Button Wrap

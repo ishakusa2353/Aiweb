@@ -536,31 +536,31 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             [ EXECUTION LATENCY ] ✦ &lt;12ms ULTRA-FAST
           </div>
 
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none text-center bg-[#070D1E]/85 backdrop-blur-md border-2 border-cyan-400/60 rounded-3xl px-8 py-5 shadow-[0_15px_45px_rgba(0,0,0,0.9),0_0_35px_rgba(0,229,255,0.3)]">
-            <div className="mb-2.5 flex justify-center">
-              <svg width="190" height="28" viewBox="0 0 190 28" fill="none">
-                <path
-                  d="M0 14 L40 14 L50 3 L60 25 L70 6 L80 20 L90 14 L130 14 L140 4 L150 24 L160 14 L190 14"
-                  stroke="#00E5FF"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="animate-[ishakPathDraw_2s_linear_infinite]"
-                  style={{ filter: 'drop-shadow(0 0 8px #00E5FF)', strokeDasharray: 350, strokeDashoffset: 350 }}
-                />
-              </svg>
-            </div>
-            <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-widest mb-2 bg-gradient-to-r from-white via-cyan-400 to-emerald-400 bg-clip-text text-transparent animate-[ishakSignalSeekingMotion_1.8s_ease-in-out_infinite]">
-              <span className="inline-flex items-center gap-2">
-                <span className="text-cyan-400 animate-[ishakSignalRadarWaves_1s_infinite]">📡</span>
-                <span>SCANNING MARKET BY</span>
-                <span className="bg-gradient-to-r from-teal-300 via-cyan-400 to-fuchsia-500 bg-clip-text text-transparent">ISHAK AI</span>
-                <span className="text-emerald-400 animate-[ishakSignalRadarWaves_1s_infinite]">⚡</span>
-              </span>
-            </h2>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#070D1E]/95 border border-emerald-400 text-emerald-400 font-black text-xs shadow-lg shadow-emerald-500/30">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{currentMarket} | {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`) : '5S'} AI MULTI-FACTOR ENGINE</span>
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none text-center select-none">
+            {/* Sleek, Compact Cyber Scanning Capsule */}
+            <div
+              className="inline-flex flex-col items-center bg-[#070D1E]/92 backdrop-blur-xl border border-cyan-400/50 rounded-2xl px-5 py-2.5 shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(0,229,255,0.3)] max-w-[320px] transition-all animate-[ishakSignalSeekingMotion_1.8s_ease-in-out_infinite]"
+              style={{
+                background: 'linear-gradient(135deg, rgba(7,13,30,0.95) 0%, rgba(13,27,62,0.9) 100%)'
+              }}
+            >
+              {/* Top Row: Pulsing Radar Dot + Compact Title */}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                </span>
+                <span className="text-xs sm:text-[13px] font-black uppercase tracking-wider text-white">
+                  SCANNING MARKET BY <span className="text-cyan-400">ISHAK AI</span>
+                </span>
+                <span className="text-emerald-400 text-xs animate-[ishakSignalRadarWaves_1s_infinite]">⚡</span>
+              </div>
+
+              {/* Bottom Row: Micro Telemetry Tag */}
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-400/30 text-[9px] font-mono font-bold text-cyan-300">
+                <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>{currentMarket} • {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`) : '5S'} • VIP ENGINE</span>
+              </div>
             </div>
           </div>
         </>
