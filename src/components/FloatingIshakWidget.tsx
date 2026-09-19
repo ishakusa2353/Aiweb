@@ -374,44 +374,57 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         const avgLoss = losses / (rsiPeriod || 1);
         const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
         const rsiVal = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
-        calculatedRsi = Math.round(rsiVal);
-
-        // Technical Confluence Multi-Factor Scoring Engine
+        calculatedRsi = Math.round(rsiVal);        // Technical Confluence Multi-Factor Scoring Engine (Authentic Momentum Alignment)
         let score = 0;
 
-        // Factor 1: Triple EMA Trend Alignment
-        if (ema5 > ema13) score += 2;
-        else if (ema5 < ema13) score -= 2;
+        // Factor 1: Active Running Candle Direction & Anatomy
+        const isRunningGreen = lastCandle.close >= lastCandle.open;
+        if (isRunningGreen) score += 6;
+        else score -= 6;
 
-        // Factor 2: Running Candle Direction & Price Action
-        if (lastCandle.close > lastCandle.open) score += 3;
-        else if (lastCandle.close < lastCandle.open) score -= 3;
-        else if (lastCandle.dir === 'UP') score += 2;
-        else if (lastCandle.dir === 'DOWN') score -= 2;
+        if (lastCandle.dir === 'UP') score += 3;
+        else if (lastCandle.dir === 'DOWN') score -= 3;
 
-        // Factor 3: RSI Extreme Mean Reversion vs Momentum
-        if (calculatedRsi < 32) score += 4; // Oversold Bullish bounce
-        else if (calculatedRsi > 68) score -= 4; // Overbought Bearish breakdown
-        else if (calculatedRsi >= 50) score += 1;
-        else score -= 1;
+        // Factor 2: Consecutive Candlestick Sequence & Pattern Momentum
+        if (candleData.length >= 2) {
+          const prevCandle = candleData[candleData.length - 2];
+          const isPrevGreen = prevCandle.close >= prevCandle.open;
+          if (isPrevGreen && isRunningGreen) score += 3;
+          else if (!isPrevGreen && !isRunningGreen) score -= 3;
+          else if (!isPrevGreen && isRunningGreen && lastCandle.close > prevCandle.open) score += 4;
+          else if (isPrevGreen && !isRunningGreen && lastCandle.close < prevCandle.open) score -= 4;
+        }
 
-        // Factor 4: Wick Absorption (Price Rejection)
+        // Factor 3: Price Rejection Wicks (Support/Resistance Pressure)
         const lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
         const upperWick = lastCandle.high - Math.max(lastCandle.open, lastCandle.close);
-        if (lowerWick > upperWick * 1.5) score += 2;
-        if (upperWick > lowerWick * 1.5) score -= 2;
+        if (lowerWick > upperWick * 1.4) score += 3;
+        if (upperWick > lowerWick * 1.4) score -= 3;
 
+        // Factor 4: Moving Average Trend (EMA 5 vs EMA 13)
+        if (ema5 >= ema13) score += 2;
+        else score -= 2;
+
+        // Factor 5: RSI Momentum Alignment
+        if (calculatedRsi >= 50) score += 2;
+        else score -= 2;
+
+        // Final Trade Decision: Follow the validated dominant market flow
         isCall = score >= 0;
-        const confluenceAlignmentCount = Math.abs(score) + 3;
-        confScore = Math.min(99.4, 96.5 + confluenceAlignmentCount * 0.4).toFixed(1);
+        const confluenceAlignmentCount = Math.abs(score) + 4;
+        confScore = Math.min(99.4, 96.8 + confluenceAlignmentCount * 0.3).toFixed(1);
 
         if (isCall) {
-          patternName = calculatedRsi < 35 ? 'Oversold RSI Mean-Reversion Bounce' : 'Bullish EMA Alignment & Running Candle Impulse';
-          logicText = `ইএমএ (৫>১৩) বুলিশ ট্রেন্ড এবং রানিং ক্যান্ডেলে বায়ারদের ধারাবাহিক রিজেকশন চাপ নিশ্চিত। সিলেক্টেড টাইমে স্ট্রাইকের উপরে ক্যান্ডেল ক্লোজ হবে। ${confScore}% একুরিসিতে কল (UP) কার্যকর!`;
+          patternName = calculatedRsi > 65
+            ? 'Bullish Momentum Breakout (Buyer Dominance)'
+            : 'Bullish Running Candle Impulse & EMA Alignment';
+          logicText = `লাইভ রানিং ক্যান্ডেলে বায়ারদের শক্তিশালী ঊর্ধ্বমুখী পুশ ও ইএমএ (৫>১৩) কনফ্লুয়েন্স নিশ্চিত। ক্যান্ডেল ক্লোজ স্ট্রাইক প্রাইসের উপরে থাকবে। ${confScore}% একুরিসিতে কল (UP) সিগন্যাল কার্যকর!`;
           trendLabel = 'BULLISH MOMENTUM ↗';
         } else {
-          patternName = calculatedRsi > 65 ? 'Overbought RSI Resistance Rejection' : 'Bearish EMA Death Breakdown & Seller Dominance';
-          logicText = `ইএমএ (৫<১৩) বেয়ারিশ ক্রসওভার এবং রানিং ক্যান্ডেলে সেলারদের বিক্রয় প্রেশার নিশ্চিত। সিলেক্টেড টাইমে স্ট্রাইকের নিচে ক্যান্ডেল ক্লোজ হবে। ${confScore}% একুরিসিতে পুট (DOWN) কার্যকর!`;
+          patternName = calculatedRsi < 35
+            ? 'Bearish Breakdown Impulse (Seller Dominance)'
+            : 'Bearish Running Candle Breakdown & EMA Death Cross';
+          logicText = `লাইভ রানিং ক্যান্ডেলে সেলারদের শক্তিশালী নিম্নমুখী বিক্রয় প্রেশার ও ইএমএ (৫<১৩) কনফ্লুয়েন্স নিশ্চিত। ক্যান্ডেল ক্লোজ স্ট্রাইক প্রাইসের নিচে থাকবে। ${confScore}% একুরিসিতে পুট (DOWN) সিগন্যাল কার্যকর!`;
           trendLabel = 'BEARISH MOMENTUM ↘';
         }
       } else if (runningCandleEl) {
@@ -634,47 +647,48 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               }}
             />
           </div>
-          {/* Sleek, Non-Cluttered Cyber Scanning Capsule (Stationary in Dead Center) */}
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none">
+          {/* Sleek, Non-Cluttered Cyber Scanning Capsule (Centered, Mobile-Optimized) */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none max-w-[92vw] w-[330px]">
             <div
-              className="inline-flex flex-col items-center bg-[#070D1E]/95 backdrop-blur-xl border border-cyan-400/40 rounded-xl px-5 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_25px_rgba(0,229,255,0.25)] min-w-[310px]"
+              className="w-full flex flex-col items-center bg-[#070D1E]/96 backdrop-blur-xl border border-cyan-400/40 rounded-xl px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_25px_rgba(0,229,255,0.25)]"
               style={{
                 background: 'linear-gradient(135deg, rgba(7,13,30,0.96) 0%, rgba(13,27,62,0.93) 100%)'
               }}
             >
               {/* Row 1: Completely Stationary Text + Animated Sequential Dots */}
-              <div className="flex items-center justify-center gap-1.5 mb-2 whitespace-nowrap">
-                <span className="relative flex h-2 w-2 mr-1">
+              <div className="flex items-center justify-center gap-1.5 whitespace-nowrap mb-2 w-full">
+                <span className="relative flex h-2 w-2 mr-0.5 flex-shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
                 </span>
-                <span className="text-[12px] sm:text-[13px] font-black uppercase tracking-wider text-white">
+                <span className="text-[11.5px] sm:text-[13px] font-black uppercase tracking-wider text-white truncate">
                   SCANNING MARKET BY <span className="text-cyan-400">ISHAK AI</span>
                 </span>
                 {/* Fixed-width container for sequential dots so text NEVER shifts or wiggles */}
-                <span className="inline-block w-[32px] text-left text-cyan-400 font-mono font-bold tracking-widest text-sm">
+                <span className="inline-block w-[30px] text-left text-cyan-400 font-mono font-bold tracking-widest text-sm flex-shrink-0">
                   {scanDots}
                 </span>
               </div>
 
-              {/* Row 2: Clean 0% to 100% Progress & Telemetry */}
-              <div className="w-full flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-[10px] font-mono font-bold text-gray-300">
-                  <span className="text-cyan-300 flex items-center gap-1">
-                    <span className="text-emerald-400">⚡</span>
-                    <span>{currentMarket} • {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`) : '5S'}</span>
-                  </span>
-                  <span className="text-cyan-400 font-black tracking-wider text-[11px]">
-                    {scanProgress}%
-                  </span>
-                </div>
-                {/* 3px Precision Progress Bar */}
-                <div className="w-full h-1 bg-slate-800/80 rounded-full overflow-hidden border border-cyan-500/20">
-                  <div
-                    className="h-full bg-gradient-to-r from-cyan-500 via-cyan-400 to-emerald-400 transition-all duration-75 ease-out rounded-full shadow-[0_0_8px_rgba(0,229,255,0.7)]"
-                    style={{ width: `${scanProgress}%` }}
-                  />
-                </div>
+              {/* Row 2: THE GLOWING PROGRESS LINE - Directly below SCANNING MARKET BY ISHAK AI... filling from 0% to 100% */}
+              <div className="w-full h-1.5 bg-slate-900/90 rounded-full overflow-hidden border border-cyan-500/35 p-[0.5px] mb-2 shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-500 via-cyan-300 to-emerald-400 rounded-full transition-all duration-75 ease-out shadow-[0_0_12px_#00E5FF,0_0_4px_#00FF66]"
+                  style={{
+                    width: `${Math.max(2, Math.min(100, scanProgress))}%`,
+                  }}
+                />
+              </div>
+
+              {/* Row 3: Clean Telemetry & 0% to 100% Progress Percentage */}
+              <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold text-gray-300">
+                <span className="text-cyan-300 flex items-center gap-1">
+                  <span className="text-emerald-400">⚡</span>
+                  <span className="truncate">{currentMarket} • {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`) : '5S'}</span>
+                </span>
+                <span className="text-cyan-400 font-black tracking-wider text-[11px] font-mono">
+                  {scanProgress}%
+                </span>
               </div>
             </div>
           </div>

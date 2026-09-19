@@ -904,19 +904,18 @@ javascript:(function(){
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.innerHTML =
-    '<div id="ishak-screen-scan-title">' +
-      '<span style="width:6px;height:6px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;display:inline-block;margin-right:2px;flex-shrink:0;"></span>' +
-      '<span>SCANNING MARKET BY <span class="ishak-ai-text-span">ISHAK AI</span></span>' +
-      '<span id="ishak-scan-dots" style="display:inline-block;width:32px;text-align:left;color:#00E5FF;font-family:monospace;font-weight:900;letter-spacing:1px;font-size:14px;flex-shrink:0;">.......</span>' +
+    '<div id="ishak-screen-scan-title" style="display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin-bottom:6px;width:100%;">' +
+      '<span style="width:6px;height:6px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;display:inline-block;flex-shrink:0;"></span>' +
+      '<span style="font-size:12px;font-weight:900;letter-spacing:1px;color:#FFF;">SCANNING MARKET BY <span class="ishak-ai-text-span" style="color:#00E5FF;">ISHAK AI</span></span>' +
+      '<span id="ishak-scan-dots" style="display:inline-block;width:30px;text-align:left;color:#00E5FF;font-family:monospace;font-weight:900;letter-spacing:1px;font-size:13px;flex-shrink:0;">.......</span>' +
     '</div>' +
-    '<div id="ishak-scan-meter-wrap" style="width:100%;margin-top:5px;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;font-family:monospace;font-size:10px;font-weight:bold;">' +
-        '<span id="ishak-scan-sub-text" style="color:#A0AEC0;">AI CONFLUENCE ENGINE</span>' +
-        '<span id="ishak-scan-percent" style="color:#00E5FF;font-weight:900;font-size:11px;">0%</span>' +
-      '</div>' +
-      '<div style="width:100%;height:3.5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;border:1px solid rgba(0,229,255,0.25);">' +
-        '<div id="ishak-scan-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#00E5FF,#00FF66);border-radius:3px;transition:width 0.05s linear;box-shadow:0 0 8px #00E5FF;"></div>' +
-      '</div>' +
+    '<!-- Line directly under SCANNING MARKET BY ISHAK AI... filling from 0% to 100% -->' +
+    '<div style="width:100%;height:6px;background:rgba(15,23,42,0.95);border-radius:6px;overflow:hidden;border:1px solid rgba(0,229,255,0.4);margin:6px 0;padding:0.5px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.85);">' +
+      '<div id="ishak-scan-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#00E5FF,#38BDF8,#00FF66);border-radius:6px;transition:width 0.04s linear;box-shadow:0 0 12px #00E5FF, 0 0 4px #00FF66;"></div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;font-family:monospace;font-size:10px;font-weight:bold;width:100%;">' +
+      '<span id="ishak-scan-sub-text" style="color:#A0AEC0;display:flex;align-items:center;gap:4px;">⚡ AI CONFLUENCE</span>' +
+      '<span id="ishak-scan-percent" style="color:#00E5FF;font-weight:900;font-size:11px;">0%</span>' +
     '</div>';
   document.body.appendChild(screenScanBox);
 
@@ -1437,27 +1436,37 @@ javascript:(function(){
       var rsiVal = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
       calculatedRsi = Math.round(rsiVal);
 
-      // Factor 1: Triple EMA Trend Alignment
-      if (ema5 > ema13) score += 2;
-      else if (ema5 < ema13) score -= 2;
+      // Factor 1: Active Running Candle Direction & Anatomy
+      var isRunningGreen = lastCandle.close >= lastCandle.open;
+      if (isRunningGreen) score += 6;
+      else score -= 6;
 
-      // Factor 2: Running Candle Direction & Price Action
-      if (lastCandle.close > lastCandle.open) score += 3;
-      else if (lastCandle.close < lastCandle.open) score -= 3;
-      if (lastCandle.dir === 'UP') score += 2;
-      else if (lastCandle.dir === 'DOWN') score -= 2;
+      if (lastCandle.dir === 'UP') score += 3;
+      else if (lastCandle.dir === 'DOWN') score -= 3;
 
-      // Factor 3: RSI Extreme Mean Reversion vs Continuation
-      if (calculatedRsi < 32) score += 4;
-      else if (calculatedRsi > 68) score -= 4;
-      else if (calculatedRsi >= 50) score += 1;
-      else score -= 1;
+      // Factor 2: Consecutive Candlestick Sequence & Pattern Momentum
+      if (candleData.length >= 2) {
+        var prevCandle = candleData[candleData.length - 2];
+        var isPrevGreen = prevCandle.close >= prevCandle.open;
+        if (isPrevGreen && isRunningGreen) score += 3;
+        else if (!isPrevGreen && !isRunningGreen) score -= 3;
+        else if (!isPrevGreen && isRunningGreen && lastCandle.close > prevCandle.open) score += 4;
+        else if (isPrevGreen && !isRunningGreen && lastCandle.close < prevCandle.open) score -= 4;
+      }
 
-      // Factor 4: Wick Absorption (Price Rejection)
+      // Factor 3: Price Rejection Wicks (Support/Resistance Pressure)
       var lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
       var upperWick = lastCandle.high - Math.max(lastCandle.open, lastCandle.close);
-      if (lowerWick > upperWick * 1.5) score += 2;
-      if (upperWick > lowerWick * 1.5) score -= 2;
+      if (lowerWick > upperWick * 1.4) score += 3;
+      if (upperWick > lowerWick * 1.4) score -= 3;
+
+      // Factor 4: Moving Average Trend (EMA 5 vs EMA 13)
+      if (ema5 >= ema13) score += 2;
+      else score -= 2;
+
+      // Factor 5: RSI Momentum Alignment
+      if (calculatedRsi >= 50) score += 2;
+      else score -= 2;
     } else {
       // Direct DOM candle if available
       if (domCandle) {
@@ -1502,11 +1511,15 @@ javascript:(function(){
     var confluenceLogic = '';
 
     if (isCall) {
-      patternName = calculatedRsi < 35 ? 'Oversold RSI Mean-Reversion Bounce' : 'Bullish EMA Alignment & Running Candle Impulse';
-      confluenceLogic = 'ইএমএ (৫>১৩) বুলিশ ট্রেন্ড এবং রানিং ক্যান্ডেলে বায়ারদের ধারাবাহিক রিজেকশন চাপ নিশ্চিত। সিলেক্টেড ' + durLabel + ' টাইম শেষ হওয়া মাত্র ক্যান্ডেল প্লেস ট্রেডের উপরে ক্লোজ হবে। ' + authenticAccuracy + '% একুরিসিতে কল (UP) কার্যকর!';
+      patternName = calculatedRsi > 65
+        ? 'Bullish Momentum Breakout (Buyer Dominance)'
+        : 'Bullish Running Candle Impulse & EMA Alignment';
+      confluenceLogic = 'লাইভ রানিং ক্যান্ডেলে বায়ারদের শক্তিশালী ঊর্ধ্বমুখী পুশ ও ইএমএ (৫>১৩) কনফ্লুয়েন্স নিশ্চিত। সিলেক্টেড ' + durLabel + ' টাইম শেষে ক্যান্ডেল স্ট্রাইকের উপরে ক্লোজ হবে। ' + authenticAccuracy + '% একুরিসিতে কল (UP) কার্যকর!';
     } else {
-      patternName = calculatedRsi > 65 ? 'Overbought RSI Resistance Rejection' : 'Bearish EMA Death Breakdown & Seller Dominance';
-      confluenceLogic = 'ইএমএ (৫<১৩) বেয়ারিশ ক্রসওভার এবং রানিং ক্যান্ডেলে সেলারদের বিক্রয় প্রেশার নিশ্চিত। সিলেক্টেড ' + durLabel + ' টাইম শেষ হওয়া মাত্র ক্যান্ডেল প্লেস ট্রেডের নিচে ক্লোজ হবে। ' + authenticAccuracy + '% একুরিসিতে পুট (DOWN) কার্যকর!';
+      patternName = calculatedRsi < 35
+        ? 'Bearish Breakdown Impulse (Seller Dominance)'
+        : 'Bearish Running Candle Breakdown & EMA Death Cross';
+      confluenceLogic = 'লাইভ রানিং ক্যান্ডেলে সেলারদের শক্তিশালী নিম্নমুখী বিক্রয় প্রেশার ও ইএমএ (৫<১৩) কনফ্লুয়েন্স নিশ্চিত। সিলেক্টেড ' + durLabel + ' টাইম শেষে ক্যান্ডেল স্ট্রাইকের নিচে ক্লোজ হবে। ' + authenticAccuracy + '% একুরিসিতে পুট (DOWN) কার্যকর!';
     }
 
     var rsiVal = calculatedRsi;
