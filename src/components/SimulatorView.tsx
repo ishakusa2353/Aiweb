@@ -187,10 +187,11 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           });
         }
 
-        // Idle market tick: harmonic dual-wave producing balanced UP (bullish) and DOWN (bearish) cycles
+        // Idle market tick: harmonic dual-wave with mean reversion producing balanced UP (bullish) and DOWN (bearish) cycles
         const t = tickCountRef.current;
-        const waveDelta = Math.sin(t * 0.22) * 0.00010 + Math.cos(t * 0.38) * 0.00007;
         setLivePrice((prev) => {
+          const meanReversion = (0.5730 - prev) * 0.035;
+          const waveDelta = Math.sin(t * 0.20) * 0.00014 + Math.cos(t * 0.35) * 0.00009 + meanReversion;
           const next = parseFloat(Math.max(0.5690, Math.min(0.5780, prev + waveDelta)).toFixed(5));
           setCandles((prevCandles) => {
             if (prevCandles.length === 0) return prevCandles;

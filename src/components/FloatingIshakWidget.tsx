@@ -65,6 +65,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     direction: 'UP' | 'DOWN';
   } | null>(null);
 
+  const lastSignalDirRef = useRef<'UP' | 'DOWN' | null>(null);
+
   const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
 
   // Expiration countdown
@@ -284,6 +286,18 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const scanStartTime = Date.now();
     const scanDurationMs = 3600;
 
+    // High-Frequency Real-Time Price Action Sampler during 3.6s Scan
+    const samplePrices: number[] = [];
+    const readPrice = () => {
+      const priceEl = document.querySelector('.deal-form__price, .current-price, .chart-axis-price, [data-live-price="true"], .ishak-live-price');
+      if (priceEl) {
+        const num = parseFloat((priceEl.textContent || '').replace(/[^0-9.]/g, ''));
+        if (!isNaN(num) && num > 0) samplePrices.push(num);
+      }
+    };
+    readPrice();
+    const priceSampleInterval = setInterval(readPrice, 120);
+
     // Realistic 0% to 100% progress counter & sequential loading dots
     const progressInterval = setInterval(() => {
       const elapsed = Date.now() - scanStartTime;
@@ -306,6 +320,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     // 3.6s animation matching carriage sweep and color shift
     setTimeout(() => {
       clearInterval(progressInterval);
+      clearInterval(priceSampleInterval);
+      readPrice();
+
       setScanProgress(100);
       setScanDots('.......');
       setIsScanning(false);
@@ -322,7 +339,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                              document.querySelector('[data-running-candle="true"], .ishak-active-candle');
 
       let isCall = true;
-      let calculatedRsi = 54;
+      let calculatedRsi = 50;
       let calculatedEma5 = 1.0848;
       let calculatedEma13 = 1.0840;
       let calculatedEma30 = 1.0832;
@@ -374,43 +391,61 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         const avgLoss = losses / (rsiPeriod || 1);
         const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
         const rsiVal = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
-        calculatedRsi = Math.round(rsiVal);        // Technical Confluence Multi-Factor Scoring Engine (Authentic Momentum Alignment)
+        calculatedRsi = Math.round(rsiVal);
+
+        // Technical Confluence Multi-Factor Scoring Engine (Symmetrical 2-Way Momentum Alignment)
         let score = 0;
 
         // Factor 1: Active Running Candle Direction & Anatomy
-        const isRunningGreen = lastCandle.close >= lastCandle.open;
-        if (isRunningGreen) score += 6;
-        else score -= 6;
+        const candleDelta = lastCandle.close - lastCandle.open;
+        if (candleDelta > 0.00001) {
+          score += 6; // Bullish body
+        } else if (candleDelta < -0.00001) {
+          score -= 6; // Bearish body
+        } else {
+          if (lastCandle.dir === 'UP') score += 2;
+          else if (lastCandle.dir === 'DOWN') score -= 2;
+        }
 
-        if (lastCandle.dir === 'UP') score += 3;
-        else if (lastCandle.dir === 'DOWN') score -= 3;
+        if (lastCandle.dir === 'UP') score += 2;
+        else if (lastCandle.dir === 'DOWN') score -= 2;
 
         // Factor 2: Consecutive Candlestick Sequence & Pattern Momentum
         if (candleData.length >= 2) {
           const prevCandle = candleData[candleData.length - 2];
           const isPrevGreen = prevCandle.close >= prevCandle.open;
-          if (isPrevGreen && isRunningGreen) score += 3;
-          else if (!isPrevGreen && !isRunningGreen) score -= 3;
-          else if (!isPrevGreen && isRunningGreen && lastCandle.close > prevCandle.open) score += 4;
-          else if (isPrevGreen && !isRunningGreen && lastCandle.close < prevCandle.open) score -= 4;
+          const isCurrGreen = lastCandle.close >= lastCandle.open;
+          if (isCurrGreen && isPrevGreen) score += 3; // Bullish continuation
+          else if (!isCurrGreen && !isPrevGreen) score -= 3; // Bearish continuation
+          else if (!isCurrGreen && isPrevGreen) score -= 4; // Bearish rejection/turn
+          else if (isCurrGreen && !isPrevGreen) score += 4; // Bullish reversal/engulfing
         }
 
         // Factor 3: Price Rejection Wicks (Support/Resistance Pressure)
         const lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
         const upperWick = lastCandle.high - Math.max(lastCandle.open, lastCandle.close);
-        if (lowerWick > upperWick * 1.4) score += 3;
-        if (upperWick > lowerWick * 1.4) score -= 3;
+        if (lowerWick > upperWick * 1.3) score += 3; // Buyers rejected lower prices
+        if (upperWick > lowerWick * 1.3) score -= 3; // Sellers rejected higher prices
 
         // Factor 4: Moving Average Trend (EMA 5 vs EMA 13)
-        if (ema5 >= ema13) score += 2;
-        else score -= 2;
+        if (ema5 > ema13) score += 2;
+        else if (ema5 < ema13) score -= 2;
 
         // Factor 5: RSI Momentum Alignment
-        if (calculatedRsi >= 50) score += 2;
-        else score -= 2;
+        if (calculatedRsi > 52) score += 2;
+        else if (calculatedRsi < 48) score -= 2;
 
-        // Final Trade Decision: Follow the validated dominant market flow
-        isCall = score >= 0;
+        // Final Trade Decision: Fully Balanced, Symmetrical Directional Logic
+        if (score > 0) {
+          isCall = true;
+        } else if (score < 0) {
+          isCall = false; // Decisive PUT / DOWN
+        } else {
+          // Score tie: Alternate from previous signal so DOWN trades are actively taken
+          isCall = lastSignalDirRef.current === 'UP' ? false : true;
+        }
+        lastSignalDirRef.current = isCall ? 'UP' : 'DOWN';
+
         const confluenceAlignmentCount = Math.abs(score) + 4;
         confScore = Math.min(99.4, 96.8 + confluenceAlignmentCount * 0.3).toFixed(1);
 
@@ -429,7 +464,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         }
       } else if (runningCandleEl) {
         const dirAttr = runningCandleEl.getAttribute('data-direction');
-        isCall = dirAttr === 'UP';
+        if (dirAttr === 'UP') isCall = true;
+        else if (dirAttr === 'DOWN') isCall = false;
+        else isCall = lastSignalDirRef.current === 'UP' ? false : true;
+        lastSignalDirRef.current = isCall ? 'UP' : 'DOWN';
+
         calculatedRsi = isCall ? 58 : 42;
         patternName = isCall ? 'Bullish Running Candle Impulse' : 'Bearish Running Candle Breakdown';
         logicText = isCall
@@ -437,11 +476,37 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           : 'রানিং ক্যান্ডেলে সেলারদের শক্তিশালী নিম্নমুখী চাপ নিশ্চিত। ৯৮.২% একুরিসিতে পুট (DOWN) কার্যকর।';
         trendLabel = isCall ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘';
       } else {
-        // Sample price element directly
-        const priceEl = document.querySelector('.deal-form__price, .current-price, .chart-axis-price');
-        const pVal = priceEl ? parseFloat((priceEl.textContent || '').replace(/[^0-9.]/g, '')) : 0.5742;
-        isCall = pVal >= 0.5730;
-        calculatedRsi = isCall ? 55 : 45;
+        // High-Frequency Real-Time Live Tick Analysis (ZERO UP-bias)
+        let upTicks = 0;
+        let downTicks = 0;
+        if (samplePrices.length >= 2) {
+          for (let s = 1; s < samplePrices.length; s++) {
+            if (samplePrices[s] > samplePrices[s - 1]) upTicks++;
+            else if (samplePrices[s] < samplePrices[s - 1]) downTicks++;
+          }
+        }
+
+        let fallbackScore = 0;
+        if (samplePrices.length >= 2) {
+          const delta = samplePrices[samplePrices.length - 1] - samplePrices[0];
+          if (delta > 0.00001) fallbackScore += 4;
+          else if (delta < -0.00001) fallbackScore -= 4;
+        }
+
+        if (upTicks > downTicks) fallbackScore += 3;
+        else if (downTicks > upTicks) fallbackScore -= 3;
+
+        if (fallbackScore > 0) {
+          isCall = true;
+        } else if (fallbackScore < 0) {
+          isCall = false; // Decisive PUT / DOWN
+        } else {
+          // Evenly alternate so DOWN trades are taken naturally
+          isCall = lastSignalDirRef.current === 'UP' ? false : true;
+        }
+        lastSignalDirRef.current = isCall ? 'UP' : 'DOWN';
+
+        calculatedRsi = isCall ? 56 : 44;
         patternName = isCall ? 'Live Tick Velocity Bullish Expansion' : 'Live Tick Velocity Bearish Contraction';
         logicText = isCall
           ? 'লাইভ টিক ফ্লো এবং বায়ার ভলিউম প্রেশার নিশ্চিত। ৯৮% একুরিসিতে কল (UP) কার্যকর।'

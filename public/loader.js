@@ -1437,57 +1437,74 @@ javascript:(function(){
       calculatedRsi = Math.round(rsiVal);
 
       // Factor 1: Active Running Candle Direction & Anatomy
-      var isRunningGreen = lastCandle.close >= lastCandle.open;
-      if (isRunningGreen) score += 6;
-      else score -= 6;
+      var candleDelta = lastCandle.close - lastCandle.open;
+      if (candleDelta > 0.00001) {
+        score += 6; // Bullish body
+      } else if (candleDelta < -0.00001) {
+        score -= 6; // Bearish body
+      } else {
+        if (lastCandle.dir === 'UP') score += 2;
+        else if (lastCandle.dir === 'DOWN') score -= 2;
+      }
 
-      if (lastCandle.dir === 'UP') score += 3;
-      else if (lastCandle.dir === 'DOWN') score -= 3;
+      if (lastCandle.dir === 'UP') score += 2;
+      else if (lastCandle.dir === 'DOWN') score -= 2;
 
       // Factor 2: Consecutive Candlestick Sequence & Pattern Momentum
       if (candleData.length >= 2) {
         var prevCandle = candleData[candleData.length - 2];
         var isPrevGreen = prevCandle.close >= prevCandle.open;
-        if (isPrevGreen && isRunningGreen) score += 3;
-        else if (!isPrevGreen && !isRunningGreen) score -= 3;
-        else if (!isPrevGreen && isRunningGreen && lastCandle.close > prevCandle.open) score += 4;
-        else if (isPrevGreen && !isRunningGreen && lastCandle.close < prevCandle.open) score -= 4;
+        var isCurrGreen = lastCandle.close >= lastCandle.open;
+        if (isCurrGreen && isPrevGreen) score += 3; // Bullish continuation
+        else if (!isCurrGreen && !isPrevGreen) score -= 3; // Bearish continuation
+        else if (!isCurrGreen && isPrevGreen) score -= 4; // Bearish rejection/turn
+        else if (isCurrGreen && !isPrevGreen) score += 4; // Bullish reversal/engulfing
       }
 
       // Factor 3: Price Rejection Wicks (Support/Resistance Pressure)
       var lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
       var upperWick = lastCandle.high - Math.max(lastCandle.open, lastCandle.close);
-      if (lowerWick > upperWick * 1.4) score += 3;
-      if (upperWick > lowerWick * 1.4) score -= 3;
+      if (lowerWick > upperWick * 1.3) score += 3; // Buyers rejected lower prices
+      if (upperWick > lowerWick * 1.3) score -= 3; // Sellers rejected higher prices
 
       // Factor 4: Moving Average Trend (EMA 5 vs EMA 13)
-      if (ema5 >= ema13) score += 2;
-      else score -= 2;
+      if (ema5 > ema13) score += 2;
+      else if (ema5 < ema13) score -= 2;
 
       // Factor 5: RSI Momentum Alignment
-      if (calculatedRsi >= 50) score += 2;
-      else score -= 2;
+      if (calculatedRsi > 52) score += 2;
+      else if (calculatedRsi < 48) score -= 2;
     } else {
       // Direct DOM candle if available
       if (domCandle) {
         var domDir = domCandle.getAttribute('data-direction');
-        if (domDir === 'UP') score += 4;
-        else if (domDir === 'DOWN') score -= 4;
+        if (domDir === 'UP') score += 5;
+        else if (domDir === 'DOWN') score -= 5;
       }
 
-      // Tick velocity during scan
+      // Real-time High Frequency Price Action Ticks during 3.6s Laser Scan
+      var upTicks = 0;
+      var downTicks = 0;
       if (priceSamples && priceSamples.length >= 2) {
+        for (var ps = 1; ps < priceSamples.length; ps++) {
+          if (priceSamples[ps] > priceSamples[ps - 1]) upTicks++;
+          else if (priceSamples[ps] < priceSamples[ps - 1]) downTicks++;
+        }
         var delta = priceSamples[priceSamples.length - 1] - priceSamples[0];
-        if (delta > 0) score += 2;
-        else if (delta < 0) score -= 2;
+        if (delta > 0.00001) score += 4;
+        else if (delta < -0.00001) score -= 4;
+
+        if (upTicks > downTicks) score += 3;
+        else if (downTicks > upTicks) score -= 3;
       }
 
-      // Rate elements
-      var rateEl = document.querySelector('.deal-form__price, .current-price, .chart-axis-price');
+      // Rate elements & classes
+      var rateEl = document.querySelector('.deal-form__price, .current-price, .chart-axis-price, .section-deal__rate');
       if (rateEl) {
         var rClass = (rateEl.className || '').toLowerCase();
-        if (rClass.indexOf('up') !== -1 || rClass.indexOf('green') !== -1) score += 2;
-        else if (rClass.indexOf('down') !== -1 || rClass.indexOf('red') !== -1) score -= 2;
+        var rStyle = (rateEl.getAttribute('style') || '').toLowerCase();
+        if (rClass.indexOf('up') !== -1 || rClass.indexOf('green') !== -1 || rStyle.indexOf('green') !== -1) score += 2;
+        else if (rClass.indexOf('down') !== -1 || rClass.indexOf('red') !== -1 || rStyle.indexOf('red') !== -1) score -= 2;
       }
 
       // Sentiment ratio
@@ -1497,15 +1514,26 @@ javascript:(function(){
           var sTxt = (sentEl.textContent || '').replace(/[^0-9]/g, ' ');
           var nums = sTxt.trim().split(/\s+/).map(Number).filter(function(n) { return !isNaN(n) && n > 0 && n <= 100; });
           if (nums.length >= 2) {
-            if (nums[0] > nums[1]) score += 1;
-            else if (nums[1] > nums[0]) score -= 1;
+            if (nums[0] > nums[1]) score += 2;
+            else if (nums[1] > nums[0]) score -= 2;
           }
         }
       } catch(e){}
     }
 
-    // 4. Authentic Final Decision (ZERO random coin-flip)
-    var isCall = score >= 0;
+    // 4. Authentic Symmetrical Final Decision (ZERO UP-BIAS)
+    window._ishakLastTradeDir = window._ishakLastTradeDir || null;
+    var isCall;
+    if (score > 0) {
+      isCall = true;
+    } else if (score < 0) {
+      isCall = false; // Decisive PUT / DOWN ⬇
+    } else {
+      // Neutral market or zero ticks: Alternate strictly based on last trade
+      isCall = window._ishakLastTradeDir === 'UP' ? false : true;
+    }
+    window._ishakLastTradeDir = isCall ? 'UP' : 'DOWN';
+
     var authenticAccuracy = Math.min(99.4, 96.5 + (Math.abs(score) + 3) * 0.4).toFixed(1);
     var patternName = '';
     var confluenceLogic = '';
@@ -1777,7 +1805,7 @@ javascript:(function(){
       var priceSamplerInterval = setInterval(function() {
         var p = extractQuotexLivePrice();
         if (p) livePriceSamples.push(p);
-      }, 250);
+      }, 90);
 
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();
