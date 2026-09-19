@@ -536,16 +536,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             [ EXECUTION LATENCY ] ✦ &lt;12ms ULTRA-FAST
           </div>
 
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none text-center select-none">
-            {/* Sleek, Compact Cyber Scanning Capsule */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none">
+            {/* Sleek, Compact Cyber Scanning Capsule (Stationary in Center) */}
             <div
-              className="inline-flex flex-col items-center bg-[#070D1E]/92 backdrop-blur-xl border border-cyan-400/50 rounded-2xl px-5 py-2.5 shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(0,229,255,0.3)] max-w-[320px] transition-all animate-[ishakSignalSeekingMotion_1.8s_ease-in-out_infinite]"
+              className="inline-flex flex-col items-center bg-[#070D1E]/92 backdrop-blur-xl border border-cyan-400/50 rounded-2xl px-5 py-2.5 shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_20px_rgba(0,229,255,0.3)] max-w-[320px]"
               style={{
                 background: 'linear-gradient(135deg, rgba(7,13,30,0.95) 0%, rgba(13,27,62,0.9) 100%)'
               }}
             >
-              {/* Top Row: Pulsing Radar Dot + Compact Title */}
-              <div className="flex items-center gap-2 mb-1">
+              {/* Top Row: Pulsing Text Animation (Gently scales smaller -> bigger -> smaller) */}
+              <div className="flex items-center gap-2 mb-1 animate-[ishakTextPulseMotion_1.4s_ease-in-out_infinite]">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
@@ -553,7 +553,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 <span className="text-xs sm:text-[13px] font-black uppercase tracking-wider text-white">
                   SCANNING MARKET BY <span className="text-cyan-400">ISHAK AI</span>
                 </span>
-                <span className="text-emerald-400 text-xs animate-[ishakSignalRadarWaves_1s_infinite]">⚡</span>
+                <span className="text-emerald-400 text-xs">⚡</span>
               </div>
 
               {/* Bottom Row: Micro Telemetry Tag */}

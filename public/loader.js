@@ -690,6 +690,11 @@ javascript:(function(){
       '100% { transform: translateY(0px) translateX(0px) scale(1); filter: drop-shadow(0 0 10px #00E5FF); } ' +
     '}' +
     '@keyframes ishakSignalRadarWaves { 0% { transform: scale(0.92); opacity: 0.3; } 50% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(0.92); opacity: 0.3; } }' +
+    '@keyframes ishakTextPulseMotion { ' +
+      '0% { transform: scale(0.93); opacity: 0.85; filter: drop-shadow(0 0 4px rgba(0,229,255,0.4)); } ' +
+      '50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 12px rgba(0,229,255,0.85)) drop-shadow(0 0 20px rgba(0,255,102,0.6)); } ' +
+      '100% { transform: scale(0.93); opacity: 0.85; filter: drop-shadow(0 0 4px rgba(0,229,255,0.4)); } ' +
+    '}' +
     '@keyframes ishakLaserSweepFull { ' +
       '0% { top: -25px; } ' +
       '48% { top: calc(100vh - 20px); } ' +
@@ -726,9 +731,9 @@ javascript:(function(){
     '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-grid { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 2147483645; display: none; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(7,13,30,0.95) 0%, rgba(13,27,62,0.9) 100%); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(0,229,255,0.45); border-radius: 16px; padding: 10px 20px; box-shadow: 0 10px 35px rgba(0,0,0,0.85), 0 0 20px rgba(0,229,255,0.25); max-width: 320px; user-select: none; animation: ishakSignalSeekingMotion 1.8s ease-in-out infinite; }' +
+    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(7,13,30,0.95) 0%, rgba(13,27,62,0.9) 100%); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(0,229,255,0.45); border-radius: 16px; padding: 10px 20px; box-shadow: 0 10px 35px rgba(0,0,0,0.85), 0 0 20px rgba(0,229,255,0.25); max-width: 320px; user-select: none; }' +
     '#ishak-screen-scan-box.scanning-active { display: block; }' +
-    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 1px; margin-bottom: 5px; color: #FFFFFF; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; }' +
+    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 1px; margin-bottom: 5px; color: #FFFFFF; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; animation: ishakTextPulseMotion 1.4s ease-in-out infinite; }' +
     '.ishak-ai-text-span { display: inline-block; color: #00E5FF; }' +
     '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); border-radius: 12px; padding: 2px 10px; color: #00E5FF; font-weight: 700; font-size: 9px; font-family: "Orbitron", monospace; letter-spacing: 0.5px; }' +
     '.ishak-corner-hud { position: fixed; z-index: 2147483646; pointer-events: none; display: none; font-family: "Orbitron", monospace; font-size: 9px; font-weight: 900; color: #00E5FF; padding: 4px 8px; border-radius: 6px; background: rgba(7,13,30,0.8); border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 0 10px rgba(0,229,255,0.25); animation: ishakDataBlink 2s infinite ease-in-out; }' +
