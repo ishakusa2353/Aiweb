@@ -721,10 +721,14 @@ javascript:(function(){
     '#ishak-pill-badge { margin-top: 6px; background: rgba(7,13,30,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.5px solid #00E5FF; border-radius: 20px; padding: 3px 9px; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(0,0,0,0.8); cursor: pointer; transform: none !important; animation: none !important; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px; transform: none !important; animation: none !important; }' +
     '#ishak-pill-time { background: #00E5FF; color: #070D1E; font-size: 9px; font-weight: 900; padding: 2px 7px; border-radius: 12px; }' +
-    '#scan-laser { display: none !important; }' +
+    '#scan-laser { position: fixed; top: -25px; left: 0; width: 100vw; height: 16px; z-index: 2147483646; display: none; pointer-events: none; }' +
+    '#scan-laser.scanning-active { display: block; animation: ishakLaserSweepFull 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
+    '#scan-laser-beam { position: relative; width: 100vw; height: 16px; background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.35) 8%, #00E5FF 25%, #E0FFFF 50%, #00E5FF 75%, rgba(0,229,255,0.35) 92%, transparent 100%); box-shadow: 0 0 20px #00E5FF, 0 0 45px #00E5FF, 0 0 80px #00E5FF, 0 0 8px #FFFFFF; border-radius: 8px; }' +
+    '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
+    '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-grid { display: none !important; }' +
     '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: auto; max-width: none; user-select: none; }' +
-    '#ishak-screen-scan-box.scanning-active { display: flex; align-items: center; justify-content: center; }' +
+    '#ishak-screen-scan-box.scanning-active { display: flex; flex-direction: column; align-items: center; justify-content: center; }' +
     '.ishak-corner-hud { position: fixed; z-index: 2147483646; pointer-events: none; display: none; font-family: "Orbitron", monospace; font-size: 9px; font-weight: 900; color: #00E5FF; padding: 4px 8px; border-radius: 6px; background: rgba(7,13,30,0.8); border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 0 10px rgba(0,229,255,0.25); animation: ishakDataBlink 2s infinite ease-in-out; }' +
     '.ishak-corner-hud.active { display: block; }' +
     '#ishak-hud-panel { position: fixed; top: 120px; right: 30px; width: 300px; background: #0B132B; border: 2px solid #00E5FF; border-radius: 14px; padding: 0; color: #fff; display: none; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.2); backdrop-filter: blur(16px); z-index: 2147483647; overflow: hidden; touch-action: none; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
@@ -812,24 +816,31 @@ javascript:(function(){
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.innerHTML =
-    '<div style="position:relative;display:flex;align-items:center;justify-content:center;">' +
-      '<svg style="width:140px;height:140px;transform:rotate(-90deg);" viewBox="0 0 120 120">' +
-        '<defs>' +
-          '<linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
-            '<stop offset="0%" stop-color="#00E5FF"/>' +
-            '<stop offset="50%" stop-color="#38BDF8"/>' +
-            '<stop offset="100%" stop-color="#00FF66"/>' +
-          '</linearGradient>' +
-          '<filter id="ishakPureGlow" x="-30%" y="-30%" width="160%" height="160%">' +
-            '<feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#00E5FF" flood-opacity="0.85"/>' +
-            '<feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#00FF66" flood-opacity="0.5"/>' +
-          '</filter>' +
-        '</defs>' +
-        '<circle cx="60" cy="60" r="48" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="6"/>' +
-        '<circle id="ishak-scan-circle-bar" cx="60" cy="60" r="48" fill="none" stroke="url(#ishakPureCircleGrad)" stroke-width="6" stroke-linecap="round" stroke-dasharray="301.59" stroke-dashoffset="301.59" filter="url(#ishakPureGlow)" style="transition:stroke-dashoffset 0.05s ease-out;"/>' +
-      '</svg>' +
-      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
-        '<span id="ishak-scan-percent" style="font-size:36px;font-weight:900;font-family:\'Orbitron\',monospace;letter-spacing:-1px;color:#00E5FF;text-shadow:0 0 16px rgba(0,229,255,0.9), 0 0 32px rgba(0,255,102,0.6);line-height:1;">0%</span>' +
+    '<div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;">' +
+      '<div style="position:absolute;width:240px;height:240px;border-radius:50%;filter:blur(50px);pointer-events:none;opacity:0.4;background:radial-gradient(circle,rgba(0,229,255,0.25) 0%,rgba(0,255,102,0.15) 50%,transparent 75%);"></div>' +
+      '<div style="position:relative;display:flex;align-items:center;justify-content:center;">' +
+        '<svg style="width:140px;height:140px;transform:rotate(-90deg);" viewBox="0 0 120 120">' +
+          '<defs>' +
+            '<linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
+              '<stop offset="0%" stop-color="#00E5FF"/>' +
+              '<stop offset="50%" stop-color="#38BDF8"/>' +
+              '<stop offset="100%" stop-color="#00FF66"/>' +
+            '</linearGradient>' +
+            '<filter id="ishakPureGlow" x="-30%" y="-30%" width="160%" height="160%">' +
+              '<feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#00E5FF" flood-opacity="0.85"/>' +
+              '<feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#00FF66" flood-opacity="0.5"/>' +
+            '</filter>' +
+          '</defs>' +
+          '<circle cx="60" cy="60" r="48" fill="none" stroke="rgba(0,229,255,0.15)" stroke-width="6"/>' +
+          '<circle id="ishak-scan-circle-bar" cx="60" cy="60" r="48" fill="none" stroke="url(#ishakPureCircleGrad)" stroke-width="6" stroke-linecap="round" stroke-dasharray="301.59" stroke-dashoffset="301.59" filter="url(#ishakPureGlow)" style="transition:stroke-dashoffset 0.05s ease-out;"/>' +
+        '</svg>' +
+        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
+          '<span id="ishak-scan-percent" style="font-size:36px;font-weight:900;font-family:\'Orbitron\',monospace;letter-spacing:-1px;color:#00E5FF;text-shadow:0 0 16px rgba(0,229,255,0.9), 0 0 32px rgba(0,255,102,0.6);line-height:1;">0%</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px;user-select:none;">' +
+        '<span style="font-size:14px;font-weight:900;letter-spacing:4px;text-transform:uppercase;color:#00E5FF;text-shadow:0 0 12px rgba(0,229,255,0.85);font-family:\'Orbitron\',\'Rajdhani\',sans-serif;">ANALYZING</span>' +
+        '<span id="ishak-scan-dots" style="color:#00E5FF;font-family:\'Orbitron\',monospace;font-weight:900;letter-spacing:2px;font-size:14px;display:inline-block;width:24px;text-align:left;">...</span>' +
       '</div>' +
     '</div>';
   document.body.appendChild(screenScanBox);
@@ -1779,6 +1790,7 @@ javascript:(function(){
       var scanSubTextEl = document.getElementById('ishak-scan-sub-text');
       if (scanSubTextEl) scanSubTextEl.innerText = currentMarket + ' | ' + (tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S');
       screenScanBox.classList.add('scanning-active');
+      laserEl.classList.add('scanning-active');
 
       // Initialize Progress Counter
       var scanStartTime = Date.now();

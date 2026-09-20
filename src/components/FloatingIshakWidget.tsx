@@ -716,63 +716,120 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
   return (
     <>
-      {/* Bot Scanning UI: Pure circular gauge with no background, sweeping from 0% to 100% full circle */}
+      {/* Bot Scanning UI: Laser Scanner Sweep + Pure Circular Gauge (no bg) + Percentage inside + Stylish Analyzing below */}
       {isScanning && (
-        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none">
-          {/* Subtle Ambient Radial Glow */}
-          <div className="absolute -inset-10 rounded-full blur-2xl pointer-events-none opacity-40 bg-gradient-to-r from-cyan-500/20 via-sky-400/20 to-emerald-400/20" />
+        <>
+          {/* Photostat Scanner Carriage Laser Sweep Line */}
+          <div
+            className="fixed left-0 w-screen pointer-events-none z-[999998]"
+            style={{
+              height: '16px',
+              animation: 'ishakLaserSweepSlow 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite'
+            }}
+          >
+            {/* Top Trailing Smoke (Single Logo Color #00E5FF) */}
+            <div
+              className="absolute bottom-full left-0 w-full pointer-events-none"
+              style={{
+                height: '130px',
+                background: 'linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%)',
+                filter: 'blur(8px)',
+                opacity: 0.95
+              }}
+            />
+            {/* Main Laser Beam */}
+            <div
+              className="relative w-full h-full rounded-full"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.35) 8%, #00E5FF 25%, #E0FFFF 50%, #00E5FF 75%, rgba(0,229,255,0.35) 92%, transparent 100%)',
+                boxShadow: '0 0 20px #00E5FF, 0 0 45px #00E5FF, 0 0 80px #00E5FF, 0 0 8px #FFFFFF'
+              }}
+            />
+            {/* Bottom Trailing Smoke (Single Logo Color #00E5FF) */}
+            <div
+              className="absolute top-full left-0 w-full pointer-events-none"
+              style={{
+                height: '130px',
+                background: 'linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%)',
+                filter: 'blur(8px)',
+                opacity: 0.85
+              }}
+            />
+          </div>
 
-          <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-              <defs>
-                <linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#00E5FF" />
-                  <stop offset="50%" stopColor="#38BDF8" />
-                  <stop offset="100%" stopColor="#00FF66" />
-                </linearGradient>
-                <filter id="ishakPureGlow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#00E5FF" floodOpacity="0.85" />
-                  <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#00FF66" floodOpacity="0.5" />
-                </filter>
-              </defs>
+          {/* Centered Circular Gauge (Without Background) with Stylish Analyzing */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex flex-col items-center justify-center select-none">
+            {/* Subtle Ambient Radial Glow */}
+            <div className="absolute -inset-14 rounded-full blur-3xl pointer-events-none opacity-45 bg-gradient-to-r from-cyan-500/25 via-sky-400/25 to-emerald-400/25" />
 
-              {/* Background Circular Track (Translucent subtle glow line, NO background fill) */}
-              <circle
-                cx="60"
-                cy="60"
-                r="48"
-                fill="none"
-                stroke="rgba(0, 229, 255, 0.12)"
-                strokeWidth="6"
-              />
+            <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                <defs>
+                  <linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#00E5FF" />
+                    <stop offset="50%" stopColor="#38BDF8" />
+                    <stop offset="100%" stopColor="#00FF66" />
+                  </linearGradient>
+                  <filter id="ishakPureGlow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#00E5FF" floodOpacity="0.85" />
+                    <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#00FF66" floodOpacity="0.5" />
+                  </filter>
+                </defs>
 
-              {/* Progress Arc: Sweeps clockwise from 12 o'clock and completes 100% full round circle */}
-              <circle
-                cx="60"
-                cy="60"
-                r="48"
-                fill="none"
-                stroke="url(#ishakPureCircleGrad)"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={301.59}
-                strokeDashoffset={301.59 - (Math.max(0, Math.min(100, scanProgress)) / 100) * 301.59}
-                filter="url(#ishakPureGlow)"
-                className="transition-all duration-75 ease-out"
-              />
-            </svg>
+                {/* Background Circular Track (Translucent subtle glow line, NO background fill) */}
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="48"
+                  fill="none"
+                  stroke="rgba(0, 229, 255, 0.15)"
+                  strokeWidth="6"
+                />
 
-            {/* Percentage centered inside circle (without background) */}
-            <div className="absolute inset-0 flex items-center justify-center">
+                {/* Progress Arc: Sweeps clockwise from 12 o'clock and completes 100% full round circle */}
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="48"
+                  fill="none"
+                  stroke="url(#ishakPureCircleGrad)"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={301.59}
+                  strokeDashoffset={301.59 - (Math.max(0, Math.min(100, scanProgress)) / 100) * 301.59}
+                  filter="url(#ishakPureGlow)"
+                  className="transition-all duration-75 ease-out"
+                />
+              </svg>
+
+              {/* Percentage centered inside circle (without background) */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span
+                  className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-emerald-300 drop-shadow-[0_0_16px_rgba(0,229,255,0.9)] leading-none select-none"
+                  style={{ fontFamily: '"Orbitron", monospace' }}
+                >
+                  {scanProgress}%
+                </span>
+              </div>
+            </div>
+
+            {/* Stylish "Analyzing" text under the circle */}
+            <div className="mt-3 flex items-center justify-center gap-1.5 select-none">
               <span
-                className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-emerald-300 drop-shadow-[0_0_16px_rgba(0,229,255,0.9)] leading-none select-none"
+                className="text-sm sm:text-base font-black tracking-[0.28em] uppercase text-cyan-300 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)]"
+                style={{ fontFamily: '"Orbitron", "Rajdhani", sans-serif' }}
+              >
+                ANALYZING
+              </span>
+              <span
+                className="text-cyan-400 font-mono font-bold tracking-widest text-sm inline-block w-6 text-left"
                 style={{ fontFamily: '"Orbitron", monospace' }}
               >
-                {scanProgress}%
+                {scanDots}
               </span>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Floating Circular Robot Button (Draggable) */}
