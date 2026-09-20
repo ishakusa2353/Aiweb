@@ -54,32 +54,36 @@
 
 @keyframes ishakSignalAppear {
   0% {
-    transform: translate(-50%, -50%) scale(0.65);
+    transform: translate(-50%, -50%) scale(0.4);
     opacity: 0;
-    filter: blur(8px);
+    filter: blur(14px);
   }
-  18% {
-    transform: translate(-50%, -50%) scale(1.06);
+  16% {
+    transform: translate(-50%, -50%) scale(1.15);
     opacity: 1;
     filter: blur(0px);
   }
-  25% {
+  24% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
-  76% {
+  50% {
+    transform: translate(-50%, -52%) scale(1.03);
+    opacity: 1;
+  }
+  75% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
     filter: blur(0px);
   }
-  84% {
-    transform: translate(-50%, -50%) scale(1.05);
+  86% {
+    transform: translate(-50%, -48%) scale(1.05);
     opacity: 0.95;
   }
   100% {
-    transform: translate(-50%, -50%) scale(0.85);
+    transform: translate(-50%, -56%) scale(0.75);
     opacity: 0;
-    filter: blur(6px);
+    filter: blur(12px);
   }
 }
 

@@ -721,17 +721,10 @@ javascript:(function(){
     '#ishak-pill-badge { margin-top: 6px; background: rgba(7,13,30,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.5px solid #00E5FF; border-radius: 20px; padding: 3px 9px; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(0,0,0,0.8); cursor: pointer; transform: none !important; animation: none !important; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 10px; font-weight: 900; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 4px; transform: none !important; animation: none !important; }' +
     '#ishak-pill-time { background: #00E5FF; color: #070D1E; font-size: 9px; font-weight: 900; padding: 2px 7px; border-radius: 12px; }' +
-    '#scan-laser { position: fixed; top: -25px; left: 0; width: 100vw; height: 16px; z-index: 2147483646; display: none; pointer-events: none; }' +
-    '#scan-laser.scanning-active { display: block; animation: ishakLaserSweepFull 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
-    '#scan-laser-beam { position: relative; width: 100vw; height: 16px; background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.35) 8%, #00E5FF 25%, #E0FFFF 50%, #00E5FF 75%, rgba(0,229,255,0.35) 92%, transparent 100%); box-shadow: 0 0 20px #00E5FF, 0 0 45px #00E5FF, 0 0 80px #00E5FF, 0 0 8px #FFFFFF; border-radius: 8px; }' +
-    '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
-    '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
-    '#scan-grid { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 2147483645; display: none; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) perspective(700px) rotateX(2deg) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(5,11,26,0.98) 0%, rgba(9,20,48,0.95) 100%); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1.5px solid rgba(0,229,255,0.6); border-bottom: 4px solid rgba(0,180,216,0.95); border-radius: 20px; padding: 16px 20px; box-shadow: 0 8px 0 #020713, 0 22px 50px rgba(0,0,0,0.92), 0 0 35px rgba(0,229,255,0.35), inset 0 1.5px 2px rgba(255,255,255,0.25), inset 0 -3px 8px rgba(0,0,0,0.7); min-width: 320px; max-width: 92vw; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
-    '#ishak-screen-scan-box.scanning-active { display: block; }' +
-    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani",system-ui,sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 1.5px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; }' +
-    '.ishak-ai-text-span { display: inline-block; color: #00E5FF; text-shadow: 0 0 10px rgba(0,229,255,0.7); font-weight: 900; }' +
-    '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); border-radius: 12px; padding: 2px 10px; color: #00E5FF; font-weight: 700; font-size: 9px; font-family: "Orbitron", monospace; letter-spacing: 0.5px; }' +
+    '#scan-laser { display: none !important; }' +
+    '#scan-grid { display: none !important; }' +
+    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: auto; max-width: none; user-select: none; }' +
+    '#ishak-screen-scan-box.scanning-active { display: flex; align-items: center; justify-content: center; }' +
     '.ishak-corner-hud { position: fixed; z-index: 2147483646; pointer-events: none; display: none; font-family: "Orbitron", monospace; font-size: 9px; font-weight: 900; color: #00E5FF; padding: 4px 8px; border-radius: 6px; background: rgba(7,13,30,0.8); border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 0 10px rgba(0,229,255,0.25); animation: ishakDataBlink 2s infinite ease-in-out; }' +
     '.ishak-corner-hud.active { display: block; }' +
     '#ishak-hud-panel { position: fixed; top: 120px; right: 30px; width: 300px; background: #0B132B; border: 2px solid #00E5FF; border-radius: 14px; padding: 0; color: #fff; display: none; box-shadow: 0 20px 50px rgba(0,0,0,0.9), inset 0 1px 1px rgba(255,255,255,0.2); backdrop-filter: blur(16px); z-index: 2147483647; overflow: hidden; touch-action: none; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
@@ -741,22 +734,16 @@ javascript:(function(){
     '.ishak-close-btn:hover { transform: scale(1.1); background: #D50000; }' +
     '.ishak-dialog-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0B132B; border: 2px solid #00E5FF; padding: 16px; border-radius: 16px; z-index: 2147483647; color: #fff; box-shadow: 0 25px 60px rgba(0,0,0,0.95), inset 0 1px 1px rgba(255,255,255,0.15); width: 330px; max-width: 92vw; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; box-sizing: border-box; }' +
     '@keyframes ishakSignalAppear { ' +
-      '0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; filter: blur(12px); } ' +
-      '18% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; filter: blur(0px); } ' +
+      '0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; filter: blur(14px); } ' +
+      '16% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; filter: blur(0px); } ' +
       '24% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
-      '80% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
-      '100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; filter: blur(8px); } ' +
-    '}' +
-    '@keyframes ishakArrowBounceUp { ' +
-      '0%, 100% { transform: translateY(0); } ' +
-      '50% { transform: translateY(-4px); } ' +
-    '}' +
-    '@keyframes ishakArrowBounceDown { ' +
-      '0%, 100% { transform: translateY(0); } ' +
-      '50% { transform: translateY(4px); } ' +
+      '50% { transform: translate(-50%, -52%) scale(1.03); opacity: 1; } ' +
+      '75% { transform: translate(-50%, -50%) scale(1); opacity: 1; filter: blur(0px); } ' +
+      '86% { transform: translate(-50%, -48%) scale(1.05); opacity: 0.95; } ' +
+      '100% { transform: translate(-50%, -56%) scale(0.75); opacity: 0; filter: blur(12px); } ' +
     '}' +
     '#ishak-fly-signal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483647; pointer-events: none; user-select: none; display: none; text-align: center; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
-    '#ishak-fly-signal.flying-active { display: block; animation: ishakSignalAppear 1.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }';
+    '#ishak-fly-signal.flying-active { display: flex; align-items: center; justify-content: center; animation: ishakSignalAppear 1.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }';
   document.head.appendChild(styleTag);
 
   // Flying UP/DOWN Signal Element (3D Cyber Holographic Energy Shield)
@@ -787,25 +774,15 @@ javascript:(function(){
 
     var isUp = direction === 'UP';
     var themeColor = isUp ? '#00FF66' : '#FF1744';
-    var glowShadow = isUp ? 'rgba(0,255,102,0.65)' : 'rgba(255,23,68,0.65)';
-    var innerGlow = isUp ? 'rgba(0,255,102,0.2)' : 'rgba(255,23,68,0.2)';
-    var arrowIcon = isUp
-      ? '<svg style="width:28px;height:28px;color:#00FF66;animation:ishakArrowBounceUp 1s infinite ease-in-out;filter:drop-shadow(0 0 10px #00FF66);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
-      : '<svg style="width:28px;height:28px;color:#FF1744;animation:ishakArrowBounceDown 1s infinite ease-in-out;filter:drop-shadow(0 0 10px #FF1744);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
+    var glowShadow = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
+    var outerBloom = isUp ? 'rgba(0,229,255,0.6)' : 'rgba(255,50,75,0.6)';
 
     fly.innerHTML =
-      '<div style="position:relative; display:inline-flex; align-items:center; gap:16px; padding:12px 28px; border-radius:24px; background:linear-gradient(135deg, rgba(5,11,26,0.96) 0%, rgba(9,20,48,0.93) 100%); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1.5px solid ' + themeColor + '; box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 35px ' + glowShadow + ', inset 0 0 20px ' + innerGlow + ', inset 0 1px 1px rgba(255,255,255,0.25); user-select:none; font-family:\'Orbitron\',\'Rajdhani\',system-ui,sans-serif;">' +
-        '<div style="width:46px; height:46px; border-radius:14px; background:' + (isUp ? 'rgba(0,255,102,0.12)' : 'rgba(255,23,68,0.12)') + '; border:1px solid ' + (isUp ? 'rgba(0,255,102,0.45)' : 'rgba(255,23,68,0.45)') + '; display:flex; align-items:center; justify-content:center; box-shadow:0 0 18px ' + (isUp ? 'rgba(0,255,102,0.4)' : 'rgba(255,23,68,0.4)') + '; flex-shrink:0;">' +
-          arrowIcon +
-        '</div>' +
-        '<div style="display:flex; flex-direction:column; text-align:left;">' +
-          '<span style="font-size:36px; font-weight:900; letter-spacing:3px; color:' + themeColor + '; text-shadow:0 0 16px ' + themeColor + ', 0 0 35px ' + glowShadow + '; line-height:1;">' +
-            direction +
-          '</span>' +
-          '<span style="font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-top:4px; color:' + (isUp ? '#6EE7B7' : '#FDA4AF') + '; opacity:0.9;">' +
-            (isUp ? 'CALL SIGNAL' : 'PUT SIGNAL') +
-          '</span>' +
-        '</div>' +
+      '<div style="position:relative; display:flex; align-items:center; justify-content:center; user-select:none; font-family:\'Orbitron\',\'Rajdhani\',system-ui,sans-serif;">' +
+        '<div style="position:absolute; width:220px; height:220px; border-radius:50%; filter:blur(40px); pointer-events:none; opacity:0.85; background:' + (isUp ? 'radial-gradient(circle, rgba(0,255,102,0.5) 0%, rgba(0,229,255,0.2) 50%, transparent 75%)' : 'radial-gradient(circle, rgba(255,23,68,0.55) 0%, rgba(255,82,82,0.2) 50%, transparent 75%)') + ';"></div>' +
+        '<span style="font-size:76px; font-weight:900; letter-spacing:8px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 50px ' + glowShadow + ', 0 0 90px ' + outerBloom + ', 0 4px 24px rgba(0,0,0,0.95); line-height:1; position:relative;">' +
+          direction +
+        '</span>' +
       '</div>';
 
     fly.classList.add('flying-active');
@@ -835,38 +812,25 @@ javascript:(function(){
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.innerHTML =
-    '<div id="ishak-screen-scan-title" style="display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin-bottom:8px;width:100%;">' +
-      '<span style="width:7px;height:7px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;display:inline-block;flex-shrink:0;"></span>' +
-      '<span style="font-size:13px;font-weight:900;letter-spacing:1.5px;color:#FFF;display:inline-block;">SCANNING MARKET BY <span class="ishak-ai-text-span" style="color:#00E5FF;text-shadow:0 0 10px rgba(0,229,255,0.7);">ISHAK AI</span></span>' +
-      '<span id="ishak-scan-dots" style="display:inline-block;width:24px;text-align:left;color:#00E5FF;font-family:monospace;font-weight:900;letter-spacing:1px;font-size:13px;flex-shrink:0;">...</span>' +
-    '</div>' +
-    '<!-- 3D Circular Progress Gauge -->' +
-    '<div style="position:relative;margin:10px auto;display:flex;align-items:center;justify-content:center;">' +
-      '<div style="width:104px;height:104px;border-radius:50%;background:radial-gradient(circle,#050B1A 52%,#020614 100%);box-shadow:inset 0 3px 8px rgba(0,0,0,0.95),0 4px 12px rgba(0,0,0,0.7),0 0 20px rgba(0,229,255,0.18);border:1px solid rgba(0,229,255,0.25);display:flex;align-items:center;justify-content:center;position:relative;">' +
-        '<svg style="width:92px;height:92px;transform:rotate(-90deg);" viewBox="0 0 100 100">' +
-          '<defs>' +
-            '<linearGradient id="ishakLoaderCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
-              '<stop offset="0%" stop-color="#00E5FF"/>' +
-              '<stop offset="50%" stop-color="#38BDF8"/>' +
-              '<stop offset="100%" stop-color="#00FF66"/>' +
-            '</linearGradient>' +
-            '<filter id="ishakLoaderGlow" x="-20%" y="-20%" width="140%" height="140%">' +
-              '<feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#00E5FF" flood-opacity="0.85"/>' +
-            '</filter>' +
-          '</defs>' +
-          '<circle cx="50" cy="50" r="38" fill="none" stroke="rgba(15,23,42,0.9)" stroke-width="7"/>' +
-          '<circle cx="50" cy="50" r="38" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="7"/>' +
-          '<circle id="ishak-scan-circle-bar" cx="50" cy="50" r="38" fill="none" stroke="url(#ishakLoaderCircleGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="238.76" stroke-dashoffset="238.76" filter="url(#ishakLoaderGlow)" style="transition:stroke-dashoffset 0.05s ease-out;"/>' +
-        '</svg>' +
-        '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">' +
-          '<span id="ishak-scan-percent" style="font-size:22px;font-weight:900;font-family:monospace;letter-spacing:-0.5px;color:#00E5FF;text-shadow:0 0 12px rgba(0,229,255,0.85);line-height:1;">0%</span>' +
-          '<span style="font-size:8px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,229,255,0.85);margin-top:3px;">ANALYZING</span>' +
-        '</div>' +
+    '<div style="position:relative;display:flex;align-items:center;justify-content:center;">' +
+      '<svg style="width:140px;height:140px;transform:rotate(-90deg);" viewBox="0 0 120 120">' +
+        '<defs>' +
+          '<linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
+            '<stop offset="0%" stop-color="#00E5FF"/>' +
+            '<stop offset="50%" stop-color="#38BDF8"/>' +
+            '<stop offset="100%" stop-color="#00FF66"/>' +
+          '</linearGradient>' +
+          '<filter id="ishakPureGlow" x="-30%" y="-30%" width="160%" height="160%">' +
+            '<feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#00E5FF" flood-opacity="0.85"/>' +
+            '<feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#00FF66" flood-opacity="0.5"/>' +
+          '</filter>' +
+        '</defs>' +
+        '<circle cx="60" cy="60" r="48" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="6"/>' +
+        '<circle id="ishak-scan-circle-bar" cx="60" cy="60" r="48" fill="none" stroke="url(#ishakPureCircleGrad)" stroke-width="6" stroke-linecap="round" stroke-dasharray="301.59" stroke-dashoffset="301.59" filter="url(#ishakPureGlow)" style="transition:stroke-dashoffset 0.05s ease-out;"/>' +
+      '</svg>' +
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
+        '<span id="ishak-scan-percent" style="font-size:36px;font-weight:900;font-family:\'Orbitron\',monospace;letter-spacing:-1px;color:#00E5FF;text-shadow:0 0 16px rgba(0,229,255,0.9), 0 0 32px rgba(0,255,102,0.6);line-height:1;">0%</span>' +
       '</div>' +
-    '</div>' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;font-family:monospace;font-size:10.5px;font-weight:bold;width:100%;border-top:1px solid rgba(0,229,255,0.2);padding-top:8px;">' +
-      '<span id="ishak-scan-sub-text" style="color:#94A3B8;display:flex;align-items:center;gap:4px;">⚡ AI CONFLUENCE</span>' +
-      '<span style="color:#00FF66;font-weight:900;font-size:10px;text-transform:uppercase;background:rgba(0,255,102,0.12);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,255,102,0.3);">⚡ 99.4% AI</span>' +
     '</div>';
   document.body.appendChild(screenScanBox);
 
@@ -1812,12 +1776,11 @@ javascript:(function(){
 
       pillTime.innerText = 'SCAN..';
 
-      document.getElementById('ishak-scan-sub-text').innerText = currentMarket + ' | ' + (tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S');
+      var scanSubTextEl = document.getElementById('ishak-scan-sub-text');
+      if (scanSubTextEl) scanSubTextEl.innerText = currentMarket + ' | ' + (tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S');
       screenScanBox.classList.add('scanning-active');
-      laserEl.classList.add('scanning-active');
-      gridEl.style.display = 'block';
 
-      // Initialize Progress Counter & Sequential Dots
+      // Initialize Progress Counter
       var scanStartTime = Date.now();
       var scanDurationMs = 3600;
       var dotsEl = document.getElementById('ishak-scan-dots');
@@ -1828,7 +1791,7 @@ javascript:(function(){
       if (dotsEl) dotsEl.innerText = '.';
       if (percentEl) percentEl.innerText = '0%';
       if (progressBarEl) progressBarEl.style.width = '0%';
-      if (circleBarEl) circleBarEl.style.strokeDashoffset = '238.76';
+      if (circleBarEl) circleBarEl.style.strokeDashoffset = '301.59';
 
       var scanProgressInterval = setInterval(function() {
         var elapsed = Date.now() - scanStartTime;
@@ -1836,10 +1799,10 @@ javascript:(function(){
         if (percentEl) percentEl.innerText = pct + '%';
         if (progressBarEl) progressBarEl.style.width = pct + '%';
         if (circleBarEl) {
-          circleBarEl.style.strokeDashoffset = (238.76 - (pct / 100) * 238.76) + '';
+          circleBarEl.style.strokeDashoffset = (301.59 - (pct / 100) * 301.59) + '';
         }
 
-        // Dots grow sequentially: . -> .. -> ... -> .... -> ..... -> ...... -> .......
+        // Dots grow sequentially
         var numDots = Math.min(7, (Math.floor(elapsed / 450) % 7) + 1);
         if (dotsEl) dotsEl.innerText = '.'.repeat(numDots);
       }, 40);
