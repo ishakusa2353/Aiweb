@@ -727,7 +727,7 @@ javascript:(function(){
     '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-grid { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 2147483645; display: none; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(5,11,26,0.96) 0%, rgba(9,20,48,0.93) 100%); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1.5px solid rgba(0,229,255,0.45); border-radius: 18px; padding: 14px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(0,229,255,0.25), inset 0 1px 1px rgba(255,255,255,0.15); min-width: 320px; max-width: 92vw; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
+    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) perspective(700px) rotateX(2deg) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(5,11,26,0.98) 0%, rgba(9,20,48,0.95) 100%); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1.5px solid rgba(0,229,255,0.6); border-bottom: 4px solid rgba(0,180,216,0.95); border-radius: 20px; padding: 16px 20px; box-shadow: 0 8px 0 #020713, 0 22px 50px rgba(0,0,0,0.92), 0 0 35px rgba(0,229,255,0.35), inset 0 1.5px 2px rgba(255,255,255,0.25), inset 0 -3px 8px rgba(0,0,0,0.7); min-width: 320px; max-width: 92vw; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
     '#ishak-screen-scan-box.scanning-active { display: block; }' +
     '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani",system-ui,sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 1.5px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; }' +
     '.ishak-ai-text-span { display: inline-block; color: #00E5FF; text-shadow: 0 0 10px rgba(0,229,255,0.7); font-weight: 900; }' +
@@ -840,13 +840,33 @@ javascript:(function(){
       '<span style="font-size:13px;font-weight:900;letter-spacing:1.5px;color:#FFF;display:inline-block;">SCANNING MARKET BY <span class="ishak-ai-text-span" style="color:#00E5FF;text-shadow:0 0 10px rgba(0,229,255,0.7);">ISHAK AI</span></span>' +
       '<span id="ishak-scan-dots" style="display:inline-block;width:24px;text-align:left;color:#00E5FF;font-family:monospace;font-weight:900;letter-spacing:1px;font-size:13px;flex-shrink:0;">...</span>' +
     '</div>' +
-    '<!-- Laser Energy Filament Progress Line -->' +
-    '<div style="width:100%;height:6px;background:rgba(2,6,23,0.95);border-radius:6px;overflow:hidden;border:1px solid rgba(0,229,255,0.4);margin:8px 0;padding:0.5px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.95);">' +
-      '<div id="ishak-scan-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#00E5FF,#38BDF8,#00FF66);border-radius:6px;transition:width 0.05s linear;box-shadow:0 0 14px #00E5FF, 0 0 5px #00FF66;"></div>' +
+    '<!-- 3D Circular Progress Gauge -->' +
+    '<div style="position:relative;margin:10px auto;display:flex;align-items:center;justify-content:center;">' +
+      '<div style="width:104px;height:104px;border-radius:50%;background:radial-gradient(circle,#050B1A 52%,#020614 100%);box-shadow:inset 0 3px 8px rgba(0,0,0,0.95),0 4px 12px rgba(0,0,0,0.7),0 0 20px rgba(0,229,255,0.18);border:1px solid rgba(0,229,255,0.25);display:flex;align-items:center;justify-content:center;position:relative;">' +
+        '<svg style="width:92px;height:92px;transform:rotate(-90deg);" viewBox="0 0 100 100">' +
+          '<defs>' +
+            '<linearGradient id="ishakLoaderCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
+              '<stop offset="0%" stop-color="#00E5FF"/>' +
+              '<stop offset="50%" stop-color="#38BDF8"/>' +
+              '<stop offset="100%" stop-color="#00FF66"/>' +
+            '</linearGradient>' +
+            '<filter id="ishakLoaderGlow" x="-20%" y="-20%" width="140%" height="140%">' +
+              '<feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#00E5FF" flood-opacity="0.85"/>' +
+            '</filter>' +
+          '</defs>' +
+          '<circle cx="50" cy="50" r="38" fill="none" stroke="rgba(15,23,42,0.9)" stroke-width="7"/>' +
+          '<circle cx="50" cy="50" r="38" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="7"/>' +
+          '<circle id="ishak-scan-circle-bar" cx="50" cy="50" r="38" fill="none" stroke="url(#ishakLoaderCircleGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="238.76" stroke-dashoffset="238.76" filter="url(#ishakLoaderGlow)" style="transition:stroke-dashoffset 0.05s ease-out;"/>' +
+        '</svg>' +
+        '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">' +
+          '<span id="ishak-scan-percent" style="font-size:22px;font-weight:900;font-family:monospace;letter-spacing:-0.5px;color:#00E5FF;text-shadow:0 0 12px rgba(0,229,255,0.85);line-height:1;">0%</span>' +
+          '<span style="font-size:8px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,229,255,0.85);margin-top:3px;">ANALYZING</span>' +
+        '</div>' +
+      '</div>' +
     '</div>' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;font-family:monospace;font-size:10.5px;font-weight:bold;width:100%;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;font-family:monospace;font-size:10.5px;font-weight:bold;width:100%;border-top:1px solid rgba(0,229,255,0.2);padding-top:8px;">' +
       '<span id="ishak-scan-sub-text" style="color:#94A3B8;display:flex;align-items:center;gap:4px;">⚡ AI CONFLUENCE</span>' +
-      '<span id="ishak-scan-percent" style="color:#00E5FF;font-weight:900;font-size:11px;background:rgba(0,229,255,0.12);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,229,255,0.3);">0%</span>' +
+      '<span style="color:#00FF66;font-weight:900;font-size:10px;text-transform:uppercase;background:rgba(0,255,102,0.12);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,255,102,0.3);">⚡ 99.4% AI</span>' +
     '</div>';
   document.body.appendChild(screenScanBox);
 
@@ -1803,16 +1823,21 @@ javascript:(function(){
       var dotsEl = document.getElementById('ishak-scan-dots');
       var percentEl = document.getElementById('ishak-scan-percent');
       var progressBarEl = document.getElementById('ishak-scan-progress-bar');
+      var circleBarEl = document.getElementById('ishak-scan-circle-bar');
 
       if (dotsEl) dotsEl.innerText = '.';
       if (percentEl) percentEl.innerText = '0%';
       if (progressBarEl) progressBarEl.style.width = '0%';
+      if (circleBarEl) circleBarEl.style.strokeDashoffset = '238.76';
 
       var scanProgressInterval = setInterval(function() {
         var elapsed = Date.now() - scanStartTime;
         var pct = Math.min(100, Math.floor((elapsed / scanDurationMs) * 100));
         if (percentEl) percentEl.innerText = pct + '%';
         if (progressBarEl) progressBarEl.style.width = pct + '%';
+        if (circleBarEl) {
+          circleBarEl.style.strokeDashoffset = (238.76 - (pct / 100) * 238.76) + '';
+        }
 
         // Dots grow sequentially: . -> .. -> ... -> .... -> ..... -> ...... -> .......
         var numDots = Math.min(7, (Math.floor(elapsed / 450) % 7) + 1);
@@ -1838,6 +1863,7 @@ javascript:(function(){
         if (priceSamplerInterval) clearInterval(priceSamplerInterval);
         if (percentEl) percentEl.innerText = '100%';
         if (progressBarEl) progressBarEl.style.width = '100%';
+        if (circleBarEl) circleBarEl.style.strokeDashoffset = '0';
         if (dotsEl) dotsEl.innerText = '.......';
 
         var pFinal = extractQuotexLivePrice();

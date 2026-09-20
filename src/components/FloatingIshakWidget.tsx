@@ -763,18 +763,23 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               }}
             />
           </div>
-          {/* Futuristic Cyber Scanning Capsule (Ultra-Stylish, Sleek & Minimalist) */}
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none max-w-[92vw] w-[340px]">
-            {/* Ambient Radial Cyan Aura Behind Capsule */}
-            <div className="absolute -inset-6 rounded-3xl blur-2xl pointer-events-none opacity-60 bg-gradient-to-r from-cyan-500/20 via-sky-400/25 to-emerald-400/20" />
+          {/* 3D Cyber Scanning Capsule with Circular Progress Ring */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none max-w-[92vw] w-[330px]">
+            {/* Ambient Radial Cyan Aura Behind 3D Capsule */}
+            <div className="absolute -inset-6 rounded-3xl blur-2xl pointer-events-none opacity-60 bg-gradient-to-r from-cyan-500/25 via-sky-400/30 to-emerald-400/25" />
 
+            {/* 3D Cyber Beveled Container */}
             <div
-              className="relative w-full flex flex-col items-center bg-[#050B1A]/95 backdrop-blur-2xl border border-cyan-400/50 rounded-2xl px-5 py-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_30px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.15)] animate-[ishakScanPulse_2.4s_infinite_ease-in-out]"
+              className="relative w-full flex flex-col items-center bg-[#050B1A]/98 backdrop-blur-2xl rounded-2xl px-5 py-4 select-none animate-[ishakScanPulse_2.4s_infinite_ease-in-out]"
               style={{
-                fontFamily: '"Orbitron", "Rajdhani", system-ui, sans-serif'
+                fontFamily: '"Orbitron", "Rajdhani", system-ui, sans-serif',
+                border: '1.5px solid rgba(0, 229, 255, 0.6)',
+                borderBottom: '4px solid rgba(0, 180, 216, 0.95)',
+                boxShadow: '0 8px 0 #020713, 0 22px 50px rgba(0,0,0,0.92), 0 0 35px rgba(0,229,255,0.35), inset 0 1.5px 2px rgba(255,255,255,0.25), inset 0 -3px 8px rgba(0,0,0,0.7)',
+                transform: 'perspective(700px) rotateX(2deg)'
               }}
             >
-              {/* Row 1: High-Tech Radar Ring + Sleek Title */}
+              {/* Row 1: High-Tech Radar Ring + Title */}
               <div className="flex items-center justify-center gap-2 whitespace-nowrap mb-2 w-full">
                 {/* Holographic Radar Pulse Dot */}
                 <div className="relative w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
@@ -795,24 +800,81 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 </span>
               </div>
 
-              {/* Row 2: Laser Energy Filament Progress Line */}
-              <div className="w-full h-1.5 bg-slate-950/90 rounded-full overflow-hidden border border-cyan-500/35 p-[0.5px] mb-2 shadow-inner relative">
+              {/* Row 2: 3D Circular Progress Gauge (Circle with percentage inside, fills from 0% around to 100%) */}
+              <div className="relative my-2.5 flex items-center justify-center">
+                {/* 3D Circular Recessed Ring Base */}
                 <div
-                  className="h-full bg-gradient-to-r from-cyan-500 via-sky-300 to-emerald-400 rounded-full transition-all duration-75 ease-out shadow-[0_0_14px_#00E5FF,0_0_6px_#00FF66]"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center relative"
                   style={{
-                    width: `${Math.max(2, Math.min(100, scanProgress))}%`,
+                    background: 'radial-gradient(circle, #050B1A 52%, #020614 100%)',
+                    boxShadow: 'inset 0 3px 8px rgba(0,0,0,0.95), 0 4px 12px rgba(0,0,0,0.7), 0 0 20px rgba(0,229,255,0.18)',
+                    border: '1px solid rgba(0, 229, 255, 0.25)'
                   }}
-                />
+                >
+                  <svg className="w-20 h-20 sm:w-24 sm:h-24 transform -rotate-90" viewBox="0 0 100 100">
+                    <defs>
+                      <linearGradient id="ishakWidgetCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#00E5FF" />
+                        <stop offset="50%" stopColor="#38BDF8" />
+                        <stop offset="100%" stopColor="#00FF66" />
+                      </linearGradient>
+                      <filter id="ishakWidgetGlow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#00E5FF" floodOpacity="0.85" />
+                      </filter>
+                    </defs>
+                    {/* Background Circular Track */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      fill="none"
+                      stroke="rgba(15, 23, 42, 0.9)"
+                      strokeWidth="7"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      fill="none"
+                      stroke="rgba(0, 229, 255, 0.12)"
+                      strokeWidth="7"
+                    />
+                    {/* Filling Circular Arc starting at 0% (top) and finishing at 100% (round) */}
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="38"
+                      fill="none"
+                      stroke="url(#ishakWidgetCircleGrad)"
+                      strokeWidth="7"
+                      strokeLinecap="round"
+                      strokeDasharray={238.76}
+                      strokeDashoffset={238.76 - (Math.max(0, Math.min(100, scanProgress)) / 100) * 238.76}
+                      filter="url(#ishakWidgetGlow)"
+                      className="transition-all duration-75 ease-out"
+                    />
+                  </svg>
+
+                  {/* Percentage in center of the round circle */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-xl sm:text-2xl font-black font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-200 to-emerald-300 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)] leading-none">
+                      {scanProgress}%
+                    </span>
+                    <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-cyan-400/90 mt-1">
+                      ANALYZING
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Row 3: High-Tech Telemetry */}
-              <div className="w-full flex items-center justify-between text-[10.5px] font-mono font-bold text-slate-300">
+              {/* Row 3: Telemetry & Live Confluence Info */}
+              <div className="w-full flex items-center justify-between text-[10.5px] font-mono font-bold text-slate-300 pt-2 border-t border-cyan-500/20">
                 <span className="text-cyan-300 flex items-center gap-1.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="truncate">{currentMarket} • {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`) : '5S'}</span>
                 </span>
-                <span className="text-cyan-400 font-black tracking-wider text-[11px] font-mono bg-cyan-950/70 border border-cyan-500/30 px-2 py-0.5 rounded">
-                  {scanProgress}%
+                <span className="text-emerald-400 font-black tracking-wider text-[10px] uppercase flex items-center gap-1 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  <span>⚡</span> 99.4% AI
                 </span>
               </div>
             </div>
