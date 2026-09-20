@@ -727,10 +727,10 @@ javascript:(function(){
     '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-grid { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 2147483645; display: none; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(7,13,30,0.96) 0%, rgba(13,27,62,0.93) 100%); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(0,229,255,0.4); border-radius: 14px; padding: 12px 18px; box-shadow: 0 12px 40px rgba(0,0,0,0.85), 0 0 25px rgba(0,229,255,0.25); min-width: 310px; max-width: 90vw; user-select: none; }' +
+    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: linear-gradient(135deg, rgba(5,11,26,0.96) 0%, rgba(9,20,48,0.93) 100%); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1.5px solid rgba(0,229,255,0.45); border-radius: 18px; padding: 14px 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 30px rgba(0,229,255,0.25), inset 0 1px 1px rgba(255,255,255,0.15); min-width: 320px; max-width: 92vw; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
     '#ishak-screen-scan-box.scanning-active { display: block; }' +
-    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani","Montserrat",system-ui,-apple-system,sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 0.8px; margin-bottom: 6px; color: #FFFFFF; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 4px; }' +
-    '.ishak-ai-text-span { display: inline-block; color: #00E5FF; }' +
+    '#ishak-screen-scan-title { font-family: "Orbitron","Rajdhani",system-ui,sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 1.5px; margin-bottom: 8px; color: #FFFFFF; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; }' +
+    '.ishak-ai-text-span { display: inline-block; color: #00E5FF; text-shadow: 0 0 10px rgba(0,229,255,0.7); font-weight: 900; }' +
     '#ishak-screen-scan-sub { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); border-radius: 12px; padding: 2px 10px; color: #00E5FF; font-weight: 700; font-size: 9px; font-family: "Orbitron", monospace; letter-spacing: 0.5px; }' +
     '.ishak-corner-hud { position: fixed; z-index: 2147483646; pointer-events: none; display: none; font-family: "Orbitron", monospace; font-size: 9px; font-weight: 900; color: #00E5FF; padding: 4px 8px; border-radius: 6px; background: rgba(7,13,30,0.8); border: 1px solid rgba(0,229,255,0.4); box-shadow: 0 0 10px rgba(0,229,255,0.25); animation: ishakDataBlink 2s infinite ease-in-out; }' +
     '.ishak-corner-hud.active { display: block; }' +
@@ -740,28 +740,23 @@ javascript:(function(){
     '.ishak-close-btn { width: 22px; height: 22px; border-radius: 50%; background: #FF1744; color: #fff; border: 1px solid #fff; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }' +
     '.ishak-close-btn:hover { transform: scale(1.1); background: #D50000; }' +
     '.ishak-dialog-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0B132B; border: 2px solid #00E5FF; padding: 16px; border-radius: 16px; z-index: 2147483647; color: #fff; box-shadow: 0 25px 60px rgba(0,0,0,0.95), inset 0 1px 1px rgba(255,255,255,0.15); width: 330px; max-width: 92vw; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; box-sizing: border-box; }' +
-    '@keyframes ishakUpDownFly { ' +
-      '0% { transform: translate(-50%, 100vh) scale(0.65); opacity: 0; } ' +
-      '20% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; } ' +
+    '@keyframes ishakSignalAppear { ' +
+      '0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; filter: blur(12px); } ' +
+      '18% { transform: translate(-50%, -50%) scale(1.06); opacity: 1; filter: blur(0px); } ' +
       '24% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
-      '78% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
-      '84% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } ' +
-      '100% { transform: translate(-50%, -100vh) scale(0.7); opacity: 0; } ' +
+      '80% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
+      '100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0; filter: blur(8px); } ' +
     '}' +
-    '#ishak-fly-signal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, 100vh); z-index: 2147483647; pointer-events: none; user-select: none; display: none; text-align: center; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
-    '#ishak-fly-signal.flying-active { display: block; animation: ishakUpDownFly 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }' +
-    '@keyframes ishakCandleTargetSnap { ' +
-      '0% { transform: scale(1.6); opacity: 0; } ' +
-      '20% { transform: scale(1); opacity: 1; } ' +
-      '80% { transform: scale(1); opacity: 1; } ' +
-      '100% { transform: scale(1.18); opacity: 0; } ' +
+    '@keyframes ishakArrowBounceUp { ' +
+      '0%, 100% { transform: translateY(0); } ' +
+      '50% { transform: translateY(-4px); } ' +
     '}' +
-    '.ishak-candle-zoomed { ' +
-      'transform: scale(1.22) !important; ' +
-      'z-index: 50 !important; ' +
-      'filter: drop-shadow(0 0 16px #00E5FF) !important; ' +
-      'transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.28s ease !important; ' +
-    '}';
+    '@keyframes ishakArrowBounceDown { ' +
+      '0%, 100% { transform: translateY(0); } ' +
+      '50% { transform: translateY(4px); } ' +
+    '}' +
+    '#ishak-fly-signal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483647; pointer-events: none; user-select: none; display: none; text-align: center; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
+    '#ishak-fly-signal.flying-active { display: block; animation: ishakSignalAppear 1.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }';
   document.head.appendChild(styleTag);
 
   // Flying UP/DOWN Signal Element (3D Cyber Holographic Energy Shield)
@@ -792,103 +787,38 @@ javascript:(function(){
 
     var isUp = direction === 'UP';
     var themeColor = isUp ? '#00FF66' : '#FF1744';
-    var glowShadow = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
-    var innerGlow = isUp ? 'rgba(0,255,102,0.3)' : 'rgba(255,23,68,0.3)';
+    var glowShadow = isUp ? 'rgba(0,255,102,0.65)' : 'rgba(255,23,68,0.65)';
+    var innerGlow = isUp ? 'rgba(0,255,102,0.2)' : 'rgba(255,23,68,0.2)';
+    var arrowIcon = isUp
+      ? '<svg style="width:28px;height:28px;color:#00FF66;animation:ishakArrowBounceUp 1s infinite ease-in-out;filter:drop-shadow(0 0 10px #00FF66);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
+      : '<svg style="width:28px;height:28px;color:#FF1744;animation:ishakArrowBounceDown 1s infinite ease-in-out;filter:drop-shadow(0 0 10px #FF1744);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>';
 
     fly.innerHTML =
-      '<div style="position:relative; display:inline-flex; flex-direction:column; align-items:center; background:rgba(7,13,30,0.92); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1.8px solid ' + themeColor + '; border-radius:18px; padding:12px 28px; box-shadow:0 0 28px ' + glowShadow + ', inset 0 0 16px ' + innerGlow + '; user-select:none; max-width:250px;">' +
-        '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
-          '<span style="width:6px; height:6px; border-radius:50%; background:' + themeColor + '; display:inline-block; box-shadow:0 0 8px ' + themeColor + ';"></span>' +
-          '<span style="font-size:9px; font-weight:900; letter-spacing:1px; color:' + themeColor + '; opacity:0.9;">AI SIGNAL CONFIRMED</span>' +
+      '<div style="position:relative; display:inline-flex; align-items:center; gap:16px; padding:12px 28px; border-radius:24px; background:linear-gradient(135deg, rgba(5,11,26,0.96) 0%, rgba(9,20,48,0.93) 100%); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1.5px solid ' + themeColor + '; box-shadow:0 20px 60px rgba(0,0,0,0.9), 0 0 35px ' + glowShadow + ', inset 0 0 20px ' + innerGlow + ', inset 0 1px 1px rgba(255,255,255,0.25); user-select:none; font-family:\'Orbitron\',\'Rajdhani\',system-ui,sans-serif;">' +
+        '<div style="width:46px; height:46px; border-radius:14px; background:' + (isUp ? 'rgba(0,255,102,0.12)' : 'rgba(255,23,68,0.12)') + '; border:1px solid ' + (isUp ? 'rgba(0,255,102,0.45)' : 'rgba(255,23,68,0.45)') + '; display:flex; align-items:center; justify-content:center; box-shadow:0 0 18px ' + (isUp ? 'rgba(0,255,102,0.4)' : 'rgba(255,23,68,0.4)') + '; flex-shrink:0;">' +
+          arrowIcon +
         '</div>' +
-        '<div style="font-size:28px; font-weight:900; letter-spacing:2px; color:' + themeColor + '; text-shadow:0 0 14px ' + themeColor + ', 0 0 28px ' + glowShadow + '; line-height:1.1;">' +
-          (isUp ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇') +
-        '</div>' +
-        '<div style="margin-top:6px; padding:2px 12px; border-radius:12px; background:' + (isUp ? 'rgba(0,255,102,0.15)' : 'rgba(255,23,68,0.15)') + '; border:1px solid ' + themeColor + '; color:' + themeColor + '; font-size:9px; font-weight:900; letter-spacing:0.5px;">' +
-          '★ 99.4% VIP ACCURACY ★' +
+        '<div style="display:flex; flex-direction:column; text-align:left;">' +
+          '<span style="font-size:36px; font-weight:900; letter-spacing:3px; color:' + themeColor + '; text-shadow:0 0 16px ' + themeColor + ', 0 0 35px ' + glowShadow + '; line-height:1;">' +
+            direction +
+          '</span>' +
+          '<span style="font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-top:4px; color:' + (isUp ? '#6EE7B7' : '#FDA4AF') + '; opacity:0.9;">' +
+            (isUp ? 'CALL SIGNAL' : 'PUT SIGNAL') +
+          '</span>' +
         '</div>' +
       '</div>';
 
     fly.classList.add('flying-active');
     setTimeout(function() {
       fly.classList.remove('flying-active');
-    }, 1800);
+    }, 1900);
   }
 
-  // Running Candle Selection Glow Box & Zoom Effect
+  // Sonic quantum shockwave trigger for signal confirmation (uncluttered clean chart)
   function highlightRunningCandleTarget(direction) {
     try {
-      var candleEl = document.getElementById('ishak-running-candle') ||
-                     document.querySelector('[data-running-candle="true"], .ishak-active-candle');
-      var targetRect = null;
-      if (candleEl) {
-        targetRect = candleEl.getBoundingClientRect();
-        candleEl.classList.add('ishak-candle-zoomed');
-        setTimeout(function() {
-          candleEl.classList.remove('ishak-candle-zoomed');
-        }, 1300);
-      } else {
-        // Fallback for canvas trading charts (Quotex etc.)
-        var canvases = Array.from(document.querySelectorAll('canvas'));
-        for (var i = 0; i < canvases.length; i++) {
-          var cr = canvases[i].getBoundingClientRect();
-          if (cr.width > 120 && cr.height > 80 && cr.bottom > 40 && cr.top < window.innerHeight) {
-            var w = 40;
-            var h = Math.min(130, cr.height * 0.45);
-            var l = cr.left + (cr.width * 0.86) - (w / 2);
-            var t = cr.top + (cr.height * 0.48) - (h / 2);
-            targetRect = { left: l, top: t, width: w, height: h };
-            break;
-          }
-        }
-      }
-
       var isUp = direction === 'UP';
-      var originX = targetRect ? (targetRect.left + targetRect.width / 2) : (window.innerWidth / 2);
-      var originY = targetRect ? (targetRect.top + targetRect.height / 2) : (window.innerHeight / 2);
-
-      // Trigger Sonic Quantum Shockwave from candle
-      triggerQuantumShockwave(originX, originY, isUp ? '#00FF66' : '#FF1744');
-
-      if (!targetRect) return;
-
-      var lockBox = document.getElementById('ishak-candle-lock-box');
-      if (!lockBox) {
-        lockBox = document.createElement('div');
-        lockBox.id = 'ishak-candle-lock-box';
-        document.body.appendChild(lockBox);
-      }
-
-      var borderColor = isUp ? '#00FF66' : '#FF1744';
-      var glowColor = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
-      var bgGlow = isUp ? 'rgba(0,255,102,0.12)' : 'rgba(255,23,68,0.12)';
-
-      var boxW = Math.max(38, targetRect.width + 18);
-      var boxH = Math.max(72, targetRect.height + 26);
-      var boxL = targetRect.left + (targetRect.width / 2) - (boxW / 2);
-      var boxT = targetRect.top + (targetRect.height / 2) - (boxH / 2);
-
-      lockBox.style.cssText = 'position:fixed; pointer-events:none; z-index:2147483646; user-select:none; ' +
-        'left:' + boxL + 'px; top:' + boxT + 'px; width:' + boxW + 'px; height:' + boxH + 'px; ' +
-        'animation:ishakCandleTargetSnap 1.3s cubic-bezier(0.2,0.9,0.3,1) forwards;';
-
-      lockBox.innerHTML =
-        '<div style="position:absolute;inset:0;border:2px solid ' + borderColor + ';border-radius:8px;box-shadow:0 0 25px ' + glowColor + ',inset 0 0 15px ' + bgGlow + ';background:' + bgGlow + ';"></div>' +
-        '<div style="position:absolute;top:-2px;left:-2px;width:12px;height:12px;border-top:3px solid ' + borderColor + ';border-left:3px solid ' + borderColor + ';"></div>' +
-        '<div style="position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-top:3px solid ' + borderColor + ';border-right:3px solid ' + borderColor + ';"></div>' +
-        '<div style="position:absolute;bottom:-2px;left:-2px;width:12px;height:12px;border-bottom:3px solid ' + borderColor + ';border-left:3px solid ' + borderColor + ';"></div>' +
-        '<div style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-bottom:3px solid ' + borderColor + ';border-right:3px solid ' + borderColor + ';"></div>' +
-        '<div style="position:absolute;top:-28px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:2px 8px;border-radius:20px;background:#070D1E;border:1px solid ' + borderColor + ';color:' + borderColor + ';font-size:9px;font-weight:900;letter-spacing:1px;box-shadow:0 0 12px ' + glowColor + ';display:flex;align-items:center;gap:4px;font-family:system-ui,sans-serif;">' +
-          '<span style="width:6px;height:6px;border-radius:50%;background:' + borderColor + ';display:inline-block;"></span>' +
-          '<span>' + direction + ' CANDLE LOCKED 🎯</span>' +
-        '</div>';
-
-      setTimeout(function() {
-        if (lockBox && lockBox.parentNode) {
-          lockBox.innerHTML = '';
-          lockBox.style.cssText = 'display:none;';
-        }
-      }, 1300);
+      triggerQuantumShockwave(window.innerWidth / 2, window.innerHeight / 2, isUp ? '#00FF66' : '#FF1744');
     } catch(e){}
   }
 
@@ -905,18 +835,18 @@ javascript:(function(){
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.innerHTML =
-    '<div id="ishak-screen-scan-title" style="display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin-bottom:6px;width:100%;">' +
-      '<span style="width:6px;height:6px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;display:inline-block;flex-shrink:0;"></span>' +
-      '<span style="font-size:12px;font-weight:900;letter-spacing:1px;color:#FFF;display:inline-block;animation:ishakTextBreathe 1.8s ease-in-out infinite;">SCANNING MARKET BY <span class="ishak-ai-text-span" style="color:#00E5FF;">ISHAK AI</span></span>' +
-      '<span id="ishak-scan-dots" style="display:inline-block;width:30px;text-align:left;color:#00E5FF;font-family:monospace;font-weight:900;letter-spacing:1px;font-size:13px;flex-shrink:0;">.......</span>' +
+    '<div id="ishak-screen-scan-title" style="display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin-bottom:8px;width:100%;">' +
+      '<span style="width:7px;height:7px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;display:inline-block;flex-shrink:0;"></span>' +
+      '<span style="font-size:13px;font-weight:900;letter-spacing:1.5px;color:#FFF;display:inline-block;">SCANNING MARKET BY <span class="ishak-ai-text-span" style="color:#00E5FF;text-shadow:0 0 10px rgba(0,229,255,0.7);">ISHAK AI</span></span>' +
+      '<span id="ishak-scan-dots" style="display:inline-block;width:24px;text-align:left;color:#00E5FF;font-family:monospace;font-weight:900;letter-spacing:1px;font-size:13px;flex-shrink:0;">...</span>' +
     '</div>' +
-    '<!-- Line directly under SCANNING MARKET BY ISHAK AI... filling from 0% to 100% -->' +
-    '<div style="width:100%;height:6px;background:rgba(15,23,42,0.95);border-radius:6px;overflow:hidden;border:1px solid rgba(0,229,255,0.4);margin:6px 0;padding:0.5px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.85);">' +
-      '<div id="ishak-scan-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#00E5FF,#38BDF8,#00FF66);border-radius:6px;transition:width 0.04s linear;box-shadow:0 0 12px #00E5FF, 0 0 4px #00FF66;"></div>' +
+    '<!-- Laser Energy Filament Progress Line -->' +
+    '<div style="width:100%;height:6px;background:rgba(2,6,23,0.95);border-radius:6px;overflow:hidden;border:1px solid rgba(0,229,255,0.4);margin:8px 0;padding:0.5px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.95);">' +
+      '<div id="ishak-scan-progress-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#00E5FF,#38BDF8,#00FF66);border-radius:6px;transition:width 0.05s linear;box-shadow:0 0 14px #00E5FF, 0 0 5px #00FF66;"></div>' +
     '</div>' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;font-family:monospace;font-size:10px;font-weight:bold;width:100%;">' +
-      '<span id="ishak-scan-sub-text" style="color:#A0AEC0;display:flex;align-items:center;gap:4px;">⚡ AI CONFLUENCE</span>' +
-      '<span id="ishak-scan-percent" style="color:#00E5FF;font-weight:900;font-size:11px;">0%</span>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;font-family:monospace;font-size:10.5px;font-weight:bold;width:100%;">' +
+      '<span id="ishak-scan-sub-text" style="color:#94A3B8;display:flex;align-items:center;gap:4px;">⚡ AI CONFLUENCE</span>' +
+      '<span id="ishak-scan-percent" style="color:#00E5FF;font-weight:900;font-size:11px;background:rgba(0,229,255,0.12);padding:1px 6px;border-radius:4px;border:1px solid rgba(0,229,255,0.3);">0%</span>' +
     '</div>';
   document.body.appendChild(screenScanBox);
 

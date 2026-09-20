@@ -57,13 +57,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   }) | null>(null);
   const [flySignal, setFlySignal] = useState<'UP' | 'DOWN' | null>(null);
   const [shockwaveState, setShockwaveState] = useState<{ x: number; y: number; color: string } | null>(null);
-  const [candleTargetRect, setCandleTargetRect] = useState<{
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-    direction: 'UP' | 'DOWN';
-  } | null>(null);
 
   const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
 
@@ -629,52 +622,22 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
       };
 
-      // 1. CANDLE SELECTION GLOW BOX & ZOOM EFFECT (1 second AI lock)
+      // 1. Quantum Sonic Shockwave from Screen Center
       const themeColor = isCall ? '#00FF66' : '#FF1744';
-      const targetCandle = runningCandleEl;
-      if (targetCandle) {
-        const rect = targetCandle.getBoundingClientRect();
-        const boxWidth = Math.max(38, rect.width + 18);
-        const boxHeight = Math.max(72, rect.height + 26);
-        const boxLeft = rect.left + (rect.width / 2) - (boxWidth / 2);
-        const boxTop = rect.top + (rect.height / 2) - (boxHeight / 2);
+      setShockwaveState({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+        color: themeColor
+      });
+      setTimeout(() => {
+        setShockwaveState(null);
+      }, 1200);
 
-        setCandleTargetRect({
-          top: boxTop,
-          left: boxLeft,
-          width: boxWidth,
-          height: boxHeight,
-          direction: isCall ? 'UP' : 'DOWN'
-        });
-
-        setShockwaveState({
-          x: rect.left + rect.width / 2,
-          y: rect.top + rect.height / 2,
-          color: themeColor
-        });
-
-        targetCandle.classList.add('ishak-candle-zoomed');
-        setTimeout(() => {
-          targetCandle.classList.remove('ishak-candle-zoomed');
-          setCandleTargetRect(null);
-          setShockwaveState(null);
-        }, 1300);
-      } else {
-        setShockwaveState({
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-          color: themeColor
-        });
-        setTimeout(() => {
-          setShockwaveState(null);
-        }, 1100);
-      }
-
-      // 2. NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
+      // 2. Ultra-stylish, minimalist UP/DOWN signal HUD (ZERO clutter, ZERO candle lock)
       setFlySignal(isCall ? 'UP' : 'DOWN');
       setTimeout(() => {
         setFlySignal(null);
-      }, 1800);
+      }, 2000);
 
       if (onTradeSignal) {
         onTradeSignal(signal);
@@ -800,46 +763,55 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               }}
             />
           </div>
-          {/* Sleek, Non-Cluttered Cyber Scanning Capsule (Centered, Mobile-Optimized) */}
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none max-w-[92vw] w-[330px]">
+          {/* Futuristic Cyber Scanning Capsule (Ultra-Stylish, Sleek & Minimalist) */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex items-center justify-center select-none max-w-[92vw] w-[340px]">
+            {/* Ambient Radial Cyan Aura Behind Capsule */}
+            <div className="absolute -inset-6 rounded-3xl blur-2xl pointer-events-none opacity-60 bg-gradient-to-r from-cyan-500/20 via-sky-400/25 to-emerald-400/20" />
+
             <div
-              className="w-full flex flex-col items-center bg-[#070D1E]/96 backdrop-blur-xl border border-cyan-400/40 rounded-xl px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_25px_rgba(0,229,255,0.25)]"
+              className="relative w-full flex flex-col items-center bg-[#050B1A]/95 backdrop-blur-2xl border border-cyan-400/50 rounded-2xl px-5 py-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_30px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.15)] animate-[ishakScanPulse_2.4s_infinite_ease-in-out]"
               style={{
-                background: 'linear-gradient(135deg, rgba(7,13,30,0.96) 0%, rgba(13,27,62,0.93) 100%)'
+                fontFamily: '"Orbitron", "Rajdhani", system-ui, sans-serif'
               }}
             >
-              {/* Row 1: Completely Stationary Text + Animated Sequential Dots */}
-              <div className="flex items-center justify-center gap-1.5 whitespace-nowrap mb-2 w-full">
-                <span className="relative flex h-2 w-2 mr-0.5 flex-shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+              {/* Row 1: High-Tech Radar Ring + Sleek Title */}
+              <div className="flex items-center justify-center gap-2 whitespace-nowrap mb-2 w-full">
+                {/* Holographic Radar Pulse Dot */}
+                <div className="relative w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_#00E5FF]" />
+                </div>
+
+                <span className="text-[12px] sm:text-[13px] font-bold uppercase tracking-[0.14em] text-slate-100 truncate">
+                  SCANNING MARKET BY{' '}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 font-black drop-shadow-[0_0_10px_rgba(0,229,255,0.7)]">
+                    ISHAK AI
+                  </span>
                 </span>
-                <span className="text-[11.5px] sm:text-[13px] font-black uppercase tracking-wider text-white truncate animate-[ishakTextBreathe_1.8s_ease-in-out_infinite]">
-                  SCANNING MARKET BY <span className="text-cyan-400">ISHAK AI</span>
-                </span>
-                {/* Fixed-width container for sequential dots so text NEVER shifts or wiggles */}
-                <span className="inline-block w-[30px] text-left text-cyan-400 font-mono font-bold tracking-widest text-sm flex-shrink-0">
+
+                {/* Fixed-width sequential animated dots */}
+                <span className="inline-block w-[24px] text-left text-cyan-400 font-mono font-bold tracking-widest text-sm flex-shrink-0">
                   {scanDots}
                 </span>
               </div>
 
-              {/* Row 2: THE GLOWING PROGRESS LINE - Directly below SCANNING MARKET BY ISHAK AI... filling from 0% to 100% */}
-              <div className="w-full h-1.5 bg-slate-900/90 rounded-full overflow-hidden border border-cyan-500/35 p-[0.5px] mb-2 shadow-inner">
+              {/* Row 2: Laser Energy Filament Progress Line */}
+              <div className="w-full h-1.5 bg-slate-950/90 rounded-full overflow-hidden border border-cyan-500/35 p-[0.5px] mb-2 shadow-inner relative">
                 <div
-                  className="h-full bg-gradient-to-r from-cyan-500 via-cyan-300 to-emerald-400 rounded-full transition-all duration-75 ease-out shadow-[0_0_12px_#00E5FF,0_0_4px_#00FF66]"
+                  className="h-full bg-gradient-to-r from-cyan-500 via-sky-300 to-emerald-400 rounded-full transition-all duration-75 ease-out shadow-[0_0_14px_#00E5FF,0_0_6px_#00FF66]"
                   style={{
                     width: `${Math.max(2, Math.min(100, scanProgress))}%`,
                   }}
                 />
               </div>
 
-              {/* Row 3: Clean Telemetry & 0% to 100% Progress Percentage */}
-              <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold text-gray-300">
-                <span className="text-cyan-300 flex items-center gap-1">
-                  <span className="text-emerald-400">⚡</span>
+              {/* Row 3: High-Tech Telemetry */}
+              <div className="w-full flex items-center justify-between text-[10.5px] font-mono font-bold text-slate-300">
+                <span className="text-cyan-300 flex items-center gap-1.5 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="truncate">{currentMarket} • {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`) : '5S'}</span>
                 </span>
-                <span className="text-cyan-400 font-black tracking-wider text-[11px] font-mono">
+                <span className="text-cyan-400 font-black tracking-wider text-[11px] font-mono bg-cyan-950/70 border border-cyan-500/30 px-2 py-0.5 rounded">
                   {scanProgress}%
                 </span>
               </div>
@@ -904,68 +876,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       </div>
 
-      {/* RUNNING CANDLE ANIMATED GLOW SELECTION BOX & CORNER HUD */}
-      {candleTargetRect && (
-        <div
-          id="ishak-candle-lock-box"
-          className="fixed pointer-events-none z-[999998] select-none"
-          style={{
-            top: `${candleTargetRect.top}px`,
-            left: `${candleTargetRect.left}px`,
-            width: `${candleTargetRect.width}px`,
-            height: `${candleTargetRect.height}px`,
-            animation: 'ishakCandleTargetSnap 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) forwards'
-          }}
-        >
-          {/* Glowing Border Frame */}
-          <div
-            className={`absolute inset-0 rounded-lg border-2 ${
-              candleTargetRect.direction === 'UP'
-                ? 'border-[#00FF66] shadow-[0_0_25px_rgba(0,255,102,0.85),inset_0_0_15px_rgba(0,255,102,0.3)] bg-emerald-500/10'
-                : 'border-[#FF1744] shadow-[0_0_25px_rgba(255,23,68,0.85),inset_0_0_15px_rgba(255,23,68,0.3)] bg-red-500/10'
-            }`}
-          />
-
-          {/* 4 Hi-Tech Corner Brackets */}
-          <div
-            className={`absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 ${
-              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
-            }`}
-          />
-          <div
-            className={`absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 ${
-              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
-            }`}
-          />
-          <div
-            className={`absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 ${
-              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
-            }`}
-          />
-          <div
-            className={`absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 ${
-              candleTargetRect.direction === 'UP' ? 'border-[#00FF66]' : 'border-[#FF1744]'
-            }`}
-          />
-
-          {/* Floating HUD Badge */}
-          <div
-            className={`absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full bg-[#070D1E] border text-[9px] font-black tracking-wider flex items-center gap-1 shadow-lg ${
-              candleTargetRect.direction === 'UP'
-                ? 'border-[#00FF66] text-[#00FF66] shadow-[0_0_12px_rgba(0,255,102,0.6)]'
-                : 'border-[#FF1744] text-[#FF1744] shadow-[0_0_12px_rgba(255,23,68,0.6)]'
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full animate-ping ${
-                candleTargetRect.direction === 'UP' ? 'bg-[#00FF66]' : 'bg-[#FF1744]'
-              }`}
-            />
-            <span>{candleTargetRect.direction} CANDLE LOCKED 🎯</span>
-          </div>
-        </div>
-      )}
-
       {/* Quantum Sonic Shockwave Ring */}
       {shockwaveState && (
         <div
@@ -983,62 +893,97 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         />
       )}
 
-      {/* STYLISH FLYING UP / DOWN NOTIFICATION (COMPACT HIGH-TECH CYBER CAPSULE) */}
+      {/* ULTRA-STYLED, BREATHTAKING HOLOGRAPHIC UP / DOWN SIGNAL (ZERO CLUTTER, PURE LUXURY) */}
       {flySignal && (
         <div
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[999999] select-none text-center"
           style={{
-            animation: 'ishakUpDownFly 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards',
+            animation: 'ishakSignalAppear 1.9s cubic-bezier(0.16, 1, 0.3, 1) forwards',
             fontFamily: '"Orbitron", "Rajdhani", system-ui, sans-serif'
           }}
         >
+          {/* Radiant Ambient Backlight Aura */}
           <div
-            className="relative inline-flex flex-col items-center bg-[#070D1E]/92 backdrop-blur-xl border-[1.8px] rounded-2xl px-6 py-2.5 sm:px-8 sm:py-3 shadow-2xl max-w-[260px]"
+            className="absolute -inset-10 rounded-full blur-3xl pointer-events-none opacity-80"
             style={{
-              borderColor: flySignal === 'UP' ? '#00FF66' : '#FF1744',
+              background: flySignal === 'UP'
+                ? 'radial-gradient(circle, rgba(0,255,102,0.45) 0%, rgba(0,229,255,0.2) 45%, transparent 70%)'
+                : 'radial-gradient(circle, rgba(255,23,68,0.5) 0%, rgba(255,82,82,0.2) 45%, transparent 70%)'
+            }}
+          />
+
+          {/* Futuristic Glassmorphic Capsule */}
+          <div
+            className="relative inline-flex items-center gap-4 sm:gap-6 px-7 py-3.5 sm:px-9 sm:py-4 rounded-3xl backdrop-blur-2xl transition-all"
+            style={{
+              background: 'linear-gradient(135deg, rgba(5, 11, 26, 0.95) 0%, rgba(9, 20, 48, 0.92) 100%)',
+              border: `1.5px solid ${flySignal === 'UP' ? 'rgba(0, 255, 102, 0.85)' : 'rgba(255, 23, 68, 0.85)'}`,
               boxShadow: flySignal === 'UP'
-                ? '0 0 28px rgba(0,255,102,0.65), inset 0 0 16px rgba(0,255,102,0.18)'
-                : '0 0 28px rgba(255,23,68,0.65), inset 0 0 16px rgba(255,23,68,0.18)'
+                ? '0 20px 60px rgba(0,0,0,0.85), 0 0 35px rgba(0,255,102,0.6), inset 0 0 20px rgba(0,255,102,0.2), inset 0 1px 1px rgba(255,255,255,0.3)'
+                : '0 20px 60px rgba(0,0,0,0.85), 0 0 35px rgba(255,23,68,0.6), inset 0 0 20px rgba(255,23,68,0.2), inset 0 1px 1px rgba(255,255,255,0.3)'
             }}
           >
-            {/* Top Indicator */}
-            <div className="flex items-center gap-1.5 mb-1">
-              <span
-                className="w-1.5 h-1.5 rounded-full animate-ping"
-                style={{ backgroundColor: flySignal === 'UP' ? '#00FF66' : '#FF1744' }}
-              />
-              <span
-                className="text-[9px] font-black tracking-widest uppercase opacity-90"
-                style={{ color: flySignal === 'UP' ? '#00FF66' : '#FF1744' }}
-              >
-                AI SIGNAL CONFIRMED
-              </span>
-            </div>
-
-            {/* Main Direction Text (Compact & Crisp) */}
+            {/* Animated Laser Arrow Icon with Energy Halo */}
             <div
-              className={`text-2xl sm:text-3xl font-black tracking-wider leading-none ${
-                flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
+              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center relative overflow-hidden flex-shrink-0 ${
+                flySignal === 'UP'
+                  ? 'bg-emerald-500/15 border border-emerald-400/50 shadow-[0_0_20px_rgba(0,255,102,0.5)]'
+                  : 'bg-rose-500/15 border border-rose-500/50 shadow-[0_0_20px_rgba(255,23,68,0.5)]'
               }`}
-              style={{
-                textShadow: flySignal === 'UP'
-                  ? '0 0 14px #00FF66, 0 0 28px rgba(0,255,102,0.8), 0 2px 8px rgba(0,0,0,0.9)'
-                  : '0 0 14px #FF1744, 0 0 28px rgba(255,23,68,0.8), 0 2px 8px rgba(0,0,0,0.9)'
-              }}
             >
-              {flySignal === 'UP' ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'}
+              <div
+                className={`absolute inset-0 rounded-2xl opacity-30 animate-ping ${
+                  flySignal === 'UP' ? 'bg-emerald-400' : 'bg-rose-500'
+                }`}
+              />
+              {flySignal === 'UP' ? (
+                <svg
+                  className="w-7 h-7 sm:w-8 sm:h-8 text-[#00FF66] animate-[ishakArrowBounceUp_1s_infinite_ease-in-out] drop-shadow-[0_0_10px_#00FF66]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 19V5M5 12l7-7 7 7" />
+                </svg>
+              ) : (
+                <svg
+                  className="w-7 h-7 sm:w-8 sm:h-8 text-[#FF1744] animate-[ishakArrowBounceDown_1s_infinite_ease-in-out] drop-shadow-[0_0_10px_#FF1744]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 5v14M19 12l-7 7-7-7" />
+                </svg>
+              )}
             </div>
 
-            {/* Accuracy Pill */}
-            <div
-              className="mt-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-wider"
-              style={{
-                backgroundColor: flySignal === 'UP' ? 'rgba(0,255,102,0.15)' : 'rgba(255,23,68,0.15)',
-                border: `1px solid ${flySignal === 'UP' ? '#00FF66' : '#FF1744'}`,
-                color: flySignal === 'UP' ? '#00FF66' : '#FF1744'
-              }}
-            >
-              ★ 99.4% VIP ACCURACY ★
+            {/* Pure Stylized Typography - Crisp & Uncluttered */}
+            <div className="flex flex-col items-start text-left">
+              <span
+                className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-[0.16em] leading-none ${
+                  flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
+                }`}
+                style={{
+                  textShadow: flySignal === 'UP'
+                    ? '0 0 16px #00FF66, 0 0 35px rgba(0,255,102,0.8), 0 2px 10px rgba(0,0,0,0.9)'
+                    : '0 0 16px #FF1744, 0 0 35px rgba(255,23,68,0.8), 0 2px 10px rgba(0,0,0,0.9)'
+                }}
+              >
+                {flySignal}
+              </span>
+              <span
+                className={`text-[10px] sm:text-[11px] font-bold tracking-[0.22em] uppercase mt-1 opacity-90 ${
+                  flySignal === 'UP' ? 'text-emerald-300' : 'text-rose-300'
+                }`}
+              >
+                {flySignal === 'UP' ? 'CALL SIGNAL' : 'PUT SIGNAL'}
+              </span>
             </div>
           </div>
         </div>
