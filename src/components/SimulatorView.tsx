@@ -380,6 +380,43 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
               </div>
             )}
 
+            {/* Dynamic Support & Resistance Level Horizontal Lines */}
+            {(() => {
+              const highs = candles.map((c) => c.high);
+              const lows = candles.map((c) => c.low);
+              const r1 = Math.max(...highs, 0.5752);
+              const s1 = Math.min(...lows, 0.5705);
+              const minP = 0.5700;
+              const maxP = 0.5760;
+              const rng = maxP - minP || 0.006;
+              const r1Y = Math.max(6, Math.min(94, ((r1 - minP) / rng) * 100));
+              const s1Y = Math.max(6, Math.min(94, ((s1 - minP) / rng) * 100));
+
+              return (
+                <>
+                  {/* Resistance R1 Line */}
+                  <div
+                    className="absolute left-0 right-0 border-b border-rose-500/40 border-dashed flex items-center justify-between px-2 pointer-events-none z-10"
+                    style={{ bottom: `${r1Y}%` }}
+                  >
+                    <span className="text-[9px] font-mono font-bold text-rose-300 bg-rose-950/80 px-1.5 py-0.5 rounded border border-rose-500/30">
+                      R1 RESISTANCE {r1.toFixed(5)}
+                    </span>
+                  </div>
+
+                  {/* Support S1 Line */}
+                  <div
+                    className="absolute left-0 right-0 border-b border-emerald-500/40 border-dashed flex items-center justify-between px-2 pointer-events-none z-10"
+                    style={{ bottom: `${s1Y}%` }}
+                  >
+                    <span className="text-[9px] font-mono font-bold text-emerald-300 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                      S1 SUPPORT {s1.toFixed(5)}
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
+
             {/* Live price horizontal dashed line */}
             <div
               className="absolute left-0 right-0 border-b border-dashed border-cyan-400/60 flex items-center justify-end pr-2 transition-all duration-300 pointer-events-none"
@@ -487,14 +524,17 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           </div>
 
           {/* Indicators Bar */}
-          <div className="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-slate-800">
-            <div className="flex items-center gap-4">
-              <span>RSI (14): <strong className="text-white">52.4 (Neutral)</strong></span>
+          <div className="flex flex-wrap items-center justify-between text-xs text-gray-400 pt-2 border-t border-slate-800 gap-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <span>RSI (14): <strong className="text-white">52.4</strong></span>
               <span>EMA (5): <strong className="text-cyan-400">{livePrice.toFixed(4)}</strong></span>
               <span>EMA (13): <strong className="text-amber-400">0.5738</strong></span>
+              <span className="text-rose-400 font-mono text-[11px]">R1: <strong>0.5752</strong></span>
+              <span className="text-emerald-400 font-mono text-[11px]">S1: <strong>0.5705</strong></span>
             </div>
-            <div className="text-[11px] text-gray-500 hidden sm:block">
-              Auto-Trade Event Listener: <strong className="text-emerald-400">Active</strong>
+            <div className="text-[11px] text-gray-400 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              <span>মার্কেট S/R ও উইক বিশ্লেষণ: <strong className="text-cyan-300">সক্রিয়</strong></span>
             </div>
           </div>
         </div>

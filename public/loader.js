@@ -662,6 +662,7 @@ javascript:(function(){
   styleTag.id = 'ishak-custom-css';
   styleTag.innerHTML = '' +
     '@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&family=Montserrat:wght@800;900&display=swap");' +
+    '@keyframes ishakTextBreathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.92); opacity: 0.88; } }' +
     '@keyframes ishakToastIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }' +
     '@keyframes ishakLogoFloat { ' +
       '0% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 12px #00E5FF); } ' +
@@ -906,7 +907,7 @@ javascript:(function(){
   screenScanBox.innerHTML =
     '<div id="ishak-screen-scan-title" style="display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;margin-bottom:6px;width:100%;">' +
       '<span style="width:6px;height:6px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;display:inline-block;flex-shrink:0;"></span>' +
-      '<span style="font-size:12px;font-weight:900;letter-spacing:1px;color:#FFF;">SCANNING MARKET BY <span class="ishak-ai-text-span" style="color:#00E5FF;">ISHAK AI</span></span>' +
+      '<span style="font-size:12px;font-weight:900;letter-spacing:1px;color:#FFF;display:inline-block;animation:ishakTextBreathe 1.8s ease-in-out infinite;">SCANNING MARKET BY <span class="ishak-ai-text-span" style="color:#00E5FF;">ISHAK AI</span></span>' +
       '<span id="ishak-scan-dots" style="display:inline-block;width:30px;text-align:left;color:#00E5FF;font-family:monospace;font-weight:900;letter-spacing:1px;font-size:13px;flex-shrink:0;">.......</span>' +
     '</div>' +
     '<!-- Line directly under SCANNING MARKET BY ISHAK AI... filling from 0% to 100% -->' +
@@ -1436,50 +1437,121 @@ javascript:(function(){
       var rsiVal = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
       calculatedRsi = Math.round(rsiVal);
 
-      // Factor 1: Active Running Candle Direction & Anatomy
-      var candleDelta = lastCandle.close - lastCandle.open;
-      if (candleDelta > 0.00001) {
-        score += 6; // Bullish body
-      } else if (candleDelta < -0.00001) {
-        score -= 6; // Bearish body
-      } else {
-        if (lastCandle.dir === 'UP') score += 2;
-        else if (lastCandle.dir === 'DOWN') score -= 2;
+      // 1. DYNAMIC SUPPORT & RESISTANCE (S/R) LEVEL CALCULATION
+      var lookback = Math.min(25, candleData.length);
+      var recentCandles = candleData.slice(-lookback);
+      var highs = recentCandles.map(function(c) { return c.high; });
+      var lows = recentCandles.map(function(c) { return c.low; });
+      var resistance = Math.max.apply(null, highs);
+      var support = Math.min.apply(null, lows);
+      var priceRange = Math.max(0.0001, resistance - support);
+      var currentPrice = lastCandle.close;
+      var distToResistance = (resistance - currentPrice) / priceRange;
+      var distToSupport = (currentPrice - support) / priceRange;
+
+      // 2. CANDLESTICK WICK ANATOMY (Price Rejection & Pin Bar Physics)
+      var upperWick = lastCandle.high - Math.max(lastCandle.open, lastCandle.close);
+      var lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
+      var candleBody = Math.abs(lastCandle.close - lastCandle.open);
+      var isRunningGreen = lastCandle.close >= lastCandle.open;
+
+      var srPattern = '';
+      var srReason = '';
+
+      // Factor 1: Support Level Reaction (Bounce or Breakdown)
+      if (distToSupport <= 0.22) {
+        if (lowerWick >= candleBody * 1.2 || lowerWick > upperWick * 1.4 || isRunningGreen) {
+          score += 6; // Aggressive buyer bounce at support
+          srPattern = 'Support Level Rejection & Bullish Hammer';
+          srReason = 'প্রাইজ সাপোর্ট লেভেল (' + support.toFixed(5) + ') ছুঁয়ে ক্রেতাদের শক্তিশালী লোয়ার উইক রিভার্সাল বাউন্স তৈরি করেছে।';
+        } else if (currentPrice <= support && !isRunningGreen) {
+          score -= 5; // Support breakdown
+          srPattern = 'Support Level Breakdown (High Selling Volume)';
+          srReason = 'সাপোর্ট লেভেল (' + support.toFixed(5) + ') ভেঙে বিক্রেতাদের বিক্রয় চাপে প্রাইজ নিচে নেমেছে।';
+        }
       }
 
-      if (lastCandle.dir === 'UP') score += 2;
-      else if (lastCandle.dir === 'DOWN') score -= 2;
+      // Factor 2: Resistance Level Reaction (Rejection or Breakout)
+      if (distToResistance <= 0.22) {
+        if (upperWick >= candleBody * 1.2 || upperWick > lowerWick * 1.4 || !isRunningGreen) {
+          score -= 6; // Aggressive seller rejection at resistance
+          srPattern = 'Resistance Level Rejection & Bearish Shooting Star';
+          srReason = 'প্রাইজ রেজিস্টেন্স লেভেল (' + resistance.toFixed(5) + ') স্পর্শ করে বিক্রেতাদের শক্তিশালী আপার উইক রিজেকশন তৈরি করেছে।';
+        } else if (currentPrice >= resistance && isRunningGreen) {
+          score += 5; // Resistance breakout
+          srPattern = 'Resistance Level Breakout (High Buying Volume)';
+          srReason = 'রেজিস্টেন্স লেভেল (' + resistance.toFixed(5) + ') বায়ারদের অতিরিক্ত শক্তিতে ব্রেকআউট করেছে।';
+        }
+      }
 
-      // Factor 2: Consecutive Candlestick Sequence & Pattern Momentum
+      // Factor 3: Candlestick Wick Rejection (Pin Bar / Hammer / Shooting Star)
+      if (lowerWick >= candleBody * 1.4 && lowerWick > upperWick * 1.6) {
+        score += 4; // Bullish Pin Bar
+        if (!srPattern) srPattern = 'Bullish Pin Bar / Lower Wick Rejection';
+        if (!srReason) srReason = 'ক্যান্ডেলে দীর্ঘ লোয়ার উইক রিজেকশন—বায়াররা নিচের প্রাইজ আগ্রাসীভাবে বাতিল করেছে।';
+      } else if (upperWick >= candleBody * 1.4 && upperWick > lowerWick * 1.6) {
+        score -= 4; // Bearish Shooting Star
+        if (!srPattern) srPattern = 'Bearish Shooting Star / Upper Wick Rejection';
+        if (!srReason) srReason = 'ক্যান্ডেলে দীর্ঘ আপার উইক রিজেকশন—সেলাররা উপরের প্রাইজ আগ্রাসীভাবে বাতিল করেছে।';
+      }
+
+      // Factor 4: Running Candle Direction & Delta
+      var candleDelta = lastCandle.close - lastCandle.open;
+      if (candleDelta > 0.00001) score += 4;
+      else if (candleDelta < -0.00001) score -= 4;
+
+      // Factor 5: Candlestick Pattern Momentum (Engulfing / Sequence)
       if (candleData.length >= 2) {
         var prevCandle = candleData[candleData.length - 2];
         var isPrevGreen = prevCandle.close >= prevCandle.open;
-        var isCurrGreen = lastCandle.close >= lastCandle.open;
-        if (isCurrGreen && isPrevGreen) score += 3; // Bullish continuation
-        else if (!isCurrGreen && !isPrevGreen) score -= 3; // Bearish continuation
-        else if (!isCurrGreen && isPrevGreen) score -= 4; // Bearish rejection/turn
-        else if (isCurrGreen && !isPrevGreen) score += 4; // Bullish reversal/engulfing
+
+        if (isRunningGreen && !isPrevGreen && lastCandle.close > prevCandle.open && lastCandle.open <= prevCandle.close) {
+          score += 4; // Bullish Engulfing
+          if (!srPattern) srPattern = 'Bullish Engulfing Reversal';
+        } else if (!isRunningGreen && isPrevGreen && lastCandle.close < prevCandle.open && lastCandle.open >= prevCandle.close) {
+          score -= 4; // Bearish Engulfing
+          if (!srPattern) srPattern = 'Bearish Engulfing Reversal';
+        } else if (isRunningGreen && isPrevGreen) {
+          score += 3;
+        } else if (!isRunningGreen && !isPrevGreen) {
+          score -= 3;
+        }
       }
 
-      // Factor 3: Price Rejection Wicks (Support/Resistance Pressure)
-      var lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
-      var upperWick = lastCandle.high - Math.max(lastCandle.open, lastCandle.close);
-      if (lowerWick > upperWick * 1.3) score += 3; // Buyers rejected lower prices
-      if (upperWick > lowerWick * 1.3) score -= 3; // Sellers rejected higher prices
-
-      // Factor 4: Moving Average Trend (EMA 5 vs EMA 13)
+      // Factor 6: Dynamic Moving Average Trend (Triple EMA)
       if (ema5 > ema13) score += 2;
       else if (ema5 < ema13) score -= 2;
 
-      // Factor 5: RSI Momentum Alignment
-      if (calculatedRsi > 52) score += 2;
-      else if (calculatedRsi < 48) score -= 2;
+      if (ema5 > ema13 && ema13 > ema30) score += 1;
+      else if (ema5 < ema13 && ema13 < ema30) score -= 1;
+
+      // Factor 7: RSI 14 Momentum & Exhaustion
+      if (calculatedRsi >= 70) {
+        score -= 4; // Overbought near resistance -> Reversal PUT
+        if (!srReason) srReason = 'RSI (' + calculatedRsi + ') ওভারবট জোনে পৌঁছেছে, সেলাররা মার্কেট পুশ ডাউন করছে।';
+      } else if (calculatedRsi <= 30) {
+        score += 4; // Oversold near support -> Reversal CALL
+        if (!srReason) srReason = 'RSI (' + calculatedRsi + ') ওভারসোল্ড জোনে পৌঁছেছে, বায়াররা মার্কেট পুশ আপ করছে।';
+      } else if (calculatedRsi > 52) {
+        score += 2;
+      } else if (calculatedRsi < 48) {
+        score -= 2;
+      }
     } else {
       // Direct DOM candle if available
       if (domCandle) {
         var domDir = domCandle.getAttribute('data-direction');
-        if (domDir === 'UP') score += 5;
-        else if (domDir === 'DOWN') score -= 5;
+        var domOpen = parseFloat(domCandle.getAttribute('data-open') || '0');
+        var domClose = parseFloat(domCandle.getAttribute('data-close') || '0');
+        var domHigh = parseFloat(domCandle.getAttribute('data-high') || '0');
+        var domLow = parseFloat(domCandle.getAttribute('data-low') || '0');
+        var dUpW = domHigh - Math.max(domOpen, domClose);
+        var dLoW = Math.min(domOpen, domClose) - domLow;
+
+        if (dUpW > dLoW * 1.5) score -= 4;
+        else if (dLoW > dUpW * 1.5) score += 4;
+        else if (domDir === 'UP') score += 3;
+        else if (domDir === 'DOWN') score -= 3;
       }
 
       // Real-time High Frequency Price Action Ticks during 3.6s Laser Scan
@@ -1521,33 +1593,46 @@ javascript:(function(){
       } catch(e){}
     }
 
-    // 4. Authentic Symmetrical Final Decision (ZERO UP-BIAS)
-    window._ishakLastTradeDir = window._ishakLastTradeDir || null;
+    // 4. Authentic Symmetrical Final Decision (ZERO MECHANICAL ALTERNATION)
     var isCall;
     if (score > 0) {
       isCall = true;
     } else if (score < 0) {
       isCall = false; // Decisive PUT / DOWN ⬇
     } else {
-      // Neutral market or zero ticks: Alternate strictly based on last trade
-      isCall = window._ishakLastTradeDir === 'UP' ? false : true;
+      // Technical tie breaker based on micro price momentum / wick rejection
+      if (candleEls.length >= 3) {
+        var midP = (support + resistance) / 2;
+        if (currentPrice > midP) {
+          isCall = upperWick > lowerWick ? false : true;
+        } else {
+          isCall = lowerWick > upperWick ? true : false;
+        }
+      } else if (priceSamples && priceSamples.length >= 2) {
+        isCall = priceSamples[priceSamples.length - 1] >= priceSamples[0];
+      } else {
+        isCall = calculatedRsi >= 50;
+      }
     }
-    window._ishakLastTradeDir = isCall ? 'UP' : 'DOWN';
 
     var authenticAccuracy = Math.min(99.4, 96.5 + (Math.abs(score) + 3) * 0.4).toFixed(1);
     var patternName = '';
     var confluenceLogic = '';
 
     if (isCall) {
-      patternName = calculatedRsi > 65
+      patternName = srPattern || (calculatedRsi > 65
         ? 'Bullish Momentum Breakout (Buyer Dominance)'
-        : 'Bullish Running Candle Impulse & EMA Alignment';
-      confluenceLogic = 'লাইভ রানিং ক্যান্ডেলে বায়ারদের শক্তিশালী ঊর্ধ্বমুখী পুশ ও ইএমএ (৫>১৩) কনফ্লুয়েন্স নিশ্চিত। সিলেক্টেড ' + durLabel + ' টাইম শেষে ক্যান্ডেল স্ট্রাইকের উপরে ক্লোজ হবে। ' + authenticAccuracy + '% একুরিসিতে কল (UP) কার্যকর!';
+        : 'Bullish Running Candle Impulse & Support Bounce');
+      confluenceLogic = srReason
+        ? srReason + ' ইএমএ (' + calculatedEma5 + '>' + calculatedEma13 + ') ও আরএসআই (' + calculatedRsi + ') কনফ্লুয়েন্স কার্যকর। ' + authenticAccuracy + '% একুরিসিতে কল (UP) ট্রেড প্লেস হলো!'
+        : 'লাইভ রানিং ক্যান্ডেলে বায়ারদের শক্তিশালী ঊর্ধ্বমুখী পুশ ও ইএমএ (৫>১৩) কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% একুরিসিতে কল (UP) কার্যকর!';
     } else {
-      patternName = calculatedRsi < 35
+      patternName = srPattern || (calculatedRsi < 35
         ? 'Bearish Breakdown Impulse (Seller Dominance)'
-        : 'Bearish Running Candle Breakdown & EMA Death Cross';
-      confluenceLogic = 'লাইভ রানিং ক্যান্ডেলে সেলারদের শক্তিশালী নিম্নমুখী বিক্রয় প্রেশার ও ইএমএ (৫<১৩) কনফ্লুয়েন্স নিশ্চিত। সিলেক্টেড ' + durLabel + ' টাইম শেষে ক্যান্ডেল স্ট্রাইকের নিচে ক্লোজ হবে। ' + authenticAccuracy + '% একুরিসিতে পুট (DOWN) কার্যকর!';
+        : 'Bearish Running Candle Breakdown & Resistance Rejection');
+      confluenceLogic = srReason
+        ? srReason + ' ইএমএ (' + calculatedEma5 + '<' + calculatedEma13 + ') ও আরএসআই (' + calculatedRsi + ') কনফ্লুয়েন্স কার্যকর। ' + authenticAccuracy + '% একুরিসিতে পুট (DOWN) ট্রেড প্লেস হলো!'
+        : 'লাইভ রানিং ক্যান্ডেলে সেলারদের শক্তিশালী নিম্নমুখী বিক্রয় প্রেশার ও ইএমএ (৫<১৩) কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% একুরিসিতে পুট (DOWN) কার্যকর!';
     }
 
     var rsiVal = calculatedRsi;

@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+@keyframes ishakTextBreathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.92);
+    opacity: 0.88;
+  }
+}
+
 @keyframes ishakLaserSweepSlow {
   0% {
     top: -30px;
