@@ -187,12 +187,17 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           });
         }
 
-        // Idle market tick: harmonic dual-wave with mean reversion producing balanced UP (bullish) and DOWN (bearish) cycles
+        // Idle market tick: harmonic dual-wave with alternating macro-trend cycles (Uptrend & Downtrend)
         const t = tickCountRef.current;
         setLivePrice((prev) => {
+          // Macro trend cycle (shifts between bullish impulse and bearish drop every ~40 ticks / 10s)
+          const trendCycle = Math.sin(t * 0.08) * 0.00018;
+          // Micro tick fluctuations generating realistic wicks and volume pressure
+          const microTick = Math.sin(t * 0.28) * 0.00009 + Math.cos(t * 0.44) * 0.00006;
+          // Soft mean-reversion around mid-level 0.5730 to stay strictly bounded
           const meanReversion = (0.5730 - prev) * 0.035;
-          const waveDelta = Math.sin(t * 0.20) * 0.00014 + Math.cos(t * 0.35) * 0.00009 + meanReversion;
-          const next = parseFloat(Math.max(0.5690, Math.min(0.5780, prev + waveDelta)).toFixed(5));
+          const waveDelta = trendCycle + microTick + meanReversion;
+          const next = parseFloat(Math.max(0.5692, Math.min(0.5778, prev + waveDelta)).toFixed(5));
           setCandles((prevCandles) => {
             if (prevCandles.length === 0) return prevCandles;
             const updated = [...prevCandles];
@@ -524,19 +529,68 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           </div>
 
           {/* Indicators Bar */}
-          <div className="flex flex-wrap items-center justify-between text-xs text-gray-400 pt-2 border-t border-slate-800 gap-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <span>RSI (14): <strong className="text-white">52.4</strong></span>
-              <span>EMA (5): <strong className="text-cyan-400">{livePrice.toFixed(4)}</strong></span>
-              <span>EMA (13): <strong className="text-amber-400">0.5738</strong></span>
-              <span className="text-rose-400 font-mono text-[11px]">R1: <strong>0.5752</strong></span>
-              <span className="text-emerald-400 font-mono text-[11px]">S1: <strong>0.5705</strong></span>
-            </div>
-            <div className="text-[11px] text-gray-400 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              <span>মার্কেট S/R ও উইক বিশ্লেষণ: <strong className="text-cyan-300">সক্রিয়</strong></span>
-            </div>
-          </div>
+          {(() => {
+            const closes = candles.map(c => c.close);
+            const lastCandle = candles[candles.length - 1];
+            const isCandleGreen = lastCandle ? lastCandle.close >= lastCandle.open : true;
+
+            // Live EMA(5) & EMA(13)
+            const calcEMA = (data: number[], period: number) => {
+              if (data.length < period) return data[data.length - 1] || 0.573;
+              const k = 2 / (period + 1);
+              let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+              for (let i = period; i < data.length; i++) {
+                ema = data[i] * k + ema * (1 - k);
+              }
+              return ema;
+            };
+            const liveEma5 = calcEMA(closes, 5);
+            const liveEma13 = calcEMA(closes, 13);
+
+            // Live RSI(14)
+            let gains = 0, losses = 0;
+            const rsiP = Math.min(14, closes.length - 1);
+            for (let i = closes.length - rsiP; i < closes.length; i++) {
+              const diff = closes[i] - closes[i - 1];
+              if (diff > 0) gains += diff;
+              else losses += Math.abs(diff);
+            }
+            const avgG = gains / (rsiP || 1);
+            const avgL = losses / (rsiP || 1);
+            const rs = avgL === 0 ? 100 : avgG / avgL;
+            const liveRsi = Math.round(avgL === 0 ? 100 : 100 - (100 / (1 + rs)));
+
+            const highs = candles.map(c => c.high);
+            const lows = candles.map(c => c.low);
+            const r1 = Math.max(...highs, 0.5752);
+            const s1 = Math.min(...lows, 0.5705);
+
+            return (
+              <div className="flex flex-wrap items-center justify-between text-xs text-gray-400 pt-2 border-t border-slate-800 gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span>
+                    RSI (14):{' '}
+                    <strong className={liveRsi >= 65 ? 'text-rose-400' : liveRsi <= 35 ? 'text-emerald-400' : 'text-cyan-300'}>
+                      {liveRsi} {liveRsi >= 65 ? '(Overbought)' : liveRsi <= 35 ? '(Oversold)' : ''}
+                    </strong>
+                  </span>
+                  <span>EMA (5): <strong className="text-cyan-400">{liveEma5.toFixed(4)}</strong></span>
+                  <span>EMA (13): <strong className="text-amber-400">{liveEma13.toFixed(4)}</strong></span>
+                  <span className="text-rose-400 font-mono text-[11px]">R1: <strong>{r1.toFixed(4)}</strong></span>
+                  <span className="text-emerald-400 font-mono text-[11px]">S1: <strong>{s1.toFixed(4)}</strong></span>
+                </div>
+                <div className="text-[11px] flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${isCandleGreen ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'}`} />
+                  <span className="text-gray-300">
+                    মার্কেট কন্ডিশন:{' '}
+                    <strong className={isCandleGreen ? 'text-emerald-400' : 'text-rose-400'}>
+                      {isCandleGreen ? 'BULLISH (UP প্রেসার ↗)' : 'BEARISH (DOWN প্রেসার ↘)'}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Trade Control Panel (1 Col on lg) */}

@@ -1454,87 +1454,89 @@ javascript:(function(){
       var lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
       var candleBody = Math.abs(lastCandle.close - lastCandle.open);
       var isRunningGreen = lastCandle.close >= lastCandle.open;
+      var candleDelta = lastCandle.close - lastCandle.open;
 
       var srPattern = '';
       var srReason = '';
 
-      // Factor 1: Support Level Reaction (Bounce or Breakdown)
-      if (distToSupport <= 0.22) {
-        if (lowerWick >= candleBody * 1.2 || lowerWick > upperWick * 1.4 || isRunningGreen) {
-          score += 6; // Aggressive buyer bounce at support
-          srPattern = 'Support Level Rejection & Bullish Hammer';
-          srReason = 'প্রাইজ সাপোর্ট লেভেল (' + support.toFixed(5) + ') ছুঁয়ে ক্রেতাদের শক্তিশালী লোয়ার উইক রিভার্সাল বাউন্স তৈরি করেছে।';
-        } else if (currentPrice <= support && !isRunningGreen) {
-          score -= 5; // Support breakdown
-          srPattern = 'Support Level Breakdown (High Selling Volume)';
+      // Factor 1: Running Candle Body Direction & Direct Momentum (Crucial binary factor)
+      if (candleDelta > 0.00001) {
+        score += 7; // Strong bullish green push
+      } else if (candleDelta < -0.00001) {
+        score -= 7; // Strong bearish red push (PUT)
+      }
+
+      // Factor 2: Candlestick Wick Rejection & Pin Bar Physics
+      if (upperWick > lowerWick * 1.3 && upperWick >= candleBody * 0.6) {
+        score -= 5; // Upper wick rejection -> Bearish Shooting Star (PUT)
+        srPattern = 'Bearish Shooting Star & Upper Wick Rejection';
+        srReason = 'ক্যান্ডেলে তীব্র আপার উইক রিজেকশন—সেলাররা প্রাইজ আগ্রাসীভাবে নিচে নামিয়ে দিয়েছে।';
+      } else if (lowerWick > upperWick * 1.3 && lowerWick >= candleBody * 0.6) {
+        score += 5; // Lower wick rejection -> Bullish Hammer (CALL)
+        srPattern = 'Bullish Hammer & Lower Wick Bounce';
+        srReason = 'ক্যান্ডেলে শক্তিশালী লোয়ার উইক রিজেকশন—বায়াররা প্রাইজ নিচ থেকে পুশ আপ করেছে।';
+      }
+
+      // Factor 3: Dynamic Support & Resistance Level Zones
+      if (distToResistance <= 0.22) {
+        // Approaching or touching Resistance
+        if (upperWick > lowerWick || !isRunningGreen || calculatedRsi >= 62) {
+          score -= 7; // Resistance Rejection (Bearish Reversal -> PUT)
+          srPattern = 'Resistance Level Rejection (Bearish Reversal)';
+          srReason = 'প্রাইজ শক্তিশালী রেজিস্টেন্স লেভেল (' + resistance.toFixed(5) + ') স্পর্শ করে সেলারদের বিক্রয় চাপে রিভার্সাল হয়েছে।';
+        } else if (currentPrice >= resistance && isRunningGreen && upperWick < candleBody * 0.25) {
+          score += 4; // Clear resistance breakout
+          srPattern = 'Resistance Level Breakout (High Volume)';
+          srReason = 'রেজিস্টেন্স লেভেল (' + resistance.toFixed(5) + ') বায়ারদের অতিরিক্ত ভলিউমে ব্রেকআউট করেছে।';
+        }
+      } else if (distToSupport <= 0.22) {
+        // Approaching or touching Support
+        if (lowerWick > upperWick || isRunningGreen || calculatedRsi <= 38) {
+          score += 7; // Support Bounce (Bullish Reversal -> CALL)
+          srPattern = 'Support Level Rejection & Bullish Bounce';
+          srReason = 'প্রাইজ শক্তিশালী সাপোর্ট লেভেল (' + support.toFixed(5) + ') স্পর্শ করে ক্রেতাদের বাউন্স তৈরি করেছে।';
+        } else if (currentPrice <= support && !isRunningGreen && lowerWick < candleBody * 0.25) {
+          score -= 4; // Support breakdown
+          srPattern = 'Support Level Breakdown (High Volume)';
           srReason = 'সাপোর্ট লেভেল (' + support.toFixed(5) + ') ভেঙে বিক্রেতাদের বিক্রয় চাপে প্রাইজ নিচে নেমেছে।';
         }
       }
 
-      // Factor 2: Resistance Level Reaction (Rejection or Breakout)
-      if (distToResistance <= 0.22) {
-        if (upperWick >= candleBody * 1.2 || upperWick > lowerWick * 1.4 || !isRunningGreen) {
-          score -= 6; // Aggressive seller rejection at resistance
-          srPattern = 'Resistance Level Rejection & Bearish Shooting Star';
-          srReason = 'প্রাইজ রেজিস্টেন্স লেভেল (' + resistance.toFixed(5) + ') স্পর্শ করে বিক্রেতাদের শক্তিশালী আপার উইক রিজেকশন তৈরি করেছে।';
-        } else if (currentPrice >= resistance && isRunningGreen) {
-          score += 5; // Resistance breakout
-          srPattern = 'Resistance Level Breakout (High Buying Volume)';
-          srReason = 'রেজিস্টেন্স লেভেল (' + resistance.toFixed(5) + ') বায়ারদের অতিরিক্ত শক্তিতে ব্রেকআউট করেছে।';
-        }
-      }
-
-      // Factor 3: Candlestick Wick Rejection (Pin Bar / Hammer / Shooting Star)
-      if (lowerWick >= candleBody * 1.4 && lowerWick > upperWick * 1.6) {
-        score += 4; // Bullish Pin Bar
-        if (!srPattern) srPattern = 'Bullish Pin Bar / Lower Wick Rejection';
-        if (!srReason) srReason = 'ক্যান্ডেলে দীর্ঘ লোয়ার উইক রিজেকশন—বায়াররা নিচের প্রাইজ আগ্রাসীভাবে বাতিল করেছে।';
-      } else if (upperWick >= candleBody * 1.4 && upperWick > lowerWick * 1.6) {
-        score -= 4; // Bearish Shooting Star
-        if (!srPattern) srPattern = 'Bearish Shooting Star / Upper Wick Rejection';
-        if (!srReason) srReason = 'ক্যান্ডেলে দীর্ঘ আপার উইক রিজেকশন—সেলাররা উপরের প্রাইজ আগ্রাসীভাবে বাতিল করেছে।';
-      }
-
-      // Factor 4: Running Candle Direction & Delta
-      var candleDelta = lastCandle.close - lastCandle.open;
-      if (candleDelta > 0.00001) score += 4;
-      else if (candleDelta < -0.00001) score -= 4;
-
-      // Factor 5: Candlestick Pattern Momentum (Engulfing / Sequence)
+      // Factor 4: Candlestick Pattern Momentum (Engulfing / Sequence)
       if (candleData.length >= 2) {
         var prevCandle = candleData[candleData.length - 2];
         var isPrevGreen = prevCandle.close >= prevCandle.open;
 
-        if (isRunningGreen && !isPrevGreen && lastCandle.close > prevCandle.open && lastCandle.open <= prevCandle.close) {
-          score += 4; // Bullish Engulfing
+        if (isRunningGreen && !isPrevGreen && lastCandle.close > prevCandle.open) {
+          score += 5; // Bullish Engulfing
           if (!srPattern) srPattern = 'Bullish Engulfing Reversal';
-        } else if (!isRunningGreen && isPrevGreen && lastCandle.close < prevCandle.open && lastCandle.open >= prevCandle.close) {
-          score -= 4; // Bearish Engulfing
+        } else if (!isRunningGreen && isPrevGreen && lastCandle.close < prevCandle.open) {
+          score -= 5; // Bearish Engulfing (PUT)
           if (!srPattern) srPattern = 'Bearish Engulfing Reversal';
         } else if (isRunningGreen && isPrevGreen) {
-          score += 3;
+          score += 4; // Bullish continuation
         } else if (!isRunningGreen && !isPrevGreen) {
-          score -= 3;
+          score -= 4; // Bearish continuation (PUT)
         }
       }
 
-      // Factor 6: Dynamic Moving Average Trend (Triple EMA)
-      if (ema5 > ema13) score += 2;
-      else if (ema5 < ema13) score -= 2;
+      // Factor 5: Dynamic Moving Average Trend (Triple EMA)
+      if (ema5 > ema13) score += 3;
+      else if (ema5 < ema13) score -= 3;
 
       if (ema5 > ema13 && ema13 > ema30) score += 1;
       else if (ema5 < ema13 && ema13 < ema30) score -= 1;
 
-      // Factor 7: RSI 14 Momentum & Exhaustion
+      // Factor 6: RSI 14 Momentum & Exhaustion
       if (calculatedRsi >= 70) {
-        score -= 4; // Overbought near resistance -> Reversal PUT
+        score -= 5; // Overbought near resistance -> Reversal PUT
         if (!srReason) srReason = 'RSI (' + calculatedRsi + ') ওভারবট জোনে পৌঁছেছে, সেলাররা মার্কেট পুশ ডাউন করছে।';
       } else if (calculatedRsi <= 30) {
-        score += 4; // Oversold near support -> Reversal CALL
+        score += 5; // Oversold near support -> Reversal CALL
         if (!srReason) srReason = 'RSI (' + calculatedRsi + ') ওভারসোল্ড জোনে পৌঁছেছে, বায়াররা মার্কেট পুশ আপ করছে।';
-      } else if (calculatedRsi > 52) {
+      } else if (calculatedRsi > 54) {
         score += 2;
-      } else if (calculatedRsi < 48) {
+      } else if (calculatedRsi < 46) {
         score -= 2;
       }
     } else {
@@ -1548,10 +1550,10 @@ javascript:(function(){
         var dUpW = domHigh - Math.max(domOpen, domClose);
         var dLoW = Math.min(domOpen, domClose) - domLow;
 
-        if (dUpW > dLoW * 1.5) score -= 4;
-        else if (dLoW > dUpW * 1.5) score += 4;
-        else if (domDir === 'UP') score += 3;
-        else if (domDir === 'DOWN') score -= 3;
+        if (dUpW > dLoW * 1.3 && dUpW >= Math.abs(domClose - domOpen) * 0.6) score -= 5;
+        else if (dLoW > dUpW * 1.3 && dLoW >= Math.abs(domClose - domOpen) * 0.6) score += 5;
+        else if (domClose < domOpen || domDir === 'DOWN') score -= 5;
+        else if (domClose > domOpen || domDir === 'UP') score += 5;
       }
 
       // Real-time High Frequency Price Action Ticks during 3.6s Laser Scan
@@ -1593,7 +1595,7 @@ javascript:(function(){
       } catch(e){}
     }
 
-    // 4. Authentic Symmetrical Final Decision (ZERO MECHANICAL ALTERNATION)
+    // 4. Authentic Symmetrical Final Decision (ZERO MECHANICAL ALTERNATION & ZERO UP-BIAS)
     var isCall;
     if (score > 0) {
       isCall = true;
@@ -1601,17 +1603,23 @@ javascript:(function(){
       isCall = false; // Decisive PUT / DOWN ⬇
     } else {
       // Technical tie breaker based on micro price momentum / wick rejection
-      if (candleEls.length >= 3) {
-        var midP = (support + resistance) / 2;
-        if (currentPrice > midP) {
-          isCall = upperWick > lowerWick ? false : true;
+      if (candleEls.length >= 3 && lastCandle) {
+        var cDelta = lastCandle.close - lastCandle.open;
+        if (cDelta > 0.00001) {
+          isCall = true;
+        } else if (cDelta < -0.00001) {
+          isCall = false;
         } else {
-          isCall = lowerWick > upperWick ? true : false;
+          var midP = (support + resistance) / 2;
+          isCall = currentPrice < midP;
         }
       } else if (priceSamples && priceSamples.length >= 2) {
-        isCall = priceSamples[priceSamples.length - 1] >= priceSamples[0];
+        var pDiff = priceSamples[priceSamples.length - 1] - priceSamples[0];
+        if (pDiff > 0.00001) isCall = true;
+        else if (pDiff < -0.00001) isCall = false;
+        else isCall = Math.random() > 0.5;
       } else {
-        isCall = calculatedRsi >= 50;
+        isCall = Math.random() > 0.5;
       }
     }
 
