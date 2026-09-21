@@ -243,4 +243,17 @@
   100% { transform: scale(0.92); opacity: 0.3; }
 }
 
+@keyframes ishakAnalyzingPulse {
+  0%, 100% {
+    opacity: 0.28;
+    filter: drop-shadow(0 0 4px rgba(0,229,255,0.4));
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 16px rgba(0,229,255,0.95)) drop-shadow(0 0 28px rgba(0,255,102,0.7));
+    transform: scale(1.03);
+  }
+}
+
 

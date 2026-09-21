@@ -19,10 +19,10 @@ function getAudioContext(): AudioContext | null {
 }
 
 /**
- * Replicates a photostat/photocopier carriage scanner:
- * - Mechanical motor hum
- * - Optical stepper carriage gear sweep (Downwards -> Upwards -> Settle)
- * - Optical sensor hum with pulse clicks
+ * Soft Futuristic Laser Scanner Sound Synthesizer:
+ * - Smooth, gentle optical laser frequency sweep
+ * - Soft sub-harmonic ambient glow
+ * - ZERO mechanical ticks or 'put-put' click noises
  */
 export function playPhotostatScannerSound(): void {
   try {
@@ -31,70 +31,53 @@ export function playPhotostatScannerSound(): void {
     const t = ctx.currentTime;
     const totalDuration = 3.6; // 3.6s matching the laser animation
 
-    // 1. Photostat Stepper Motor (Low mechanical buzz)
-    const motorOsc = ctx.createOscillator();
-    const motorGain = ctx.createGain();
-    const motorFilter = ctx.createBiquadFilter();
+    // 1. Primary Soft Laser Sweeper (Pure sine wave, smoothly sweeping optical frequency)
+    const laserOsc = ctx.createOscillator();
+    const laserGain = ctx.createGain();
+    const laserFilter = ctx.createBiquadFilter();
 
-    motorOsc.type = 'sawtooth';
-    motorFilter.type = 'bandpass';
-    motorFilter.frequency.setValueAtTime(140, t);
-    motorFilter.Q.setValueAtTime(3.5, t);
+    laserOsc.type = 'sine';
+    laserFilter.type = 'lowpass';
+    laserFilter.frequency.setValueAtTime(650, t);
+    laserFilter.Q.setValueAtTime(1.8, t);
 
-    // Motor sweeps down then up like a photocopier lamp carriage
-    motorOsc.frequency.setValueAtTime(120, t);
-    motorOsc.frequency.linearRampToValueAtTime(185, t + 1.6); // Carriage down
-    motorOsc.frequency.linearRampToValueAtTime(220, t + 3.0); // Carriage back up
-    motorOsc.frequency.linearRampToValueAtTime(110, t + totalDuration); // Settle
+    // Laser frequency smoothly glides down then returns like an optical beam sweep
+    laserOsc.frequency.setValueAtTime(260, t);
+    laserOsc.frequency.exponentialRampToValueAtTime(390, t + 1.8);
+    laserOsc.frequency.exponentialRampToValueAtTime(280, t + 3.2);
+    laserOsc.frequency.exponentialRampToValueAtTime(220, t + totalDuration);
 
-    motorGain.gain.setValueAtTime(0.01, t);
-    motorGain.gain.linearRampToValueAtTime(0.09, t + 0.15);
-    motorGain.gain.setValueAtTime(0.09, t + totalDuration - 0.2);
-    motorGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
+    // Gentle, soft gain envelope (no sudden spikes, no clicks)
+    laserGain.gain.setValueAtTime(0.0001, t);
+    laserGain.gain.linearRampToValueAtTime(0.045, t + 0.3);
+    laserGain.gain.setValueAtTime(0.045, t + totalDuration - 0.4);
+    laserGain.gain.linearRampToValueAtTime(0.0001, t + totalDuration);
 
-    motorOsc.connect(motorFilter);
-    motorFilter.connect(motorGain);
-    motorGain.connect(ctx.destination);
+    laserOsc.connect(laserFilter);
+    laserFilter.connect(laserGain);
+    laserGain.connect(ctx.destination);
 
-    motorOsc.start(t);
-    motorOsc.stop(t + totalDuration);
+    laserOsc.start(t);
+    laserOsc.stop(t + totalDuration);
 
-    // 2. Optical Lamp Hum (High-voltage xenon / LED tube hum)
-    const lampOsc = ctx.createOscillator();
-    const lampGain = ctx.createGain();
-    lampOsc.type = 'sine';
-    lampOsc.frequency.setValueAtTime(440, t);
-    lampOsc.frequency.linearRampToValueAtTime(520, t + 1.6);
-    lampOsc.frequency.linearRampToValueAtTime(460, t + 3.0);
+    // 2. Soft Ambient Resonance Layer (Warm, subtle undertone)
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(160, t);
+    subOsc.frequency.linearRampToValueAtTime(195, t + 1.8);
+    subOsc.frequency.linearRampToValueAtTime(150, t + totalDuration);
 
-    lampGain.gain.setValueAtTime(0.001, t);
-    lampGain.gain.linearRampToValueAtTime(0.05, t + 0.2);
-    lampGain.gain.linearRampToValueAtTime(0.05, t + totalDuration - 0.3);
-    lampGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
+    subGain.gain.setValueAtTime(0.0001, t);
+    subGain.gain.linearRampToValueAtTime(0.025, t + 0.4);
+    subGain.gain.setValueAtTime(0.025, t + totalDuration - 0.3);
+    subGain.gain.linearRampToValueAtTime(0.0001, t + totalDuration);
 
-    lampOsc.connect(lampGain);
-    lampGain.connect(ctx.destination);
-    lampOsc.start(t);
-    lampOsc.stop(t + totalDuration);
+    subOsc.connect(subGain);
+    subGain.connect(ctx.destination);
 
-    // 3. Photocopier Carriage Gear Ticks (Rhythmic pulse clicks as carriage moves)
-    const tickTimes = [0.2, 0.5, 0.8, 1.1, 1.4, 1.7, 2.0, 2.3, 2.6, 2.9, 3.2];
-    tickTimes.forEach((d, idx) => {
-      const clickOsc = ctx.createOscillator();
-      const clickGain = ctx.createGain();
-      clickOsc.type = 'triangle';
-      const freq = idx < 5 ? 750 + idx * 30 : 900 - (idx - 5) * 35;
-      clickOsc.frequency.setValueAtTime(freq, t + d);
-
-      clickGain.gain.setValueAtTime(0.06, t + d);
-      clickGain.gain.exponentialRampToValueAtTime(0.001, t + d + 0.05);
-
-      clickOsc.connect(clickGain);
-      clickGain.connect(ctx.destination);
-
-      clickOsc.start(t + d);
-      clickOsc.stop(t + d + 0.06);
-    });
+    subOsc.start(t);
+    subOsc.stop(t + totalDuration);
   } catch (e) {
     console.warn('Audio playback error', e);
   }
