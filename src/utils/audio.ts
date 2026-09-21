@@ -19,9 +19,9 @@ function getAudioContext(): AudioContext | null {
 }
 
 /**
- * Soft Futuristic Laser Scanner Sound Synthesizer:
- * - Smooth, gentle optical laser frequency sweep
- * - Soft sub-harmonic ambient glow
+ * Futuristic Laser Scanner Sound Synthesizer:
+ * - High-impact, powerful and loud optical laser frequency sweep
+ * - Deep sub-harmonic resonance & airy laser harmonics
  * - ZERO mechanical ticks or 'put-put' click noises
  */
 export function playPhotostatScannerSound(): void {
@@ -31,53 +31,81 @@ export function playPhotostatScannerSound(): void {
     const t = ctx.currentTime;
     const totalDuration = 3.6; // 3.6s matching the laser animation
 
-    // 1. Primary Soft Laser Sweeper (Pure sine wave, smoothly sweeping optical frequency)
+    // Master Limiter / Compressor to allow rich, loud audio without digital clipping
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-12, t);
+    compressor.knee.setValueAtTime(8, t);
+    compressor.ratio.setValueAtTime(4, t);
+    compressor.attack.setValueAtTime(0.005, t);
+    compressor.release.setValueAtTime(0.15, t);
+    compressor.connect(ctx.destination);
+
+    // 1. Primary Powerful Laser Sweeper
     const laserOsc = ctx.createOscillator();
     const laserGain = ctx.createGain();
     const laserFilter = ctx.createBiquadFilter();
 
     laserOsc.type = 'sine';
     laserFilter.type = 'lowpass';
-    laserFilter.frequency.setValueAtTime(650, t);
-    laserFilter.Q.setValueAtTime(1.8, t);
+    laserFilter.frequency.setValueAtTime(850, t);
+    laserFilter.Q.setValueAtTime(2.2, t);
 
-    // Laser frequency smoothly glides down then returns like an optical beam sweep
-    laserOsc.frequency.setValueAtTime(260, t);
-    laserOsc.frequency.exponentialRampToValueAtTime(390, t + 1.8);
-    laserOsc.frequency.exponentialRampToValueAtTime(280, t + 3.2);
-    laserOsc.frequency.exponentialRampToValueAtTime(220, t + totalDuration);
+    // Laser frequency sweep
+    laserOsc.frequency.setValueAtTime(280, t);
+    laserOsc.frequency.exponentialRampToValueAtTime(440, t + 1.8);
+    laserOsc.frequency.exponentialRampToValueAtTime(320, t + 3.2);
+    laserOsc.frequency.exponentialRampToValueAtTime(240, t + totalDuration);
 
-    // Gentle, soft gain envelope (no sudden spikes, no clicks)
-    laserGain.gain.setValueAtTime(0.0001, t);
-    laserGain.gain.linearRampToValueAtTime(0.045, t + 0.3);
-    laserGain.gain.setValueAtTime(0.045, t + totalDuration - 0.4);
-    laserGain.gain.linearRampToValueAtTime(0.0001, t + totalDuration);
+    // Strong, loud gain envelope (Noticeably louder as requested)
+    laserGain.gain.setValueAtTime(0.001, t);
+    laserGain.gain.linearRampToValueAtTime(0.26, t + 0.25);
+    laserGain.gain.setValueAtTime(0.26, t + totalDuration - 0.35);
+    laserGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
 
     laserOsc.connect(laserFilter);
     laserFilter.connect(laserGain);
-    laserGain.connect(ctx.destination);
+    laserGain.connect(compressor);
 
     laserOsc.start(t);
     laserOsc.stop(t + totalDuration);
 
-    // 2. Soft Ambient Resonance Layer (Warm, subtle undertone)
+    // 2. Sub Ambient Resonance Layer (Deep power undertone)
     const subOsc = ctx.createOscillator();
     const subGain = ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(160, t);
-    subOsc.frequency.linearRampToValueAtTime(195, t + 1.8);
-    subOsc.frequency.linearRampToValueAtTime(150, t + totalDuration);
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(140, t);
+    subOsc.frequency.linearRampToValueAtTime(185, t + 1.8);
+    subOsc.frequency.linearRampToValueAtTime(130, t + totalDuration);
 
-    subGain.gain.setValueAtTime(0.0001, t);
-    subGain.gain.linearRampToValueAtTime(0.025, t + 0.4);
-    subGain.gain.setValueAtTime(0.025, t + totalDuration - 0.3);
-    subGain.gain.linearRampToValueAtTime(0.0001, t + totalDuration);
+    subGain.gain.setValueAtTime(0.001, t);
+    subGain.gain.linearRampToValueAtTime(0.15, t + 0.3);
+    subGain.gain.setValueAtTime(0.15, t + totalDuration - 0.25);
+    subGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
 
     subOsc.connect(subGain);
-    subGain.connect(ctx.destination);
+    subGain.connect(compressor);
 
     subOsc.start(t);
     subOsc.stop(t + totalDuration);
+
+    // 3. Cyber Harmonic Sheen Layer (High optical shimmer)
+    const shimmerOsc = ctx.createOscillator();
+    const shimmerGain = ctx.createGain();
+    shimmerOsc.type = 'sine';
+    shimmerOsc.frequency.setValueAtTime(560, t);
+    shimmerOsc.frequency.exponentialRampToValueAtTime(880, t + 1.8);
+    shimmerOsc.frequency.exponentialRampToValueAtTime(480, t + totalDuration);
+
+    shimmerGain.gain.setValueAtTime(0.001, t);
+    shimmerGain.gain.linearRampToValueAtTime(0.08, t + 0.35);
+    shimmerGain.gain.setValueAtTime(0.08, t + totalDuration - 0.35);
+    shimmerGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
+
+    shimmerOsc.connect(shimmerGain);
+    shimmerGain.connect(compressor);
+
+    shimmerOsc.start(t);
+    shimmerOsc.stop(t + totalDuration);
   } catch (e) {
     console.warn('Audio playback error', e);
   }

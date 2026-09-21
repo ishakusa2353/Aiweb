@@ -427,7 +427,11 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
               className="absolute left-0 right-0 border-b border-dashed border-cyan-400/60 flex items-center justify-end pr-2 transition-all duration-300 pointer-events-none"
               style={{ bottom: '48%' }}
             >
-              <span className="bg-cyan-500 text-[#0B132B] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+              <span
+                id="ishak-live-price-val"
+                data-live-price="true"
+                className="bg-cyan-500 text-[#0B132B] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded current-price chart-axis-price ishak-live-price"
+              >
                 {livePrice.toFixed(5)}
               </span>
             </div>
@@ -650,7 +654,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
                     const num = parseInt(e.target.value.replace(/\D/g, ''), 10);
                     if (!isNaN(num)) setInvestment(num);
                   }}
-                  className="flex-1 text-center bg-[#111F43] border border-slate-700 text-white font-bold text-xs py-1.5 rounded-lg outline-none deal-form__price"
+                  className="flex-1 text-center bg-[#111F43] border border-slate-700 text-white font-bold text-xs py-1.5 rounded-lg outline-none deal-form__investment deal-form__amount"
                 />
                 <button
                   onClick={() => setInvestment((v) => v + 10)}
