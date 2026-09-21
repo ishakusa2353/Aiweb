@@ -149,6 +149,7 @@ async function startServer() {
         traderId: license.trader_id || inputTraderId || "",
         deviceId: license.device_id || inputDeviceId || "",
         isLifetime: license.duration === 'lifetime' || license.exp === null,
+        maintenanceMode: licenseDb.getMaintenanceMode(),
         serverTime: Date.now()
       });
     } catch (err: any) {
@@ -246,6 +247,7 @@ async function startServer() {
         traderId: license.trader_id || inputTraderId || "",
         deviceId: license.device_id || inputDeviceId || "",
         isLifetime: license.duration === 'lifetime' || license.exp === null,
+        maintenanceMode: licenseDb.getMaintenanceMode(),
         serverTime: Date.now()
       })});`);
     } catch (err: any) {
@@ -255,6 +257,28 @@ async function startServer() {
 
   app.get("/api/verify-jsonp", jsonpVerificationHandler);
   app.get("/api/verify-license-jsonp", jsonpVerificationHandler);
+
+  // 1.4 MAINTENANCE MODE STATUS & TOGGLE ENDPOINTS
+  app.get("/api/maintenance-status", (req, res) => {
+    return res.json({
+      success: true,
+      maintenanceMode: licenseDb.getMaintenanceMode()
+    });
+  });
+
+  app.post("/api/admin/maintenance", async (req, res) => {
+    try {
+      const { enabled } = req.body;
+      const status = await licenseDb.setMaintenanceMode(Boolean(enabled));
+      return res.json({
+        success: true,
+        maintenanceMode: status,
+        message: status ? "বট মেইনটেনেন্স মোড চালু করা হয়েছে!" : "বট মেইনটেনেন্স মোড বন্ধ করা হয়েছে!"
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
 
   // 1.5 ADMIN AUTHENTICATION ENDPOINTS
   app.post("/api/admin/login", (req, res) => {

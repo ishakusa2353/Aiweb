@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2, Wrench, ShieldAlert } from 'lucide-react';
 import { LicenseRecord } from '../types';
 import { supabaseService } from '../lib/supabaseService';
 
@@ -34,6 +34,26 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'blocked' | 'expired'>('all');
 
+  // Maintenance mode state
+  const [maintenanceMode, setMaintenanceModeState] = useState<boolean>(false);
+  const [isTogglingMaintenance, setIsTogglingMaintenance] = useState<boolean>(false);
+
+  // Live countdown ticker (ticks every second for real-time live expiration countdown)
+  const [, setLiveTick] = useState<number>(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTick((t) => (t + 1) % 10000);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch initial maintenance status
+  useEffect(() => {
+    supabaseService.getMaintenanceMode().then((status) => {
+      setMaintenanceModeState(Boolean(status));
+    });
+  }, []);
+
   // Flash notification toast (replaces alert popups!)
   const [toastMessage, setToastMessage] = useState<{ text: string; isError?: boolean } | null>(null);
 
@@ -42,6 +62,24 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
     setTimeout(() => {
       setToastMessage(null);
     }, 3200);
+  };
+
+  const handleToggleMaintenance = async () => {
+    setIsTogglingMaintenance(true);
+    const nextState = !maintenanceMode;
+    try {
+      const result = await supabaseService.setMaintenanceMode(nextState);
+      setMaintenanceModeState(result.maintenanceMode);
+      if (result.maintenanceMode) {
+        showActionToast('⚠️ Maintenance Mode অন করা হয়েছে! এখন ইউজারের বটে ক্লিক করলে দেখাবে "Bot In Maintenance"');
+      } else {
+        showActionToast('✅ Maintenance Mode বন্ধ করা হয়েছে! বট পুনরায় স্বাভাবিকভাবে কাজ করছে।');
+      }
+    } catch (e: any) {
+      showActionToast('মেইনটেনেন্স মোড পরিবর্তন ব্যর্থ হয়েছে', true);
+    } finally {
+      setIsTogglingMaintenance(false);
+    }
   };
 
   // Custom key generation modal state
@@ -438,6 +476,62 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
             <span>টেলিগ্রাম বট খুলুন</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
+        </div>
+      </div>
+
+      {/* 🛠️ MAINTENANCE MODE CONTROL CARD */}
+      <div className={`border rounded-2xl p-4 sm:p-5 shadow-2xl transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-4 ${
+        maintenanceMode 
+          ? 'bg-gradient-to-r from-red-950/90 via-rose-950/80 to-red-900/70 border-red-500/70 shadow-[0_0_35px_rgba(239,68,68,0.3)]' 
+          : 'bg-gradient-to-r from-slate-900/90 via-[#0B132B] to-slate-900/90 border-cyan-500/30'
+      }`}>
+        <div className="flex items-center gap-4">
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 border transition ${
+            maintenanceMode 
+              ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' 
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+          }`}>
+            {maintenanceMode ? '⚠️' : '🛡️'}
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <span>বট মেইনটেনেন্স মোড (Maintenance Mode)</span>
+              </h3>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider flex items-center gap-1.5 ${
+                maintenanceMode
+                  ? 'bg-red-500/20 text-red-300 border-red-500/60 animate-pulse'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${maintenanceMode ? 'bg-red-500 animate-ping' : 'bg-emerald-400'}`} />
+                <span>{maintenanceMode ? 'ACTIVE (মেইনটেনেন্স চালু)' : 'INACTIVE (বট সচল)'}</span>
+              </span>
+            </div>
+            <p className="text-xs text-gray-300 mt-1">
+              {maintenanceMode
+                ? '🔴 এই মোড চালু রয়েছে! ইউজারের প্ল্যাটফর্মে স্ক্রিপ্ট লোড হবে ঠিকই, কিন্তু বটে ক্লিক করলেই "Bot In Maintenance" মেসেজ দেখাবে এবং ট্রেড বন্ধ থাকবে।'
+                : '🟢 সাধারণ অবস্থা: এই অপশন অন করলে বট লোড হবে কিন্তু ইউজার বটে ক্লিক করলে "Bot In Maintenance" পপআপ শো করবে।'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            type="button"
+            disabled={isTogglingMaintenance}
+            onClick={handleToggleMaintenance}
+            className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition active:scale-95 shadow-xl cursor-pointer ${
+              maintenanceMode
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
+                : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30'
+            }`}
+          >
+            {isTogglingMaintenance ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <span>{maintenanceMode ? '🟢 মেইনটেনেন্স বন্ধ করুন (বট সচল)' : '🔴 মেইনটেনেন্স মোড অন করুন'}</span>
+            )}
+          </button>
         </div>
       </div>
 

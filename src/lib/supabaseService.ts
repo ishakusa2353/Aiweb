@@ -608,4 +608,76 @@ export const supabaseService = {
       reason: '❌ লাইসেন্স যাচাই করা যায়নি।',
     };
   },
+
+  // 10. MAINTENANCE MODE MANAGEMENT
+  async getMaintenanceMode(): Promise<boolean> {
+    try {
+      const resp = await fetch('/api/maintenance-status');
+      if (resp.ok) {
+        const json = await resp.json();
+        if (typeof json.maintenanceMode === 'boolean') {
+          return json.maintenanceMode;
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data } = await supabase
+          .from('ishak_licenses')
+          .select('active')
+          .eq('key', '__MAINTENANCE_CONFIG__')
+          .maybeSingle();
+        if (data && typeof data.active === 'boolean') {
+          return data.active;
+        }
+      } catch {}
+    }
+
+    return false;
+  },
+
+  async setMaintenanceMode(enabled: boolean): Promise<{ success: boolean; maintenanceMode: boolean }> {
+    try {
+      const resp = await fetch('/api/admin/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      if (resp.ok) {
+        const json = await resp.json();
+        if (isSupabaseConfigured) {
+          supabase.from('ishak_licenses').upsert({
+            key: '__MAINTENANCE_CONFIG__',
+            active: enabled,
+            tier: 'SYSTEM',
+            duration: 'system',
+            note: enabled ? 'MAINTENANCE_ON' : 'MAINTENANCE_OFF',
+            created_at: Date.now(),
+          }, { onConflict: 'key' }).then();
+        }
+        return { success: true, maintenanceMode: json.maintenanceMode !== false };
+      }
+    } catch (e) {
+      console.warn('Set maintenance mode via server API failed:', e);
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        await supabase.from('ishak_licenses').upsert({
+          key: '__MAINTENANCE_CONFIG__',
+          active: enabled,
+          tier: 'SYSTEM',
+          duration: 'system',
+          note: enabled ? 'MAINTENANCE_ON' : 'MAINTENANCE_OFF',
+          created_at: Date.now(),
+        }, { onConflict: 'key' });
+        return { success: true, maintenanceMode: enabled };
+      } catch (err) {}
+    }
+
+    return { success: false, maintenanceMode: enabled };
+  },
 };

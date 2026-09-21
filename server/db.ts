@@ -66,6 +66,7 @@ class LicenseDatabase {
   private isConfigured: boolean = false;
   private adminPassword: string = 'ishakdevos';
   private authorizedTelegramChats: Set<number> = new Set();
+  private maintenanceMode: boolean = false;
 
   constructor() {
     let savedSupabaseUrl = '';
@@ -78,6 +79,9 @@ class LicenseDatabase {
         const parsed = JSON.parse(raw);
         if (parsed.adminPassword && typeof parsed.adminPassword === 'string') {
           this.adminPassword = parsed.adminPassword;
+        }
+        if (typeof parsed.maintenanceMode === 'boolean') {
+          this.maintenanceMode = parsed.maintenanceMode;
         }
         if (parsed.supabaseUrl && typeof parsed.supabaseUrl === 'string') {
           savedSupabaseUrl = parsed.supabaseUrl;
@@ -520,6 +524,41 @@ class LicenseDatabase {
       success: true,
       message: active ? `✅ লাইসেন্স ${key} আনব্লক (সক্রিয়) করা হয়েছে!` : `🚫 লাইসেন্স ${key} ব্লক (নিষ্ক্রিয়) করা হয়েছে!`
     };
+  }
+
+  public getMaintenanceMode(): boolean {
+    return this.maintenanceMode;
+  }
+
+  public async setMaintenanceMode(enabled: boolean): Promise<boolean> {
+    this.maintenanceMode = Boolean(enabled);
+    try {
+      let current: any = {};
+      if (fs.existsSync(SETTINGS_FILE)) {
+        current = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+      }
+      current.maintenanceMode = this.maintenanceMode;
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(current, null, 2));
+    } catch (e) {
+      console.warn('Failed to save maintenanceMode to settings file:', e);
+    }
+
+    if (this.supabase && this.isConfigured) {
+      try {
+        await this.supabase.from('ishak_licenses').upsert({
+          key: '__MAINTENANCE_CONFIG__',
+          active: this.maintenanceMode,
+          tier: 'SYSTEM',
+          duration: 'system',
+          note: this.maintenanceMode ? 'MAINTENANCE_ON' : 'MAINTENANCE_OFF',
+          created_at: Date.now(),
+        }, { onConflict: 'key' });
+      } catch (err) {
+        console.warn('Supabase maintenanceMode upsert failed:', err);
+      }
+    }
+
+    return this.maintenanceMode;
   }
 }
 
