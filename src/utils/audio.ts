@@ -33,11 +33,11 @@ export function playPhotostatScannerSound(): void {
 
     // Master Limiter / Compressor to allow rich, loud audio without digital clipping
     const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-12, t);
-    compressor.knee.setValueAtTime(8, t);
-    compressor.ratio.setValueAtTime(4, t);
-    compressor.attack.setValueAtTime(0.005, t);
-    compressor.release.setValueAtTime(0.15, t);
+    compressor.threshold.setValueAtTime(-6, t);
+    compressor.knee.setValueAtTime(6, t);
+    compressor.ratio.setValueAtTime(3, t);
+    compressor.attack.setValueAtTime(0.003, t);
+    compressor.release.setValueAtTime(0.12, t);
     compressor.connect(ctx.destination);
 
     // 1. Primary Powerful Laser Sweeper
@@ -45,21 +45,21 @@ export function playPhotostatScannerSound(): void {
     const laserGain = ctx.createGain();
     const laserFilter = ctx.createBiquadFilter();
 
-    laserOsc.type = 'sine';
+    laserOsc.type = 'sawtooth';
     laserFilter.type = 'lowpass';
-    laserFilter.frequency.setValueAtTime(850, t);
-    laserFilter.Q.setValueAtTime(2.2, t);
+    laserFilter.frequency.setValueAtTime(1100, t);
+    laserFilter.Q.setValueAtTime(3.2, t);
 
     // Laser frequency sweep
-    laserOsc.frequency.setValueAtTime(280, t);
-    laserOsc.frequency.exponentialRampToValueAtTime(440, t + 1.8);
-    laserOsc.frequency.exponentialRampToValueAtTime(320, t + 3.2);
-    laserOsc.frequency.exponentialRampToValueAtTime(240, t + totalDuration);
+    laserOsc.frequency.setValueAtTime(320, t);
+    laserOsc.frequency.exponentialRampToValueAtTime(520, t + 1.8);
+    laserOsc.frequency.exponentialRampToValueAtTime(380, t + 3.0);
+    laserOsc.frequency.exponentialRampToValueAtTime(260, t + totalDuration);
 
-    // Strong, loud gain envelope (Noticeably louder as requested)
+    // Strong, noticeably louder gain envelope as requested
     laserGain.gain.setValueAtTime(0.001, t);
-    laserGain.gain.linearRampToValueAtTime(0.26, t + 0.25);
-    laserGain.gain.setValueAtTime(0.26, t + totalDuration - 0.35);
+    laserGain.gain.linearRampToValueAtTime(0.55, t + 0.22);
+    laserGain.gain.setValueAtTime(0.55, t + totalDuration - 0.35);
     laserGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
 
     laserOsc.connect(laserFilter);
@@ -74,12 +74,12 @@ export function playPhotostatScannerSound(): void {
     const subGain = ctx.createGain();
     subOsc.type = 'triangle';
     subOsc.frequency.setValueAtTime(140, t);
-    subOsc.frequency.linearRampToValueAtTime(185, t + 1.8);
+    subOsc.frequency.linearRampToValueAtTime(195, t + 1.8);
     subOsc.frequency.linearRampToValueAtTime(130, t + totalDuration);
 
     subGain.gain.setValueAtTime(0.001, t);
-    subGain.gain.linearRampToValueAtTime(0.15, t + 0.3);
-    subGain.gain.setValueAtTime(0.15, t + totalDuration - 0.25);
+    subGain.gain.linearRampToValueAtTime(0.35, t + 0.25);
+    subGain.gain.setValueAtTime(0.35, t + totalDuration - 0.25);
     subGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
 
     subOsc.connect(subGain);
@@ -92,13 +92,13 @@ export function playPhotostatScannerSound(): void {
     const shimmerOsc = ctx.createOscillator();
     const shimmerGain = ctx.createGain();
     shimmerOsc.type = 'sine';
-    shimmerOsc.frequency.setValueAtTime(560, t);
-    shimmerOsc.frequency.exponentialRampToValueAtTime(880, t + 1.8);
-    shimmerOsc.frequency.exponentialRampToValueAtTime(480, t + totalDuration);
+    shimmerOsc.frequency.setValueAtTime(580, t);
+    shimmerOsc.frequency.exponentialRampToValueAtTime(960, t + 1.8);
+    shimmerOsc.frequency.exponentialRampToValueAtTime(520, t + totalDuration);
 
     shimmerGain.gain.setValueAtTime(0.001, t);
-    shimmerGain.gain.linearRampToValueAtTime(0.08, t + 0.35);
-    shimmerGain.gain.setValueAtTime(0.08, t + totalDuration - 0.35);
+    shimmerGain.gain.linearRampToValueAtTime(0.24, t + 0.3);
+    shimmerGain.gain.setValueAtTime(0.24, t + totalDuration - 0.3);
     shimmerGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
 
     shimmerOsc.connect(shimmerGain);
