@@ -37,6 +37,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const [showTimeModal, setShowTimeModal] = useState<boolean>(false);
   const [showMarketModal, setShowMarketModal] = useState<boolean>(false);
   const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState<boolean>(false);
   const [marketSearch, setMarketSearch] = useState<string>('');
 
   // Key verification state
@@ -220,6 +221,15 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   // 🔒 TRIGGER SCAN: MANDATORY PRE-SCAN LICENSE CHECK ON EVERY SINGLE CLICK
   const triggerScan = async () => {
     if (isScanning) return;
+
+    // 🛠️ Check 0: Maintenance mode check
+    try {
+      const isMaint = await supabaseService.getMaintenanceMode();
+      if (isMaint) {
+        setShowMaintenanceModal(true);
+        return;
+      }
+    } catch (e) {}
 
     // Check 1: License presence
     if (!activeLicense || !activeLicense.key) {
@@ -1321,6 +1331,41 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 </a>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🛠️ MAINTENANCE MODE MODAL */}
+      {showMaintenanceModal && (
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-[#0B132B] border-2 border-amber-500 rounded-2xl w-full max-w-sm p-5 shadow-[0_0_60px_rgba(245,158,11,0.6)] text-white text-center animate-in fade-in zoom-in duration-200">
+            <div className="text-4xl mb-2 animate-bounce">🛠️</div>
+            <h3 className="text-lg font-black text-amber-400 tracking-wide mb-1">
+              Bot In Maintenance
+            </h3>
+            <div className="my-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs leading-relaxed text-left">
+              বটের সিস্টেম আপডেট ও সার্বিক অপ্টিমাইজেশন চলছে! মেইনটেনেন্স চলাকালীন সময়ে নতুন সিগন্যাল স্ক্যান ও ট্রেডিং সাময়িকভাবে স্থগিত রাখা হয়েছে।
+            </div>
+            <p className="text-[11px] text-gray-400 mb-4">
+              আপডেট ও সহায়তার জন্য টেলিগ্রামে যোগাযোগ রাখুন:
+            </p>
+            <div className="flex gap-2">
+              <a
+                href="https://t.me/IshakVhai"
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs shadow-lg hover:brightness-110 flex items-center justify-center gap-1.5"
+              >
+                <span>⚡ Telegram Support (@IshakVhai)</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowMaintenanceModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-400 font-bold text-xs hover:bg-slate-800 transition"
+              >
+                ঠিক আছে
+              </button>
+            </div>
           </div>
         </div>
       )}

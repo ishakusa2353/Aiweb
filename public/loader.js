@@ -453,6 +453,89 @@ javascript:(function(){
     }
   }
 
+  // 🛠️ MAINTENANCE MODE MODAL & CHECKER
+  var isMaintenanceModeActive = false;
+  function showMaintenanceModal(customMsg) {
+    var old = document.getElementById('ishak-maintenance-modal');
+    if (old) old.remove();
+
+    var mm = document.createElement('div');
+    mm.id = 'ishak-maintenance-modal';
+    mm.className = 'ishak-dialog-modal';
+    mm.style.borderColor = '#FF9100';
+    mm.style.boxShadow = '0 0 60px rgba(255,145,0,0.85)';
+    mm.innerHTML = '<div style="text-align:center;padding:12px 6px;">' +
+      '<div style="font-size:38px;margin-bottom:8px;animation:ishakTextBreathe 1.5s infinite ease-in-out;">🛠️</div>' +
+      '<h3 style="color:#FF9100;font-size:16px;font-weight:900;margin:0 0 6px 0;letter-spacing:0.5px;">Bot In Maintenance</h3>' +
+      '<div style="background:rgba(255,145,0,0.15);border:1px solid rgba(255,145,0,0.4);border-radius:10px;padding:10px;margin-bottom:12px;color:#FFE0B2;font-size:12px;line-height:18px;">' +
+      (customMsg || 'বটের সিস্টেম আপডেট ও সার্বিক অপ্টিমাইজেশন চলছে! মেইনটেনেন্স চলাকালীন সময়ে নতুন সিগন্যাল স্ক্যান ও ট্রেডিং সাময়িকভাবে স্থগিত রাখা হয়েছে।') +
+      '</div>' +
+      '<p style="color:#A0AEC0;font-size:10.5px;margin:0 0 14px 0;">আপডেট ও সহায়তার জন্য টেলিগ্রামে যোগাযোগ রাখুন:</p>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<a href="https://t.me/IshakVhai" target="_blank" style="flex:1;background:linear-gradient(135deg,#FF9100,#FF6D00);color:#070D1E;text-align:center;padding:10px;border-radius:10px;font-weight:900;font-size:12px;text-decoration:none;box-shadow:0 4px 15px rgba(255,145,0,0.4);">⚡ Telegram Support (@IshakVhai)</a>' +
+      '<button id="ishak-maint-close-btn" style="background:#111F43;border:1.5px solid #00E5FF;color:#00E5FF;padding:10px 14px;border-radius:10px;font-weight:bold;font-size:11px;cursor:pointer;">ঠিক আছে</button>' +
+      '</div>' +
+      '</div>';
+    document.body.appendChild(mm);
+
+    var closeBtn = document.getElementById('ishak-maint-close-btn');
+    if (closeBtn) {
+      closeBtn.onclick = function(e) {
+        e.stopPropagation();
+        mm.remove();
+      };
+    }
+  }
+
+  function checkMaintenanceStatus() {
+    return new Promise(function(resolve) {
+      // 1. Direct server query if running on same domain or JSONP
+      var hostUrl = BACKEND_SERVER_URL;
+      if (hostUrl) {
+        fetch(hostUrl + '/api/maintenance-status')
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data && typeof data.maintenanceMode === 'boolean') {
+              isMaintenanceModeActive = data.maintenanceMode;
+              resolve(data.maintenanceMode);
+              return;
+            }
+            throw new Error('Fallback to Supabase');
+          })
+          .catch(function() {
+            querySupabaseMaintenance(resolve);
+          });
+      } else {
+        querySupabaseMaintenance(resolve);
+      }
+    });
+  }
+
+  function querySupabaseMaintenance(resolve) {
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      resolve(isMaintenanceModeActive);
+      return;
+    }
+    fetch(SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.__MAINTENANCE_CONFIG__&select=active', {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(rows) {
+      if (rows && rows.length && typeof rows[0].active === 'boolean') {
+        isMaintenanceModeActive = rows[0].active;
+        resolve(rows[0].active);
+      } else {
+        resolve(false);
+      }
+    })
+    .catch(function() {
+      resolve(isMaintenanceModeActive);
+    });
+  }
+
   function parseDurationString(durStr) {
     var d = (durStr || '').trim().toUpperCase();
     if (d === 'LIFE' || d === 'LIFETIME' || d === 'PERMANENT') return null;
@@ -1882,6 +1965,12 @@ javascript:(function(){
       return;
     }
 
+    // 🛠️ CHECK MAINTENANCE MODE FIRST (Admin remote lock)
+    if (isMaintenanceModeActive) {
+      showMaintenanceModal();
+      return;
+    }
+
     if (!currentMarket) {
       showMarketSelectionModal(function() {
         if (!tradeDuration) {
@@ -2081,7 +2170,7 @@ javascript:(function(){
     });
   }
 
-  // 💓 CONTINUOUS EXPIRY HEARTBEAT
+  // 💓 CONTINUOUS EXPIRY & MAINTENANCE HEARTBEAT
   if (expiryHeartbeat) clearInterval(expiryHeartbeat);
   expiryHeartbeat = setInterval(function() {
     if (isBotTerminated) return;
@@ -2091,20 +2180,32 @@ javascript:(function(){
     }
   }, 1000);
 
+  // Periodic Maintenance status check (every 10s)
+  checkMaintenanceStatus();
+  setInterval(checkMaintenanceStatus, 10000);
+
   // Click & Double click handles
   circleBtn.addEventListener('click', function(e) {
     e.stopPropagation();
     if (isDragging) return;
-    if (singleClickTimer) {
-      clearTimeout(singleClickTimer);
-      singleClickTimer = null;
-      showSettingsHub();
-    } else {
-      singleClickTimer = setTimeout(function() {
+
+    // Immediate maintenance check
+    checkMaintenanceStatus().then(function(isMaint) {
+      if (isMaint) {
+        showMaintenanceModal();
+        return;
+      }
+      if (singleClickTimer) {
+        clearTimeout(singleClickTimer);
         singleClickTimer = null;
-        triggerScanAndTrade();
-      }, 260);
-    }
+        showSettingsHub();
+      } else {
+        singleClickTimer = setTimeout(function() {
+          singleClickTimer = null;
+          triggerScanAndTrade();
+        }, 260);
+      }
+    });
   });
 
   circleBtn.addEventListener('dblclick', function(e) {
