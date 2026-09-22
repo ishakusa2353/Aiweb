@@ -114,8 +114,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     } catch (e) {}
 
-    // 2. BOT FIRST LOAD: Mandatory Market & Time Selection
-    setShowMarketModal(true);
+    // Bot loaded: Logo animates in from above first. Modals appear when user clicks logo!
   }, []);
 
   // Countdown timer
@@ -218,9 +217,21 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  // 🔒 TRIGGER SCAN: MANDATORY PRE-SCAN LICENSE CHECK ON EVERY SINGLE CLICK
+  // 🔒 TRIGGER SCAN / LOGO CLICK: FIRST OPENS MARKET -> TIME SELECTION IF NOT SET, THEN SCANS
   const triggerScan = async () => {
     if (isScanning) return;
+
+    // Check 1: Forced Market Selection First on Click
+    if (!currentMarket) {
+      setShowMarketModal(true);
+      return;
+    }
+
+    // Check 2: Forced Time Selection Next
+    if (!tradeDuration) {
+      setShowTimeModal(true);
+      return;
+    }
 
     // 🛠️ Check 0: Maintenance mode check
     try {
@@ -231,21 +242,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     } catch (e) {}
 
-    // Check 1: License presence
+    // Check 3: License presence
     if (!activeLicense || !activeLicense.key) {
       setShowKeyModal(true);
       showToast('⚠️ অনুগ্রহ করে প্রথমে আপনার VIP লাইসেন্স কি ভেরিফাই করুন!', true);
-      return;
-    }
-
-    // Check 2: Forced Market & Time Selection
-    if (!currentMarket) {
-      setShowMarketModal(true);
-      return;
-    }
-
-    if (!tradeDuration) {
-      setShowTimeModal(true);
       return;
     }
 
@@ -916,17 +916,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               e.stopPropagation();
               setShowHub(true);
             }}
-            className={`relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 border-cyan-400 bg-[#070D1E] shadow-[0_8px_25px_rgba(0,0,0,0.85),inset_0_0_12px_rgba(0,229,255,0.4)] cursor-pointer transition-transform hover:scale-105 active:scale-95 flex items-center justify-center p-0.5 overflow-hidden ${
+            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-[#F59E0B] bg-[#070D1E] shadow-[0_8px_30px_rgba(0,0,0,0.9),0_0_20px_rgba(245,158,11,0.5),0_0_35px_rgba(0,229,255,0.35),inset_0_0_12px_rgba(245,158,11,0.3)] cursor-pointer transition-transform hover:scale-108 active:scale-95 flex items-center justify-center p-0.5 overflow-hidden ${
               isScanning
-                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-emerald-400 shadow-[0_0_25px_#00FF66,0_0_50px_#00E5FF,inset_0_0_14px_rgba(0,255,102,0.4)]'
+                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#00E5FF] shadow-[0_0_30px_#00E5FF,0_0_55px_#F59E0B,inset_0_0_16px_rgba(0,229,255,0.5)]'
                 : ''
             }`}
-            title="Single Click: Scan & Trade | Double Click: Control Panel"
+            title="Single Click: Setup & Scan | Double Click: Control Panel"
           >
             <img
-              src="https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg"
+              src="/ishak_logo.png"
               alt="Ishak AI"
-              className="w-full h-full object-cover rounded-full pointer-events-none"
+              className="w-full h-full object-cover rounded-full pointer-events-none select-none"
               referrerPolicy="no-referrer"
             />
           </button>
@@ -935,10 +935,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         {/* Small 3D Pill Badge - Matched size and proportions */}
         <div
           onClick={() => setShowHub(true)}
-          className="mt-0.5 px-1.5 py-0.5 rounded-full bg-[#070D1E]/95 border border-cyan-400/80 flex items-center gap-1 shadow-lg shadow-black/80 cursor-pointer hover:border-cyan-300 transform-none select-none"
+          className="mt-1 px-2 py-0.5 rounded-full bg-[#070D1E]/95 border border-[#F59E0B]/80 flex items-center gap-1.5 shadow-lg shadow-black/90 cursor-pointer hover:border-[#00E5FF] transition-colors transform-none select-none"
         >
-          <span className="text-cyan-400 text-[8px] font-black tracking-tight transform-none select-none">⚡ ISHAK AI</span>
-          <span className="bg-cyan-400 text-[#070D1E] text-[7px] font-black px-1.5 py-0.2 rounded-full">
+          <span className="text-[#F59E0B] text-[8.5px] font-black tracking-tight transform-none select-none">⚡ ISHAK AI</span>
+          <span className="bg-gradient-to-r from-amber-400 to-cyan-400 text-[#070D1E] text-[7.5px] font-black px-1.5 py-0.2 rounded-full">
             {badgeText}
           </span>
         </div>

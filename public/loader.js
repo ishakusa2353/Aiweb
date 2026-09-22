@@ -14,7 +14,7 @@ javascript:(function(){
   window.__ISHAK_AI_ACTIVE__ = true;
   var SUPABASE_URL = "https://qbazzarqiplrqqfytajz.supabase.co";
   var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
-  var LOGO_URL = "https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg";
+  var LOGO_URL = "/ishak_logo.png";
 
   // 1. CONFIGURATION & STATE (Mandatory selection required on load)
   var tradeDuration = null;
@@ -844,11 +844,11 @@ javascript:(function(){
       '100% { opacity: 0; transform: scaleY(0.2); } ' +
     '}' +
     '@keyframes ishakIntroSpawn { ' +
-      '0% { transform: scale(0.05) rotate(-35deg); opacity: 0; filter: blur(20px) drop-shadow(0 0 50px #00E5FF) brightness(2.2); } ' +
-      '45% { transform: scale(1.28) rotate(6deg); opacity: 1; filter: blur(0px) drop-shadow(0 0 65px #00FF66) drop-shadow(0 0 100px #00E5FF) brightness(1.3); } ' +
-      '68% { transform: scale(0.92) rotate(-2deg); filter: drop-shadow(0 0 35px #00E5FF); } ' +
-      '85% { transform: scale(1.06) rotate(1deg); } ' +
-      '100% { transform: scale(1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 18px rgba(0,229,255,0.7)); } ' +
+      '0% { transform: translateY(-160px) scale(0.3) rotate(-15deg); opacity: 0; filter: blur(16px) drop-shadow(0 0 50px #00E5FF) brightness(2.2); } ' +
+      '45% { transform: translateY(18px) scale(1.18) rotate(4deg); opacity: 1; filter: blur(0px) drop-shadow(0 0 60px #F59E0B) drop-shadow(0 0 90px #00E5FF) brightness(1.25); } ' +
+      '68% { transform: translateY(-8px) scale(0.96) rotate(-2deg); filter: drop-shadow(0 0 35px #00E5FF); } ' +
+      '85% { transform: translateY(3px) scale(1.04) rotate(1deg); } ' +
+      '100% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 20px rgba(0,229,255,0.75)) drop-shadow(0 0 35px rgba(245,158,11,0.5)); } ' +
     '}' +
     '@keyframes ishakSignalAppear1s { ' +
       '0% { transform: translate(-50%, -50%) scale(0.45); opacity: 0; filter: blur(14px); } ' +
@@ -858,16 +858,16 @@ javascript:(function(){
       '100% { transform: translate(-50%, -55%) scale(0.78); opacity: 0; filter: blur(10px); } ' +
     '}' +
     '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
-    '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn 1.25s cubic-bezier(0.19, 1, 0.22, 1) forwards; }' +
+    '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn 1.35s cubic-bezier(0.19, 1, 0.22, 1) forwards; }' +
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
-    '#ishak-logo-aura { position: absolute; inset: -12px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
-    '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(0,229,255,0.95) 0%, rgba(0,255,102,0.7) 40%, rgba(0,229,255,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 1; width: 44px; height: 44px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/cover no-repeat; border: 2px solid #00E5FF; box-shadow: 0 8px 24px rgba(0,0,0,0.85), inset 0 0 10px rgba(0,229,255,0.4); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
-    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 10px 30px rgba(0,229,255,0.65); }' +
-    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00FF66; box-shadow: 0 0 20px #00FF66, 0 0 45px #00E5FF, inset 0 0 12px rgba(0,255,102,0.4); }' +
-    '#ishak-pill-badge { margin-top: 3px; background: rgba(7,13,30,0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 6px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 14px rgba(0,0,0,0.8); cursor: pointer; transform: none !important; animation: none !important; }' +
-    '#ishak-pill-name { color: #00E5FF; font-size: 7.5px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; }' +
-    '#ishak-pill-time { background: #00E5FF; color: #070D1E; font-size: 7px; font-weight: 900; padding: 1px 4.5px; border-radius: 8px; }' +
+    '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
+    '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(245,158,11,0.95) 0%, rgba(0,229,255,0.7) 40%, rgba(245,158,11,0.2) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
+    '#ishak-circle-btn { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/cover no-repeat; border: 2.5px solid #F59E0B; box-shadow: 0 8px 30px rgba(0,0,0,0.9), 0 0 20px rgba(245,158,11,0.5), 0 0 35px rgba(0,229,255,0.35), inset 0 0 12px rgba(245,158,11,0.3); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 10px 35px rgba(245,158,11,0.7), 0 0 45px rgba(0,229,255,0.5); }' +
+    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 25px #00E5FF, 0 0 50px #F59E0B, inset 0 0 14px rgba(0,229,255,0.5); }' +
+    '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #F59E0B; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; }' +
+    '#ishak-pill-name { color: #F59E0B; font-size: 8px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; }' +
+    '#ishak-pill-time { background: linear-gradient(135deg, #F59E0B, #00E5FF); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1px 5px; border-radius: 8px; }' +
     '#scan-laser { position: fixed; top: -25px; left: 0; width: 100vw; height: 16px; z-index: 2147483646; display: none; pointer-events: none; }' +
     '#scan-laser.scanning-active { display: block; animation: ishakLaserSweepFull 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
     '#scan-laser-beam { position: relative; width: 100vw; height: 16px; background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.35) 8%, #00E5FF 25%, #E0FFFF 50%, #00E5FF 75%, rgba(0,229,255,0.35) 92%, transparent 100%); box-shadow: 0 0 20px #00E5FF, 0 0 45px #00E5FF, 0 0 80px #00E5FF, 0 0 8px #FFFFFF; border-radius: 8px; }' +
@@ -1959,18 +1959,7 @@ javascript:(function(){
   function triggerScanAndTrade() {
     if (isScanning) return;
 
-    var local = getLocalLicense();
-    if (!local || !local.key) {
-      showKeyModal(function() { triggerScanAndTrade(); });
-      return;
-    }
-
-    // 🛠️ CHECK MAINTENANCE MODE FIRST (Admin remote lock)
-    if (isMaintenanceModeActive) {
-      showMaintenanceModal();
-      return;
-    }
-
+    // Check 1: Mandatory Market selection on logo click
     if (!currentMarket) {
       showMarketSelectionModal(function() {
         if (!tradeDuration) {
@@ -1982,8 +1971,21 @@ javascript:(function(){
       return;
     }
 
+    // Check 2: Mandatory Time duration selection next
     if (!tradeDuration) {
       showDurationSelectionModal(function() { triggerScanAndTrade(); });
+      return;
+    }
+
+    // 🛠️ CHECK MAINTENANCE MODE (Admin remote lock)
+    if (isMaintenanceModeActive) {
+      showMaintenanceModal();
+      return;
+    }
+
+    var local = getLocalLicense();
+    if (!local || !local.key) {
+      showKeyModal(function() { triggerScanAndTrade(); });
       return;
     }
 
@@ -2213,17 +2215,7 @@ javascript:(function(){
     showSettingsHub();
   });
 
-  // MANDATORY MARKET & TIME SELECTION ON FIRST BOT LOAD:
+  // BOT LOADED: Logo enters with top drop-down animation first.
+  // Clicking the logo opens Market Select -> Time Select options!
   updateBadgeLabel();
-  setTimeout(function() {
-    if (!currentMarket) {
-      showMarketSelectionModal(function(mkt) {
-        if (!tradeDuration) {
-          showDurationSelectionModal(function(dur) {
-            updateBadgeLabel();
-          });
-        }
-      });
-    }
-  }, 600);
 })();

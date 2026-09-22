@@ -32,9 +32,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="relative">
               <img
-                src="https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg"
+                src="/ishak_logo.png"
                 alt="Ishak AI"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-cyan-400 shadow-[0_0_15px_rgba(0,229,255,0.6)] object-cover"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-[#F59E0B] shadow-[0_0_15px_rgba(245,158,11,0.6),0_0_25px_rgba(0,229,255,0.4)] object-cover"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';

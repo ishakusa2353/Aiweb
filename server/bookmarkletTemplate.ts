@@ -47,6 +47,9 @@ export function generateBookmarkletCode(
   if (supabaseKey) {
     script = script.replace(/var SUPABASE_KEY = "[^"]*";/, `var SUPABASE_KEY = "${supabaseKey}";`);
   }
+  if (baseUrl) {
+    script = script.replace(/var LOGO_URL = "[^"]*";/, `var LOGO_URL = "${baseUrl}/ishak_logo.png";`);
+  }
 
   if (!script.startsWith('javascript:')) {
     script = 'javascript:' + script;

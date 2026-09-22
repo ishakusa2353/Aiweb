@@ -47,9 +47,9 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ onLoginSuccess
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="relative">
             <img
-              src="https://i.ibb.co/B5k2894W/a1fd0ad10f4d.jpg"
+              src="/ishak_logo.png"
               alt="Ishak AI"
-              className="w-16 h-16 rounded-full border-2 border-cyan-400 shadow-[0_0_25px_rgba(0,229,255,0.6)] object-cover"
+              className="w-18 h-18 rounded-full border-2 border-[#F59E0B] shadow-[0_0_30px_rgba(245,158,11,0.6),0_0_40px_rgba(0,229,255,0.4)] object-cover"
               referrerPolicy="no-referrer"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = 'none';

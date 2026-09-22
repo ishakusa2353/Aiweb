@@ -261,21 +261,28 @@ class LicenseDatabase {
           .order('created_at', { ascending: false });
 
         if (!error && data) {
-          return data.map((d: any) => ({
-            key: d.key,
-            active: d.active !== false,
-            tier: d.tier || 'VIP',
-            duration: d.duration || '30d',
-            duration_ms: d.duration_ms ? Number(d.duration_ms) : (parseDurationToMs(d.duration || '30d') || undefined),
-            exp: d.exp !== null && d.exp !== undefined ? Number(d.exp) : null,
-            first_login_at: d.first_login_at ? Number(d.first_login_at) : null,
-            device_id: d.device_id || '',
-            device_limit: d.device_limit !== undefined && d.device_limit !== null ? Number(d.device_limit) : 1,
-            trader_id: d.trader_id || '',
-            created_at: d.created_at ? Number(d.created_at) : Date.now(),
-            last_used_at: d.last_used_at ? Number(d.last_used_at) : undefined,
-            note: d.note || ''
-          }));
+          return data.map((d: any) => {
+            let limit = d.device_limit !== undefined && d.device_limit !== null ? Number(d.device_limit) : 1;
+            if (d.note && d.note.includes('[DEV_LIMIT:')) {
+              const mLimit = d.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+              if (mLimit) limit = Number(mLimit[1]);
+            }
+            return {
+              key: d.key,
+              active: d.active !== false,
+              tier: d.tier || 'VIP',
+              duration: d.duration || '30d',
+              duration_ms: d.duration_ms ? Number(d.duration_ms) : (parseDurationToMs(d.duration || '30d') || undefined),
+              exp: d.exp !== null && d.exp !== undefined ? Number(d.exp) : null,
+              first_login_at: d.first_login_at ? Number(d.first_login_at) : null,
+              device_id: d.device_id || '',
+              device_limit: limit,
+              trader_id: d.trader_id || '',
+              created_at: d.created_at ? Number(d.created_at) : Date.now(),
+              last_used_at: d.last_used_at ? Number(d.last_used_at) : undefined,
+              note: d.note || ''
+            };
+          });
         }
       } catch (err) {
         console.warn('Supabase fetch failed, falling back to server memory:', err);
@@ -297,6 +304,11 @@ class LicenseDatabase {
           .maybeSingle();
 
         if (!error && data) {
+          let limit = data.device_limit !== undefined && data.device_limit !== null ? Number(data.device_limit) : 1;
+          if (data.note && data.note.includes('[DEV_LIMIT:')) {
+            const mLimit = data.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+            if (mLimit) limit = Number(mLimit[1]);
+          }
           return {
             key: data.key,
             active: data.active !== false,
@@ -306,7 +318,7 @@ class LicenseDatabase {
             exp: data.exp !== null && data.exp !== undefined ? Number(data.exp) : null,
             first_login_at: data.first_login_at ? Number(data.first_login_at) : null,
             device_id: data.device_id || '',
-            device_limit: data.device_limit !== undefined && data.device_limit !== null ? Number(data.device_limit) : 1,
+            device_limit: limit,
             trader_id: data.trader_id || '',
             created_at: data.created_at ? Number(data.created_at) : Date.now(),
             last_used_at: data.last_used_at ? Number(data.last_used_at) : undefined,
@@ -333,26 +345,49 @@ class LicenseDatabase {
 
     if (this.supabase && this.isConfigured) {
       try {
+        const payloadWithDeviceLimit: any = {
+          key: formatted.key,
+          active: formatted.active,
+          tier: formatted.tier,
+          duration: formatted.duration,
+          duration_ms: formatted.duration_ms,
+          exp: formatted.exp,
+          first_login_at: formatted.first_login_at,
+          device_id: formatted.device_id || '',
+          device_limit: formatted.device_limit,
+          trader_id: formatted.trader_id || '',
+          created_at: formatted.created_at,
+          last_used_at: formatted.last_used_at,
+          note: formatted.note || ''
+        };
+
         const { error } = await this.supabase
           .from('ishak_licenses')
-          .upsert({
-            key: formatted.key,
-            active: formatted.active,
-            tier: formatted.tier,
-            duration: formatted.duration,
-            duration_ms: formatted.duration_ms,
-            exp: formatted.exp,
-            first_login_at: formatted.first_login_at,
-            device_id: formatted.device_id || '',
-            device_limit: formatted.device_limit,
-            trader_id: formatted.trader_id || '',
-            created_at: formatted.created_at,
-            last_used_at: formatted.last_used_at,
-            note: formatted.note || ''
-          });
+          .upsert(payloadWithDeviceLimit, { onConflict: 'key' });
 
         if (error) {
-          console.error('Supabase upsert error:', error.message);
+          // If the error is that 'device_limit' column does not exist in the remote Supabase table schema
+          if (error.message && error.message.includes('device_limit')) {
+            console.warn('⚠️ Supabase schema does not have "device_limit" column. Retrying upsert without device_limit...');
+            // Embed [DEV_LIMIT:N] tag into note so device limit is preserved even without the column
+            let updatedNote = formatted.note || '';
+            if (formatted.device_limit !== undefined && !updatedNote.includes('[DEV_LIMIT:')) {
+              updatedNote = (updatedNote ? updatedNote + ' ' : '') + `[DEV_LIMIT:${formatted.device_limit}]`;
+            }
+
+            const { device_limit, ...payloadFallback } = payloadWithDeviceLimit;
+            payloadFallback.note = updatedNote;
+
+            const { error: fallbackError } = await this.supabase
+              .from('ishak_licenses')
+              .upsert(payloadFallback, { onConflict: 'key' });
+
+            if (fallbackError) {
+              console.error('Supabase fallback upsert error:', fallbackError.message);
+            }
+          } else {
+            console.error('Supabase upsert error:', error.message);
+          }
         }
       } catch (err) {
         console.warn('Supabase save failed:', err);

@@ -184,11 +184,15 @@ CREATE TABLE IF NOT EXISTS public.ishak_licenses (
   exp BIGINT,
   first_login_at BIGINT,
   device_id TEXT DEFAULT '',
+  device_limit INT DEFAULT 1,
   trader_id TEXT DEFAULT '',
   created_at BIGINT NOT NULL,
   last_used_at BIGINT,
   note TEXT
 );
+
+-- If you already have the table, add the device_limit column:
+ALTER TABLE public.ishak_licenses ADD COLUMN IF NOT EXISTS device_limit INT DEFAULT 1;
 
 -- Enable RLS and public policies
 ALTER TABLE public.ishak_licenses ENABLE ROW LEVEL SECURITY;

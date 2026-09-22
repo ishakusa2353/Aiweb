@@ -215,21 +215,28 @@ export const supabaseService = {
           .order('created_at', { ascending: false });
 
         if (!error && data) {
-          return data.map((d: any) => ({
-            key: d.key,
-            active: d.active !== false,
-            tier: d.tier || 'VIP',
-            duration: d.duration || '30d',
-            duration_ms: d.duration_ms ? Number(d.duration_ms) : (parseDurationToMs(d.duration || '30d') || undefined),
-            exp: d.exp !== null && d.exp !== undefined ? Number(d.exp) : null,
-            first_login_at: d.first_login_at ? Number(d.first_login_at) : null,
-            device_id: d.device_id || '',
-            device_limit: d.device_limit !== undefined && d.device_limit !== null ? Number(d.device_limit) : 1,
-            trader_id: d.trader_id || '',
-            created_at: d.created_at ? Number(d.created_at) : Date.now(),
-            last_used_at: d.last_used_at ? Number(d.last_used_at) : undefined,
-            note: d.note || '',
-          }));
+          return data.map((d: any) => {
+            let limit = d.device_limit !== undefined && d.device_limit !== null ? Number(d.device_limit) : 1;
+            if (d.note && d.note.includes('[DEV_LIMIT:')) {
+              const mLimit = d.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+              if (mLimit) limit = Number(mLimit[1]);
+            }
+            return {
+              key: d.key,
+              active: d.active !== false,
+              tier: d.tier || 'VIP',
+              duration: d.duration || '30d',
+              duration_ms: d.duration_ms ? Number(d.duration_ms) : (parseDurationToMs(d.duration || '30d') || undefined),
+              exp: d.exp !== null && d.exp !== undefined ? Number(d.exp) : null,
+              first_login_at: d.first_login_at ? Number(d.first_login_at) : null,
+              device_id: d.device_id || '',
+              device_limit: limit,
+              trader_id: d.trader_id || '',
+              created_at: d.created_at ? Number(d.created_at) : Date.now(),
+              last_used_at: d.last_used_at ? Number(d.last_used_at) : undefined,
+              note: d.note || '',
+            };
+          });
         }
       } catch (err) {
         console.warn('Supabase direct fetch failed:', err);
@@ -263,7 +270,18 @@ export const supabaseService = {
         if (json.success) {
           // If direct Supabase is configured, also upsert to Supabase
           if (isSupabaseConfigured && json.key) {
-            supabase.from('ishak_licenses').upsert(json.key, { onConflict: 'key' }).then();
+            const rawItem = json.key;
+            supabase.from('ishak_licenses').upsert(rawItem, { onConflict: 'key' }).then(({ error }) => {
+              if (error && error.message && error.message.includes('device_limit')) {
+                let note = rawItem.note || '';
+                if (rawItem.device_limit !== undefined && !note.includes('[DEV_LIMIT:')) {
+                  note = (note ? note + ' ' : '') + `[DEV_LIMIT:${rawItem.device_limit}]`;
+                }
+                const { device_limit, ...fallbackItem } = rawItem;
+                fallbackItem.note = note;
+                supabase.from('ishak_licenses').upsert(fallbackItem, { onConflict: 'key' }).then();
+              }
+            });
           }
           return { success: true };
         } else {
@@ -305,7 +323,7 @@ export const supabaseService = {
 
     if (isSupabaseConfigured) {
       try {
-        const { error } = await supabase.from('ishak_licenses').insert({
+        const insertObj: any = {
           key: finalKey,
           active: true,
           tier: (payload.tier || 'VIP').toUpperCase(),
@@ -319,9 +337,24 @@ export const supabaseService = {
           created_at: Date.now(),
           last_used_at: null,
           note: (payload.note || '').trim(),
-        });
+        };
+
+        const { error } = await supabase.from('ishak_licenses').insert(insertObj);
 
         if (error) {
+          if (error.message && error.message.includes('device_limit')) {
+            let note = insertObj.note || '';
+            if (!note.includes('[DEV_LIMIT:')) {
+              note = (note ? note + ' ' : '') + `[DEV_LIMIT:${deviceLimit}]`;
+            }
+            const { device_limit, ...fallbackObj } = insertObj;
+            fallbackObj.note = note;
+            const { error: fallbackErr } = await supabase.from('ishak_licenses').insert(fallbackObj);
+            if (fallbackErr) {
+              return { success: false, error: fallbackErr.message };
+            }
+            return { success: true };
+          }
           return { success: false, error: error.message };
         }
         return { success: true };
