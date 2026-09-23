@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2, Wrench, ShieldAlert } from 'lucide-react';
+import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2, Wrench, ShieldAlert, Download, Laptop } from 'lucide-react';
 import { LicenseRecord } from '../types';
 import { supabaseService } from '../lib/supabaseService';
 
@@ -37,6 +37,53 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
   // Maintenance mode state
   const [maintenanceMode, setMaintenanceModeState] = useState<boolean>(false);
   const [isTogglingMaintenance, setIsTogglingMaintenance] = useState<boolean>(false);
+
+  // PWA 1-Click App Install & Download state (100% Live DB Sync)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isAppInstalled, setIsAppInstalled] = useState<boolean>(false);
+  const [showInstallGuide, setShowInstallGuide] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsAppInstalled(true);
+    }
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsAppInstalled(true);
+        showActionToast('অ্যাপ সফলভাবে ইনস্টল হয়েছে!');
+      }
+      setDeferredPrompt(null);
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
+
+  const downloadWebAppLauncher = () => {
+    const manifestData = {
+      name: "Ishak AI Admin Portal",
+      url: window.location.origin,
+      desc: "Live Supabase Ishak AI Admin Portal"
+    };
+    const blob = new Blob([JSON.stringify(manifestData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Ishak_AI_Admin.webapp';
+    a.click();
+    URL.revokeObjectURL(url);
+    showActionToast('অ্যাপ ফাইল ডাউনলোড হয়েছে!');
+  };
 
   // Live countdown ticker (ticks every second for real-time live expiration countdown)
   const [, setLiveTick] = useState<number>(0);
@@ -377,154 +424,161 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
   const lockedDeviceCount = keys.filter((k) => k.device_id && k.device_id.trim() !== '').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 sm:space-y-6">
       {/* Dynamic Action Notification Toast (No browser alert popups!) */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-[999999] animate-bounce">
+        <div className="fixed top-4 sm:top-20 left-4 right-4 sm:left-auto sm:right-6 z-[999999] animate-bounce max-w-sm sm:max-w-md mx-auto sm:mx-0">
           <div
             className={`px-4 py-2.5 rounded-2xl shadow-2xl border text-xs font-black flex items-center gap-2 backdrop-blur-md ${
               toastMessage.isError
-                ? 'bg-red-950/90 border-red-500 text-red-200'
-                : 'bg-emerald-950/90 border-emerald-400 text-emerald-300'
+                ? 'bg-red-950/95 border-red-500 text-red-200'
+                : 'bg-emerald-950/95 border-emerald-400 text-emerald-300'
             }`}
           >
-            {toastMessage.isError ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-            <span>{toastMessage.text}</span>
+            {toastMessage.isError ? <AlertTriangle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
+            <span className="truncate">{toastMessage.text}</span>
           </div>
         </div>
       )}
 
-      {/* Top 3D Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)]">
-          <div className="flex items-center justify-between text-gray-400 text-xs mb-1">
-            <span>মোট লাইসেন্স কি</span>
-            <KeyRound className="w-4 h-4 text-cyan-400" />
+      {/* Top 3D Stat Cards - Mobile Compact Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]">
+          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
+            <span className="truncate">মোট কী</span>
+            <KeyRound className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-white">{keys.length}</div>
-          <div className="text-[11px] text-cyan-400/80 mt-1 flex items-center gap-1">
-            <RefreshCw className="w-3 h-3 cursor-pointer hover:rotate-180 transition" onClick={onRefresh} />
-            <span>সুপাবেস ডাটাবেস</span>
+          <div className="text-xl sm:text-2xl font-black text-white">{keys.length}</div>
+          <div className="text-[10px] sm:text-[11px] text-cyan-400/80 mt-1 flex items-center gap-1 truncate">
+            <RefreshCw className="w-3 h-3 cursor-pointer hover:rotate-180 transition shrink-0" onClick={onRefresh} />
+            <span className="truncate">সুপাবেস ডাটাবেস</span>
           </div>
         </div>
 
-        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)]">
-          <div className="flex items-center justify-between text-gray-400 text-xs mb-1">
-            <span>সক্রিয় লাইসেন্স (Active)</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]">
+          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
+            <span className="truncate">সক্রিয় কী</span>
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-emerald-400">{activeCount}</div>
-          <div className="text-[11px] text-gray-400 mt-1">ভ্যালিড ও সুরক্ষিত</div>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400">{activeCount}</div>
+          <div className="text-[10px] sm:text-[11px] text-gray-400 mt-1 truncate">ভ্যালিড ও লাইভ</div>
         </div>
 
-        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)]">
-          <div className="flex items-center justify-between text-gray-400 text-xs mb-1">
-            <span>লক করা ডিভাইস (Single Device)</span>
-            <Smartphone className="w-4 h-4 text-amber-400" />
+        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]">
+          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
+            <span className="truncate">লকড ডিভাইস</span>
+            <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
           </div>
-          <div className="text-2xl font-black text-amber-400">{lockedDeviceCount}</div>
-          <div className="text-[11px] text-gray-400 mt-1">শেয়ারিং রোধে লকড</div>
+          <div className="text-xl sm:text-2xl font-black text-amber-400">{lockedDeviceCount}</div>
+          <div className="text-[10px] sm:text-[11px] text-gray-400 mt-1 truncate">ডিভাইসে আবদ্ধ</div>
         </div>
 
         <div 
           onClick={openSupabaseModal}
-          className="bg-[#0B132B] border border-cyan-500/30 hover:border-cyan-400 rounded-2xl p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)] cursor-pointer transition group"
-          title="Supabase ডাটাবেস সেটিংস ও SQL কোড দেখতে ক্লিক করুন"
+          className="bg-[#0B132B] border border-cyan-500/30 hover:border-cyan-400 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)] cursor-pointer transition group"
+          title="Supabase ডাটাবেস সেটিংস দেখতে ক্লিক করুন"
         >
-          <div className="flex items-center justify-between text-gray-400 text-xs mb-1">
-            <span>ডাটাবেস স্টোরেজ</span>
+          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
+            <span className="truncate">স্টোরেজ</span>
             <div className="flex items-center gap-1">
-              <Database className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition" />
-              <span className="text-[10px] text-cyan-400 font-bold group-hover:underline">সেটিংস</span>
+              <Database className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition shrink-0" />
+              <span className="text-[9px] sm:text-[10px] text-cyan-400 font-bold group-hover:underline">সেটিংস</span>
             </div>
           </div>
-          <div className="text-base font-bold text-white truncate flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isSupabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span>{isSupabaseActive ? 'Supabase Cloud' : 'Server Memory'}</span>
+          <div className="text-sm sm:text-base font-bold text-white truncate flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${isSupabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span className="truncate">{isSupabaseActive ? 'Supabase' : 'Server Memory'}</span>
           </div>
-          <div className="text-[11px] text-cyan-400 mt-1 flex items-center justify-between">
-            <span>{isSupabaseActive ? 'সুপাবেসে লাইভ কানেক্টেড' : 'ক্লিক করে কানেক্ট করুন'}</span>
-            <ExternalLink className="w-3 h-3 text-gray-500 group-hover:text-cyan-400" />
+          <div className="text-[10px] sm:text-[11px] text-cyan-400 mt-1 flex items-center justify-between">
+            <span className="truncate">{isSupabaseActive ? 'লাইভ কানেক্টেড' : 'কানেক্ট করুন'}</span>
+            <ExternalLink className="w-3 h-3 text-gray-500 group-hover:text-cyan-400 shrink-0" />
           </div>
         </div>
       </div>
 
-      {/* 🤖 TELEGRAM BOT INTEGRATION BANNER (Supabase-TG Live) */}
-      <div className="bg-gradient-to-r from-blue-950/80 via-[#0B132B] to-cyan-950/80 border border-cyan-400/40 rounded-2xl p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-2xl shadow-inner shrink-0">
-            🤖
+      {/* 📱 1-CLICK PWA APP INSTALL & DOWNLOAD CARD (100% Live Supabase & Server Sync) */}
+      <div className="bg-gradient-to-r from-cyan-950/80 via-[#0B132B] to-blue-950/80 border border-cyan-400/40 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
+            📱
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-white flex items-center gap-1.5">
-                <span>টেলিগ্রাম বট লাইভ কানেক্টেড</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
-                  🟢 Supabase-TG Active
-                </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                <span>মোবাইল ও পিসি অ্যাপ (PWA Live App)</span>
               </h3>
+              <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>লাইভ ডাটাবেজ কানেক্টেড</span>
+              </span>
             </div>
-            <p className="text-xs text-gray-300 mt-0.5">
-              বট ইউজারনেম: <b className="text-cyan-300">@IshakTrading_bot</b> | এডমিন পাসওয়ার্ড: <code className="bg-slate-900 px-1.5 py-0.5 rounded text-amber-300 font-mono">ishakdevos</code> (বটের ভেতর পরিবর্তনযোগ্য)
+            <p className="text-[11px] text-gray-300 mt-0.5">
+              ১-ক্লিকে অফিসিয়াল অ্যাপটি ফোনে ইনস্টল করুন — কোনো ব্রাউজার ট্যাব ছাড়া সরাসরি ফুলস্ক্রিনে চলবে।
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <a
-            href="https://t.me/IshakTrading_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-lg shadow-cyan-500/25 hover:brightness-110 flex items-center gap-1.5 transition"
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <button
+            onClick={handleInstallApp}
+            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
           >
-            <span>টেলিগ্রাম বট খুলুন</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+            <Download className="w-4 h-4" />
+            <span>{isAppInstalled ? 'অ্যাপ চালু আছে' : '১-ক্লিকে অ্যাপ ইনস্টল'}</span>
+          </button>
+          <button
+            onClick={downloadWebAppLauncher}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center justify-center gap-1 transition active:scale-95"
+            title="অ্যাপ ফাইল ডাউনলোড"
+          >
+            <Laptop className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">ফাইল</span>
+          </button>
         </div>
       </div>
 
       {/* 🛠️ MAINTENANCE MODE CONTROL CARD */}
-      <div className={`border rounded-2xl p-4 sm:p-5 shadow-2xl transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-4 ${
+      <div className={`border rounded-2xl p-3.5 sm:p-5 shadow-2xl transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 ${
         maintenanceMode 
           ? 'bg-gradient-to-r from-red-950/90 via-rose-950/80 to-red-900/70 border-red-500/70 shadow-[0_0_35px_rgba(239,68,68,0.3)]' 
           : 'bg-gradient-to-r from-slate-900/90 via-[#0B132B] to-slate-900/90 border-cyan-500/30'
       }`}>
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 border transition ${
+        <div className="flex items-start sm:items-center gap-3 w-full sm:w-auto">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl sm:text-2xl shrink-0 border transition ${
             maintenanceMode 
               ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' 
               : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
           }`}>
             {maintenanceMode ? '⚠️' : '🛡️'}
           </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <span>বট মেইনটেনেন্স মোড (Maintenance Mode)</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h3 className="text-xs sm:text-sm font-black text-white">
+                বট মেইনটেনেন্স মোড
               </h3>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider flex items-center gap-1.5 ${
+              <span className={`px-2 py-0.2 rounded-full text-[9px] font-black border uppercase tracking-wider flex items-center gap-1 ${
                 maintenanceMode
                   ? 'bg-red-500/20 text-red-300 border-red-500/60 animate-pulse'
                   : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${maintenanceMode ? 'bg-red-500 animate-ping' : 'bg-emerald-400'}`} />
-                <span>{maintenanceMode ? 'ACTIVE (মেইনটেনেন্স চালু)' : 'INACTIVE (বট সচল)'}</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${maintenanceMode ? 'bg-red-500 animate-ping' : 'bg-emerald-400'}`} />
+                <span>{maintenanceMode ? 'অন (Maintenance)' : 'অফ (সচল)'}</span>
               </span>
             </div>
-            <p className="text-xs text-gray-300 mt-1">
+            <p className="text-[11px] text-gray-300 mt-0.5 leading-snug">
               {maintenanceMode
-                ? '🔴 এই মোড চালু রয়েছে! ইউজারের প্ল্যাটফর্মে স্ক্রিপ্ট লোড হবে ঠিকই, কিন্তু বটে ক্লিক করলেই "Bot In Maintenance" মেসেজ দেখাবে এবং ট্রেড বন্ধ থাকবে।'
-                : '🟢 সাধারণ অবস্থা: এই অপশন অন করলে বট লোড হবে কিন্তু ইউজার বটে ক্লিক করলে "Bot In Maintenance" পপআপ শো করবে।'}
+                ? '🔴 এই মোড চালু রয়েছে! ইউজারের বটে ক্লিক করলে "Bot In Maintenance" দেখাবে।'
+                : '🟢 সাধারণ অবস্থা: অন করলে বট চালু হওয়া বন্ধ হয়ে মেইনটেনেন্স মেসেজ দেখাবে।'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="w-full sm:w-auto shrink-0">
           <button
             type="button"
             disabled={isTogglingMaintenance}
             onClick={handleToggleMaintenance}
-            className={`px-5 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition active:scale-95 shadow-xl cursor-pointer ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-xl cursor-pointer ${
               maintenanceMode
                 ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
                 : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30'
@@ -533,51 +587,95 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
             {isTogglingMaintenance ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
             ) : (
-              <span>{maintenanceMode ? '🟢 মেইনটেনেন্স বন্ধ করুন (বট সচল)' : '🔴 মেইনটেনেন্স মোড অন করুন'}</span>
+              <span>{maintenanceMode ? '🟢 মেইনটেনেন্স বন্ধ করুন' : '🔴 মেইনটেনেন্স মোড অন করুন'}</span>
             )}
           </button>
         </div>
       </div>
 
-      {/* Action Bar */}
-      <div className="bg-[#0B132B] border border-cyan-500/20 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="কী, ডিভাইস বা ট্রেডার আইডি দিয়ে খুঁজুন..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-gray-500 outline-none focus:border-cyan-400"
-          />
-        </div>
+      {/* Mobile-First Action & Quick Create Bar */}
+      <div className="bg-[#0B132B] border border-cyan-500/20 rounded-2xl p-3 sm:p-4 shadow-xl space-y-3">
+        {/* Prominent Primary Create Key Button */}
+        <button
+          id="btn-create-key-primary"
+          onClick={() => setShowCreateModal(true)}
+          className="w-full py-3 sm:py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs sm:text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 active:scale-98 flex items-center justify-center gap-2 transition"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>নতুন VIP কী তৈরি করুন (Create Key)</span>
+        </button>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <select
-            value={filterStatus}
-            onChange={(e: any) => setFilterStatus(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-xs text-gray-300 rounded-xl px-3 py-2 outline-none focus:border-cyan-400"
-          >
-            <option value="all">সব কি ({keys.length})</option>
-            <option value="active">সক্রিয় (Active)</option>
-            <option value="blocked">ব্লকড (Blocked)</option>
-            <option value="expired">মেয়াদোত্তীর্ণ (Expired)</option>
-          </select>
+        {/* Search and Mobile Segmented Filter Tabs */}
+        <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="কী, ডিভাইস বা ট্রেডার আইডি দিয়ে খুঁজুন..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs text-white placeholder-gray-500 outline-none focus:border-cyan-400 transition"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/20 hover:brightness-110 flex items-center gap-1.5 transition"
-          >
-            <Plus className="w-4 h-4" />
-            <span>নতুন কী তৈরি</span>
-          </button>
+          {/* Quick Segmented Filter Tabs - Thumb Friendly */}
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                filterStatus === 'all'
+                  ? 'bg-cyan-500 text-[#070D1E] shadow-sm'
+                  : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+              }`}
+            >
+              সব ({keys.length})
+            </button>
+            <button
+              onClick={() => setFilterStatus('active')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                filterStatus === 'active'
+                  ? 'bg-emerald-500 text-[#070D1E] shadow-sm'
+                  : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+              }`}
+            >
+              সক্রিয় ({activeCount})
+            </button>
+            <button
+              onClick={() => setFilterStatus('blocked')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                filterStatus === 'blocked'
+                  ? 'bg-red-500 text-white shadow-sm'
+                  : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+              }`}
+            >
+              ব্লকড
+            </button>
+            <button
+              onClick={() => setFilterStatus('expired')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                filterStatus === 'expired'
+                  ? 'bg-amber-500 text-[#070D1E] shadow-sm'
+                  : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+              }`}
+            >
+              মেয়াদ শেষ
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* License Keys Grid - Compact, Modern, High-Density Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+      {/* License Keys Grid - Ultra Compact, High-Density (2-3 per row on mobile, 3-4 on desktop) */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
         {filteredKeys.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-gray-500 text-xs bg-[#0B132B]/50 rounded-2xl border border-slate-800">
+          <div className="col-span-full py-10 text-center text-gray-500 text-xs bg-[#0B132B]/50 rounded-2xl border border-slate-800">
             কোনো লাইসেন্স কি পাওয়া যায়নি
           </div>
         ) : (
@@ -594,7 +692,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
             return (
               <div
                 key={k.key}
-                className={`rounded-xl p-3 border transition-all duration-200 flex flex-col justify-between shadow-md hover:shadow-cyan-950/40 ${
+                className={`rounded-xl p-2 sm:p-2.5 border transition-all duration-150 flex flex-col justify-between shadow-md hover:shadow-cyan-950/40 relative overflow-hidden ${
                   !k.active
                     ? 'bg-red-950/20 border-red-500/40'
                     : remaining.isExpired
@@ -603,81 +701,84 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                 }`}
               >
                 <div>
-                  {/* Card Header: Tier & Status */}
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-1.5">
+                  {/* Card Header: Tier & Active status */}
+                  <div className="flex items-center justify-between gap-1 mb-1.5">
+                    <div className="flex items-center gap-1 min-w-0">
                       <span
-                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                        className={`px-1.5 py-0.5 rounded text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-wider shrink-0 ${
                           k.tier === 'LIFETIME'
-                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
                             : k.tier === 'TRIAL'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                         }`}
                       >
                         {k.tier}
                       </span>
-                      <span className="text-[10px] text-gray-400 font-mono">
-                        {k.duration === 'lifetime' ? '♾️ Lifetime' : k.duration || '30d'}
+                      <span className="text-[9.5px] sm:text-[10px] text-gray-400 font-mono font-bold truncate">
+                        {k.duration === 'lifetime' ? '♾️ Life' : k.duration || '30d'}
                       </span>
                     </div>
 
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1 ${
+                      className={`px-1.5 py-0.5 rounded-full text-[8.5px] sm:text-[9px] font-bold flex items-center gap-1 shrink-0 ${
                         !k.active
-                          ? 'bg-red-500/20 text-red-400'
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                           : remaining.isExpired
-                          ? 'bg-amber-500/20 text-amber-400'
-                          : 'bg-emerald-500/20 text-emerald-400'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${!k.active ? 'bg-red-400' : remaining.isExpired ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-                      <span>{!k.active ? 'ব্লকড' : remaining.isExpired ? 'মেয়াদ শেষ' : 'সক্রিয়'}</span>
+                      <span className={`w-1 h-1 rounded-full ${!k.active ? 'bg-red-400' : remaining.isExpired ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                      <span>{!k.active ? 'ব্লক' : remaining.isExpired ? 'শেষ' : 'সক্রিয়'}</span>
                     </span>
                   </div>
 
-                  {/* Key Code & Instant Copy */}
-                  <div className="flex items-center justify-between bg-slate-950/90 px-2.5 py-1.5 rounded-lg border border-slate-800 mb-2.5">
-                    <span className="text-cyan-300 font-mono font-bold text-xs select-all truncate">
+                  {/* Key Code & Quick Copy Box */}
+                  <div className="flex items-center justify-between bg-slate-950/90 px-2 py-1.5 rounded-lg border border-cyan-500/20 mb-1.5">
+                    <span className="text-cyan-300 font-mono font-black text-[10px] sm:text-[11px] select-all truncate tracking-tight">
                       {k.key}
                     </span>
                     <button
                       onClick={() => handleCopy(k.key)}
-                      className="text-gray-400 hover:text-cyan-400 transition ml-2 shrink-0 p-1"
+                      className={`ml-1 shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold flex items-center gap-0.5 transition active:scale-95 cursor-pointer ${
+                        copiedKey === k.key
+                          ? 'bg-emerald-500 text-[#070D1E]'
+                          : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-400/40'
+                      }`}
                       title="কপি করুন"
                     >
-                      {copiedKey === k.key ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedKey === k.key ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                      <span>{copiedKey === k.key ? 'কপি!' : 'কপি'}</span>
                     </button>
                   </div>
 
-                  {/* Compact Info Grid */}
-                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10.5px] text-gray-300 mb-2.5 bg-slate-900/50 p-2 rounded-lg border border-slate-800/80">
-                    <div className="flex items-center justify-between col-span-2">
-                      <span className="text-gray-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-cyan-400" />
+                  {/* High-Density Compact Info Box */}
+                  <div className="space-y-1 text-[9.5px] sm:text-[10px] text-gray-300 mb-1.5 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800/80">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 flex items-center gap-1 text-[9px] sm:text-[9.5px]">
+                        <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
                         <span>মেয়াদ:</span>
                       </span>
-                      <b className={remaining.isExpired ? 'text-red-400 font-mono' : remaining.notStarted ? 'text-cyan-400' : 'text-emerald-400 font-mono'}>
+                      <b className={`font-mono truncate max-w-[55%] text-right ${remaining.isExpired ? 'text-red-400' : remaining.notStarted ? 'text-cyan-400' : 'text-emerald-400'}`}>
                         {remaining.text}
                       </b>
                     </div>
 
-                    <div className="flex items-center justify-between col-span-2">
-                      <span className="text-gray-400 flex items-center gap-1">
-                        <Smartphone className="w-3 h-3 text-amber-400" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 flex items-center gap-1 text-[9px] sm:text-[9.5px]">
+                        <Smartphone className="w-3 h-3 text-amber-400 shrink-0" />
                         <span>ডিভাইস:</span>
                       </span>
                       <div className="flex items-center gap-1">
-                        <b className={isBound ? 'text-amber-300 font-mono text-[10px]' : 'text-gray-400 text-[10px]'}>
-                          {isUnlimitedDev
-                            ? `${registeredDevices.length} / Unlimited`
-                            : `${registeredDevices.length} / ${devLimit} Dev`}
+                        <b className={isBound ? 'text-amber-300 font-mono' : 'text-gray-400 font-mono'}>
+                          {isUnlimitedDev ? `${registeredDevices.length}/∞` : `${registeredDevices.length}/${devLimit}`}
                         </b>
                         {isBound && (
                           <button
                             onClick={() => handleResetDevice(k.key)}
-                            title="ডিভাইস লক রিসেট করুন"
-                            className="p-0.5 hover:text-cyan-400 text-gray-400"
+                            title="রিসেট"
+                            className="p-0.5 hover:text-cyan-400 text-gray-400 bg-slate-800 rounded transition"
                           >
                             <RotateCcw className="w-2.5 h-2.5" />
                           </button>
@@ -686,34 +787,28 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                     </div>
 
                     {k.trader_id && (
-                      <div className="flex items-center justify-between col-span-2">
-                        <span className="text-gray-400">ট্রেডার ID:</span>
-                        <b className="text-amber-400 font-mono">{k.trader_id}</b>
-                      </div>
-                    )}
-
-                    {k.note && (
-                      <div className="col-span-2 text-[10px] text-gray-400 italic truncate pt-0.5 border-t border-slate-800">
-                        "{k.note}"
+                      <div className="flex items-center justify-between pt-0.5 border-t border-slate-800/60">
+                        <span className="text-gray-400 text-[9px]">ID:</span>
+                        <b className="text-amber-400 font-mono truncate max-w-[65%] text-right">{k.trader_id}</b>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Compact Actions Toolbar */}
-                <div className="flex items-center gap-1.5 pt-2 border-t border-slate-800/90 text-xs">
+                {/* Ultra-Compact 4-Action Button Bar */}
+                <div className="grid grid-cols-4 gap-1 pt-1.5 border-t border-slate-800/90">
                   <button
                     onClick={async () => {
                       await onToggleActive(k.key, k.active);
                       showActionToast(k.active ? 'কী ব্লক করা হয়েছে' : 'কী আনব্লক করা হয়েছে');
                     }}
-                    className={`flex-1 py-1 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition ${
+                    className={`col-span-2 h-7 rounded-lg font-black text-[9.5px] sm:text-[10px] flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer ${
                       k.active
                         ? 'bg-red-950/40 text-red-400 hover:bg-red-900/40 border border-red-500/30'
                         : 'bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/40 border border-emerald-500/30'
                     }`}
                   >
-                    <Ban className="w-3 h-3" />
+                    <Ban className="w-2.5 h-2.5" />
                     <span>{k.active ? 'ব্লক' : 'আনব্লক'}</span>
                   </button>
 
@@ -722,7 +817,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                       await onExtend(k.key, 30);
                       showActionToast('মেয়াদ +৩০ দিন বৃদ্ধি করা হয়েছে');
                     }}
-                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-[11px] border border-cyan-500/20"
+                    className="h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-black text-[9.5px] border border-cyan-500/20 flex items-center justify-center transition active:scale-95 cursor-pointer"
                     title="+৩০ দিন বাড়ান"
                   >
                     +30d
@@ -733,22 +828,22 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                       setDeliveryLicense(k);
                       setShowDeliveryModal(true);
                     }}
-                    className="px-2 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-[11px] font-bold flex items-center gap-1 transition"
+                    className="h-7 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-400/40 flex items-center justify-center transition active:scale-95 cursor-pointer"
                     title="কাস্টমার ডেলিভারি মেসেজ"
                   >
-                    <Send className="w-3 h-3 text-cyan-400" />
-                    <span>মেসেজ</span>
+                    <Send className="w-2.5 h-2.5 text-cyan-400" />
                   </button>
 
                   <button
                     onClick={async () => {
                       await onDeleteKey(k.key);
-                      showActionToast('কী সফলভাবে ডিলিট করা হয়েছে');
+                      showActionToast('কী ডিলিট করা হয়েছে');
                     }}
-                    className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-500/20"
+                    className="col-span-4 h-6 rounded-lg bg-red-950/20 hover:bg-red-900/30 text-red-400/80 hover:text-red-300 border border-red-500/20 flex items-center justify-center gap-1 text-[9px] sm:text-[9.5px] transition active:scale-95 cursor-pointer"
                     title="ডিলিট করুন"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="w-2.5 h-2.5" />
+                    <span>ডিলিট</span>
                   </button>
                 </div>
               </div>
@@ -757,18 +852,21 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         )}
       </div>
 
-      {/* CREATE NEW KEY MODAL WITH TIME LIMIT & DEVICE LIMIT OPTIONS */}
+      {/* CREATE NEW KEY MODAL WITH TIME LIMIT & DEVICE LIMIT OPTIONS - MOBILE SHEET */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-5 shadow-2xl relative max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999996] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-[#0B132B] border-t-2 sm:border-2 border-cyan-400 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+            {/* Mobile Sheet Handle */}
+            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-3 sm:hidden shrink-0" />
+
             <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-cyan-500/30">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-sm font-black text-white">নতুন VIP লাইসেন্স তৈরি (Device & Time Controls)</h3>
+                <h3 className="text-sm font-black text-white">নতুন VIP লাইসেন্স তৈরি</h3>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold"
+                className="w-7 h-7 rounded-full bg-slate-800 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition"
               >
                 ✕
               </button>
@@ -1021,25 +1119,28 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
 
       {/* 🗄️ SUPABASE CLOUD DATABASE CONNECTION MODAL & SQL VIEWER */}
       {showSupabaseModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0B132B] border border-cyan-500/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-[#0B132B] border-t-2 sm:border border-cyan-500/40 rounded-t-3xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto space-y-4">
+            {/* Mobile Sheet Handle */}
+            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-2 sm:hidden shrink-0" />
+
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
                   <Database className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-white font-black text-base sm:text-lg">
-                    Supabase ক্লাউড ডাটাবেস কানেকশন ও SQL কোড
+                  <h3 className="text-white font-black text-sm sm:text-lg">
+                    Supabase ডাটাবেস সেটিংস
                   </h3>
-                  <p className="text-xs text-gray-400">
-                    আপনার লাইসেন্স ডাটাবেসে স্থায়ীভাবে সংরক্ষণ করতে নিচের SQL রান করুন ও তথ্য দিন
+                  <p className="text-[11px] sm:text-xs text-gray-400">
+                    SQL কোড রান করুন ও প্রজেক্ট তথ্য দিয়ে পার্মানেন্টলি কানেক্ট করুন
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowSupabaseModal(false)}
-                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-400 hover:text-white transition"
+                className="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition"
               >
                 ✕
               </button>
@@ -1163,21 +1264,24 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
         </div>
       )}
 
-      {/* 📦 CUSTOMER DELIVERY MESSAGE MODAL */}
+      {/* 📦 CUSTOMER DELIVERY MESSAGE MODAL - MOBILE SHEET */}
       {showDeliveryModal && deliveryLicense && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999998] flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-5 shadow-2xl relative max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999998] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-lg bg-[#0B132B] border-t-2 sm:border-2 border-cyan-400 rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl relative max-h-[92vh] flex flex-col">
+            {/* Mobile Sheet Handle */}
+            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-2.5 sm:hidden shrink-0" />
+
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/30">
               <div className="flex items-center gap-2">
                 <span className="text-xl">📦</span>
                 <div>
-                  <h3 className="text-sm font-black text-white">কাস্টমার ডেলিভারি মেসেজ (Ready-to-Send)</h3>
-                  <p className="text-[11px] text-cyan-400">এই মেসেজটি কপি করে কাস্টমারকে সরাসরি পাঠিয়ে দিন</p>
+                  <h3 className="text-xs sm:text-sm font-black text-white">কাস্টমার ডেলিভারি মেসেজ</h3>
+                  <p className="text-[10px] sm:text-[11px] text-cyan-400">কাস্টমারকে সরাসরি কপি বা শেয়ার করুন</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowDeliveryModal(false)}
-                className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center text-xs font-bold hover:bg-red-500 transition"
+                className="w-7 h-7 rounded-full bg-slate-800 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition"
               >
                 ✕
               </button>
@@ -1229,16 +1333,6 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
               {/* Direct Share Buttons */}
               <div className="flex items-center justify-between gap-2 pt-1">
                 <a
-                  href={`https://t.me/share/url?url=&text=${encodeURIComponent(getDeliveryMessage(deliveryLicense))}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-1.5 px-3 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/40 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>টেলিগ্রামে পাঠান</span>
-                </a>
-
-                <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(getDeliveryMessage(deliveryLicense))}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -1255,6 +1349,98 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   বন্ধ করুন
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 📱 PWA APP 1-CLICK DOWNLOAD & INSTALL GUIDE MODAL */}
+      {showInstallGuide && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-[#0B132B] border-t-2 sm:border-2 border-cyan-400 rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 shadow-2xl relative max-h-[92vh] flex flex-col">
+            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-2.5 sm:hidden shrink-0" />
+
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/30">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-lg shadow-inner shrink-0">
+                  📱
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-black text-white">মোবাইল অ্যাপ ইনস্টল ও ডাউনলোড</h3>
+                  <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>লাইভ ডাটাবেজ কানেক্টেড (Live Supabase Sync)</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="w-7 h-7 rounded-full bg-slate-800 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 overflow-y-auto mb-3 text-xs text-gray-200">
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-cyan-500/20">
+                <p className="text-cyan-300 font-bold mb-1">⚡ অ্যাপের সুবিধা:</p>
+                <ul className="text-[11px] text-gray-300 space-y-1 list-disc list-inside">
+                  <li>ব্রাউজার অ্যাড্রেস বার বা ট্যাব ছাড়াই ফুলস্ক্রিন নেটিভ অ্যাপের মতো চলে।</li>
+                  <li>লাইভ ডাটাবেজের সাথে সবসময় সংযুক্ত—কী তৈরি, ব্লক বা এক্সটেন্ড সাথে সাথে কার্যকর হয়।</li>
+                  <li>এক ক্লিকে মোবাইল হোম স্ক্রিন থেকে দ্রুত চালু করা যায়।</li>
+                </ul>
+              </div>
+
+              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-700 space-y-2">
+                <p className="text-white font-bold text-xs">📱 যেভাবে ইনস্টল করবেন:</p>
+                <div className="text-[11px] text-gray-300 space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <span className="text-cyan-400 font-bold">১.</span>
+                    <span><b>Chrome / Kiwi (Android):</b> ব্রাউজারের উপরে ডানদিকের <b>৩ ডট (⋮)</b> মেনুতে ক্লিক করে <b>"Install app"</b> বা <b>"Add to Home screen"</b> চাপুন।</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-cyan-400 font-bold">২.</span>
+                    <span><b>Safari (iPhone / iPad):</b> ব্রাউজারের নিচে <b>Share (শেয়ার ↗)</b> আইকনে ক্লিক করে <b>"Add to Home Screen"</b> চাপুন।</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-cyan-950/30 border border-cyan-500/30 p-2.5 rounded-xl flex items-center justify-between gap-2">
+                <div className="text-[11px]">
+                  <b className="text-white block">অ্যাপ ফাইল সরাসরি চান?</b>
+                  <span className="text-gray-400 text-[10px]">এক ক্লিকে শর্টকাট ফাইল নামিয়ে নিন</span>
+                </div>
+                <button
+                  onClick={downloadWebAppLauncher}
+                  className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-[#070D1E] rounded-lg font-black text-xs flex items-center gap-1 transition active:scale-95 cursor-pointer shrink-0"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>ডাউনলোড</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 flex gap-2">
+              <button
+                onClick={() => {
+                  if (deferredPrompt) {
+                    handleInstallApp();
+                  } else {
+                    downloadWebAppLauncher();
+                  }
+                  setShowInstallGuide(false);
+                }}
+                className="flex-1 py-2 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>ইনস্টল নিশ্চিত করুন</span>
+              </button>
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-xs font-semibold transition"
+              >
+                বন্ধ
+              </button>
             </div>
           </div>
         </div>

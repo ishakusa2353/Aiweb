@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { KeyRound, Zap, Code2 } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { SimulatorView } from './components/SimulatorView';
 import { KeyManagerView } from './components/KeyManagerView';
@@ -180,7 +181,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 md:pb-16">
         {activeTab === 'keys' && (
           <KeyManagerView
             keys={keys}
@@ -195,6 +196,55 @@ export default function App() {
         {activeTab === 'simulator' && <SimulatorView lastSignal={lastSignal} />}
         {activeTab === 'bookmarklet' && <BookmarkletView />}
       </main>
+
+      {/* Sleek Mobile Bottom Navigation Dock (High-Tech Native App Feel) */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#070D1E]/95 backdrop-blur-2xl border-t border-cyan-500/25 px-3 py-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] shadow-[0_-10px_35px_rgba(0,0,0,0.9)] flex items-center justify-around"
+      >
+        <button
+          onClick={() => setActiveTab('keys')}
+          className={`flex-1 py-1 px-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 ${
+            activeTab === 'keys'
+              ? 'text-cyan-300 bg-cyan-500/15 border border-cyan-400/40 shadow-[0_0_15px_rgba(0,229,255,0.25)]'
+              : 'text-gray-400 hover:text-gray-200 border border-transparent'
+          }`}
+        >
+          <div className="relative">
+            <KeyRound className="w-5 h-5" />
+            {supabaseStatus.keyCount > 0 && (
+              <span className="absolute -top-1 -right-2.5 px-1 py-0.2 text-[9px] font-black rounded-full bg-cyan-400 text-[#070D1E] min-w-4 text-center leading-none">
+                {supabaseStatus.keyCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] font-black tracking-tight">লাইসেন্স কি</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('simulator')}
+          className={`flex-1 py-1 px-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 ${
+            activeTab === 'simulator'
+              ? 'text-amber-300 bg-amber-500/15 border border-amber-400/40 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+              : 'text-gray-400 hover:text-gray-200 border border-transparent'
+          }`}
+        >
+          <Zap className="w-5 h-5" />
+          <span className="text-[10px] font-black tracking-tight">বট প্রিভিউ</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('bookmarklet')}
+          className={`flex-1 py-1 px-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 ${
+            activeTab === 'bookmarklet'
+              ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-400/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+              : 'text-gray-400 hover:text-gray-200 border border-transparent'
+          }`}
+        >
+          <Code2 className="w-5 h-5" />
+          <span className="text-[10px] font-black tracking-tight">বুকমার্কলেট</span>
+        </button>
+      </nav>
 
       {/* Persistent Floating Ishak AI Assistant Widget with Laser Scan & Sound */}
       <FloatingIshakWidget

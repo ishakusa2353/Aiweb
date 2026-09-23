@@ -532,7 +532,7 @@ class LicenseDatabase {
       device_limit: deviceLimit !== undefined ? Number(deviceLimit) : 1,
       trader_id: cleanTraderId,
       created_at: Date.now(),
-      note: note || `Generated via Telegram Bot (${cleanDuration})`
+      note: note || `Generated VIP License (${cleanDuration})`
     };
 
     await this.saveLicense(record);

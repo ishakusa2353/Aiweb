@@ -1,10 +1,33 @@
 javascript:(function(){
+  // 🔒 MILITARY-GRADE ANTI-TAMPER & INSPECTION SHIELD
+  try {
+    document.addEventListener('contextmenu', function(e) {
+      var t = e.target;
+      if (t && t.closest && (t.closest('#ishak-trade-wrap') || t.closest('.ishak-dialog-modal') || t.closest('#ishak-hud-panel') || t.closest('#ishak-screen-scan-box'))) {
+        e.preventDefault();
+        return false;
+      }
+    }, true);
+
+    window.addEventListener('keydown', function(e) {
+      if (
+        e.keyCode === 123 || // F12
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || // Ctrl+Shift+I/J/C
+        (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83)) // Ctrl+U, Ctrl+S
+      ) {
+        if (document.getElementById('ishak-trade-wrap')) {
+          e.stopPropagation();
+        }
+      }
+    }, true);
+  } catch(e){}
+
   try {
     var oldWrap = document.getElementById('ishak-trade-wrap');
     if (oldWrap) oldWrap.remove();
     var oldHud = document.getElementById('ishak-hud-panel');
     if (oldHud) oldHud.remove();
-    var toRemove = ['ishak-opt-modal', 'm-modal', 't-modal', 'k-modal', 'ishak-custom-css', 'scan-laser', 'scan-grid', 'ishak-screen-scan-box'];
+    var toRemove = ['ishak-opt-modal', 'm-modal', 't-modal', 'k-modal', 'ishak-custom-css', 'scan-laser', 'scan-grid', 'ishak-screen-scan-box', 'ishak-water-wave-overlay'];
     for (var i = 0; i < toRemove.length; i++) {
       var el = document.getElementById(toRemove[i]);
       if (el) el.remove();
@@ -348,6 +371,70 @@ javascript:(function(){
     } catch(e){}
   }
 
+  // 🌊 4-SECOND RELAXING WATER WAVE ENTRANCE SYNTHESIZER
+  function playWaterWaveIntroSound() {
+    try {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var t = audioCtx.currentTime;
+      var dur = 4.0;
+
+      // 1. Water Ripple / Fluid Ocean Whoosh (Smooth Resonant Lowpass Filtered Noise)
+      var bufferSize = Math.floor(audioCtx.sampleRate * dur);
+      var noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      var output = noiseBuffer.getChannelData(0);
+      var lastOut = 0.0;
+      for (var i = 0; i < bufferSize; i++) {
+        var white = Math.random() * 2 - 1;
+        output[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = output[i];
+      }
+      var noiseSrc = audioCtx.createBufferSource();
+      noiseSrc.buffer = noiseBuffer;
+
+      var filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(160, t);
+      filter.frequency.exponentialRampToValueAtTime(780, t + 1.8);
+      filter.frequency.exponentialRampToValueAtTime(140, t + dur);
+      filter.Q.setValueAtTime(2.8, t);
+
+      var waveGain = audioCtx.createGain();
+      waveGain.gain.setValueAtTime(0.001, t);
+      waveGain.gain.linearRampToValueAtTime(0.18, t + 1.2);
+      waveGain.gain.linearRampToValueAtTime(0.12, t + 2.6);
+      waveGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+      noiseSrc.connect(filter);
+      filter.connect(waveGain);
+      waveGain.connect(audioCtx.destination);
+      noiseSrc.start(t);
+      noiseSrc.stop(t + dur);
+
+      // 2. Harmonic Celestial Water Chimes (A4 -> C#5 -> E5 -> A5)
+      var chimes = [
+        { f: 440.00, time: 0.5 },
+        { f: 554.37, time: 1.5 },
+        { f: 659.25, time: 2.5 },
+        { f: 880.00, time: 3.4 }
+      ];
+      chimes.forEach(function(item) {
+        var osc = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(item.f, t + item.time);
+        g.gain.setValueAtTime(0.14, t + item.time);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + item.time + 0.65);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start(t + item.time);
+        osc.stop(t + item.time + 0.7);
+      });
+    } catch(e){}
+  }
+
   function getLocalLicense() {
     try {
       var raw = localStorage.getItem('ISHAK_AI_LICENSE');
@@ -368,28 +455,29 @@ javascript:(function(){
     } catch(e){}
   }
 
+  // 🛡️ MOBILE-PERFECT ERROR TOAST: NEVER CLIPS OR OVERFLOWS ANY SCREEN
   function showModalToast(containerEl, msg, isError) {
-    var oldToast = containerEl.querySelector('.ishak-toast-notify');
+    var oldToast = document.querySelector('.ishak-toast-notify');
     if (oldToast) oldToast.remove();
 
     var toast = document.createElement('div');
     toast.className = 'ishak-toast-notify';
-    toast.style.cssText = 'position:absolute;bottom:-48px;left:50%;transform:translateX(-50%);padding:8px 14px;border-radius:12px;font-size:11px;font-weight:bold;display:flex;align-items:center;gap:6px;white-space:nowrap;z-index:2147483647;backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,0.85);animation:ishakToastIn 0.25s ease-out;' +
+    toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);width:calc(100vw - 32px);max-width:380px;padding:12px 16px;border-radius:14px;font-size:11.5px;line-height:1.45;font-weight:bold;text-align:center;word-break:break-word;white-space:normal;z-index:2147483647;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 12px 35px rgba(0,0,0,0.95);box-sizing:border-box;animation:ishakToastIn 0.25s ease-out;' +
       (isError
-        ? 'background:rgba(213,0,0,0.95);border:1.5px solid #FF1744;color:#FFF;text-shadow:0 0 8px #FF1744;'
-        : 'background:rgba(0,200,83,0.95);border:1.5px solid #00FF66;color:#0B132B;text-shadow:none;');
+        ? 'background:rgba(213,0,0,0.96);border:1.5px solid #FF1744;color:#FFF;text-shadow:0 0 8px #FF1744;'
+        : 'background:rgba(0,200,83,0.96);border:1.5px solid #00FF66;color:#0B132B;text-shadow:none;');
 
     toast.innerHTML = (isError ? '⚠️ ' : '✅ ') + msg;
-    containerEl.appendChild(toast);
+    document.body.appendChild(toast);
 
     setTimeout(function() {
       if (toast && toast.parentNode) {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(6px)';
+        toast.style.transform = 'translateX(-50%) translateY(-6px)';
         toast.style.transition = 'all 0.3s ease-out';
         setTimeout(function() { if (toast.parentNode) toast.remove(); }, 320);
       }
-    }, 3500);
+    }, 4500);
   }
 
   // 🚨 INSTANT BOT TERMINATION WHEN KEY EXPIRES OR IS DELETED
@@ -851,13 +939,35 @@ javascript:(function(){
       '96% { opacity: 0.95; transform: scaleY(1); } ' +
       '100% { opacity: 0; transform: scaleY(0.2); } ' +
     '}' +
-    '@keyframes ishakIntroSpawn { ' +
-      '0% { transform: translateY(-160px) scale(0.3) rotate(-15deg); opacity: 0; filter: blur(16px) drop-shadow(0 0 50px #00E5FF) brightness(2.2); } ' +
-      '45% { transform: translateY(18px) scale(1.18) rotate(4deg); opacity: 1; filter: blur(0px) drop-shadow(0 0 60px #F59E0B) drop-shadow(0 0 90px #00E5FF) brightness(1.25); } ' +
-      '68% { transform: translateY(-8px) scale(0.96) rotate(-2deg); filter: drop-shadow(0 0 35px #00E5FF); } ' +
-      '85% { transform: translateY(3px) scale(1.04) rotate(1deg); } ' +
-      '100% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 20px rgba(0,229,255,0.75)) drop-shadow(0 0 35px rgba(245,158,11,0.5)); } ' +
+    '@keyframes ishakIntroSpawn4s { ' +
+      '0% { transform: translate3d(calc(-50vw + 60px), -120vh, 0) scale(0.4) rotate(-12deg); opacity: 0; filter: blur(14px) drop-shadow(0 0 50px #00E5FF); } ' +
+      '30% { transform: translate3d(calc(-50vw + 60px), calc(-50vh + 60px), 0) scale(1.22) rotate(3deg); opacity: 1; filter: blur(0px) drop-shadow(0 0 60px #00E5FF) drop-shadow(0 0 90px #00FF66); } ' +
+      '58% { transform: translate3d(calc(-50vw + 60px), calc(-50vh + 50px), 0) scale(1.12) rotate(-1deg); opacity: 1; filter: drop-shadow(0 0 45px #00E5FF); } ' +
+      '82% { transform: translate3d(0, 0, 0) scale(1.05) rotate(0deg); opacity: 1; } ' +
+      '100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 20px rgba(0,229,255,0.75)); } ' +
     '}' +
+    '@keyframes ishakSpinClockwise { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
+    '@keyframes ishakSpinCounter { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }' +
+    '@keyframes ishakWaterWaveSweep1 { ' +
+      '0% { transform: translateX(-100%) scaleX(0.4) skewX(-15deg); opacity: 0.9; } ' +
+      '45% { transform: translateX(0%) scaleX(1.1) skewX(5deg); opacity: 0.85; } ' +
+      '100% { transform: translateX(130%) scaleX(1.4) skewX(0deg); opacity: 0; } ' +
+    '}' +
+    '@keyframes ishakWaterWaveSweep2 { ' +
+      '0% { transform: translateX(-100%) scaleX(0.3) skewX(-20deg); opacity: 0.7; } ' +
+      '50% { transform: translateX(10%) scaleX(1.15) skewX(8deg); opacity: 0.75; } ' +
+      '100% { transform: translateX(140%) scaleX(1.5) skewX(0deg); opacity: 0; } ' +
+    '}' +
+    '@keyframes ishakWaterWaveSweep3 { ' +
+      '0% { transform: translateX(-100%) scaleX(0.2) skewX(-10deg); opacity: 0.5; } ' +
+      '55% { transform: translateX(20%) scaleX(1.2) skewX(4deg); opacity: 0.6; } ' +
+      '100% { transform: translateX(150%) scaleX(1.6) skewX(0deg); opacity: 0; } ' +
+    '}' +
+    '#ishak-water-wave-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 2147483645; overflow: hidden; }' +
+    '.ishak-wave-sweep { position: absolute; top: 0; bottom: 0; width: 140vw; background: radial-gradient(ellipse at left center, rgba(0,229,255,0.3) 0%, rgba(34,211,238,0.18) 35%, rgba(0,255,102,0.08) 65%, transparent 100%); filter: blur(24px); transform-origin: left center; }' +
+    '.ishak-wave-1 { animation: ishakWaterWaveSweep1 4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }' +
+    '.ishak-wave-2 { animation: ishakWaterWaveSweep2 4s cubic-bezier(0.25, 0.85, 0.25, 1) 0.25s forwards; }' +
+    '.ishak-wave-3 { animation: ishakWaterWaveSweep3 4s cubic-bezier(0.3, 0.9, 0.3, 1) 0.5s forwards; }' +
     '@keyframes ishakSignalAppear1s { ' +
       '0% { transform: translate(-50%, -50%) scale(0.45); opacity: 0; filter: blur(14px); } ' +
       '18% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; filter: blur(0px); } ' +
@@ -866,7 +976,7 @@ javascript:(function(){
       '100% { transform: translate(-50%, -55%) scale(0.78); opacity: 0; filter: blur(10px); } ' +
     '}' +
     '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
-    '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn 1.35s cubic-bezier(0.19, 1, 0.22, 1) forwards; }' +
+    '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn4s 4s cubic-bezier(0.19, 1, 0.22, 1) forwards; }' +
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
     '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(0,229,255,0.95) 0%, rgba(0,229,255,0.7) 40%, rgba(0,229,255,0.2) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
@@ -876,11 +986,8 @@ javascript:(function(){
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 8px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; }' +
     '#ishak-pill-time { background: linear-gradient(135deg, #00E5FF, #22D3EE); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1px 5px; border-radius: 8px; }' +
-    '#scan-laser { position: fixed; top: -25px; left: 0; width: 100vw; height: 16px; z-index: 2147483646; display: none; pointer-events: none; }' +
-    '#scan-laser.scanning-active { display: block; animation: ishakLaserSweepFull 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
-    '#scan-laser-beam { position: relative; width: 100vw; height: 16px; background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.35) 8%, #00E5FF 25%, #E0FFFF 50%, #00E5FF 75%, rgba(0,229,255,0.35) 92%, transparent 100%); box-shadow: 0 0 20px #00E5FF, 0 0 45px #00E5FF, 0 0 80px #00E5FF, 0 0 8px #FFFFFF; border-radius: 8px; }' +
-    '#scan-laser-smoke-top { position: absolute; bottom: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0.95; transform-origin: bottom center; animation: ishakSmokeTopSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
-    '#scan-laser-smoke-bottom { position: absolute; top: 100%; left: 0; width: 100vw; height: 135px; background: linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%); filter: blur(8px); pointer-events: none; opacity: 0; transform-origin: top center; animation: ishakSmokeBottomSweep 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
+    '#scan-laser { display: none !important; }' +
+    '#scan-laser.scanning-active { display: none !important; }' +
     '#scan-grid { display: none !important; }' +
     '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: auto; max-width: none; user-select: none; }' +
     '#ishak-screen-scan-box.scanning-active { display: flex; flex-direction: column; align-items: center; justify-content: center; }' +
@@ -968,8 +1075,10 @@ javascript:(function(){
   screenScanBox.innerHTML =
     '<div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;">' +
       '<div style="position:absolute;width:240px;height:240px;border-radius:50%;filter:blur(50px);pointer-events:none;opacity:0.35;background:radial-gradient(circle,rgba(0,229,255,0.25) 0%,rgba(0,255,102,0.12) 50%,transparent 75%);"></div>' +
-      '<div style="position:relative;width:148px;height:148px;display:flex;align-items:center;justify-content:center;">' +
-        '<svg style="width:100%;height:100%;transform:rotate(-90deg);" viewBox="0 0 120 120">' +
+      '<div style="position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center;">' +
+        '<div style="position:absolute;inset:0;border-radius:50%;border:2.5px solid transparent;border-top-color:#00E5FF;border-right-color:rgba(0,229,255,0.35);animation:ishakSpinClockwise 1.6s linear infinite;filter:drop-shadow(0 0 8px #00E5FF);"></div>' +
+        '<div style="position:absolute;inset:7px;border-radius:50%;border:2px solid transparent;border-bottom-color:#00FF66;border-left-color:rgba(0,255,102,0.35);animation:ishakSpinCounter 2.2s linear infinite;filter:drop-shadow(0 0 8px #00FF66);"></div>' +
+        '<svg style="width:116px;height:116px;transform:rotate(-90deg);" viewBox="0 0 120 120">' +
           '<defs>' +
             '<linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
               '<stop offset="0%" stop-color="#00E5FF"/>' +
@@ -982,19 +1091,31 @@ javascript:(function(){
             '</filter>' +
           '</defs>' +
           '<circle cx="60" cy="60" r="50" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="3.5"/>' +
-          '<circle id="ishak-scan-circle-bar" cx="60" cy="60" r="50" fill="none" stroke="url(#ishakPureCircleGrad)" stroke-width="4.5" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" filter="url(#ishakPureGlow)" style="transition:stroke-dashoffset 0.08s linear;"/>' +
+          '<circle id="ishak-scan-circle-bar" cx="60" cy="60" r="50" fill="none" stroke="url(#ishakPureCircleGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" filter="url(#ishakPureGlow)" style="transition:stroke-dashoffset 0.08s linear;"/>' +
         '</svg>' +
         '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
-          '<span id="ishak-scan-percent-num" style="font-size:40px;font-weight:900;font-family:\'Orbitron\',monospace;letter-spacing:-1px;color:#FFFFFF;text-shadow:0 0 18px rgba(0,229,255,0.95), 0 0 32px rgba(0,255,102,0.6);line-height:1;">0</span>' +
-          '<span style="font-size:22px;font-weight:900;font-family:\'Orbitron\',monospace;color:#00E5FF;text-shadow:0 0 12px rgba(0,229,255,0.85);margin-left:2px;line-height:1;">%</span>' +
+          '<span id="ishak-scan-percent-num" style="font-size:38px;font-weight:900;font-family:\'Orbitron\',monospace;letter-spacing:-1px;color:#FFFFFF;text-shadow:0 0 18px rgba(0,229,255,0.95), 0 0 32px rgba(0,255,102,0.6);line-height:1;">0</span>' +
+          '<span style="font-size:20px;font-weight:900;font-family:\'Orbitron\',monospace;color:#00E5FF;text-shadow:0 0 12px rgba(0,229,255,0.85);margin-left:2px;line-height:1;">%</span>' +
         '</div>' +
       '</div>' +
       '<div style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;user-select:none;animation:ishakAnalyzingPulse 1.3s infinite ease-in-out;">' +
-        '<span id="ishak-scan-analyzing-title" style="font-size:13px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#00E5FF;text-shadow:0 0 14px rgba(0,229,255,0.95);font-family:\'Orbitron\',\'Rajdhani\',sans-serif;">ANALYZING</span>' +
-        '<span id="ishak-scan-dots" style="color:#00E5FF;font-family:\'Orbitron\',monospace;font-weight:900;letter-spacing:2px;font-size:13px;display:inline-block;width:24px;text-align:left;">...</span>' +
+        '<span id="ishak-scan-analyzing-title" style="font-size:12.5px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#00E5FF;text-shadow:0 0 14px rgba(0,229,255,0.95);font-family:\'Orbitron\',\'Rajdhani\',sans-serif;">ANALYZING</span>' +
+        '<span id="ishak-scan-dots" style="color:#00FF66;font-family:\'Orbitron\',monospace;font-weight:900;letter-spacing:2px;font-size:13px;display:inline-block;width:24px;text-align:left;">...</span>' +
       '</div>' +
     '</div>';
   document.body.appendChild(screenScanBox);
+
+  // 🌊 Water Wave Ripple Overlay (Sweeps from left during 4s entrance animation)
+  var waterWaveOverlay = document.createElement('div');
+  waterWaveOverlay.id = 'ishak-water-wave-overlay';
+  waterWaveOverlay.innerHTML =
+    '<div class="ishak-wave-sweep ishak-wave-1"></div>' +
+    '<div class="ishak-wave-sweep ishak-wave-2"></div>' +
+    '<div class="ishak-wave-sweep ishak-wave-3"></div>';
+  document.body.appendChild(waterWaveOverlay);
+  setTimeout(function() {
+    if (waterWaveOverlay && waterWaveOverlay.parentNode) waterWaveOverlay.remove();
+  }, 4500);
 
   // Independent Circular Button Wrap
   var mainWrap = document.createElement('div'); mainWrap.id = 'ishak-trade-wrap'; mainWrap.className = 'ishak-intro-spawn'; document.body.appendChild(mainWrap);
@@ -2223,7 +2344,10 @@ javascript:(function(){
     showSettingsHub();
   });
 
-  // BOT LOADED: Logo enters with top drop-down animation first.
+  // BOT LOADED: Logo enters with top drop-down animation first (4s relaxing glide with water wave).
   // Clicking the logo opens Market Select -> Time Select options!
   updateBadgeLabel();
+  try {
+    playWaterWaveIntroSound();
+  } catch(e){}
 })();

@@ -122,7 +122,7 @@ export const BookmarkletView: React.FC = () => {
           <button
             id="btn-copy-atob-loader"
             onClick={() => handleCopy(obfuscatedLoader, 'atob')}
-            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 text-[#070D1E] font-black text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/30 hover:brightness-110 active:scale-95 transition shrink-0"
+            className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 text-[#070D1E] font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30 hover:brightness-110 active:scale-95 transition shrink-0"
           >
             {copiedType === 'atob' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             <span>{copiedType === 'atob' ? 'কপি সফল হয়েছে!' : 'শর্ট কোড কপি করুন'}</span>
@@ -201,11 +201,11 @@ export const BookmarkletView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <button
               id="btn-copy-gh-loader"
               onClick={() => handleCopy(bookmarkletCode.replace(/^javascript:/, ''), 'gh-raw')}
-              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-[#070D1E] font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition"
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-[#070D1E] font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30 hover:brightness-110 active:scale-95 transition"
             >
               {copiedType === 'gh-raw' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               <span>{copiedType === 'gh-raw' ? 'লম্বা কোড কপি হয়েছে!' : 'GitHub লম্বা কোড কপি করুন'}</span>

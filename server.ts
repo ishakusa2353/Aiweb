@@ -4,7 +4,6 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { licenseDb, LicenseRecord, parseDurationToMs } from "./server/db.ts";
 import { generateBookmarkletCode, generateRawScriptCode, generateOfflineSignedKey } from "./server/bookmarkletTemplate.ts";
-import { startTelegramBot } from "./server/telegramBot.ts";
 
 // Safe directory resolver for both dev tsx and bundled CJS production
 const getRootDir = () => process.cwd();
@@ -641,10 +640,6 @@ ON CONFLICT (key) DO NOTHING;`
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Ishak AI Supabase Server running at http://0.0.0.0:${PORT}`);
-    // Start Telegram Bot Polling Engine
-    startTelegramBot().catch((err) => {
-      console.error("Failed to start Telegram Bot:", err);
-    });
   });
 }
 
