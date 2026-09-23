@@ -916,9 +916,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               e.stopPropagation();
               setShowHub(true);
             }}
-            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-[#F59E0B] bg-[#070D1E] shadow-[0_8px_30px_rgba(0,0,0,0.9),0_0_20px_rgba(245,158,11,0.5),0_0_35px_rgba(0,229,255,0.35),inset_0_0_12px_rgba(245,158,11,0.3)] cursor-pointer transition-transform hover:scale-108 active:scale-95 flex items-center justify-center p-0.5 overflow-hidden ${
+            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-[#00E5FF] bg-[#070D1E] shadow-[0_8px_30px_rgba(0,0,0,0.95),0_0_20px_rgba(0,229,255,0.7),0_0_35px_rgba(0,229,255,0.4)] cursor-pointer transition-transform hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden ${
               isScanning
-                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#00E5FF] shadow-[0_0_30px_#00E5FF,0_0_55px_#F59E0B,inset_0_0_16px_rgba(0,229,255,0.5)]'
+                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#00E5FF] shadow-[0_0_30px_#00E5FF,0_0_55px_rgba(0,229,255,0.8),inset_0_0_16px_rgba(0,229,255,0.5)]'
                 : ''
             }`}
             title="Single Click: Setup & Scan | Double Click: Control Panel"
@@ -935,10 +935,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         {/* Small 3D Pill Badge - Matched size and proportions */}
         <div
           onClick={() => setShowHub(true)}
-          className="mt-1 px-2 py-0.5 rounded-full bg-[#070D1E]/95 border border-[#F59E0B]/80 flex items-center gap-1.5 shadow-lg shadow-black/90 cursor-pointer hover:border-[#00E5FF] transition-colors transform-none select-none"
+          className="mt-1 px-2 py-0.5 rounded-full bg-[#070D1E]/95 border border-[#00E5FF]/80 flex items-center gap-1.5 shadow-lg shadow-black/90 cursor-pointer hover:border-[#00E5FF] transition-colors transform-none select-none"
         >
-          <span className="text-[#F59E0B] text-[8.5px] font-black tracking-tight transform-none select-none">⚡ ISHAK AI</span>
-          <span className="bg-gradient-to-r from-amber-400 to-cyan-400 text-[#070D1E] text-[7.5px] font-black px-1.5 py-0.2 rounded-full">
+          <span className="text-[#00E5FF] text-[8.5px] font-black tracking-tight transform-none select-none">⚡ ISHAK AI</span>
+          <span className="bg-gradient-to-r from-cyan-400 to-teal-300 text-[#070D1E] text-[7.5px] font-black px-1.5 py-0.2 rounded-full">
             {badgeText}
           </span>
         </div>
