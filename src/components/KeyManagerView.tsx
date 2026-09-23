@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2, Wrench, ShieldAlert, Download, Laptop } from 'lucide-react';
+import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2, Wrench, ShieldAlert, Download } from 'lucide-react';
 import { LicenseRecord } from '../types';
 import { supabaseService } from '../lib/supabaseService';
 
@@ -57,32 +57,20 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
 
   const handleInstallApp = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setIsAppInstalled(true);
-        showActionToast('অ্যাপ সফলভাবে ইনস্টল হয়েছে!');
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setIsAppInstalled(true);
+          showActionToast('✅ APK সফলভাবে ফোনে ইনস্টল হয়েছে!');
+        }
+        setDeferredPrompt(null);
+      } catch (e) {
+        setShowInstallGuide(true);
       }
-      setDeferredPrompt(null);
     } else {
       setShowInstallGuide(true);
     }
-  };
-
-  const downloadWebAppLauncher = () => {
-    const manifestData = {
-      name: "Ishak AI Admin Portal",
-      url: window.location.origin,
-      desc: "Live Supabase Ishak AI Admin Portal"
-    };
-    const blob = new Blob([JSON.stringify(manifestData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Ishak_AI_Admin.webapp';
-    a.click();
-    URL.revokeObjectURL(url);
-    showActionToast('অ্যাপ ফাইল ডাউনলোড হয়েছে!');
   };
 
   // Live countdown ticker (ticks every second for real-time live expiration countdown)
@@ -496,8 +484,8 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       </div>
 
-      {/* 📱 1-CLICK PWA APP INSTALL & DOWNLOAD CARD (100% Live Supabase & Server Sync) */}
-      <div className="bg-gradient-to-r from-cyan-950/80 via-[#0B132B] to-blue-950/80 border border-cyan-400/40 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      {/* 📱 1-CLICK DIRECT APK INSTALL CARD (Direct to Phone Home Screen with Live DB Sync) */}
+      <div className="bg-gradient-to-r from-cyan-950/90 via-[#0B132B] to-blue-950/90 border border-cyan-400/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
             📱
@@ -505,7 +493,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
-                <span>মোবাইল ও পিসি অ্যাপ (PWA Live App)</span>
+                <span>মোবাইল APK সরাসরি ইনস্টল (WebAPK)</span>
               </h3>
               <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -513,26 +501,18 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
               </span>
             </div>
             <p className="text-[11px] text-gray-300 mt-0.5">
-              ১-ক্লিকে অফিসিয়াল অ্যাপটি ফোনে ইনস্টল করুন — কোনো ব্রাউজার ট্যাব ছাড়া সরাসরি ফুলস্ক্রিনে চলবে।
+              কোনো ফাইল ডাউনলোড ছাড়াই ১-ক্লিকে সরাসরি ফোনের হোমস্ক্রিনে অ্যাপ হিসেবে ইনস্টল করে নিন।
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+        <div className="w-full sm:w-auto shrink-0">
           <button
             onClick={handleInstallApp}
-            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            <span>{isAppInstalled ? 'অ্যাপ চালু আছে' : '১-ক্লিকে অ্যাপ ইনস্টল'}</span>
-          </button>
-          <button
-            onClick={downloadWebAppLauncher}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 text-xs font-bold flex items-center justify-center gap-1 transition active:scale-95"
-            title="অ্যাপ ফাইল ডাউনলোড"
-          >
-            <Laptop className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">ফাইল</span>
+            <span>{isAppInstalled ? '✅ অ্যাপ ইনস্টল্ড (চালু আছে)' : '১-ক্লিকে ফোনে APK ইনস্টল করুন'}</span>
           </button>
         </div>
       </div>
@@ -1354,7 +1334,7 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
         </div>
       )}
 
-      {/* 📱 PWA APP 1-CLICK DOWNLOAD & INSTALL GUIDE MODAL */}
+      {/* 📱 DIRECT APK 1-CLICK INSTALL GUIDE MODAL */}
       {showInstallGuide && (
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="w-full max-w-md bg-[#0B132B] border-t-2 sm:border-2 border-cyan-400 rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 shadow-2xl relative max-h-[92vh] flex flex-col">
@@ -1366,7 +1346,7 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   📱
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-sm font-black text-white">মোবাইল অ্যাপ ইনস্টল ও ডাউনলোড</h3>
+                  <h3 className="text-xs sm:text-sm font-black text-white">ফোনের হোমস্ক্রিনে APK ইনস্টল</h3>
                   <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span>লাইভ ডাটাবেজ কানেক্টেড (Live Supabase Sync)</span>
@@ -1385,38 +1365,26 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
               <div className="bg-slate-950/80 p-3 rounded-xl border border-cyan-500/20">
                 <p className="text-cyan-300 font-bold mb-1">⚡ অ্যাপের সুবিধা:</p>
                 <ul className="text-[11px] text-gray-300 space-y-1 list-disc list-inside">
-                  <li>ব্রাউজার অ্যাড্রেস বার বা ট্যাব ছাড়াই ফুলস্ক্রিন নেটিভ অ্যাপের মতো চলে।</li>
-                  <li>লাইভ ডাটাবেজের সাথে সবসময় সংযুক্ত—কী তৈরি, ব্লক বা এক্সটেন্ড সাথে সাথে কার্যকর হয়।</li>
+                  <li>ব্রাউজার অ্যাড্রেস বার বা ট্যাব ছাড়াই ফুলস্ক্রিন আসল APK হিসেবে চলে।</li>
+                  <li>লাইভ ডাটাবেজের সাথে সবসময় যুক্ত—কী তৈরি, ব্লক বা এক্সটেন্ড সাথে সাথে কাজ করে।</li>
                   <li>এক ক্লিকে মোবাইল হোম স্ক্রিন থেকে দ্রুত চালু করা যায়।</li>
                 </ul>
               </div>
 
-              <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-700 space-y-2">
-                <p className="text-white font-bold text-xs">📱 যেভাবে ইনস্টল করবেন:</p>
-                <div className="text-[11px] text-gray-300 space-y-1.5">
-                  <div className="flex items-start gap-2">
-                    <span className="text-cyan-400 font-bold">১.</span>
-                    <span><b>Chrome / Kiwi (Android):</b> ব্রাউজারের উপরে ডানদিকের <b>৩ ডট (⋮)</b> মেনুতে ক্লিক করে <b>"Install app"</b> বা <b>"Add to Home screen"</b> চাপুন।</span>
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-cyan-500/30 space-y-2">
+                <p className="text-white font-bold text-xs flex items-center gap-1.5">
+                  <span>📱 যেভাবে ফোনে সরাসরি নিবেন:</span>
+                </p>
+                <div className="text-[11px] text-gray-300 space-y-2">
+                  <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">১</span>
+                    <span><b>Chrome / Kiwi (Android):</b> নিচের <b>"এখনই ইনস্টল করুন"</b> চাপুন। অথবা ব্রাউজারের উপরে ডানদিকের <b>৩ ডট (⋮)</b> থেকে <b>"Install app"</b> / <b>"Add to Home screen"</b> চাপলে ফোনে ডিরেক্ট APK তৈরি হয়ে যাবে।</span>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-cyan-400 font-bold">২.</span>
-                    <span><b>Safari (iPhone / iPad):</b> ব্রাউজারের নিচে <b>Share (শেয়ার ↗)</b> আইকনে ক্লিক করে <b>"Add to Home Screen"</b> চাপুন।</span>
+                  <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">২</span>
+                    <span><b>Safari (iPhone):</b> ব্রাউজারের নিচে <b>Share (শেয়ার ↗)</b> চেপে <b>"Add to Home Screen"</b> চাপুন।</span>
                   </div>
                 </div>
-              </div>
-
-              <div className="bg-cyan-950/30 border border-cyan-500/30 p-2.5 rounded-xl flex items-center justify-between gap-2">
-                <div className="text-[11px]">
-                  <b className="text-white block">অ্যাপ ফাইল সরাসরি চান?</b>
-                  <span className="text-gray-400 text-[10px]">এক ক্লিকে শর্টকাট ফাইল নামিয়ে নিন</span>
-                </div>
-                <button
-                  onClick={downloadWebAppLauncher}
-                  className="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-[#070D1E] rounded-lg font-black text-xs flex items-center gap-1 transition active:scale-95 cursor-pointer shrink-0"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>ডাউনলোড</span>
-                </button>
               </div>
             </div>
 
@@ -1426,18 +1394,18 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   if (deferredPrompt) {
                     handleInstallApp();
                   } else {
-                    downloadWebAppLauncher();
+                    showActionToast('অনুগ্রহ করে ব্রাউজারের ৩ ডট মেনু (⋮) থেকে Install app চাপুন');
                   }
                   setShowInstallGuide(false);
                 }}
-                className="flex-1 py-2 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
               >
                 <Download className="w-4 h-4" />
-                <span>ইনস্টল নিশ্চিত করুন</span>
+                <span>এখনই ফোনে APK ইনস্টল করুন</span>
               </button>
               <button
                 onClick={() => setShowInstallGuide(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-xs font-semibold transition"
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-xs font-semibold transition cursor-pointer"
               >
                 বন্ধ
               </button>

@@ -916,9 +916,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               e.stopPropagation();
               setShowHub(true);
             }}
-            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-[#00E5FF] bg-[#070D1E] shadow-[0_8px_30px_rgba(0,0,0,0.95),0_0_20px_rgba(0,229,255,0.7),0_0_35px_rgba(0,229,255,0.4)] cursor-pointer transition-transform hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden ${
+            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[3px] border-[#FFB800] ring-2 ring-[#F59E0B] ring-offset-1 ring-offset-[#070D1E] bg-[#070D1E] shadow-[0_4px_14px_rgba(0,0,0,0.85)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden ${
               isScanning
-                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#00E5FF] shadow-[0_0_30px_#00E5FF,0_0_55px_rgba(0,229,255,0.8),inset_0_0_16px_rgba(0,229,255,0.5)]'
+                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#00E5FF] ring-[#00E5FF] shadow-[0_0_30px_#00E5FF,0_0_55px_rgba(0,229,255,0.85),inset_0_0_16px_rgba(0,229,255,0.5)]'
                 : ''
             }`}
             title="Single Click: Setup & Scan | Double Click: Control Panel"
@@ -1076,14 +1076,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 </div>
               )}
 
-              <a
-                href="https://t.me/IshakVhai"
-                target="_blank"
-                rel="noreferrer"
-                className="block text-center p-2 rounded-xl border border-dashed border-cyan-400/50 bg-cyan-500/10 text-cyan-300 text-[11px] font-bold hover:bg-cyan-500/20 transition"
-              >
-                ⚡ Telegram Support (@IshakVhai)
-              </a>
+              <div className="text-center p-2 rounded-xl border border-dashed border-cyan-400/50 bg-cyan-500/10 text-cyan-300 text-[11px] font-bold">
+                ⚡ Ishak AI VIP Trading System
+              </div>
             </div>
           </div>
         </div>
@@ -1347,21 +1342,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               বটের সিস্টেম আপডেট ও সার্বিক অপ্টিমাইজেশন চলছে! মেইনটেনেন্স চলাকালীন সময়ে নতুন সিগন্যাল স্ক্যান ও ট্রেডিং সাময়িকভাবে স্থগিত রাখা হয়েছে।
             </div>
             <p className="text-[11px] text-gray-400 mb-4">
-              আপডেট ও সহায়তার জন্য টেলিগ্রামে যোগাযোগ রাখুন:
+              সার্ভার মেইনটেনেন্স শেষ হওয়া মাত্রই বটটি স্বয়ংক্রিয়ভাবে পুনরায় চালু হয়ে যাবে।
             </p>
-            <div className="flex gap-2">
-              <a
-                href="https://t.me/IshakVhai"
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs shadow-lg hover:brightness-110 flex items-center justify-center gap-1.5"
-              >
-                <span>⚡ Telegram Support (@IshakVhai)</span>
-              </a>
+            <div className="flex justify-center">
               <button
                 type="button"
                 onClick={() => setShowMaintenanceModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-400 font-bold text-xs hover:bg-slate-800 transition"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black text-xs shadow-lg hover:brightness-110 transition active:scale-95 cursor-pointer"
               >
                 ঠিক আছে
               </button>

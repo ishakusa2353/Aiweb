@@ -371,7 +371,7 @@ javascript:(function(){
     } catch(e){}
   }
 
-  // 🌊 4-SECOND RELAXING WATER WAVE ENTRANCE SYNTHESIZER
+  // 🌊 6.5-SECOND LUXURY RELAXING WATER WAVE & OCEAN ENTRANCE SYNTHESIZER
   function playWaterWaveIntroSound() {
     try {
       var AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -379,32 +379,51 @@ javascript:(function(){
       if (!audioCtx) audioCtx = new AudioContext();
       if (audioCtx.state === 'suspended') audioCtx.resume();
       var t = audioCtx.currentTime;
-      var dur = 4.0;
+      var dur = 6.5;
 
-      // 1. Water Ripple / Fluid Ocean Whoosh (Smooth Resonant Lowpass Filtered Noise)
+      // 1. Warm Oceanic Sub-Bass Drone (Ethereal Foundation)
+      var subOsc = audioCtx.createOscillator();
+      var subGain = audioCtx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(55, t);
+      subOsc.frequency.exponentialRampToValueAtTime(82, t + 2.5);
+      subOsc.frequency.exponentialRampToValueAtTime(48, t + dur);
+      subGain.gain.setValueAtTime(0.0001, t);
+      subGain.gain.linearRampToValueAtTime(0.16, t + 1.8);
+      subGain.gain.linearRampToValueAtTime(0.09, t + 4.2);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      subOsc.connect(subGain);
+      subGain.connect(audioCtx.destination);
+      subOsc.start(t);
+      subOsc.stop(t + dur);
+
+      // 2. Multi-Stage Natural Ocean Wave Surge & Recede (Filtered Fluid Pink Noise)
       var bufferSize = Math.floor(audioCtx.sampleRate * dur);
       var noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       var output = noiseBuffer.getChannelData(0);
-      var lastOut = 0.0;
+      var b0 = 0, b1 = 0, b2 = 0;
       for (var i = 0; i < bufferSize; i++) {
         var white = Math.random() * 2 - 1;
-        output[i] = (lastOut + (0.02 * white)) / 1.02;
-        lastOut = output[i];
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        output[i] = (b0 + b1 + b2 + white * 0.1) * 0.18;
       }
       var noiseSrc = audioCtx.createBufferSource();
       noiseSrc.buffer = noiseBuffer;
 
       var filter = audioCtx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(160, t);
-      filter.frequency.exponentialRampToValueAtTime(780, t + 1.8);
-      filter.frequency.exponentialRampToValueAtTime(140, t + dur);
-      filter.Q.setValueAtTime(2.8, t);
+      filter.frequency.setValueAtTime(140, t);
+      filter.frequency.exponentialRampToValueAtTime(850, t + 2.4);
+      filter.frequency.linearRampToValueAtTime(420, t + 4.2);
+      filter.frequency.exponentialRampToValueAtTime(120, t + dur);
+      filter.Q.setValueAtTime(3.2, t);
 
       var waveGain = audioCtx.createGain();
       waveGain.gain.setValueAtTime(0.001, t);
-      waveGain.gain.linearRampToValueAtTime(0.18, t + 1.2);
-      waveGain.gain.linearRampToValueAtTime(0.12, t + 2.6);
+      waveGain.gain.linearRampToValueAtTime(0.24, t + 2.0);
+      waveGain.gain.linearRampToValueAtTime(0.14, t + 4.5);
       waveGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 
       noiseSrc.connect(filter);
@@ -413,24 +432,46 @@ javascript:(function(){
       noiseSrc.start(t);
       noiseSrc.stop(t + dur);
 
-      // 2. Harmonic Celestial Water Chimes (A4 -> C#5 -> E5 -> A5)
+      // 3. Realistic Crystal Water Drop Echoes (High-Q sine frequency pitch-drop)
+      var dropNotes = [
+        { time: 0.8, startF: 1450, endF: 920 },
+        { time: 2.1, startF: 1720, endF: 1080 },
+        { time: 3.5, startF: 1280, endF: 840 },
+        { time: 4.8, startF: 1600, endF: 1020 }
+      ];
+      dropNotes.forEach(function(d) {
+        var dropOsc = audioCtx.createOscillator();
+        var dropGain = audioCtx.createGain();
+        dropOsc.type = 'sine';
+        dropOsc.frequency.setValueAtTime(d.startF, t + d.time);
+        dropOsc.frequency.exponentialRampToValueAtTime(d.endF, t + d.time + 0.12);
+        dropGain.gain.setValueAtTime(0.12, t + d.time);
+        dropGain.gain.exponentialRampToValueAtTime(0.0001, t + d.time + 0.35);
+        dropOsc.connect(dropGain);
+        dropGain.connect(audioCtx.destination);
+        dropOsc.start(t + d.time);
+        dropOsc.stop(t + d.time + 0.4);
+      });
+
+      // 4. Relaxing Ambient Celestial Chimes (Warm Pentatonic Chord: F# -> A# -> C# -> F#)
       var chimes = [
-        { f: 440.00, time: 0.5 },
-        { f: 554.37, time: 1.5 },
-        { f: 659.25, time: 2.5 },
-        { f: 880.00, time: 3.4 }
+        { f: 370.00, time: 0.6, d: 2.2 },
+        { f: 466.16, time: 1.8, d: 2.4 },
+        { f: 554.37, time: 3.2, d: 2.5 },
+        { f: 740.00, time: 4.6, d: 1.8 }
       ];
       chimes.forEach(function(item) {
         var osc = audioCtx.createOscillator();
         var g = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(item.f, t + item.time);
-        g.gain.setValueAtTime(0.14, t + item.time);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + item.time + 0.65);
+        g.gain.setValueAtTime(0.0001, t + item.time);
+        g.gain.linearRampToValueAtTime(0.12, t + item.time + 0.3);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + item.time + item.d);
         osc.connect(g);
         g.connect(audioCtx.destination);
         osc.start(t + item.time);
-        osc.stop(t + item.time + 0.7);
+        osc.stop(t + item.time + item.d + 0.1);
       });
     } catch(e){}
   }
@@ -939,35 +980,36 @@ javascript:(function(){
       '96% { opacity: 0.95; transform: scaleY(1); } ' +
       '100% { opacity: 0; transform: scaleY(0.2); } ' +
     '}' +
-    '@keyframes ishakIntroSpawn4s { ' +
-      '0% { transform: translate3d(calc(-50vw + 60px), -120vh, 0) scale(0.4) rotate(-12deg); opacity: 0; filter: blur(14px) drop-shadow(0 0 50px #00E5FF); } ' +
-      '30% { transform: translate3d(calc(-50vw + 60px), calc(-50vh + 60px), 0) scale(1.22) rotate(3deg); opacity: 1; filter: blur(0px) drop-shadow(0 0 60px #00E5FF) drop-shadow(0 0 90px #00FF66); } ' +
-      '58% { transform: translate3d(calc(-50vw + 60px), calc(-50vh + 50px), 0) scale(1.12) rotate(-1deg); opacity: 1; filter: drop-shadow(0 0 45px #00E5FF); } ' +
-      '82% { transform: translate3d(0, 0, 0) scale(1.05) rotate(0deg); opacity: 1; } ' +
-      '100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 20px rgba(0,229,255,0.75)); } ' +
+    '@keyframes ishakIntroSpawn6s { ' +
+      '0% { transform: translate3d(calc(-50vw + 60px), -130vh, 0) scale(0.35) rotate(-10deg); opacity: 0; filter: blur(14px); } ' +
+      '25% { transform: translate3d(calc(-50vw + 60px), calc(-50vh + 35px), 0) scale(1.24) rotate(2deg); opacity: 1; filter: blur(0px); } ' +
+      '48% { transform: translate3d(calc(-50vw + 60px), calc(-50vh + 15px), 0) scale(1.18) rotate(-1deg); opacity: 1; } ' +
+      '70% { transform: translate3d(calc(-50vw + 60px), calc(-50vh + 25px), 0) scale(1.12) rotate(0deg); opacity: 1; } ' +
+      '88% { transform: translate3d(0, 0, 0) scale(1.05); opacity: 1; } ' +
+      '100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; } ' +
     '}' +
     '@keyframes ishakSpinClockwise { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
     '@keyframes ishakSpinCounter { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }' +
     '@keyframes ishakWaterWaveSweep1 { ' +
-      '0% { transform: translateX(-100%) scaleX(0.4) skewX(-15deg); opacity: 0.9; } ' +
+      '0% { transform: translateX(-100%) scaleX(0.4) skewX(-15deg); opacity: 0.95; } ' +
       '45% { transform: translateX(0%) scaleX(1.1) skewX(5deg); opacity: 0.85; } ' +
-      '100% { transform: translateX(130%) scaleX(1.4) skewX(0deg); opacity: 0; } ' +
+      '100% { transform: translateX(135%) scaleX(1.4) skewX(0deg); opacity: 0; } ' +
     '}' +
     '@keyframes ishakWaterWaveSweep2 { ' +
-      '0% { transform: translateX(-100%) scaleX(0.3) skewX(-20deg); opacity: 0.7; } ' +
-      '50% { transform: translateX(10%) scaleX(1.15) skewX(8deg); opacity: 0.75; } ' +
-      '100% { transform: translateX(140%) scaleX(1.5) skewX(0deg); opacity: 0; } ' +
+      '0% { transform: translateX(-100%) scaleX(0.3) skewX(-20deg); opacity: 0.8; } ' +
+      '50% { transform: translateX(15%) scaleX(1.15) skewX(8deg); opacity: 0.75; } ' +
+      '100% { transform: translateX(145%) scaleX(1.5) skewX(0deg); opacity: 0; } ' +
     '}' +
     '@keyframes ishakWaterWaveSweep3 { ' +
-      '0% { transform: translateX(-100%) scaleX(0.2) skewX(-10deg); opacity: 0.5; } ' +
-      '55% { transform: translateX(20%) scaleX(1.2) skewX(4deg); opacity: 0.6; } ' +
-      '100% { transform: translateX(150%) scaleX(1.6) skewX(0deg); opacity: 0; } ' +
+      '0% { transform: translateX(-100%) scaleX(0.2) skewX(-10deg); opacity: 0.6; } ' +
+      '55% { transform: translateX(25%) scaleX(1.2) skewX(4deg); opacity: 0.65; } ' +
+      '100% { transform: translateX(155%) scaleX(1.6) skewX(0deg); opacity: 0; } ' +
     '}' +
     '#ishak-water-wave-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 2147483645; overflow: hidden; }' +
-    '.ishak-wave-sweep { position: absolute; top: 0; bottom: 0; width: 140vw; background: radial-gradient(ellipse at left center, rgba(0,229,255,0.3) 0%, rgba(34,211,238,0.18) 35%, rgba(0,255,102,0.08) 65%, transparent 100%); filter: blur(24px); transform-origin: left center; }' +
-    '.ishak-wave-1 { animation: ishakWaterWaveSweep1 4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }' +
-    '.ishak-wave-2 { animation: ishakWaterWaveSweep2 4s cubic-bezier(0.25, 0.85, 0.25, 1) 0.25s forwards; }' +
-    '.ishak-wave-3 { animation: ishakWaterWaveSweep3 4s cubic-bezier(0.3, 0.9, 0.3, 1) 0.5s forwards; }' +
+    '.ishak-wave-sweep { position: absolute; top: 0; bottom: 0; width: 150vw; background: radial-gradient(ellipse at left center, rgba(0,229,255,0.35) 0%, rgba(34,211,238,0.2) 35%, rgba(0,255,102,0.08) 65%, transparent 100%); filter: blur(28px); transform-origin: left center; }' +
+    '.ishak-wave-1 { animation: ishakWaterWaveSweep1 6.5s cubic-bezier(0.16, 0.9, 0.2, 1) forwards; }' +
+    '.ishak-wave-2 { animation: ishakWaterWaveSweep2 6.5s cubic-bezier(0.2, 0.95, 0.25, 1) 0.4s forwards; }' +
+    '.ishak-wave-3 { animation: ishakWaterWaveSweep3 6.5s cubic-bezier(0.25, 1, 0.3, 1) 0.8s forwards; }' +
     '@keyframes ishakSignalAppear1s { ' +
       '0% { transform: translate(-50%, -50%) scale(0.45); opacity: 0; filter: blur(14px); } ' +
       '18% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; filter: blur(0px); } ' +
@@ -976,13 +1018,13 @@ javascript:(function(){
       '100% { transform: translate(-50%, -55%) scale(0.78); opacity: 0; filter: blur(10px); } ' +
     '}' +
     '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
-    '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn4s 4s cubic-bezier(0.19, 1, 0.22, 1) forwards; }' +
+    '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn6s 6.5s cubic-bezier(0.16, 1, 0.22, 1) forwards; }' +
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
     '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(0,229,255,0.95) 0%, rgba(0,229,255,0.7) 40%, rgba(0,229,255,0.2) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid #00E5FF; box-shadow: 0 8px 30px rgba(0,0,0,0.95), 0 0 20px rgba(0,229,255,0.7), 0 0 35px rgba(0,229,255,0.4), inset 0 0 10px rgba(0,229,255,0.3); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
-    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 10px 35px rgba(0,229,255,0.9), 0 0 45px rgba(0,229,255,0.6); }' +
-    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 25px #00E5FF, 0 0 50px rgba(0,229,255,0.8), inset 0 0 14px rgba(0,229,255,0.5); }' +
+    '#ishak-circle-btn { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 3px solid #FFB800; outline: 1.5px solid #F59E0B; outline-offset: 1.5px; box-shadow: 0 4px 14px rgba(0,0,0,0.85); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.95); }' +
+    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; outline-color: #00E5FF; box-shadow: 0 0 28px #00E5FF, 0 0 55px rgba(0,229,255,0.85), inset 0 0 14px rgba(0,229,255,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 8px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; }' +
     '#ishak-pill-time { background: linear-gradient(135deg, #00E5FF, #22D3EE); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1px 5px; border-radius: 8px; }' +
@@ -1105,7 +1147,7 @@ javascript:(function(){
     '</div>';
   document.body.appendChild(screenScanBox);
 
-  // 🌊 Water Wave Ripple Overlay (Sweeps from left during 4s entrance animation)
+  // 🌊 Water Wave Ripple Overlay (Sweeps from left during 6.5s entrance animation)
   var waterWaveOverlay = document.createElement('div');
   waterWaveOverlay.id = 'ishak-water-wave-overlay';
   waterWaveOverlay.innerHTML =
@@ -1115,7 +1157,7 @@ javascript:(function(){
   document.body.appendChild(waterWaveOverlay);
   setTimeout(function() {
     if (waterWaveOverlay && waterWaveOverlay.parentNode) waterWaveOverlay.remove();
-  }, 4500);
+  }, 7000);
 
   // Independent Circular Button Wrap
   var mainWrap = document.createElement('div'); mainWrap.id = 'ishak-trade-wrap'; mainWrap.className = 'ishak-intro-spawn'; document.body.appendChild(mainWrap);
