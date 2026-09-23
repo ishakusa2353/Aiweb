@@ -196,6 +196,9 @@ class LicenseDatabase {
       // Sync initial local licenses into Supabase table
       this.syncInitialToSupabase().catch((err) => console.warn('Supabase sync initial error:', err));
 
+      // Sync maintenance mode from Supabase table
+      this.syncMaintenanceModeFromSupabase().catch((err) => console.warn('Supabase maintenance sync error:', err));
+
       return true;
     } catch (err) {
       console.error('Failed to init Supabase client:', err);
@@ -559,6 +562,24 @@ class LicenseDatabase {
       success: true,
       message: active ? `✅ লাইসেন্স ${key} আনব্লক (সক্রিয়) করা হয়েছে!` : `🚫 লাইসেন্স ${key} ব্লক (নিষ্ক্রিয়) করা হয়েছে!`
     };
+  }
+
+  public async syncMaintenanceModeFromSupabase(): Promise<boolean> {
+    if (!this.supabase || !this.isConfigured) return this.maintenanceMode;
+    try {
+      const { data, error } = await this.supabase
+        .from('ishak_licenses')
+        .select('active')
+        .eq('key', '__MAINTENANCE_CONFIG__')
+        .maybeSingle();
+      if (!error && data && typeof data.active === 'boolean') {
+        this.maintenanceMode = data.active;
+        console.log('🔄 Synced maintenance mode from Supabase:', this.maintenanceMode);
+      }
+    } catch (err) {
+      console.warn('Failed to sync maintenance mode from Supabase:', err);
+    }
+    return this.maintenanceMode;
   }
 
   public getMaintenanceMode(): boolean {

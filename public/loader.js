@@ -14,6 +14,7 @@ javascript:(function(){
   window.__ISHAK_AI_ACTIVE__ = true;
   var SUPABASE_URL = "https://qbazzarqiplrqqfytajz.supabase.co";
   var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
+  var BACKEND_SERVER_URL = "";
   var LOGO_URL = "/ishak_logo.png";
 
   // 1. CONFIGURATION & STATE (Mandatory selection required on load)
@@ -489,51 +490,58 @@ javascript:(function(){
 
   function checkMaintenanceStatus() {
     return new Promise(function(resolve) {
-      // 1. Direct server query if running on same domain or JSONP
-      var hostUrl = BACKEND_SERVER_URL;
-      if (hostUrl) {
-        fetch(hostUrl + '/api/maintenance-status')
-          .then(function(res) { return res.json(); })
-          .then(function(data) {
-            if (data && typeof data.maintenanceMode === 'boolean') {
-              isMaintenanceModeActive = data.maintenanceMode;
-              resolve(data.maintenanceMode);
-              return;
-            }
-            throw new Error('Fallback to Supabase');
-          })
-          .catch(function() {
-            querySupabaseMaintenance(resolve);
-          });
-      } else {
+      try {
+        var hostUrl = (typeof BACKEND_SERVER_URL !== 'undefined' && BACKEND_SERVER_URL) ? BACKEND_SERVER_URL : '';
+        if (hostUrl) {
+          fetch(hostUrl + '/api/maintenance-status')
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (data && typeof data.maintenanceMode === 'boolean') {
+                isMaintenanceModeActive = data.maintenanceMode;
+                resolve(data.maintenanceMode);
+                return;
+              }
+              querySupabaseMaintenance(resolve);
+            })
+            .catch(function() {
+              querySupabaseMaintenance(resolve);
+            });
+        } else {
+          querySupabaseMaintenance(resolve);
+        }
+      } catch(e) {
         querySupabaseMaintenance(resolve);
       }
     });
   }
 
   function querySupabaseMaintenance(resolve) {
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
-      resolve(isMaintenanceModeActive);
-      return;
+    try {
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        resolve(Boolean(isMaintenanceModeActive));
+        return;
+      }
+      fetch(SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.__MAINTENANCE_CONFIG__&select=active', {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY
+        }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(rows) {
+        if (rows && rows.length && typeof rows[0].active === 'boolean') {
+          isMaintenanceModeActive = rows[0].active;
+          resolve(rows[0].active);
+        } else {
+          resolve(false);
+        }
+      })
+      .catch(function() {
+        resolve(Boolean(isMaintenanceModeActive));
+      });
+    } catch(e) {
+      resolve(Boolean(isMaintenanceModeActive));
     }
-    fetch(SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.__MAINTENANCE_CONFIG__&select=active', {
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY
-      }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(rows) {
-      if (rows && rows.length && typeof rows[0].active === 'boolean') {
-        isMaintenanceModeActive = rows[0].active;
-        resolve(rows[0].active);
-      } else {
-        resolve(false);
-      }
-    })
-    .catch(function() {
-      resolve(isMaintenanceModeActive);
-    });
   }
 
   function parseDurationString(durStr) {

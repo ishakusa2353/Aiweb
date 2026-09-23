@@ -48,6 +48,7 @@ export function generateBookmarkletCode(
     script = script.replace(/var SUPABASE_KEY = "[^"]*";/, `var SUPABASE_KEY = "${supabaseKey}";`);
   }
   if (baseUrl) {
+    script = script.replace(/var BACKEND_SERVER_URL = "[^"]*";/, `var BACKEND_SERVER_URL = "${baseUrl}";`);
     script = script.replace(/var LOGO_URL = "[^"]*";/, `var LOGO_URL = "${baseUrl}/ishak_logo.png";`);
   }
 
