@@ -57,6 +57,9 @@ export const supabaseService = {
   // 1. ADMIN LOGIN
   async adminLogin(password: string): Promise<{ success: boolean; error?: string }> {
     const cleanPass = password.trim();
+    if (!cleanPass) {
+      return { success: false, error: 'পাসওয়ার্ড প্রদান করুন!' };
+    }
 
     try {
       const resp = await fetch('/api/admin/login', {
@@ -72,12 +75,15 @@ export const supabaseService = {
           return { success: true };
         }
         return { success: false, error: data.error || 'ভুল এডমিন পাসওয়ার্ড!' };
+      } else {
+        const errData = await resp.json().catch(() => ({}));
+        return { success: false, error: errData.error || 'ভুল এডমিন পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিন।' };
       }
     } catch {
       // network fallback below
     }
 
-    // Direct Supabase fallback if configured
+    // Direct Supabase fallback if server is unreachable
     if (isSupabaseConfigured) {
       try {
         const { data } = await supabase
@@ -86,19 +92,14 @@ export const supabaseService = {
           .eq('key', '__ADMIN_CONFIG__')
           .maybeSingle();
 
-        const storedPass = data?.note || 'ishakdevos';
-        if (cleanPass === storedPass || cleanPass === 'ishakdevos') {
+        const storedPass = data?.note;
+        if (storedPass && cleanPass === storedPass.trim()) {
           localStorage.setItem('ishak_admin_auth', 'authenticated');
           return { success: true };
         }
       } catch {
         // Fall through
       }
-    }
-
-    if (cleanPass === 'ishakdevos') {
-      localStorage.setItem('ishak_admin_auth', 'authenticated');
-      return { success: true };
     }
 
     return { success: false, error: 'ভুল এডমিন পাসওয়ার্ড! সঠিক পাসওয়ার্ড দিন।' };
@@ -150,8 +151,8 @@ export const supabaseService = {
           .eq('key', '__ADMIN_CONFIG__')
           .maybeSingle();
 
-        const current = data?.note || 'ishakdevos';
-        if (cleanOld !== current && cleanOld !== 'ishakdevos') {
+        const current = data?.note ? data.note.trim() : null;
+        if (current && cleanOld !== current) {
           return { success: false, error: 'বর্তমান পাসওয়ার্ডটি সঠিক নয়!' };
         }
 
@@ -399,15 +400,45 @@ export const supabaseService = {
     return false;
   },
 
-  // 6. EXTEND LICENSE
-  async extendLicense(key: string, days: number): Promise<boolean> {
+  // 6. EXTEND LICENSE (Custom Minutes, Hours, Days)
+  async extendLicense(key: string, value: number, unit: 'minutes' | 'hours' | 'days' = 'days'): Promise<boolean> {
+    const numVal = Number(value);
+    if (!numVal || numVal <= 0) return false;
+
+    let addMs = 0;
+    if (unit === 'minutes') addMs = numVal * 60 * 1000;
+    else if (unit === 'hours') addMs = numVal * 3600 * 1000;
+    else addMs = numVal * 86400 * 1000;
+
     try {
       const resp = await fetch(`/api/keys/${encodeURIComponent(key)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ extendDays: days }),
+        body: JSON.stringify({ extendValue: numVal, extendUnit: unit, extendMs: addMs }),
       });
       if (resp.ok) {
+        // Also sync directly to supabase if configured
+        if (isSupabaseConfigured) {
+          try {
+            const { data } = await supabase
+              .from('ishak_licenses')
+              .select('*')
+              .eq('key', key)
+              .maybeSingle();
+
+            if (data) {
+              const now = Date.now();
+              if (data.exp !== null && data.exp !== undefined) {
+                const base = Number(data.exp) > now ? Number(data.exp) : now;
+                const newExp = base + addMs;
+                await supabase.from('ishak_licenses').update({ exp: newExp, active: true }).eq('key', key);
+              } else {
+                const curMs = data.duration_ms ? Number(data.duration_ms) : (parseDurationToMs(data.duration || '30d') || (30 * 86400000));
+                await supabase.from('ishak_licenses').update({ duration_ms: curMs + addMs, active: true }).eq('key', key);
+              }
+            }
+          } catch {}
+        }
         return true;
       }
     } catch {
@@ -424,18 +455,23 @@ export const supabaseService = {
 
         if (!data) return false;
 
-        const addMs = days * 86400 * 1000;
         const now = Date.now();
-        const currentExp = data.exp ? Number(data.exp) : now;
-        const base = currentExp > now ? currentExp : now;
-        const newExp = base + addMs;
-
-        const { error } = await supabase
-          .from('ishak_licenses')
-          .update({ exp: newExp, active: true })
-          .eq('key', key);
-
-        return !error;
+        if (data.exp !== null && data.exp !== undefined) {
+          const base = Number(data.exp) > now ? Number(data.exp) : now;
+          const newExp = base + addMs;
+          const { error } = await supabase
+            .from('ishak_licenses')
+            .update({ exp: newExp, active: true })
+            .eq('key', key);
+          return !error;
+        } else {
+          const curMs = data.duration_ms ? Number(data.duration_ms) : (parseDurationToMs(data.duration || '30d') || (30 * 86400000));
+          const { error } = await supabase
+            .from('ishak_licenses')
+            .update({ duration_ms: curMs + addMs, active: true })
+            .eq('key', key);
+          return !error;
+        }
       } catch {
         return false;
       }

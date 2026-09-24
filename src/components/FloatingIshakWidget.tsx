@@ -769,97 +769,84 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       {/* Bot Scanning UI: Laser Scanner Sweep + Pure Circular Gauge (no bg) + Percentage inside + Stylish Analyzing below */}
       {isScanning && (
         <>
-          {/* 🌟 UNIQUE VIP QUANTUM GOLDEN SCANNER BLADE (3.5s Sweep + Flowing Plasma Core + HUD Reticles) */}
+          {/* 🌟 ULTRA-REALISTIC MARKET-TOUCHING PHOTONIC LASER SCANNER (3.5s Sweep, No Extra Text) */}
           <div
             className="fixed left-0 w-screen pointer-events-none z-[999998]"
             style={{
-              height: '32px',
+              height: '36px',
               animation: 'ishakGoldenLaserSweep 3.5s cubic-bezier(0.42, 0, 0.58, 1) infinite'
             }}
           >
-            {/* Top Volumetric Golden Photonic Curtain (Silky, ethereal ambient light wash) */}
+            {/* Top Volumetric Market Contact Light Wash (Silky, luminous ambient illumination on candles) */}
             <div
               className="absolute bottom-1/2 left-0 w-full pointer-events-none"
               style={{
-                height: '52px',
-                background: 'linear-gradient(to top, rgba(255,184,0,0.35) 0%, rgba(245,158,11,0.12) 40%, rgba(217,119,6,0.03) 75%, transparent 100%)',
-                filter: 'blur(8px)',
+                height: '42px',
+                background: 'linear-gradient(to top, rgba(255,190,0,0.38) 0%, rgba(245,158,11,0.15) 35%, rgba(217,119,6,0.02) 80%, transparent 100%)',
+                filter: 'blur(6px)',
                 opacity: 0.95
               }}
             />
 
-            {/* Top Parallel Cyber-Optic Hairline Rail */}
+            {/* Top Micro-Optic Photonic Rail */}
             <div
-              className="absolute left-0 w-full h-[1.5px] -top-1 pointer-events-none"
+              className="absolute left-0 w-full h-[1.5px] -top-0.5 pointer-events-none"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.2) 10%, #FFD700 40%, #FFFDE0 50%, #FFD700 60%, rgba(255,184,0,0.2) 90%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.15) 8%, #FFD700 35%, #FFFFFF 50%, #FFD700 65%, rgba(255,184,0,0.15) 92%, transparent 100%)',
                 boxShadow: '0 0 10px #FFB800'
               }}
             />
 
-            {/* ⚡ Main High-Voltage Plasma Laser Blade (Prominent 7px Living Energy Core) */}
-            <div className="relative w-full h-[7px] flex items-center justify-center">
-              {/* Running Horizontal Plasma Energy Wave */}
+            {/* ⚡ Incandescent Laser Contact Blade (Living Photonic Wave Reading Price Action) */}
+            <div className="relative w-full h-[6px] flex items-center justify-center">
+              {/* Traveling Plasma Energy Wave */}
               <div
                 className="w-full h-full rounded-full"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.3) 5%, #FFB800 20%, #FFF59D 42%, #FFFFFF 50%, #FFF59D 58%, #FFB800 80%, rgba(245,158,11,0.3) 95%, transparent 100%)',
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.2) 6%, #FF9E00 20%, #FFE066 38%, #FFFFFF 50%, #FFE066 62%, #FF9E00 80%, rgba(245,158,11,0.2) 94%, transparent 100%)',
                   backgroundSize: '200% 100%',
-                  animation: 'ishakPlasmaWave 2s linear infinite',
-                  boxShadow: '0 0 14px #FFD700, 0 0 28px #FFB800, 0 0 50px rgba(245,158,11,0.85), 0 0 80px rgba(217,119,6,0.5), inset 0 0 3px #FFFFFF'
+                  animation: 'ishakPlasmaWave 2.2s linear infinite',
+                  boxShadow: '0 0 8px #FFFFFF, 0 0 18px #FFD700, 0 0 35px #FF9E00, 0 0 60px rgba(245,158,11,0.8), inset 0 0 2px #FFFFFF'
                 }}
               />
 
-              {/* Center Quantum Sensor Reticle (Pulsating Diamond + Focus Ring + Live Badge) */}
+              {/* Optical Laser Focus Head (Pure Crystal Sensor, Zero Text Clutter) */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
-                {/* Expanding Focus Ring */}
+                {/* Expansive Photonic Resonance Rings */}
                 <div
-                  className="w-8 h-8 rounded-full border border-yellow-300/80 animate-ping absolute"
+                  className="w-9 h-9 rounded-full border border-amber-300/80 animate-ping absolute"
                   style={{ animationDuration: '1.75s' }}
                 />
-                {/* Diamond Sensor Core */}
                 <div
-                  className="w-4 h-4 bg-gradient-to-br from-white via-amber-300 to-yellow-500 border border-white"
+                  className="w-5 h-5 rounded-full border border-yellow-200/90 absolute"
+                  style={{ animation: 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
+                />
+                {/* Precision Diamond Crystal Prism Core */}
+                <div
+                  className="w-3.5 h-3.5 bg-gradient-to-br from-white via-amber-200 to-yellow-500 border border-white rotate-45 shadow-[0_0_15px_#FFE066,0_0_30px_#FFB800]"
                   style={{
                     animation: 'ishakDiamondSpinPulse 1.75s ease-in-out infinite'
                   }}
                 />
-                {/* Center HUD Coordinate Badge */}
-                <div className="absolute -top-6 px-2.5 py-0.5 rounded-full bg-slate-950/90 border border-amber-400/80 text-[8px] font-black text-amber-300 tracking-wider whitespace-nowrap shadow-xl flex items-center gap-1.5 backdrop-blur-md">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>AI QUANTUM RADAR SCAN</span>
-                </div>
-              </div>
-
-              {/* Left HUD Bracket */}
-              <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-amber-300 font-mono text-[9px] font-bold opacity-85 hidden sm:flex">
-                <span className="text-amber-400 text-sm font-black">「</span>
-                <span className="tracking-widest">FREQ 528Hz</span>
-              </div>
-
-              {/* Right HUD Bracket */}
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-amber-300 font-mono text-[9px] font-bold opacity-85 hidden sm:flex">
-                <span className="tracking-widest">3.5s VIP BEAM</span>
-                <span className="text-amber-400 text-sm font-black">」</span>
               </div>
             </div>
 
-            {/* Bottom Parallel Cyber-Optic Hairline Rail */}
+            {/* Bottom Micro-Optic Photonic Rail */}
             <div
-              className="absolute left-0 w-full h-[1.5px] -bottom-1 pointer-events-none"
+              className="absolute left-0 w-full h-[1.5px] -bottom-0.5 pointer-events-none"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.2) 10%, #FFD700 40%, #FFFDE0 50%, #FFD700 60%, rgba(255,184,0,0.2) 90%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.15) 8%, #FFD700 35%, #FFFFFF 50%, #FFD700 65%, rgba(255,184,0,0.15) 92%, transparent 100%)',
                 boxShadow: '0 0 10px #FFB800'
               }}
             />
 
-            {/* Bottom Volumetric Golden Photonic Curtain */}
+            {/* Bottom Volumetric Market Contact Light Wash */}
             <div
               className="absolute top-1/2 left-0 w-full pointer-events-none"
               style={{
-                height: '52px',
-                background: 'linear-gradient(to bottom, rgba(255,184,0,0.35) 0%, rgba(245,158,11,0.12) 40%, rgba(217,119,6,0.03) 75%, transparent 100%)',
-                filter: 'blur(8px)',
+                height: '42px',
+                background: 'linear-gradient(to bottom, rgba(255,190,0,0.38) 0%, rgba(245,158,11,0.15) 35%, rgba(217,119,6,0.02) 80%, transparent 100%)',
+                filter: 'blur(6px)',
                 opacity: 0.95
               }}
             />

@@ -199,6 +199,9 @@ class LicenseDatabase {
       // Sync maintenance mode from Supabase table
       this.syncMaintenanceModeFromSupabase().catch((err) => console.warn('Supabase maintenance sync error:', err));
 
+      // Sync admin password from Supabase table
+      this.syncAdminPasswordFromSupabase().catch((err) => console.warn('Supabase admin password sync error:', err));
+
       return true;
     } catch (err) {
       console.error('Failed to init Supabase client:', err);
@@ -416,6 +419,33 @@ class LicenseDatabase {
     }
 
     return true;
+  }
+
+  public async syncAdminPasswordFromSupabase(): Promise<string> {
+    if (!this.supabase || !this.isConfigured) return this.adminPassword;
+    try {
+      const { data, error } = await this.supabase
+        .from('ishak_licenses')
+        .select('note')
+        .eq('key', '__ADMIN_CONFIG__')
+        .maybeSingle();
+      if (!error && data && data.note && typeof data.note === 'string' && data.note.trim()) {
+        const cloudPass = data.note.trim();
+        this.adminPassword = cloudPass;
+        try {
+          let current: any = {};
+          if (fs.existsSync(SETTINGS_FILE)) {
+            current = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+          }
+          current.adminPassword = cloudPass;
+          fs.writeFileSync(SETTINGS_FILE, JSON.stringify(current, null, 2));
+        } catch (e) {}
+        console.log('🔄 Synced admin password from Supabase:', cloudPass.replace(/./g, '*'));
+      }
+    } catch (err) {
+      console.warn('Failed to sync admin password from Supabase:', err);
+    }
+    return this.adminPassword;
   }
 
   public getAdminPassword(): string {

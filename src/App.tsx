@@ -118,9 +118,9 @@ export default function App() {
     }
   };
 
-  const handleExtend = async (key: string, days: number): Promise<boolean> => {
+  const handleExtend = async (key: string, value: number, unit: 'minutes' | 'hours' | 'days' = 'days'): Promise<boolean> => {
     try {
-      const success = await supabaseService.extendLicense(key, days);
+      const success = await supabaseService.extendLicense(key, value, unit);
       if (success) {
         await fetchKeys();
         return true;

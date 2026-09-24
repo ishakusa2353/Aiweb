@@ -435,7 +435,7 @@ async function startServer() {
         return res.status(404).json({ success: false, error: "Key not found" });
       }
 
-      const { active, traderId, extendDays, extendMinutes, resetDevice, note, deviceLimit } = req.body;
+      const { active, traderId, extendDays, extendHours, extendMinutes, extendValue, extendUnit, extendMs, resetDevice, note, deviceLimit } = req.body;
 
       if (typeof active === "boolean") {
         existing.active = active;
@@ -452,11 +452,40 @@ async function startServer() {
       if (deviceLimit !== undefined) {
         existing.device_limit = Number(deviceLimit);
       }
-      if (extendDays && existing.exp) {
-        existing.exp += Number(extendDays) * 86400000;
+
+      // Calculate extension in milliseconds
+      let addMs = 0;
+      if (extendMs) {
+        addMs = Number(extendMs);
+      } else if (extendValue && extendUnit) {
+        const val = Number(extendValue);
+        const unit = String(extendUnit).toLowerCase();
+        if (unit === 'minutes' || unit === 'minute' || unit === 'min' || unit === 'm') {
+          addMs = val * 60 * 1000;
+        } else if (unit === 'hours' || unit === 'hour' || unit === 'h') {
+          addMs = val * 3600 * 1000;
+        } else if (unit === 'days' || unit === 'day' || unit === 'd') {
+          addMs = val * 86400 * 1000;
+        }
+      } else if (extendDays) {
+        addMs = Number(extendDays) * 86400000;
+      } else if (extendHours) {
+        addMs = Number(extendHours) * 3600000;
+      } else if (extendMinutes) {
+        addMs = Number(extendMinutes) * 60000;
       }
-      if (extendMinutes && existing.exp) {
-        existing.exp += Number(extendMinutes) * 60000;
+
+      if (addMs > 0) {
+        const now = Date.now();
+        if (existing.exp !== null && existing.exp !== undefined) {
+          const baseExp = existing.exp > now ? existing.exp : now;
+          existing.exp = baseExp + addMs;
+        } else {
+          // Key has not been activated yet - increase duration_ms
+          const existingMs = existing.duration_ms || parseDurationToMs(existing.duration || '30d') || (30 * 86400000);
+          existing.duration_ms = existingMs + addMs;
+        }
+        existing.active = true;
       }
 
       await licenseDb.saveLicense(existing);
