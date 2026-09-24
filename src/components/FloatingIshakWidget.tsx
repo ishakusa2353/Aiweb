@@ -285,7 +285,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     setHudResult(null);
 
     const scanStartTime = Date.now();
-    const scanDurationMs = 3600;
+    const scanDurationMs = 3500;
 
     // High-Frequency Real-Time Price Action Sampler during 3.6s Scan
     const samplePrices: number[] = [];
@@ -337,7 +337,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       playPhotostatScannerSound();
     }
 
-    // 3.6s animation matching carriage sweep and color shift
+    // 3.5s animation matching slow golden floating scan sweep
     setTimeout(() => {
       clearInterval(progressInterval);
       clearInterval(priceSampleInterval);
@@ -698,7 +698,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           triggerScan();
         }, ((tradeDuration || 60) * 1000) + 3000);
       }
-    }, 3600);
+    }, 3500);
   };
 
   const handleVerifyKey = async (e: React.FormEvent) => {
@@ -769,40 +769,98 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       {/* Bot Scanning UI: Laser Scanner Sweep + Pure Circular Gauge (no bg) + Percentage inside + Stylish Analyzing below */}
       {isScanning && (
         <>
-          {/* Photostat Scanner Carriage Laser Sweep Line */}
+          {/* 🌟 UNIQUE VIP QUANTUM GOLDEN SCANNER BLADE (3.5s Sweep + Flowing Plasma Core + HUD Reticles) */}
           <div
             className="fixed left-0 w-screen pointer-events-none z-[999998]"
             style={{
-              height: '16px',
-              animation: 'ishakLaserSweepSlow 3.6s cubic-bezier(0.42, 0, 0.58, 1) infinite'
+              height: '32px',
+              animation: 'ishakGoldenLaserSweep 3.5s cubic-bezier(0.42, 0, 0.58, 1) infinite'
             }}
           >
-            {/* Top Trailing Smoke (Single Logo Color #00E5FF) */}
+            {/* Top Volumetric Golden Photonic Curtain (Silky, ethereal ambient light wash) */}
             <div
-              className="absolute bottom-full left-0 w-full pointer-events-none"
+              className="absolute bottom-1/2 left-0 w-full pointer-events-none"
               style={{
-                height: '130px',
-                background: 'linear-gradient(to top, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%)',
+                height: '52px',
+                background: 'linear-gradient(to top, rgba(255,184,0,0.35) 0%, rgba(245,158,11,0.12) 40%, rgba(217,119,6,0.03) 75%, transparent 100%)',
                 filter: 'blur(8px)',
                 opacity: 0.95
               }}
             />
-            {/* Main Laser Beam */}
+
+            {/* Top Parallel Cyber-Optic Hairline Rail */}
             <div
-              className="relative w-full h-full rounded-full"
+              className="absolute left-0 w-full h-[1.5px] -top-1 pointer-events-none"
               style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.35) 8%, #00E5FF 25%, #E0FFFF 50%, #00E5FF 75%, rgba(0,229,255,0.35) 92%, transparent 100%)',
-                boxShadow: '0 0 20px #00E5FF, 0 0 45px #00E5FF, 0 0 80px #00E5FF, 0 0 8px #FFFFFF'
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.2) 10%, #FFD700 40%, #FFFDE0 50%, #FFD700 60%, rgba(255,184,0,0.2) 90%, transparent 100%)',
+                boxShadow: '0 0 10px #FFB800'
               }}
             />
-            {/* Bottom Trailing Smoke (Single Logo Color #00E5FF) */}
+
+            {/* ⚡ Main High-Voltage Plasma Laser Blade (Prominent 7px Living Energy Core) */}
+            <div className="relative w-full h-[7px] flex items-center justify-center">
+              {/* Running Horizontal Plasma Energy Wave */}
+              <div
+                className="w-full h-full rounded-full"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.3) 5%, #FFB800 20%, #FFF59D 42%, #FFFFFF 50%, #FFF59D 58%, #FFB800 80%, rgba(245,158,11,0.3) 95%, transparent 100%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'ishakPlasmaWave 2s linear infinite',
+                  boxShadow: '0 0 14px #FFD700, 0 0 28px #FFB800, 0 0 50px rgba(245,158,11,0.85), 0 0 80px rgba(217,119,6,0.5), inset 0 0 3px #FFFFFF'
+                }}
+              />
+
+              {/* Center Quantum Sensor Reticle (Pulsating Diamond + Focus Ring + Live Badge) */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+                {/* Expanding Focus Ring */}
+                <div
+                  className="w-8 h-8 rounded-full border border-yellow-300/80 animate-ping absolute"
+                  style={{ animationDuration: '1.75s' }}
+                />
+                {/* Diamond Sensor Core */}
+                <div
+                  className="w-4 h-4 bg-gradient-to-br from-white via-amber-300 to-yellow-500 border border-white"
+                  style={{
+                    animation: 'ishakDiamondSpinPulse 1.75s ease-in-out infinite'
+                  }}
+                />
+                {/* Center HUD Coordinate Badge */}
+                <div className="absolute -top-6 px-2.5 py-0.5 rounded-full bg-slate-950/90 border border-amber-400/80 text-[8px] font-black text-amber-300 tracking-wider whitespace-nowrap shadow-xl flex items-center gap-1.5 backdrop-blur-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>AI QUANTUM RADAR SCAN</span>
+                </div>
+              </div>
+
+              {/* Left HUD Bracket */}
+              <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-amber-300 font-mono text-[9px] font-bold opacity-85 hidden sm:flex">
+                <span className="text-amber-400 text-sm font-black">「</span>
+                <span className="tracking-widest">FREQ 528Hz</span>
+              </div>
+
+              {/* Right HUD Bracket */}
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-amber-300 font-mono text-[9px] font-bold opacity-85 hidden sm:flex">
+                <span className="tracking-widest">3.5s VIP BEAM</span>
+                <span className="text-amber-400 text-sm font-black">」</span>
+              </div>
+            </div>
+
+            {/* Bottom Parallel Cyber-Optic Hairline Rail */}
             <div
-              className="absolute top-full left-0 w-full pointer-events-none"
+              className="absolute left-0 w-full h-[1.5px] -bottom-1 pointer-events-none"
               style={{
-                height: '130px',
-                background: 'linear-gradient(to bottom, rgba(0,229,255,0.6) 0%, rgba(0,229,255,0.25) 35%, rgba(0,229,255,0.08) 70%, transparent 100%)',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.2) 10%, #FFD700 40%, #FFFDE0 50%, #FFD700 60%, rgba(255,184,0,0.2) 90%, transparent 100%)',
+                boxShadow: '0 0 10px #FFB800'
+              }}
+            />
+
+            {/* Bottom Volumetric Golden Photonic Curtain */}
+            <div
+              className="absolute top-1/2 left-0 w-full pointer-events-none"
+              style={{
+                height: '52px',
+                background: 'linear-gradient(to bottom, rgba(255,184,0,0.35) 0%, rgba(245,158,11,0.12) 40%, rgba(217,119,6,0.03) 75%, transparent 100%)',
                 filter: 'blur(8px)',
-                opacity: 0.85
+                opacity: 0.95
               }}
             />
           </div>

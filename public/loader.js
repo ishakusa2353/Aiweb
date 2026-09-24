@@ -966,6 +966,15 @@ javascript:(function(){
       '52% { top: calc(100vh - 20px); } ' +
       '100% { top: -25px; } ' +
     '}' +
+    '@keyframes ishakGoldenLaserSweep { ' +
+      '0% { top: -25px; } ' +
+      '48% { top: calc(100vh - 25px); } ' +
+      '52% { top: calc(100vh - 25px); } ' +
+      '100% { top: -25px; } ' +
+    '}' +
+    '@keyframes ishakPlasmaWave { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }' +
+    '@keyframes ishakDiamondSpinPulse { 0%, 100% { transform: translate(-50%, -50%) rotate(45deg) scale(0.92); box-shadow: 0 0 10px #FFB800, 0 0 20px #FFD700; } 50% { transform: translate(-50%, -50%) rotate(45deg) scale(1.18); box-shadow: 0 0 18px #FFFFFF, 0 0 35px #FFB800, 0 0 55px #FFA000; } }' +
+    '@keyframes ishakRingPing { 0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0.9; } 100% { transform: translate(-50%, -50%) scale(2.2); opacity: 0; } }' +
     '@keyframes ishakSmokeTopSweep { ' +
       '0% { opacity: 0.95; transform: scaleY(1); } ' +
       '46% { opacity: 0.95; transform: scaleY(1); } ' +
@@ -1028,8 +1037,21 @@ javascript:(function(){
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 8px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; }' +
     '#ishak-pill-time { background: linear-gradient(135deg, #00E5FF, #22D3EE); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1px 5px; border-radius: 8px; }' +
-    '#scan-laser { display: none !important; }' +
-    '#scan-laser.scanning-active { display: none !important; }' +
+    '#scan-laser { position: fixed; left: 0; width: 100vw; height: 32px; pointer-events: none; z-index: 2147483645; display: none; font-family: "Orbitron","Rajdhani",monospace,sans-serif; }' +
+    '#scan-laser.scanning-active { display: block; animation: ishakGoldenLaserSweep 3.5s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
+    '#scan-laser-curtain-top { position: absolute; bottom: 50%; left: 0; width: 100%; height: 52px; pointer-events: none; background: linear-gradient(to top, rgba(255,184,0,0.35) 0%, rgba(245,158,11,0.12) 40%, rgba(217,119,6,0.03) 75%, transparent 100%); filter: blur(8px); opacity: 0.95; }' +
+    '#scan-laser-rail-top { position: absolute; left: 0; width: 100%; height: 1.5px; top: 11px; pointer-events: none; background: linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.2) 10%, #FFD700 40%, #FFFDE0 50%, #FFD700 60%, rgba(255,184,0,0.2) 90%, transparent 100%); box-shadow: 0 0 10px #FFB800; }' +
+    '#scan-laser-beam-wrap { position: relative; width: 100%; height: 7px; top: 12.5px; display: flex; align-items: center; justify-content: center; }' +
+    '#scan-laser-beam { position: absolute; inset: 0; border-radius: 9999px; background: linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.3) 5%, #FFB800 20%, #FFF59D 42%, #FFFFFF 50%, #FFF59D 58%, #FFB800 80%, rgba(245,158,11,0.3) 95%, transparent 100%); background-size: 200% 100%; animation: ishakPlasmaWave 2s linear infinite; box-shadow: 0 0 14px #FFD700, 0 0 28px #FFB800, 0 0 50px rgba(245,158,11,0.85), 0 0 80px rgba(217,119,6,0.5), inset 0 0 3px #FFFFFF; }' +
+    '#scan-laser-reticle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }' +
+    '#scan-laser-focus-ring { position: absolute; top: 50%; left: 50%; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid rgba(253,224,71,0.85); animation: ishakRingPing 1.75s cubic-bezier(0, 0.2, 0.8, 1) infinite; }' +
+    '#scan-laser-diamond { position: absolute; top: 50%; left: 50%; width: 15px; height: 15px; background: linear-gradient(135deg, #FFFFFF, #FDE047, #F59E0B); border: 1px solid #FFF; animation: ishakDiamondSpinPulse 1.75s ease-in-out infinite; }' +
+    '#scan-laser-badge { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); padding: 2px 10px; border-radius: 12px; background: rgba(11,19,43,0.92); border: 1px solid rgba(251,191,36,0.85); font-size: 8px; font-weight: 900; color: #FCD34D; letter-spacing: 1px; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,0.85); display: flex; align-items: center; gap: 5px; backdrop-filter: blur(8px); }' +
+    '.ishak-radar-dot { width: 5px; height: 5px; border-radius: 50%; background: #10B981; box-shadow: 0 0 6px #10B981; display: inline-block; }' +
+    '#scan-laser-hud-left { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); color: #FCD34D; font-size: 9px; font-weight: bold; letter-spacing: 2px; opacity: 0.85; text-shadow: 0 0 8px rgba(251,191,36,0.6); }' +
+    '#scan-laser-hud-right { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); color: #FCD34D; font-size: 9px; font-weight: bold; letter-spacing: 2px; opacity: 0.85; text-shadow: 0 0 8px rgba(251,191,36,0.6); }' +
+    '#scan-laser-rail-bottom { position: absolute; left: 0; width: 100%; height: 1.5px; bottom: 11px; pointer-events: none; background: linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.2) 10%, #FFD700 40%, #FFFDE0 50%, #FFD700 60%, rgba(255,184,0,0.2) 90%, transparent 100%); box-shadow: 0 0 10px #FFB800; }' +
+    '#scan-laser-curtain-bottom { position: absolute; top: 50%; left: 0; width: 100%; height: 52px; pointer-events: none; background: linear-gradient(to bottom, rgba(255,184,0,0.35) 0%, rgba(245,158,11,0.12) 40%, rgba(217,119,6,0.03) 75%, transparent 100%); filter: blur(8px); opacity: 0.95; }' +
     '#scan-grid { display: none !important; }' +
     '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: auto; max-width: none; user-select: none; }' +
     '#ishak-screen-scan-box.scanning-active { display: flex; flex-direction: column; align-items: center; justify-content: center; }' +
@@ -1105,7 +1127,21 @@ javascript:(function(){
   // Laser with Trailing Smoky Mist, Grid, Scan Title Elements
   var laserEl = document.createElement('div');
   laserEl.id = 'scan-laser';
-  laserEl.innerHTML = '<div id="scan-laser-smoke-top"></div><div id="scan-laser-beam"></div><div id="scan-laser-smoke-bottom"></div>';
+  laserEl.innerHTML =
+    '<div id="scan-laser-curtain-top"></div>' +
+    '<div id="scan-laser-rail-top"></div>' +
+    '<div id="scan-laser-beam-wrap">' +
+      '<div id="scan-laser-beam"></div>' +
+      '<div id="scan-laser-reticle">' +
+        '<div id="scan-laser-focus-ring"></div>' +
+        '<div id="scan-laser-diamond"></div>' +
+        '<div id="scan-laser-badge"><span class="ishak-radar-dot"></span><span>AI QUANTUM RADAR SCAN</span></div>' +
+      '</div>' +
+      '<div id="scan-laser-hud-left"><span>「</span> FREQ 528Hz</div>' +
+      '<div id="scan-laser-hud-right">3.5s VIP BEAM <span>」</span></div>' +
+    '</div>' +
+    '<div id="scan-laser-rail-bottom"></div>' +
+    '<div id="scan-laser-curtain-bottom"></div>';
   document.body.appendChild(laserEl);
 
   var gridEl = document.createElement('div');
@@ -2205,7 +2241,7 @@ javascript:(function(){
 
       // Initialize Progress Counter
       var scanStartTime = Date.now();
-      var scanDurationMs = 3600;
+      var scanDurationMs = 3500;
       var dotsEl = document.getElementById('ishak-scan-dots');
       var percentEl = document.getElementById('ishak-scan-percent');
       var percentNumEl = document.getElementById('ishak-scan-percent-num');
@@ -2339,7 +2375,7 @@ javascript:(function(){
             }
           }, nextWaitMs);
         }
-      }, 3600);
+      }, 3500);
     });
   }
 

@@ -13,7 +13,22 @@
 
 @keyframes ishakLaserSweepSlow {
   0% {
-    top: -30px;
+    top: -20px;
+  }
+  48% {
+    top: calc(100vh - 20px);
+  }
+  52% {
+    top: calc(100vh - 20px);
+  }
+  100% {
+    top: -20px;
+  }
+}
+
+@keyframes ishakGoldenLaserSweep {
+  0% {
+    top: -25px;
   }
   48% {
     top: calc(100vh - 25px);
@@ -22,7 +37,27 @@
     top: calc(100vh - 25px);
   }
   100% {
-    top: -30px;
+    top: -25px;
+  }
+}
+
+@keyframes ishakPlasmaWave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes ishakDiamondSpinPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) rotate(45deg) scale(0.92);
+    box-shadow: 0 0 10px #FFB800, 0 0 20px #FFD700;
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(45deg) scale(1.18);
+    box-shadow: 0 0 18px #FFFFFF, 0 0 35px #FFB800, 0 0 55px #FFA000;
   }
 }
 
