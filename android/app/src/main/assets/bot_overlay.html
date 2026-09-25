@@ -15,6 +15,11 @@
     user-select: none;
     -webkit-user-select: none;
   }
+  /* The native Android Service provides the compact floating bubble on screen.
+     In overlay mode, we hide the redundant web-wrap so it does not block touches! */
+  #ishak-trade-wrap {
+    display: none !important;
+  }
 </style>
 </head>
 <body>
@@ -39,6 +44,49 @@
       window.AndroidBridge.executeAutoTrade(dir);
     }
     if (typeof origExecuteTrade === 'function') origExecuteTrade(dir);
+  };
+
+  // Close HUD hook when any dialog close button is clicked
+  document.addEventListener('click', function(e) {
+    var t = e.target;
+    if (t && (t.id === 'hud-close-btn' || t.id === 'k-close' || t.id === 'm-close' || t.id === 't-close' || t.id === 'ishak-opt-close' || t.id === 'maint-close')) {
+      setTimeout(function() {
+        var openModals = document.querySelectorAll('.ishak-dialog-modal');
+        var hud = document.getElementById('ishak-hud-panel');
+        var hudVisible = hud && hud.style.display !== 'none';
+        if (openModals.length === 0 && !hudVisible) {
+          if (window.AndroidBridge && window.AndroidBridge.closeHud) {
+            window.AndroidBridge.closeHud();
+          }
+        }
+      }, 100);
+    }
+  }, true);
+
+  // Function called by Android Native Service when the floating bubble is tapped
+  window.showMainDialog = function() {
+    if (typeof checkMaintenanceStatus === 'function') {
+      checkMaintenanceStatus().then(function(isMaint) {
+        if (isMaint && typeof showMaintenanceModal === 'function') {
+          showMaintenanceModal();
+          return;
+        }
+        var local = typeof getLocalLicense === 'function' ? getLocalLicense() : null;
+        if (!local || !local.key) {
+          if (typeof showKeyModal === 'function') {
+            showKeyModal(function() {
+              if (typeof showOptionsModal === 'function') showOptionsModal();
+            });
+          }
+          return;
+        }
+        if (typeof showOptionsModal === 'function') {
+          showOptionsModal();
+        } else if (typeof showKeyModal === 'function') {
+          showKeyModal();
+        }
+      });
+    }
   };
 
 

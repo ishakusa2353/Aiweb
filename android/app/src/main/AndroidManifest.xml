@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -36,10 +37,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Floating Foreground Service with Android 14/15 specialUse type -->
         <service
             android:name=".FloatingBotService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating Trading Bot Overlay" />
+        </service>
 
         <service
             android:name=".QuotexAccessibilityService"

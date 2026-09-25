@@ -151,7 +151,11 @@ public class MainActivity extends Activity {
         }
 
         Intent serviceIntent = new Intent(this, FloatingBotService.class);
-        startService(serviceIntent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
 
         Toast.makeText(this, "🚀 Ishak AI বট চালু হয়েছে! স্ক্রিনে রোবট লগো ভাসছে।", Toast.LENGTH_SHORT).show();
 
