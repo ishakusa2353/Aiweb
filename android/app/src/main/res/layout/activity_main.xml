@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#070D1E"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:gravity="center_horizontal">
+
+        <!-- Logo -->
+        <ImageView
+            android:id="@+id/imgLogo"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_marginTop="20dp"
+            android:src="@drawable/logo"
+            android:contentDescription="Ishak AI" />
+
+        <!-- Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="ISHAK AI PRO BOT"
+            android:textColor="#00E5FF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Quotex App Floating Overlay &amp; Auto-Trader"
+            android:textColor="#94A3B8"
+            android:textSize="12sp" />
+
+        <!-- Permission Box -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="#0B132B"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📱 প্রয়োজনীয় পারমিশন (আবশ্যক):"
+                android:textColor="#00E5FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <!-- 1. Floating Window Permission -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1. Floating Window"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtOverlayStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="স্ক্রিনে লগো ভাসার পারমিশন"
+                        android:textColor="#94A3B8"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnOverlayPerm"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="#00E5FF"
+                    android:textColor="#070D1E"
+                    android:text="অনুমতি দিন"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 2. Accessibility Permission -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2. Assistive / Auto-Trade"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtAccessibilityStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="অটো ট্রেড প্লেস করার পারমিশন"
+                        android:textColor="#94A3B8"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnAccessibilityPerm"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="#FFD600"
+                    android:textColor="#070D1E"
+                    android:text="অনুমতি দিন"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Start Bot Button -->
+        <Button
+            android:id="@+id/btnStartBot"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="24dp"
+            android:background="#00E5FF"
+            android:text="🚀 START BOT / বট চালু করুন"
+            android:textColor="#070D1E"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!-- Stop Bot Button -->
+        <Button
+            android:id="@+id/btnStopBot"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="10dp"
+            android:background="#1E293B"
+            android:text="🛑 STOP BOT / স্ক্রিন থেকে সরান"
+            android:textColor="#EF4444"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- Note -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="স্টার্ট বাটনে চাপলে অ্যাপটি ব্যাকগ্রাউন্ডে গিয়ে স্ক্রিনে বটের রোবট লগো ভেসে উঠবে। লগোতে চাপলে হুবহু ওয়েব বটের মতো লাইসেন্স যাচাই ও সিগন্যাল HUD ওপেন হবে।"
+            android:textColor="#64748B"
+            android:textSize="11sp" />
+
+    </LinearLayout>
+</ScrollView>
