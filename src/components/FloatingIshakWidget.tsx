@@ -217,20 +217,33 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  // 🔒 TRIGGER SCAN / LOGO CLICK: FIRST OPENS MARKET -> TIME SELECTION IF NOT SET, THEN SCANS
+  // 🔒 TRIGGER SCAN / LOGO CLICK: FIRST DETECTS ON-SCREEN MARKET & TIMEFRAME
   const triggerScan = async () => {
     if (isScanning) return;
 
-    // Check 1: Forced Market Selection First on Click
-    if (!currentMarket) {
+    // ⚡ Auto-Detect active Market and selected Duration from the screen
+    const screenAssetEl = document.querySelector('.current-asset, [data-asset], #current-asset');
+    const screenAsset = screenAssetEl ? (screenAssetEl.getAttribute('data-asset') || screenAssetEl.textContent || '').trim() : '';
+    if (screenAsset && screenAsset.length >= 3) {
+      setCurrentMarket(screenAsset);
+    }
+    const screenDurationSaved = localStorage.getItem('ISHAK_TRADE_DURATION');
+    if (screenDurationSaved) {
+      const durNum = parseInt(screenDurationSaved, 10);
+      if (!isNaN(durNum) && durNum > 0) {
+        setTradeDuration(durNum);
+      }
+    }
+
+    // Check 1: If neither on-screen nor manual market is set, open market modal
+    if (!currentMarket && !screenAsset) {
       setShowMarketModal(true);
       return;
     }
 
-    // Check 2: Forced Time Selection Next
-    if (!tradeDuration) {
-      setShowTimeModal(true);
-      return;
+    // Check 2: If neither on-screen nor manual duration is set, adopt default 5s or open time modal
+    if (!tradeDuration && !screenDurationSaved) {
+      setTradeDuration(5);
     }
 
     // 🛠️ Check 0: Maintenance mode check
