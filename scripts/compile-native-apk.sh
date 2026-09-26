@@ -8,7 +8,7 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/classes"
 mkdir -p "$BUILD_DIR/gen"
 
-ANDROID_JAR="/opt/android-sdk/platforms/android-28/android.jar"
+ANDROID_JAR="/opt/android-sdk/platforms/android-34/android.jar"
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 RES_DIR="android/app/src/main/res"
 ASSETS_DIR="android/app/src/main/assets"

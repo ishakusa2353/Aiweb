@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.View;
@@ -33,6 +35,13 @@ public class MainActivity extends Activity {
         btnAccessibilityPerm = findViewById(R.id.btnAccessibilityPerm);
         btnStartBot = findViewById(R.id.btnStartBot);
         btnStopBot = findViewById(R.id.btnStopBot);
+
+        // Check POST_NOTIFICATIONS on Android 13+ (API 33+)
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 102);
+            }
+        }
 
         btnOverlayPerm.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -150,17 +159,29 @@ public class MainActivity extends Activity {
             return;
         }
 
-        Intent serviceIntent = new Intent(this, FloatingBotService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
+        try {
+            Intent serviceIntent = new Intent(this, FloatingBotService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+            Toast.makeText(this, "🚀 Ishak AI বট চালু হয়েছে! স্ক্রিনে রোবট লগো ভাসছে।", Toast.LENGTH_SHORT).show();
+        } catch (Throwable e) {
+            Toast.makeText(this, "বট সার্ভিস ত্রুটি: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            return;
         }
 
-        Toast.makeText(this, "🚀 Ishak AI বট চালু হয়েছে! স্ক্রিনে রোবট লগো ভাসছে।", Toast.LENGTH_SHORT).show();
-
-        // Move this activity to back so user is immediately on their screen / Quotex app!
-        moveTaskToBack(true);
+        // Wait 800ms before moveTaskToBack so startForeground() executes while Activity is active!
+        // This completely prevents ForegroundServiceStartNotAllowedException on Android 14/15.
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    moveTaskToBack(true);
+                } catch (Exception ignored) {}
+            }
+        }, 800);
     }
 
     private void stopFloatingBot() {

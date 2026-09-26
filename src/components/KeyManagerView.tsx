@@ -607,7 +607,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                   <span>Floating &amp; Auto-Trade</span>
                 </span>
                 <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
-                  Android 5-15+ (v4.2.0)
+                  Android 5-15+ (v4.2.2 Fix)
                 </span>
               </div>
               <p className="text-[11px] text-gray-300 mt-0.5">

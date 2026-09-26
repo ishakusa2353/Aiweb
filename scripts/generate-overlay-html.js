@@ -43,45 +43,53 @@ const androidBridgeHooks = `
 
   // Close HUD hook when any dialog close button is clicked
   document.addEventListener('click', function(e) {
-    var t = e.target;
-    if (t && (t.id === 'hud-close-btn' || t.id === 'k-close' || t.id === 'm-close' || t.id === 't-close' || t.id === 'ishak-opt-close' || t.id === 'maint-close')) {
-      setTimeout(function() {
-        var openModals = document.querySelectorAll('.ishak-dialog-modal');
-        var hud = document.getElementById('ishak-hud-panel');
-        var hudVisible = hud && hud.style.display !== 'none';
-        if (openModals.length === 0 && !hudVisible) {
-          if (window.AndroidBridge && window.AndroidBridge.closeHud) {
-            window.AndroidBridge.closeHud();
-          }
+    setTimeout(function() {
+      var openModals = document.querySelectorAll('.ishak-dialog-modal, #k-modal, #m-modal, #t-modal, #ishak-opt-modal, #maint-modal');
+      var hud = document.getElementById('ishak-hud-panel');
+      var hudVisible = hud && hud.style.display !== 'none';
+      if (openModals.length === 0 && !hudVisible) {
+        if (window.AndroidBridge && window.AndroidBridge.closeHud) {
+          window.AndroidBridge.closeHud();
         }
-      }, 100);
-    }
+      }
+    }, 150);
   }, true);
+
+  // Close when clicking outside any modal card (on backdrop)
+  document.addEventListener('click', function(e) {
+    if (e.target === document.body || e.target === document.documentElement) {
+      var openModals = document.querySelectorAll('.ishak-dialog-modal, #k-modal, #m-modal, #t-modal, #ishak-opt-modal');
+      for (var i = 0; i < openModals.length; i++) {
+        openModals[i].remove();
+      }
+      if (window.AndroidBridge && window.AndroidBridge.closeHud) {
+        window.AndroidBridge.closeHud();
+      }
+    }
+  });
 
   // Function called by Android Native Service when the floating bubble is tapped
   window.showMainDialog = function() {
-    if (typeof checkMaintenanceStatus === 'function') {
-      checkMaintenanceStatus().then(function(isMaint) {
-        if (isMaint && typeof showMaintenanceModal === 'function') {
-          showMaintenanceModal();
-          return;
+    checkMaintenanceStatus().then(function(isMaint) {
+      if (isMaint) {
+        if (typeof showMaintenanceModal === 'function') showMaintenanceModal();
+        return;
+      }
+      var local = typeof getLocalLicense === 'function' ? getLocalLicense() : null;
+      if (!local || !local.key) {
+        if (typeof showKeyModal === 'function') {
+          showKeyModal(function() {
+            if (typeof showSettingsHub === 'function') showSettingsHub();
+          });
         }
-        var local = typeof getLocalLicense === 'function' ? getLocalLicense() : null;
-        if (!local || !local.key) {
-          if (typeof showKeyModal === 'function') {
-            showKeyModal(function() {
-              if (typeof showOptionsModal === 'function') showOptionsModal();
-            });
-          }
-          return;
-        }
-        if (typeof showOptionsModal === 'function') {
-          showOptionsModal();
-        } else if (typeof showKeyModal === 'function') {
-          showKeyModal();
-        }
-      });
-    }
+        return;
+      }
+      if (typeof showSettingsHub === 'function') {
+        showSettingsHub();
+      } else if (typeof showKeyModal === 'function') {
+        showKeyModal();
+      }
+    });
   };
 `;
 
@@ -102,10 +110,13 @@ const htmlContent = `<!DOCTYPE html>
     user-select: none;
     -webkit-user-select: none;
   }
-  /* The native Android Service provides the compact floating bubble on screen.
-     In overlay mode, we hide the redundant web-wrap so it does not block touches! */
+  /* In native overlay mode, the Android service provides the high-performance draggable floating bubble.
+     We hide the web wrap bubble so it doesn't double-render, while all dialogs, menus, and HUD scan remain 100% identical! */
   #ishak-trade-wrap {
     display: none !important;
+  }
+  .ishak-dialog-modal {
+    box-shadow: 0 0 50px rgba(0, 229, 255, 0.4), 0 20px 60px rgba(0, 0, 0, 0.95) !important;
   }
 </style>
 </head>

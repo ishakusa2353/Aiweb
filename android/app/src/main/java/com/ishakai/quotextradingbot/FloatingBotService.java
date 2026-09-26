@@ -6,11 +6,13 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -22,9 +24,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class FloatingBotService extends Service {
 
@@ -35,6 +35,7 @@ public class FloatingBotService extends Service {
     private WindowManager.LayoutParams hudParams;
     private WebView hudWebView;
     private boolean isHudOpen = false;
+    private Handler mainHandler;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -44,6 +45,7 @@ public class FloatingBotService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        mainHandler = new Handler(Looper.getMainLooper());
         startForegroundNotification();
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         createFloatingBubble();
@@ -51,34 +53,42 @@ public class FloatingBotService extends Service {
     }
 
     private void startForegroundNotification() {
-        String channelId = "ishak_bot_service_channel";
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    channelId,
-                    "Ishak AI Trading Bot Service",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
+        try {
+            String channelId = "ishak_bot_service_channel";
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                        channelId,
+                        "Ishak AI Trading Bot Service",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+                NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (manager != null) {
+                    manager.createNotificationChannel(channel);
+                }
 
-            Notification notification = new Notification.Builder(this, channelId)
-                    .setContentTitle("Ishak AI Pro Bot Active")
-                    .setContentText("স্ক্রিনে বটের ফ্লোটিং লগো সক্রিয় আছে")
-                    .setSmallIcon(R.drawable.ic_launcher)
-                    .build();
+                Notification.Builder builder = new Notification.Builder(this, channelId)
+                        .setContentTitle("Ishak AI Pro Bot Active")
+                        .setContentText("স্ক্রিনে বটের ফ্লোটিং লগো সক্রিয় আছে")
+                        .setSmallIcon(R.drawable.ic_launcher);
 
-            // Android 14+ (API 34+) and Android 15 compatibility
-            if (Build.VERSION.SDK_INT >= 34) {
-                try {
-                    startForeground(1001, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
-                } catch (Exception e) {
+                Notification notification = builder.build();
+
+                // Android 14+ (API 34+) and Android 15 compatibility
+                if (Build.VERSION.SDK_INT >= 34) {
+                    try {
+                        // 0x40000000 = FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                        startForeground(1001, notification, 0x40000000);
+                    } catch (Throwable t) {
+                        try {
+                            startForeground(1001, notification);
+                        } catch (Throwable ignored) {}
+                    }
+                } else {
                     startForeground(1001, notification);
                 }
-            } else {
-                startForeground(1001, notification);
             }
+        } catch (Throwable e) {
+            // Notification setup fallback
         }
     }
 
@@ -96,9 +106,10 @@ public class FloatingBotService extends Service {
     }
 
     /**
-     * 1. Compact Floating Bubble: Only 76dp x 76dp.
-     * Takes up minimal space on screen edge.
-     * Does NOT block phone touches anywhere else!
+     * 1. Compact Floating Bubble: STRICTLY 76dp x 76dp.
+     * Uses FLAG_NOT_FOCUSABLE | FLAG_NOT_TOUCH_MODAL without FLAG_LAYOUT_NO_LIMITS.
+     * This guarantees 100% of the screen outside this 76dp icon is completely free to touch!
+     * Solves the screen freeze on Android 8 (Oreo) and all other versions!
      */
     private void createFloatingBubble() {
         int bubbleSize = dpToPx(76);
@@ -108,7 +119,7 @@ public class FloatingBotService extends Service {
                 bubbleSize,
                 getLayoutFlag(),
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT
         );
 
@@ -122,27 +133,46 @@ public class FloatingBotService extends Service {
         FrameLayout container = new FrameLayout(this);
         container.setBackgroundColor(Color.TRANSPARENT);
 
-        // Circular background glow
-        ImageView imgLogo = new ImageView(this);
-        imgLogo.setImageResource(R.drawable.logo);
-        int pad = dpToPx(4);
-        imgLogo.setPadding(pad, pad, pad, pad);
+        // Circular background glow with cyan border matching public/loader.js
+        GradientDrawable circleBg = new GradientDrawable();
+        circleBg.setShape(GradientDrawable.OVAL);
+        circleBg.setColor(0xEE0B132B); // Dark navy cyber base
+        circleBg.setStroke(dpToPx(2), 0xFF00E5FF); // Neon cyan border
 
-        FrameLayout.LayoutParams imgParams = new FrameLayout.LayoutParams(
-                dpToPx(62),
-                dpToPx(62),
+        FrameLayout circleView = new FrameLayout(this);
+        circleView.setBackground(circleBg);
+        int circleSize = dpToPx(66);
+        FrameLayout.LayoutParams circleParams = new FrameLayout.LayoutParams(
+                circleSize,
+                circleSize,
                 Gravity.CENTER
         );
-        container.addView(imgLogo, imgParams);
+        container.addView(circleView, circleParams);
 
-        // Status badge at bottom
+        // Center Ishak AI Robot Logo
+        ImageView imgLogo = new ImageView(this);
+        imgLogo.setImageResource(R.drawable.logo);
+        int pad = dpToPx(7);
+        imgLogo.setPadding(pad, pad, pad, pad);
+        circleView.addView(imgLogo, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER
+        ));
+
+        // Status badge at bottom matching public/loader.js
         TextView txtBadge = new TextView(this);
         txtBadge.setText("ISHAK AI");
         txtBadge.setTextColor(Color.WHITE);
-        txtBadge.setTextSize(8f);
-        txtBadge.setBackgroundColor(0xCC00E5FF);
+        txtBadge.setTextSize(7.5f);
         txtBadge.setGravity(Gravity.CENTER);
-        txtBadge.setPadding(dpToPx(4), dpToPx(1), dpToPx(4), dpToPx(1));
+
+        GradientDrawable badgeBg = new GradientDrawable();
+        badgeBg.setColor(0xEE070D1E);
+        badgeBg.setCornerRadius(dpToPx(4));
+        badgeBg.setStroke(dpToPx(1), 0xFF00E5FF);
+        txtBadge.setBackground(badgeBg);
+        txtBadge.setPadding(dpToPx(5), dpToPx(1), dpToPx(5), dpToPx(1));
 
         FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -175,7 +205,7 @@ public class FloatingBotService extends Service {
                     case MotionEvent.ACTION_MOVE:
                         float dx = event.getRawX() - initialTouchX;
                         float dy = event.getRawY() - initialTouchY;
-                        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                        if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
                             isMoving = true;
                         }
                         if (isMoving) {
@@ -189,8 +219,8 @@ public class FloatingBotService extends Service {
 
                     case MotionEvent.ACTION_UP:
                         if (!isMoving) {
-                            // Single tap -> Open HUD / License Scanner
-                            toggleHudOverlay();
+                            // Single tap -> Open HUD / License / Settings Dialog
+                            showHudOverlay();
                         } else {
                             // Snap to nearest screen edge (left or right)
                             DisplayMetrics d = getResources().getDisplayMetrics();
@@ -216,8 +246,8 @@ public class FloatingBotService extends Service {
 
     /**
      * 2. Full HUD & License Dialog Overlay:
-     * Appears ONLY when user taps the circular robot icon.
-     * When closed, disappears completely so phone touches are 100% free!
+     * Added ONLY when the user taps the floating bubble.
+     * When closed, it is completely removed from WindowManager, releasing all touches!
      */
     private void createHudOverlay() {
         hudParams = new WindowManager.LayoutParams(
@@ -232,7 +262,7 @@ public class FloatingBotService extends Service {
         hudParams.gravity = Gravity.TOP | Gravity.START;
 
         FrameLayout hudContainer = new FrameLayout(this);
-        hudContainer.setBackgroundColor(0x77000000); // Semi-transparent backdrop
+        hudContainer.setBackgroundColor(0x77000000); // Semi-transparent dark cyber backdrop
 
         hudWebView = new WebView(this);
         hudWebView.setBackgroundColor(Color.TRANSPARENT);
@@ -255,7 +285,7 @@ public class FloatingBotService extends Service {
 
             @JavascriptInterface
             public void closeHud() {
-                bubbleView.post(new Runnable() {
+                mainHandler.post(new Runnable() {
                     @Override
                     public void run() {
                         hideHudOverlay();
@@ -265,12 +295,17 @@ public class FloatingBotService extends Service {
 
             @JavascriptInterface
             public void closeBot() {
-                stopSelf();
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        stopSelf();
+                    }
+                });
             }
 
             @JavascriptInterface
             public void setFocusable(final boolean focusable) {
-                hudOverlayView.post(new Runnable() {
+                mainHandler.post(new Runnable() {
                     @Override
                     public void run() {
                         if (focusable) {
@@ -278,8 +313,10 @@ public class FloatingBotService extends Service {
                         } else {
                             hudParams.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                         }
-                        if (isHudOpen && hudOverlayView.isAttachedToWindow()) {
-                            windowManager.updateViewLayout(hudOverlayView, hudParams);
+                        if (isHudOpen && hudOverlayView != null && hudOverlayView.isAttachedToWindow()) {
+                            try {
+                                windowManager.updateViewLayout(hudOverlayView, hudParams);
+                            } catch (Exception ignored) {}
                         }
                     }
                 });
@@ -293,15 +330,19 @@ public class FloatingBotService extends Service {
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
-        // Close HUD button at top-right
+        // Circular close button at top-right
         TextView btnClose = new TextView(this);
         btnClose.setText("✕");
         btnClose.setTextColor(Color.WHITE);
-        btnClose.setTextSize(18f);
+        btnClose.setTextSize(16f);
         btnClose.setGravity(Gravity.CENTER);
-        btnClose.setBackgroundColor(0xCCEF4444);
-        int bP = dpToPx(8);
-        btnClose.setPadding(bP, bP, bP, bP);
+
+        GradientDrawable closeBg = new GradientDrawable();
+        closeBg.setShape(GradientDrawable.OVAL);
+        closeBg.setColor(0xDDFF1744); // Bright red
+        closeBg.setStroke(dpToPx(1), Color.WHITE);
+        btnClose.setBackground(closeBg);
+
         btnClose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -309,42 +350,42 @@ public class FloatingBotService extends Service {
             }
         });
 
+        int closeSize = dpToPx(38);
         FrameLayout.LayoutParams closeParams = new FrameLayout.LayoutParams(
-                dpToPx(40),
-                dpToPx(40),
+                closeSize,
+                closeSize,
                 Gravity.TOP | Gravity.END
         );
-        closeParams.topMargin = dpToPx(36);
+        closeParams.topMargin = dpToPx(34);
         closeParams.rightMargin = dpToPx(16);
         hudContainer.addView(btnClose, closeParams);
 
         hudOverlayView = hudContainer;
     }
 
-    private void toggleHudOverlay() {
-        if (isHudOpen) {
-            hideHudOverlay();
-        } else {
-            showHudOverlay();
-        }
-    }
-
     private void showHudOverlay() {
-        if (isHudOpen) return;
+        if (isHudOpen || hudOverlayView == null) return;
         try {
             windowManager.addView(hudOverlayView, hudParams);
             isHudOpen = true;
-            // Inform webview to show HUD / Dialog
+            // Trigger dialog in webview
             hudWebView.evaluateJavascript("if (typeof window.showMainDialog === 'function') window.showMainDialog();", null);
         } catch (Exception ignored) {}
     }
 
     private void hideHudOverlay() {
-        if (!isHudOpen) return;
+        if (!isHudOpen || hudOverlayView == null) return;
         try {
             windowManager.removeView(hudOverlayView);
             isHudOpen = false;
         } catch (Exception ignored) {}
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        // When user swipes away / closes the app from Recents, remove floating logo and stop service!
+        super.onTaskRemoved(rootIntent);
+        stopSelf();
     }
 
     @Override
