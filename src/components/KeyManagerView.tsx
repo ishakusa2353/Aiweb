@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2, Wrench, ShieldAlert, Download, LayoutGrid, List, Bot } from 'lucide-react';
+import { KeyRound, Plus, Copy, Check, Ban, CheckCircle2, Clock, Trash2, ShieldCheck, RefreshCw, Search, Smartphone, RotateCcw, AlertTriangle, Database, Settings, Server, ExternalLink, Terminal, Send, MessageSquare, Share2, Wrench, ShieldAlert, Download, LayoutGrid, List } from 'lucide-react';
 import { LicenseRecord } from '../types';
 import { supabaseService } from '../lib/supabaseService';
-import { BotAppModal } from './BotAppModal';
 
 interface KeyManagerViewProps {
   keys: LicenseRecord[];
@@ -44,23 +43,6 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isAppInstalled, setIsAppInstalled] = useState<boolean>(false);
   const [showInstallGuide, setShowInstallGuide] = useState<boolean>(false);
-
-  // 🤖 Ishak AI Bot Full APK Modal & Download State (Quotex App Edition)
-  const [showBotAppModal, setShowBotAppModal] = useState<boolean>(false);
-
-  const handleDownloadBotApk = () => {
-    try {
-      const a = document.createElement('a');
-      a.href = '/Ishak_AI_Bot_Quotex_Trader.apk';
-      a.download = 'Ishak_AI_Bot_Quotex_Trader.apk';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      showActionToast('✅ Ishak AI Quotex Bot APK ডাউনলোড শুরু হয়েছে!');
-    } catch (e) {
-      window.location.href = '/Ishak_AI_Bot_Quotex_Trader.apk';
-    }
-  };
 
   useEffect(() => {
     const handleBeforeInstall = (e: any) => {
@@ -556,82 +538,36 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       </div>
 
-      {/* 📱 SIDE-BY-SIDE MOBILE APK DOCK: ADMIN APK (LEFT) & ISHAK AI BOT FULL APK (RIGHT) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-        {/* 1. ADMIN MANAGEMENT APK */}
-        <div className="bg-gradient-to-r from-cyan-950/90 via-[#0B132B] to-blue-950/90 border border-cyan-400/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
-              🛡️
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
-                  <span>এডমিন কন্ট্রোল APK (WebAPK)</span>
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>লাইভ ডাটাবেজ</span>
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-300 mt-0.5">
-                লাইসেন্স কি তৈরি, ব্লক ও রিচার্জ করার জন্য অ্যাডমিন ফোন অ্যাপ।
-              </p>
-            </div>
+      {/* 📱 ADMIN MOBILE APP INSTALL DOCK */}
+      <div className="bg-gradient-to-r from-cyan-950/90 via-[#0B132B] to-blue-950/90 border border-cyan-400/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
+            🛡️
           </div>
-
-          <div className="w-full pt-1">
-            <button
-              onClick={handleInstallApp}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>{isAppInstalled ? '✅ এডমিন অ্যাপ ইনস্টল্ড' : '১-ক্লিকে Admin APK ইনস্টল'}</span>
-            </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+                <span>এডমিন কন্ট্রোল অ্যাপ (WebAPK)</span>
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>লাইভ ডাটাবেজ</span>
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-300 mt-0.5">
+              লাইসেন্স কি তৈরি, ব্লক ও রিচার্জ করার জন্য অ্যাডমিন ফোন অ্যাপ।
+            </p>
           </div>
         </div>
 
-        {/* 2. ISHAK AI BOT TRADER FULL APK (RIGHT BESIDE ADMIN APK) */}
-        <div className="bg-gradient-to-r from-amber-950/90 via-[#181102] to-cyan-950/90 border border-amber-400/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col justify-between gap-3 shadow-[0_0_25px_rgba(245,158,11,0.15)]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
-              🤖
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
-                  <span>বট ট্রেডার Full APK (Quotex App)</span>
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  <span>Floating &amp; Auto-Trade</span>
-                </span>
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold">
-                  Android 5-15+ (v4.2.2 Fix)
-                </span>
-              </div>
-              <p className="text-[11px] text-gray-300 mt-0.5">
-                Quotex অ্যাপের উপরে ফ্লোটিং রোবট লগো এবং অটো ট্রেড প্লেসমেন্ট ফুল APK (1.1 MB • সব ভার্সন সাপোর্টেড)।
-              </p>
-            </div>
-          </div>
-
-          <div className="w-full flex items-center gap-2 pt-1">
-            <button
-              onClick={handleDownloadBotApk}
-              className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-black font-black text-xs shadow-lg shadow-amber-500/30 hover:brightness-110 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>১-ক্লিকে Full APK ডাউনলোড</span>
-            </button>
-            <button
-              onClick={() => setShowBotAppModal(true)}
-              className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 text-cyan-300 font-black text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span>অ্যাপ ওপেন</span>
-            </button>
-          </div>
+        <div className="w-full sm:w-auto pt-1 sm:pt-0 shrink-0">
+          <button
+            onClick={handleInstallApp}
+            className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isAppInstalled ? '✅ এডমিন অ্যাপ ইনস্টল্ড' : '১-ক্লিকে Admin অ্যাপ ইনস্টল'}</span>
+          </button>
         </div>
       </div>
 
@@ -1728,15 +1664,6 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
           </div>
         </div>
       )}
-
-      {/* 🤖 ISHAK AI BOT TRADER FULL APK MODAL (Quotex Floating Overlay & Auto-Trader) */}
-      <BotAppModal
-        isOpen={showBotAppModal}
-        onClose={() => setShowBotAppModal(false)}
-        onBotStarted={(k) => {
-          showActionToast(`🚀 Ishak AI বট সফলভাবে চালু হয়েছে (${k})! স্ক্রিনে রোবট লগো সক্রিয়।`);
-        }}
-      />
     </div>
   );
 };

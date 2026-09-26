@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Ishak AI Bot</string>
-    <string name="accessibility_service_description">Ishak AI Assistive Auto-Trading Service for Quotex App. Automatically executes trade clicks when high win-rate signals are generated.</string>
-</resources>

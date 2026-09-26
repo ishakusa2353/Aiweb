@@ -603,21 +603,6 @@ ON CONFLICT (key) DO NOTHING;`
   app.get("/bot.js", serveBotScript);
   app.get("/loader.js", serveBotScript);
 
-  // 4.5. DIRECT BOT APK DOWNLOAD ENDPOINTS
-  const serveBotApk = (req: express.Request, res: express.Response) => {
-    const apkFile = path.join(process.cwd(), "public", "Ishak_AI_Bot_Quotex_Trader.apk");
-    if (!fs.existsSync(apkFile)) {
-      return res.status(404).json({ error: "APK file not found on server" });
-    }
-    res.setHeader("Content-Type", "application/vnd.android.package-archive");
-    res.setHeader("Content-Disposition", 'attachment; filename="Ishak_AI_Bot_Quotex_Trader.apk"');
-    fs.createReadStream(apkFile).pipe(res);
-  };
-
-  app.get("/Ishak_AI_Bot_Quotex_Trader.apk", serveBotApk);
-  app.get("/Ishak_AI_Trading_Bot.apk", serveBotApk);
-  app.get("/api/download-bot-apk", serveBotApk);
-
   // 5. BOOKMARKLET GENERATION ENDPOINT
   app.get("/api/bookmarklet-code", async (req, res) => {
     const host = req.get("host") || "localhost:3000";
