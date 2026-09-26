@@ -57,7 +57,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     liveExecutionTime: string;
   }) | null>(null);
   const [flySignal, setFlySignal] = useState<'UP' | 'DOWN' | null>(null);
-  const [shockwaveState, setShockwaveState] = useState<{ x: number; y: number; color: string } | null>(null);
 
   const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
 
@@ -781,18 +780,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
       };
 
-      // 1. Quantum Sonic Shockwave from Screen Center
-      const themeColor = isCall ? '#00FF66' : '#FF1744';
-      setShockwaveState({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-        color: themeColor
-      });
-      setTimeout(() => {
-        setShockwaveState(null);
-      }, 1200);
-
-      // 2. Ultra-stylish, minimalist BUY/SELL signal (1.5s Duration)
+      // Clean, compact BUY/SELL signal (1.5s Duration, No circles/shockwaves)
       setFlySignal(isCall ? 'UP' : 'DOWN');
       setTimeout(() => {
         setFlySignal(null);
@@ -1152,67 +1140,42 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       </div>
 
-      {/* Quantum Sonic Shockwave Ring */}
-      {shockwaveState && (
-        <div
-          className="fixed pointer-events-none z-[999995] rounded-full animate-[ishakShockwaveRing_1.1s_cubic-bezier(0.1,0.85,0.25,1)_forwards]"
-          style={{
-            left: `${shockwaveState.x}px`,
-            top: `${shockwaveState.y}px`,
-            width: '100px',
-            height: '100px',
-            borderColor: shockwaveState.color,
-            borderWidth: '4px',
-            borderStyle: 'solid',
-            boxShadow: `0 0 60px ${shockwaveState.color}, 0 0 120px ${shockwaveState.color}, inset 0 0 40px ${shockwaveState.color}`
-          }}
-        />
-      )}
-
-      {/* ⚡ ULTRA-PREMIUM BUY / SELL SIGNAL ANIMATION (1.5s Duration) */}
+      {/* ⚡ CLEAN, COMPACT BUY / SELL SIGNAL (1.5s Duration, Zero Circles/Auras) */}
       {flySignal && (
         <div
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[999999] select-none text-center flex items-center justify-center"
           style={{
             animation: flySignal === 'UP'
-              ? 'ishakBuyFlyUp1500 1.5s cubic-bezier(0.18, 0.9, 0.25, 1) forwards'
-              : 'ishakSellFlyDown1500 1.5s cubic-bezier(0.18, 0.9, 0.25, 1) forwards',
-            fontFamily: '"Syncopate", "Orbitron", "Montserrat", sans-serif'
+              ? 'ishakBuyFlyUp1500 1.5s cubic-bezier(0.16, 0.9, 0.25, 1) forwards'
+              : 'ishakSellFlyDown1500 1.5s cubic-bezier(0.16, 0.9, 0.25, 1) forwards',
+            fontFamily: '"Syncopate", "Orbitron", sans-serif'
           }}
         >
-          {/* Ambient Radiant Glow Aura */}
-          <div
-            className="absolute -inset-24 rounded-full blur-3xl pointer-events-none opacity-85"
-            style={{
-              background: flySignal === 'UP'
-                ? 'radial-gradient(circle, rgba(0,255,102,0.45) 0%, rgba(0,229,255,0.2) 50%, transparent 75%)'
-                : 'radial-gradient(circle, rgba(255,23,68,0.5) 0%, rgba(255,82,82,0.2) 50%, transparent 75%)'
-            }}
-          />
-
-          <div className="relative flex flex-col items-center justify-center">
+          <div className="flex items-center gap-3">
             <span
-              className={`text-6xl sm:text-7xl md:text-8xl font-black tracking-[0.18em] leading-none select-none relative whitespace-nowrap uppercase ${
+              className={`text-3xl sm:text-4xl font-black tracking-[0.18em] leading-none select-none uppercase ${
                 flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
               }`}
               style={{
                 textShadow: flySignal === 'UP'
-                  ? '0 0 20px #00FF66, 0 0 45px rgba(0,255,102,0.95), 0 0 85px rgba(0,229,255,0.7), 0 4px 28px rgba(0,0,0,0.95)'
-                  : '0 0 20px #FF1744, 0 0 45px rgba(255,23,68,0.95), 0 0 85px rgba(255,50,75,0.7), 0 4px 28px rgba(0,0,0,0.95)'
+                  ? '0 0 16px #00FF66, 0 0 32px rgba(0,255,102,0.8), 0 2px 10px rgba(0,0,0,0.95)'
+                  : '0 0 16px #FF1744, 0 0 32px rgba(255,23,68,0.8), 0 2px 10px rgba(0,0,0,0.95)'
               }}
             >
               {flySignal === 'UP' ? 'BUY' : 'SELL'}
             </span>
-            <div
-              className={`mt-2 flex items-center gap-2 text-lg sm:text-xl font-black tracking-[0.3em] ${
+            <span
+              className={`text-2xl sm:text-3xl font-black ${
                 flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
               }`}
               style={{
-                textShadow: flySignal === 'UP' ? '0 0 12px #00FF66' : '0 0 12px #FF1744'
+                textShadow: flySignal === 'UP'
+                  ? '0 0 14px #00FF66, 0 2px 8px rgba(0,0,0,0.95)'
+                  : '0 0 14px #FF1744, 0 2px 8px rgba(0,0,0,0.95)'
               }}
             >
-              {flySignal === 'UP' ? '▲ ▲ ▲' : '▼ ▼ ▼'}
-            </div>
+              {flySignal === 'UP' ? '↑' : '↓'}
+            </span>
           </div>
         </div>
       )}

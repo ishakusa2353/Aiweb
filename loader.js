@@ -1369,16 +1369,16 @@ javascript:(function(){
     '.ishak-wave-2 { animation: ishakWaterWaveSweep2 6.5s cubic-bezier(0.2, 0.95, 0.25, 1) 0.4s forwards; }' +
     '.ishak-wave-3 { animation: ishakWaterWaveSweep3 6.5s cubic-bezier(0.25, 1, 0.3, 1) 0.8s forwards; }' +
     '@keyframes ishakBuyFlyUp1500 { ' +
-      '0% { transform: translate(-50%, calc(-50% + 95px)) scale(0.68); opacity: 0; filter: blur(14px); } ' +
-      '24% { transform: translate(-50%, -50%) scale(1.14); opacity: 1; filter: blur(0px); } ' +
-      '65% { transform: translate(-50%, calc(-50% - 22px)) scale(1.04); opacity: 1; filter: blur(0px); } ' +
-      '100% { transform: translate(-50%, calc(-50% - 95px)) scale(0.85); opacity: 0; filter: blur(12px); } ' +
+      '0% { transform: translate(-50%, calc(-50% + 70px)); opacity: 0; filter: blur(6px); } ' +
+      '22% { transform: translate(-50%, -50%); opacity: 1; filter: blur(0px); } ' +
+      '68% { transform: translate(-50%, calc(-50% - 18px)); opacity: 1; filter: blur(0px); } ' +
+      '100% { transform: translate(-50%, calc(-50% - 75px)); opacity: 0; filter: blur(6px); } ' +
     '}' +
     '@keyframes ishakSellFlyDown1500 { ' +
-      '0% { transform: translate(-50%, calc(-50% - 95px)) scale(0.68); opacity: 0; filter: blur(14px); } ' +
-      '24% { transform: translate(-50%, -50%) scale(1.14); opacity: 1; filter: blur(0px); } ' +
-      '65% { transform: translate(-50%, calc(-50% + 22px)) scale(1.04); opacity: 1; filter: blur(0px); } ' +
-      '100% { transform: translate(-50%, calc(-50% + 95px)) scale(0.85); opacity: 0; filter: blur(12px); } ' +
+      '0% { transform: translate(-50%, calc(-50% - 70px)); opacity: 0; filter: blur(6px); } ' +
+      '22% { transform: translate(-50%, -50%); opacity: 1; filter: blur(0px); } ' +
+      '68% { transform: translate(-50%, calc(-50% + 18px)); opacity: 1; filter: blur(0px); } ' +
+      '100% { transform: translate(-50%, calc(-50% + 75px)); opacity: 0; filter: blur(6px); } ' +
     '}' +
     '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 72px; height: 72px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; border-radius: 50%; }' +
     '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; }' +
@@ -1434,18 +1434,7 @@ javascript:(function(){
   document.body.appendChild(flySignalEl);
 
   function triggerQuantumShockwave(originX, originY, color) {
-    try {
-      var sw = document.getElementById('ishak-shockwave-el');
-      if (!sw) {
-        sw = document.createElement('div');
-        sw.id = 'ishak-shockwave-el';
-        document.body.appendChild(sw);
-      }
-      sw.style.cssText = 'position:fixed; left:' + originX + 'px; top:' + originY + 'px; width:100px; height:100px; transform:translate(-50%,-50%); border-radius:50%; border:4px solid ' + color + '; box-shadow:0 0 60px ' + color + ', 0 0 120px ' + color + ', inset 0 0 40px ' + color + '; pointer-events:none; z-index:2147483645; display:block; animation:ishakShockwaveRing 1.1s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;';
-      setTimeout(function() {
-        if (sw) sw.style.display = 'none';
-      }, 1150);
-    } catch(e){}
+    // Disabled: Zero circular rings or shockwaves during BUY/SELL signal per user specification
   }
 
   function showFlySignalAnimation(direction) {
@@ -1456,21 +1445,18 @@ javascript:(function(){
 
     var isUp = direction === 'UP';
     var text = isUp ? 'BUY' : 'SELL';
+    var arrow = isUp ? '↑' : '↓';
     var themeColor = isUp ? '#00FF66' : '#FF1744';
-    var glowShadow = isUp ? 'rgba(0,255,102,0.95)' : 'rgba(255,23,68,0.95)';
-    var outerBloom = isUp ? 'rgba(0,229,255,0.7)' : 'rgba(255,50,75,0.7)';
+    var glowShadow = isUp ? 'rgba(0,255,102,0.8)' : 'rgba(255,23,68,0.8)';
 
     fly.innerHTML =
-      '<div style="position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
-        '<div style="position:absolute; width:260px; height:200px; border-radius:50%; filter:blur(45px); pointer-events:none; opacity:0.85; background:' + (isUp ? 'radial-gradient(circle, rgba(0,255,102,0.45) 0%, rgba(0,229,255,0.2) 50%, transparent 75%)' : 'radial-gradient(circle, rgba(255,23,68,0.5) 0%, rgba(255,82,82,0.2) 50%, transparent 75%)') + ';"></div>' +
-        '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative;">' +
-          '<span style="font-size:56px; font-weight:900; letter-spacing:10px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 45px ' + glowShadow + ', 0 0 85px ' + outerBloom + ', 0 4px 28px rgba(0,0,0,0.95); line-height:1; position:relative; white-space:nowrap; text-transform:uppercase;">' +
-            text +
-          '</span>' +
-          '<div style="margin-top:6px; display:flex; align-items:center; gap:8px; font-size:16px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 12px ' + themeColor + '; letter-spacing:6px; opacity:0.9;">' +
-            (isUp ? '▲ ▲ ▲' : '▼ ▼ ▼') +
-          '</div>' +
-        '</div>' +
+      '<div style="position:relative; display:flex; align-items:center; justify-content:center; gap:10px; user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
+        '<span style="font-size:32px; font-weight:900; letter-spacing:5px; color:' + themeColor + '; text-shadow:0 0 16px ' + themeColor + ', 0 0 32px ' + glowShadow + ', 0 2px 10px rgba(0,0,0,0.95); line-height:1; position:relative; white-space:nowrap; text-transform:uppercase;">' +
+          text +
+        '</span>' +
+        '<span style="font-size:28px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 14px ' + themeColor + ', 0 2px 8px rgba(0,0,0,0.95); line-height:1;">' +
+          arrow +
+        '</span>' +
       '</div>';
 
     fly.className = isUp ? 'ishak-fly-buy-active' : 'ishak-fly-sell-active';
@@ -1483,12 +1469,9 @@ javascript:(function(){
     }, 1500);
   }
 
-  // Sonic quantum shockwave trigger for signal confirmation (uncluttered clean chart)
+  // Pure Clean Signal confirmation (Zero Clutter, Zero Circles)
   function highlightRunningCandleTarget(direction) {
-    try {
-      var isUp = direction === 'UP';
-      triggerQuantumShockwave(window.innerWidth / 2, window.innerHeight / 2, isUp ? '#00FF66' : '#FF1744');
-    } catch(e){}
+    // Clutter-free: strictly text animation only
   }
 
   // Photonic Market-Touching Laser Scanner (No Text Clutter)

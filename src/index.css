@@ -318,47 +318,47 @@
 
 @keyframes ishakBuyFlyUp1500 {
   0% {
-    transform: translate(-50%, calc(-50% + 95px)) scale(0.68);
+    transform: translate(-50%, calc(-50% + 70px));
     opacity: 0;
-    filter: blur(14px);
+    filter: blur(6px);
   }
-  24% {
-    transform: translate(-50%, -50%) scale(1.14);
+  22% {
+    transform: translate(-50%, -50%);
     opacity: 1;
     filter: blur(0px);
   }
-  65% {
-    transform: translate(-50%, calc(-50% - 22px)) scale(1.04);
+  68% {
+    transform: translate(-50%, calc(-50% - 18px));
     opacity: 1;
     filter: blur(0px);
   }
   100% {
-    transform: translate(-50%, calc(-50% - 95px)) scale(0.85);
+    transform: translate(-50%, calc(-50% - 75px));
     opacity: 0;
-    filter: blur(12px);
+    filter: blur(6px);
   }
 }
 
 @keyframes ishakSellFlyDown1500 {
   0% {
-    transform: translate(-50%, calc(-50% - 95px)) scale(0.68);
+    transform: translate(-50%, calc(-50% - 70px));
     opacity: 0;
-    filter: blur(14px);
+    filter: blur(6px);
   }
-  24% {
-    transform: translate(-50%, -50%) scale(1.14);
+  22% {
+    transform: translate(-50%, -50%);
     opacity: 1;
     filter: blur(0px);
   }
-  65% {
-    transform: translate(-50%, calc(-50% + 22px)) scale(1.04);
+  68% {
+    transform: translate(-50%, calc(-50% + 18px));
     opacity: 1;
     filter: blur(0px);
   }
   100% {
-    transform: translate(-50%, calc(-50% + 95px)) scale(0.85);
+    transform: translate(-50%, calc(-50% + 75px));
     opacity: 0;
-    filter: blur(12px);
+    filter: blur(6px);
   }
 }
 
