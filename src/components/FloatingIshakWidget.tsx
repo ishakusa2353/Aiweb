@@ -1014,10 +1014,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         {/* Small 3D Pill Badge - Matched size and proportions */}
         <div
           onClick={() => setShowHub(true)}
-          className="mt-1 px-2 py-0.5 rounded-full bg-[#070D1E]/95 border border-[#00E5FF]/80 flex items-center gap-1.5 shadow-lg shadow-black/90 cursor-pointer hover:border-[#00E5FF] transition-colors transform-none select-none"
+          className="mt-1 px-2 py-0.5 rounded-full bg-[#070D1E]/95 border border-[#00E5FF]/80 flex items-center gap-1.5 shadow-lg shadow-black/90 cursor-pointer hover:border-[#00E5FF] transition-colors transform-none select-none font-['Orbitron',sans-serif]"
         >
-          <span className="text-[#00E5FF] text-[8.5px] font-black tracking-tight transform-none select-none">⚡ ISHAK AI</span>
-          <span className="bg-gradient-to-r from-cyan-400 to-teal-300 text-[#070D1E] text-[7.5px] font-black px-1.5 py-0.2 rounded-full">
+          <span className="text-[#00E5FF] text-[8.5px] font-black tracking-tight transform-none select-none whitespace-nowrap flex items-center gap-1">
+            <span>⚡</span>
+            <span>ISHAK AI</span>
+          </span>
+          <span className="bg-gradient-to-r from-cyan-400 to-teal-300 text-[#070D1E] text-[7.5px] font-black px-1.5 py-0.5 rounded-full whitespace-nowrap leading-none shadow-[0_0_8px_rgba(0,229,255,0.4)]">
             {badgeText}
           </span>
         </div>
