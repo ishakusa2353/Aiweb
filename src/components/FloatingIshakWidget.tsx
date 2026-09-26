@@ -217,16 +217,81 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  // 🛡️ Strict Asset Whitelist & Normalizer (Filters out "tradin", "trading", etc.)
+  const validateAndNormalizeAsset = (raw: string | null | undefined): string | null => {
+    if (!raw || typeof raw !== 'string') return null;
+    const cleaned = raw.replace(/\+\d+%.*$/, '').replace(/\d+%/g, '').replace(/[\r\n\t]/g, ' ').trim();
+    if (!cleaned || cleaned.length < 3 || cleaned.length > 40) return null;
+
+    const lower = cleaned.toLowerCase();
+    const bannedWords = [
+      'tradin', 'trading', 'trade', 'market', 'quotex', 'broker', 'chart', 'platform',
+      'login', 'account', 'wallet', 'history', 'profile', 'setup', 'deposit', 'withdraw',
+      'payout', 'info', 'ishak', 'dashboard', 'indicator', 'signals', 'overview', 'demo',
+      'tournament', 'support', 'help', 'settings', 'live', 'time', 'amount', 'invest'
+    ];
+    for (const b of bannedWords) {
+      if (lower === b || lower.startsWith(b + ' ') || lower.includes(' ' + b)) {
+        return null;
+      }
+    }
+
+    for (const cat of MARKETS_DATABASE) {
+      for (const item of cat.items) {
+        if (item.toLowerCase() === lower) return item;
+        const baseDb = item.replace(/\s*\(OTC\)/i, '').trim();
+        const baseRaw = cleaned.replace(/\s*\(OTC\)/i, '').replace(/_otc/i, '').replace(/_/g, '/').trim();
+        if (baseDb.toLowerCase() === baseRaw.toLowerCase()) {
+          const hasOtc = lower.includes('otc') || item.includes('(OTC)');
+          return hasOtc ? `${baseDb} (OTC)` : baseDb;
+        }
+      }
+    }
+
+    const pairMatch = cleaned.match(/([A-Za-z]{3})[\s/_]*([A-Za-z]{3})/);
+    if (pairMatch) {
+      const cur1 = pairMatch[1].toUpperCase();
+      const cur2 = pairMatch[2].toUpperCase();
+      const knownCurs = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','NZD','BDT','INR','PKR','BRL','EGP','IDR','MYR','NGN','PHP','RUB','THB','TRY','VND','ZAR','NOK','SEK','SGD'];
+      if (knownCurs.includes(cur1) && knownCurs.includes(cur2)) {
+        return `${cur1}/${cur2}${lower.includes('otc') ? ' (OTC)' : ''}`;
+      }
+    }
+
+    if (lower.includes('bitcoin') || lower.includes('btc')) return lower.includes('otc') ? 'Bitcoin (OTC)' : 'BTC/USD';
+    if (lower.includes('ethereum') || lower.includes('eth')) return lower.includes('otc') ? 'Ethereum (OTC)' : 'ETH/USD';
+    if (lower.includes('gold') || lower.includes('xau')) return lower.includes('otc') ? 'Gold (OTC)' : 'GOLD (XAU/USD)';
+    if (lower.includes('silver') || lower.includes('xag')) return lower.includes('otc') ? 'Silver (OTC)' : 'SILVER (XAG/USD)';
+    if (lower.includes('crude') || lower.includes('brent')) return 'Crude Oil (OTC)';
+    if (lower.includes('crypto idx')) return 'Crypto IDX';
+
+    return null;
+  };
+
   // 🔒 TRIGGER SCAN / LOGO CLICK: FIRST DETECTS ON-SCREEN MARKET & TIMEFRAME
   const triggerScan = async () => {
     if (isScanning) return;
 
     // ⚡ Auto-Detect active Market and selected Duration from the screen
     const screenAssetEl = document.querySelector('.current-asset, [data-asset], #current-asset');
-    const screenAsset = screenAssetEl ? (screenAssetEl.getAttribute('data-asset') || screenAssetEl.textContent || '').trim() : '';
-    if (screenAsset && screenAsset.length >= 3) {
+    const screenRaw = screenAssetEl ? (screenAssetEl.getAttribute('data-asset') || screenAssetEl.textContent || '').trim() : '';
+    const screenAsset = validateAndNormalizeAsset(screenRaw);
+    if (screenAsset) {
       setCurrentMarket(screenAsset);
+      try { localStorage.setItem('ISHAK_SELECTED_MARKET', screenAsset); } catch (e) {}
+    } else if (currentMarket) {
+      const valMkt = validateAndNormalizeAsset(currentMarket);
+      if (valMkt !== currentMarket) setCurrentMarket(valMkt);
+    } else {
+      try {
+        const savedMkt = localStorage.getItem('ISHAK_SELECTED_MARKET');
+        if (savedMkt) {
+          const valSaved = validateAndNormalizeAsset(savedMkt);
+          if (valSaved) setCurrentMarket(valSaved);
+        }
+      } catch (e) {}
     }
+
     const screenDurationSaved = localStorage.getItem('ISHAK_TRADE_DURATION');
     if (screenDurationSaved) {
       const durNum = parseInt(screenDurationSaved, 10);
@@ -235,8 +300,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     }
 
-    // Check 1: If neither on-screen nor manual market is set, open market modal
-    if (!currentMarket && !screenAsset) {
+    // Check 1: If neither on-screen nor manual verified market is set, MANDATORILY open market modal
+    const effectiveMarket = screenAsset || validateAndNormalizeAsset(currentMarket);
+    if (!effectiveMarket) {
       setShowMarketModal(true);
       return;
     }
@@ -642,6 +708,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           const mid = (support + resistance) / 2;
           isCall = currentPrice < mid;
         }
+      }
+
+      // 🛡️ ANTI-LOSS GUARDIAN (PREVENTS CALLING UP ON A DUMPING/FALLING CANDLE):
+      if (isCall && (tickDelta < -0.00001 || candleDelta < -0.00001)) {
+        isCall = false; // Strictly align with falling candle (PUT)!
+        srPattern = 'Bearish Downward Candle Plunge (PUT)';
+        srReason = 'ক্যান্ডেলটি সরাসরি নিচের দিকে নামছে (সেলিং প্রেসার)—ঝুঁকি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
+      } else if (!isCall && (tickDelta > 0.00001 || candleDelta > 0.00001)) {
+        isCall = true; // Strictly align with rising candle (CALL)!
+        srPattern = 'Bullish Upward Candle Push (CALL)';
+        srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করছে—কল (UP) ট্রেড কার্যকর করা হয়েছে।';
       }
 
       const confScore = Math.min(99.4, 96.8 + Math.abs(totalScore) * 0.22).toFixed(1);

@@ -144,24 +144,34 @@ javascript:(function(){
     return '$100';
   }
 
-  // 📈 Quotex Live Price Extractor
+  // 📈 Quotex Live Price Extractor (Multi-Layer Resilient Precision)
   function extractQuotexLivePrice() {
     try {
+      // 0. High-Speed WebSocket Intercepted Price
+      if (window.__ISHAK_LAST_WS_PRICE__ && window.__ISHAK_LAST_WS_PRICE__ > 0) {
+        return window.__ISHAK_LAST_WS_PRICE__;
+      }
+
       // 1. Direct High-Priority Live Price Elements
       var directSelectors = [
         '#ishak-live-price-val', '[data-live-price="true"]', '.ishak-live-price',
-        '.current-price', '.chart-axis-price', '.chart-price-current',
+        '.chart-axis-price', '.chart-price-current', '.axis-price-current',
+        '.current-price', '.current-quote', '.header-sub__asset-rate',
         '.section-deal__rate', '.deal-form__rate', '.rate-value', '.current-rate',
-        '[class*="price-current"]', '[class*="current-value"]', '[class*="currentPrice"]',
-        '[class*="price_current"]', '.trading-chart__price', '.chart__price',
-        '.deal-form__quote', '.quote-value'
+        '.trading-chart__price', '.chart__price', '.strike-price',
+        '[class*="price-current"]', '[class*="current-price"]', '[class*="current-value"]',
+        '[class*="currentPrice"]', '[class*="price_current"]', '[class*="axis-label"]',
+        '[class*="axis-item--current"]', '.deal-form__quote', '.quote-value'
       ];
       for (var i = 0; i < directSelectors.length; i++) {
         var el = document.querySelector(directSelectors[i]);
         if (el) {
           var txt = el.tagName === 'INPUT' ? (el.value || '') : (el.innerText || el.textContent || '');
-          var num = parseFloat(txt.trim().replace(/[^0-9.]/g, ''));
-          if (!isNaN(num) && num > 0) return num;
+          var m = txt.match(/\b\d{1,6}(?:,\d{3})*(?:\.\d{2,6})?\b/);
+          if (m) {
+            var num = parseFloat(m[0].replace(/,/g, ''));
+            if (!isNaN(num) && num > 0.00001 && num < 1000000) return num;
+          }
         }
       }
 
@@ -173,14 +183,16 @@ javascript:(function(){
       }
 
       // 3. Search Deal Form container
-      var dealForm = document.querySelector('.section-deal, .deal-form, aside.deal-form');
+      var dealForm = document.querySelector('.section-deal, .deal-form, aside.deal-form, .trade-panel');
       if (dealForm) {
-        var els = dealForm.querySelectorAll('div, span, p');
+        var els = dealForm.querySelectorAll('div, span, p, strong, b');
         for (var j = 0; j < els.length; j++) {
           var t = (els[j].innerText || els[j].textContent || '').trim();
-          if (/^\d{1,6}\.\d{2,6}$/.test(t)) {
-            var p = parseFloat(t);
-            if (!isNaN(p) && p > 0) return p;
+          if (t.includes('%') || t.includes('$') || t.includes('€') || t.includes('₹') || t.includes('৳')) continue;
+          var mNum = t.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
+          if (mNum) {
+            var p = parseFloat(mNum[0].replace(/,/g, ''));
+            if (!isNaN(p) && p > 0.0001 && p < 1000000) return p;
           }
         }
       }
@@ -189,17 +201,18 @@ javascript:(function(){
       var svgTexts = document.querySelectorAll('svg text, .trading-chart svg text');
       for (var s = svgTexts.length - 1; s >= 0; s--) {
         var st = (svgTexts[s].textContent || '').trim();
-        if (/^\d{1,6}\.\d{2,6}$/.test(st)) {
-          var sp = parseFloat(st);
-          if (!isNaN(sp) && sp > 0) return sp;
+        var sm = st.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
+        if (sm) {
+          var sp = parseFloat(sm[0].replace(/,/g, ''));
+          if (!isNaN(sp) && sp > 0.0001 && sp < 1000000) return sp;
         }
       }
 
       // 5. Document Title (e.g. "EUR/USD 1.08453 (OTC) | Quotex")
       if (document.title) {
-        var mTitle = document.title.match(/\b(\d{1,6}\.\d{2,6})\b/);
+        var mTitle = document.title.match(/\b(\d{1,6}(?:,\d{3})*\.\d{2,6})\b/);
         if (mTitle) {
-          var tp = parseFloat(mTitle[1]);
+          var tp = parseFloat(mTitle[1].replace(/,/g, ''));
           if (!isNaN(tp) && tp > 0) return tp;
         }
       }
@@ -223,72 +236,126 @@ javascript:(function(){
     }, 100);
   }
 
-  // 🌐 Extract Live Market/Asset Name Directly from Screen (Quotex / market.qx/info/trade / Simulator)
+  // 🛡️ Strict Asset Whitelist & Normalizer (Filters out "tradin", "trading", "quotex", etc.)
+  function validateAndNormalizeAsset(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    var cleaned = raw.replace(/\+\d+%.*$/, '').replace(/\d+%/g, '').replace(/[\r\n\t]/g, ' ').trim();
+    if (!cleaned || cleaned.length < 3 || cleaned.length > 40) return null;
+
+    var lower = cleaned.toLowerCase();
+    // STRICT BLACKLIST: Absolutely reject generic navigation words, URLs, and UI text
+    var bannedWords = [
+      'tradin', 'trading', 'trade', 'market', 'quotex', 'broker', 'chart', 'platform',
+      'login', 'account', 'wallet', 'history', 'profile', 'setup', 'deposit', 'withdraw',
+      'payout', 'info', 'ishak', 'dashboard', 'indicator', 'signals', 'overview', 'demo',
+      'tournament', 'support', 'help', 'settings', 'live', 'time', 'amount', 'invest'
+    ];
+    for (var b = 0; b < bannedWords.length; b++) {
+      if (lower === bannedWords[b] || lower.indexOf(bannedWords[b] + ' ') === 0 || lower.indexOf(' ' + bannedWords[b]) !== -1) {
+        return null;
+      }
+    }
+
+    // 1. Direct match with MARKETS_DATABASE
+    for (var c = 0; c < MARKETS_DATABASE.length; c++) {
+      var items = MARKETS_DATABASE[c].items;
+      for (var it = 0; it < items.length; it++) {
+        var dbItem = items[it];
+        if (dbItem.toLowerCase() === lower) return dbItem;
+        var baseDb = dbItem.replace(/\s*\(OTC\)/i, '').trim();
+        var baseRaw = cleaned.replace(/\s*\(OTC\)/i, '').replace(/_otc/i, '').replace(/_/g, '/').trim();
+        if (baseDb.toLowerCase() === baseRaw.toLowerCase()) {
+          var hasOtc = lower.includes('otc') || dbItem.includes('(OTC)');
+          return hasOtc ? baseDb + ' (OTC)' : baseDb;
+        }
+      }
+    }
+
+    // 2. Standard Currency Pair Format (e.g. EUR/USD, USD/BDT, EURUSD)
+    var pairMatch = cleaned.match(/([A-Za-z]{3})[\s/_]*([A-Za-z]{3})/);
+    if (pairMatch) {
+      var cur1 = pairMatch[1].toUpperCase();
+      var cur2 = pairMatch[2].toUpperCase();
+      var knownCurs = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','NZD','BDT','INR','PKR','BRL','EGP','IDR','MYR','NGN','PHP','RUB','THB','TRY','VND','ZAR','NOK','SEK','SGD'];
+      if (knownCurs.indexOf(cur1) !== -1 && knownCurs.indexOf(cur2) !== -1) {
+        var isOtc = lower.includes('otc');
+        return cur1 + '/' + cur2 + (isOtc ? ' (OTC)' : '');
+      }
+    }
+
+    // 3. Known Crypto / Commodities / Stocks
+    if (lower.includes('bitcoin') || lower.includes('btc')) return lower.includes('otc') ? 'Bitcoin (OTC)' : 'BTC/USD';
+    if (lower.includes('ethereum') || lower.includes('eth')) return lower.includes('otc') ? 'Ethereum (OTC)' : 'ETH/USD';
+    if (lower.includes('gold') || lower.includes('xau')) return lower.includes('otc') ? 'Gold (OTC)' : 'GOLD (XAU/USD)';
+    if (lower.includes('silver') || lower.includes('xag')) return lower.includes('otc') ? 'Silver (OTC)' : 'SILVER (XAG/USD)';
+    if (lower.includes('crude') || lower.includes('brent')) return 'Crude Oil (OTC)';
+    if (lower.includes('boeing')) return 'Boeing Company (OTC)';
+    if (lower.includes('intel')) return 'Intel (OTC)';
+    if (lower.includes('apple')) return 'Apple (OTC)';
+    if (lower.includes('crypto idx')) return 'Crypto IDX';
+
+    return null;
+  }
+
+  // 🌐 Extract Live Market/Asset Name Directly from Screen (Quotex / Simulator)
   function extractQuotexAsset() {
     try {
       // 1. Simulator / Custom DOM active asset
       var simAsset = document.querySelector('.current-asset, [data-asset], #current-asset, .ishak-current-asset');
       if (simAsset) {
         var saTxt = (simAsset.getAttribute('data-asset') || simAsset.innerText || simAsset.textContent || '').trim();
-        if (saTxt && saTxt.length >= 3 && saTxt.length <= 40) return saTxt;
+        var valSim = validateAndNormalizeAsset(saTxt);
+        if (valSim) return valSim;
       }
 
-      // 2. Quotex active tab in tab list & Header Sub asset selectors
+      // 2. Quotex active tab & header sub asset selectors
       var activeTabSelectors = [
-        '.tab-list__item--active .tab-list__title',
-        '.tab-list__item--active',
-        '.tab-item.active .tab-title',
-        '.tab-item.active',
-        '.tabs__item.active',
-        '.tab-active',
         '.header-sub__asset-name',
         '.header-sub__asset',
         '.asset-select__button .asset-select__name',
-        '.asset-select__button',
-        '.asset-select',
+        '.tab-list__item--active .tab-list__title',
+        '.tab-list__item--active',
+        '.tab-item.active .tab-title',
+        '.trading-chart__asset',
         '[data-test="active-asset"]',
-        '[data-test="asset-name"]',
-        '.trading-chart__asset'
+        '[data-test="asset-name"]'
       ];
       for (var i = 0; i < activeTabSelectors.length; i++) {
         var el = document.querySelector(activeTabSelectors[i]);
         if (el) {
           var txt = (el.innerText || el.textContent || '').trim();
-          var cleaned = txt.split('\n')[0].replace(/\+\d+%.*$/, '').replace(/\d+%/, '').trim();
-          if (cleaned && cleaned.length >= 3 && (cleaned.includes('/') || cleaned.includes('OTC') || cleaned.length >= 6)) {
-            return cleaned;
-          }
+          var validated = validateAndNormalizeAsset(txt);
+          if (validated) return validated;
         }
       }
 
       // 3. Document Title match (e.g. "EUR/USD (OTC) | Quotex", "USD/BDT (OTC) | Quotex", "Bitcoin (OTC)")
       if (document.title) {
         var docTitle = document.title;
-        var pairMatch = docTitle.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?|[A-Z]{6}(\s*\(OTC\))?|[A-Za-z0-9\s.-]+(\s*\(OTC\)))/i);
-        if (pairMatch && pairMatch[1] && !pairMatch[1].toLowerCase().includes('quotex') && !pairMatch[1].toLowerCase().includes('trade')) {
-          return pairMatch[1].trim();
+        var titleMatch = docTitle.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?|[A-Za-z\s.-]+(\s*\(OTC\)))/i);
+        if (titleMatch && titleMatch[1]) {
+          var valTitle = validateAndNormalizeAsset(titleMatch[1]);
+          if (valTitle) return valTitle;
         }
       }
 
-      // 4. URL path / query (e.g. market.qxbroker.com/trade/EURUSD_otc or ?asset=EURUSD_otc or market.qx/info/trade)
+      // 4. URL path / query (e.g. /trade/EURUSD_otc or ?asset=EURUSD_otc)
       var href = window.location.href || '';
       var urlMatch = href.match(/(?:trade\/|asset=|\/chart\/)([A-Za-z0-9_-]+)/i);
       if (urlMatch && urlMatch[1]) {
-        var rawAsset = urlMatch[1].replace(/_otc/i, ' (OTC)').replace(/_/g, '/');
-        if (rawAsset.length >= 6) {
-          if (/^[A-Z]{6}/i.test(rawAsset)) {
-            rawAsset = rawAsset.substring(0, 3).toUpperCase() + '/' + rawAsset.substring(3);
-          }
-          return rawAsset;
-        }
+        var valUrl = validateAndNormalizeAsset(urlMatch[1]);
+        if (valUrl) return valUrl;
       }
 
-      // 5. Quotex Deal Form text scan for currency pair
+      // 5. Deal Panel text scan
       var dealPanel = document.querySelector('.deal-form, .section-deal, aside.deal-form');
       if (dealPanel) {
         var dText = dealPanel.innerText || '';
         var mDeal = dText.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?)/);
-        if (mDeal && mDeal[1]) return mDeal[1].trim();
+        if (mDeal && mDeal[1]) {
+          var valDeal = validateAndNormalizeAsset(mDeal[1]);
+          if (valDeal) return valDeal;
+        }
       }
     } catch(e){}
     return null;
@@ -1516,7 +1583,17 @@ javascript:(function(){
     var detectedDur = extractQuotexDuration();
     if (detectedDur && !tradeDuration) tradeDuration = detectedDur;
     var detectedMkt = extractQuotexAsset();
-    if (detectedMkt && !currentMarket) currentMarket = detectedMkt;
+    if (detectedMkt) {
+      currentMarket = detectedMkt;
+      try { localStorage.setItem('ISHAK_SELECTED_MARKET', detectedMkt); } catch(e){}
+    } else if (currentMarket) {
+      currentMarket = validateAndNormalizeAsset(currentMarket);
+    } else {
+      try {
+        var saved = localStorage.getItem('ISHAK_SELECTED_MARKET');
+        if (saved) currentMarket = validateAndNormalizeAsset(saved);
+      } catch(e){}
+    }
 
     if (!tradeDuration) {
       pillTime.innerText = 'SETUP';
@@ -1579,6 +1656,7 @@ javascript:(function(){
         e.stopPropagation();
         var selected = this.getAttribute('data-name');
         currentMarket = selected;
+        try { localStorage.setItem('ISHAK_SELECTED_MARKET', selected); } catch(err){}
         updateBadgeLabel();
         mm.remove();
         if (onSelected) onSelected(selected);
@@ -1860,11 +1938,18 @@ javascript:(function(){
     var candleScore = 0;
     var tickScore = 0;
     var calculatedRsi = 50;
-    var calculatedEma5 = 1.0848;
-    var calculatedEma13 = 1.0840;
-    var calculatedEma30 = 1.0832;
+    var calculatedEma5 = 0;
+    var calculatedEma13 = 0;
+    var calculatedEma30 = 0;
     var srPattern = '';
     var srReason = '';
+
+    // Measure live price displacement over the full scan and final 1s micro-momentum
+    var pStart = (priceSamples && priceSamples.length > 0) ? priceSamples[0] : 0;
+    var pEnd = (priceSamples && priceSamples.length > 0) ? priceSamples[priceSamples.length - 1] : 0;
+    var scanPriceDelta = (pStart > 0 && pEnd > 0) ? (pEnd - pStart) : 0;
+    var recentSlice = (priceSamples && priceSamples.length >= 10) ? priceSamples.slice(-10) : priceSamples;
+    var microDelta = (recentSlice && recentSlice.length >= 2) ? (recentSlice[recentSlice.length - 1] - recentSlice[0]) : 0;
 
     // --- LAYER A: Candlestick & Structural Price Level Analysis ---
     var candleData = [];
@@ -1887,7 +1972,7 @@ javascript:(function(){
       }
     }
 
-    // Real Quotex Continuous Tick-to-Candle Clustering
+    // Real Quotex Continuous Tick-to-Candle Clustering (From Live Tick Buffer)
     if (candleData.length < 3 && window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length >= 8) {
       var allTicks = window.__ISHAK_LIVE_TICKS__.map(function(t) { return t.price; });
       var groupSize = Math.max(2, Math.floor(allTicks.length / 8));
@@ -1899,6 +1984,21 @@ javascript:(function(){
           var h = Math.max.apply(null, chunk);
           var l = Math.min.apply(null, chunk);
           candleData.push({ open: o, close: c, high: h, low: l, dir: c >= o ? 'UP' : 'DOWN' });
+        }
+      }
+    }
+
+    // Cluster live price samples collected during the 3.5s scan if still needed
+    if (candleData.length < 3 && priceSamples && priceSamples.length >= 6) {
+      var pGroupSz = Math.max(2, Math.floor(priceSamples.length / 6));
+      for (var pgi = 0; pgi < priceSamples.length; pgi += pGroupSz) {
+        var pchunk = priceSamples.slice(pgi, pgi + pGroupSz);
+        if (pchunk.length > 0) {
+          var po = pchunk[0];
+          var pc = pchunk[pchunk.length - 1];
+          var ph = Math.max.apply(null, pchunk);
+          var pl = Math.min.apply(null, pchunk);
+          candleData.push({ open: po, close: pc, high: ph, low: pl, dir: pc >= po ? 'UP' : 'DOWN' });
         }
       }
     }
@@ -2187,28 +2287,39 @@ javascript:(function(){
       }
     } catch(e){}
 
+    // Incorporate real-time scan price movement and final micro-delta into tick score
+    if (scanPriceDelta > 0.00001) tickScore += 8;
+    else if (scanPriceDelta < -0.00001) tickScore -= 8;
+
+    if (microDelta > 0.00001) tickScore += 8;
+    else if (microDelta < -0.00001) tickScore -= 8;
+
     // --- LAYER C: Timeframe-Adaptive Duration Weighting (Responsive to Selected Duration) ---
     var totalScore = 0;
     if (dur <= 15) {
       // 5s, 10s, 15s: High-frequency tick momentum and immediate candle wick physics dominate
-      totalScore = (tickScore * 1.8) + (candleScore * 0.8);
+      totalScore = (tickScore * 2.0) + (candleScore * 0.7);
     } else if (dur <= 30) {
       // 30s: Balanced tick & candle confluence
-      totalScore = (tickScore * 1.2) + (candleScore * 1.1);
+      totalScore = (tickScore * 1.3) + (candleScore * 1.1);
     } else {
       // 60s+ (1M, 2M, 5M): Candlestick patterns, EMA trends, and S/R dominate
-      totalScore = (tickScore * 0.6) + (candleScore * 1.6);
+      totalScore = (tickScore * 0.7) + (candleScore * 1.5);
     }
 
-    // --- LAYER D: Authentic Symmetrical Final Decision (ZERO GUESSWORK & ZERO MATH.RANDOM) ---
+    // --- LAYER D: Authentic Symmetrical Final Decision (ZERO GUESSWORK & ZERO DEFAULT BIAS) ---
     var isCall;
     if (totalScore > 0) {
       isCall = true; // CALL / UP
     } else if (totalScore < 0) {
       isCall = false; // PUT / DOWN
     } else {
-      // Symmetrical tie-breaker based on live slope, candle delta, EMA trend, or sentiment (100% deterministic)
-      if (slope !== 0) {
+      // Pure physical tie-breaker based on micro-delta, scan delta, slope, or last candle close
+      if (microDelta !== 0) {
+        isCall = microDelta > 0;
+      } else if (scanPriceDelta !== 0) {
+        isCall = scanPriceDelta > 0;
+      } else if (slope !== 0) {
         isCall = slope > 0;
       } else if (tickDelta !== 0) {
         isCall = tickDelta > 0;
@@ -2218,21 +2329,41 @@ javascript:(function(){
       } else if (sentScore !== 0) {
         isCall = sentScore > 0;
       } else {
-        isCall = calculatedEma5 >= calculatedEma13;
+        isCall = false; // Strictly unbiased: do not default to call
       }
+    }
+
+    // 🛡️ ANTI-LOSS GUARDIAN (PREVENTS CALLING UP ON A DUMPING/FALLING CANDLE):
+    // If the live market candle is visibly plunging downward (micro-delta or scan delta negative),
+    // NEVER force an UP (CALL) trade!
+    if (isCall && (microDelta < -0.00001 || scanPriceDelta < -0.00002)) {
+      isCall = false; // Strictly align with the falling candle (PUT)!
+      srPattern = 'Bearish Downward Candle Plunge (PUT)';
+      srReason = 'ক্যান্ডেলটি সরাসরি নিচের দিকে নামছে (সেলিং প্রেসার)—ঝুঁকি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
+    }
+    // Vice versa: if candle is rocketing upward, NEVER execute a DOWN (PUT) trade!
+    if (!isCall && (microDelta > 0.00001 || scanPriceDelta > 0.00002)) {
+      isCall = true; // Strictly align with the rising candle (CALL)!
+      srPattern = 'Bullish Upward Candle Push (CALL)';
+      srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করছে—কল (UP) ট্রেড কার্যকর করা হয়েছে।';
     }
 
     // Multi-Indicator Quantitative Confluence Agreement Calculation
     var indTotal = 0;
     var indBull = 0;
 
-    indTotal++; if (calculatedEma5 >= calculatedEma13) indBull++;
+    if (calculatedEma5 > 0 && calculatedEma13 > 0) {
+      indTotal++;
+      if (calculatedEma5 >= calculatedEma13) indBull++;
+    }
     indTotal++; if (calculatedRsi >= 50) indBull++;
     if (candleData && candleData.length > 0) {
       indTotal++;
       if (candleData[candleData.length - 1].close >= candleData[candleData.length - 1].open) indBull++;
     }
     indTotal++; if (slope >= 0) indBull++;
+    indTotal++; if (microDelta >= 0) indBull++;
+    indTotal++; if (scanPriceDelta >= 0) indBull++;
     indTotal++; if (microRsi >= 50) indBull++;
     if (sentScore !== 0) {
       indTotal++;
@@ -2432,15 +2563,28 @@ javascript:(function(){
     var onScreenMarket = extractQuotexAsset();
     if (onScreenMarket) {
       currentMarket = onScreenMarket;
+      try { localStorage.setItem('ISHAK_SELECTED_MARKET', onScreenMarket); } catch(e){}
+    } else if (currentMarket) {
+      currentMarket = validateAndNormalizeAsset(currentMarket);
+    } else {
+      try {
+        var saved = localStorage.getItem('ISHAK_SELECTED_MARKET');
+        if (saved) currentMarket = validateAndNormalizeAsset(saved);
+      } catch(e){}
     }
+
     var onScreenDuration = extractQuotexDuration();
     if (onScreenDuration) {
       tradeDuration = onScreenDuration;
+      try { localStorage.setItem('ISHAK_TRADE_DURATION', onScreenDuration); } catch(e){}
     }
 
-    // Check 1: If neither screen nor manual market is set, open market modal
+    // MANDATORY SELECTION RULE: If no valid market is detected or selected, MUST open market modal
     if (!currentMarket) {
-      showMarketSelectionModal(function() {
+      showMarketSelectionModal(function(selected) {
+        currentMarket = selected;
+        try { localStorage.setItem('ISHAK_SELECTED_MARKET', selected); } catch(e){}
+        updateBadgeLabel();
         if (!tradeDuration) {
           showDurationSelectionModal(function() { triggerScanAndTrade(); });
         } else {
