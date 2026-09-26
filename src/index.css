@@ -28,16 +28,16 @@
 
 @keyframes ishakGoldenLaserSweep {
   0% {
-    top: -25px;
+    transform: translate3d(0, -35px, 0);
   }
   48% {
-    top: calc(100vh - 25px);
+    transform: translate3d(0, calc(100vh - 10px), 0);
   }
   52% {
-    top: calc(100vh - 25px);
+    transform: translate3d(0, calc(100vh - 10px), 0);
   }
   100% {
-    top: -25px;
+    transform: translate3d(0, -35px, 0);
   }
 }
 

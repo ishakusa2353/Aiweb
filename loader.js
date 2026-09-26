@@ -1316,10 +1316,10 @@ javascript:(function(){
       '100% { top: -25px; } ' +
     '}' +
     '@keyframes ishakGoldenLaserSweep { ' +
-      '0% { top: -25px; } ' +
-      '48% { top: calc(100vh - 25px); } ' +
-      '52% { top: calc(100vh - 25px); } ' +
-      '100% { top: -25px; } ' +
+      '0% { transform: translate3d(0, -35px, 0); } ' +
+      '48% { transform: translate3d(0, calc(100vh - 10px), 0); } ' +
+      '52% { transform: translate3d(0, calc(100vh - 10px), 0); } ' +
+      '100% { transform: translate3d(0, -35px, 0); } ' +
     '}' +
     '@keyframes ishakPlasmaWave { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }' +
     '@keyframes ishakDiamondSpinPulse { 0%, 100% { transform: translate(-50%, -50%) rotate(45deg) scale(0.92); box-shadow: 0 0 10px #FFB800, 0 0 20px #FFD700; } 50% { transform: translate(-50%, -50%) rotate(45deg) scale(1.18); box-shadow: 0 0 18px #FFFFFF, 0 0 35px #FFB800, 0 0 55px #FFA000; } }' +
@@ -1396,18 +1396,14 @@ javascript:(function(){
     '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #FFD700; box-shadow: 0 0 28px #FFD700, 0 0 55px rgba(255,184,0,0.85), inset 0 0 14px rgba(255,184,0,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 8px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; }' +
-    '#ishak-pill-time { background: linear-gradient(135deg, #00E5FF, #22D3EE); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1px 5px; border-radius: 8px; }' +
-    '#scan-laser { position: fixed; left: 0; width: 100vw; height: 36px; pointer-events: none; z-index: 2147483645; display: none; }' +
-    '#scan-laser.scanning-active { display: block; animation: ishakGoldenLaserSweep 3.5s cubic-bezier(0.42, 0, 0.58, 1) infinite; }' +
-    '#scan-laser-curtain-top { position: absolute; bottom: 50%; left: 0; width: 100%; height: 42px; pointer-events: none; background: linear-gradient(to top, rgba(255,190,0,0.38) 0%, rgba(245,158,11,0.15) 35%, rgba(217,119,6,0.02) 80%, transparent 100%); filter: blur(6px); opacity: 0.95; }' +
-    '#scan-laser-rail-top { position: absolute; left: 0; width: 100%; height: 1.5px; top: 12px; pointer-events: none; background: linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.15) 8%, #FFD700 35%, #FFFFFF 50%, #FFD700 65%, rgba(255,184,0,0.15) 92%, transparent 100%); box-shadow: 0 0 10px #FFB800; }' +
-    '#scan-laser-beam-wrap { position: relative; width: 100%; height: 6px; top: 14px; display: flex; align-items: center; justify-content: center; }' +
-    '#scan-laser-beam { position: absolute; inset: 0; border-radius: 9999px; background: linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.2) 6%, #FF9E00 20%, #FFE066 38%, #FFFFFF 50%, #FFE066 62%, #FF9E00 80%, rgba(245,158,11,0.2) 94%, transparent 100%); background-size: 200% 100%; animation: ishakPlasmaWave 2.2s linear infinite; box-shadow: 0 0 8px #FFFFFF, 0 0 18px #FFD700, 0 0 35px #FF9E00, 0 0 60px rgba(245,158,11,0.8), inset 0 0 2px #FFFFFF; }' +
+    '#scan-laser { position: fixed; top: 0; left: 0; width: 100vw; height: 32px; pointer-events: none; z-index: 2147483645; display: none; will-change: transform; transform: translate3d(0, -40px, 0); }' +
+    '#scan-laser.scanning-active { display: block; animation: ishakGoldenLaserSweep 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }' +
+    '#scan-laser-curtain-top { position: absolute; bottom: 50%; left: 0; width: 100%; height: 30px; pointer-events: none; background: linear-gradient(to top, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%); }' +
+    '#scan-laser-beam-wrap { position: relative; width: 100%; height: 3.5px; display: flex; align-items: center; justify-content: center; }' +
+    '#scan-laser-beam { width: 100%; height: 100%; background: linear-gradient(90deg, rgba(255,184,0,0) 0%, rgba(255,215,0,0.9) 3%, #FFFFFF 15%, #FFFFFF 85%, rgba(255,215,0,0.9) 97%, rgba(255,184,0,0) 100%); box-shadow: 0 0 10px #FFFFFF, 0 0 20px #FFD700, 0 0 35px #FF9E00, 0 0 55px rgba(255,158,11,0.7); }' +
     '#scan-laser-reticle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; display: flex; align-items: center; justify-content: center; }' +
-    '#scan-laser-focus-ring { position: absolute; top: 50%; left: 50%; width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid rgba(253,224,71,0.85); transform: translate(-50%, -50%); animation: ishakRingPing 1.75s cubic-bezier(0, 0.2, 0.8, 1) infinite; }' +
-    '#scan-laser-diamond { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; background: linear-gradient(135deg, #FFFFFF, #FDE047, #F59E0B); border: 1.2px solid #FFF; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 15px #FFE066, 0 0 30px #FFB800; animation: ishakDiamondSpinPulse 1.75s ease-in-out infinite; }' +
-    '#scan-laser-rail-bottom { position: absolute; left: 0; width: 100%; height: 1.5px; bottom: 12px; pointer-events: none; background: linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.15) 8%, #FFD700 35%, #FFFFFF 50%, #FFD700 65%, rgba(255,184,0,0.15) 92%, transparent 100%); box-shadow: 0 0 10px #FFB800; }' +
-    '#scan-laser-curtain-bottom { position: absolute; top: 50%; left: 0; width: 100%; height: 42px; pointer-events: none; background: linear-gradient(to bottom, rgba(255,190,0,0.38) 0%, rgba(245,158,11,0.15) 35%, rgba(217,119,6,0.02) 80%, transparent 100%); filter: blur(6px); opacity: 0.95; }' +
+    '#scan-laser-diamond { width: 14px; height: 14px; background: linear-gradient(135deg, #FFFFFF, #FDE047, #F59E0B); border: 1.2px solid #FFF; transform: rotate(45deg); box-shadow: 0 0 15px #FFE066, 0 0 30px #FFB800; }' +
+    '#scan-laser-curtain-bottom { position: absolute; top: 50%; left: 0; width: 100%; height: 30px; pointer-events: none; background: linear-gradient(to bottom, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%); }' +
     '#scan-grid { display: none !important; }' +
     '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: auto; max-width: none; user-select: none; }' +
     '#ishak-screen-scan-box.scanning-active { display: flex; flex-direction: column; align-items: center; justify-content: center; }' +
@@ -1479,15 +1475,12 @@ javascript:(function(){
   laserEl.id = 'scan-laser';
   laserEl.innerHTML =
     '<div id="scan-laser-curtain-top"></div>' +
-    '<div id="scan-laser-rail-top"></div>' +
     '<div id="scan-laser-beam-wrap">' +
       '<div id="scan-laser-beam"></div>' +
       '<div id="scan-laser-reticle">' +
-        '<div id="scan-laser-focus-ring"></div>' +
         '<div id="scan-laser-diamond"></div>' +
       '</div>' +
     '</div>' +
-    '<div id="scan-laser-rail-bottom"></div>' +
     '<div id="scan-laser-curtain-bottom"></div>';
   document.body.appendChild(laserEl);
 
@@ -1497,38 +1490,7 @@ javascript:(function(){
 
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
-  screenScanBox.innerHTML =
-    '<div style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;">' +
-      '<div style="position:absolute;width:240px;height:240px;border-radius:50%;filter:blur(50px);pointer-events:none;opacity:0.35;background:radial-gradient(circle,rgba(0,229,255,0.25) 0%,rgba(0,255,102,0.12) 50%,transparent 75%);"></div>' +
-      '<div style="position:relative;width:150px;height:150px;display:flex;align-items:center;justify-content:center;">' +
-        '<div style="position:absolute;inset:0;border-radius:50%;border:2.5px solid transparent;border-top-color:#00E5FF;border-right-color:rgba(0,229,255,0.35);animation:ishakSpinClockwise 1.6s linear infinite;filter:drop-shadow(0 0 8px #00E5FF);"></div>' +
-        '<div style="position:absolute;inset:7px;border-radius:50%;border:2px solid transparent;border-bottom-color:#00FF66;border-left-color:rgba(0,255,102,0.35);animation:ishakSpinCounter 2.2s linear infinite;filter:drop-shadow(0 0 8px #00FF66);"></div>' +
-        '<svg style="width:116px;height:116px;transform:rotate(-90deg);" viewBox="0 0 120 120">' +
-          '<defs>' +
-            '<linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
-              '<stop offset="0%" stop-color="#00E5FF"/>' +
-              '<stop offset="50%" stop-color="#38BDF8"/>' +
-              '<stop offset="100%" stop-color="#00FF66"/>' +
-            '</linearGradient>' +
-            '<filter id="ishakPureGlow" x="-30%" y="-30%" width="160%" height="160%">' +
-              '<feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#00E5FF" flood-opacity="0.85"/>' +
-              '<feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#00FF66" flood-opacity="0.5"/>' +
-            '</filter>' +
-          '</defs>' +
-          '<circle cx="60" cy="60" r="50" fill="none" stroke="rgba(0,229,255,0.12)" stroke-width="3.5"/>' +
-          '<circle id="ishak-scan-circle-bar" cx="60" cy="60" r="50" fill="none" stroke="url(#ishakPureCircleGrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" filter="url(#ishakPureGlow)" style="transition:stroke-dashoffset 0.08s linear;"/>' +
-        '</svg>' +
-        '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
-          '<span id="ishak-scan-percent-num" style="font-size:38px;font-weight:900;font-family:\'Orbitron\',monospace;letter-spacing:-1px;color:#FFFFFF;text-shadow:0 0 18px rgba(0,229,255,0.95), 0 0 32px rgba(0,255,102,0.6);line-height:1;">0</span>' +
-          '<span style="font-size:20px;font-weight:900;font-family:\'Orbitron\',monospace;color:#00E5FF;text-shadow:0 0 12px rgba(0,229,255,0.85);margin-left:2px;line-height:1;">%</span>' +
-        '</div>' +
-      '</div>' +
-      '<div style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px;user-select:none;animation:ishakAnalyzingPulse 1.3s infinite ease-in-out;">' +
-        '<span id="ishak-scan-analyzing-title" style="font-size:12.5px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#00E5FF;text-shadow:0 0 14px rgba(0,229,255,0.95);font-family:\'Orbitron\',\'Rajdhani\',sans-serif;">ANALYZING</span>' +
-        '<span id="ishak-scan-dots" style="color:#00FF66;font-family:\'Orbitron\',monospace;font-weight:900;letter-spacing:2px;font-size:13px;display:inline-block;width:24px;text-align:left;">...</span>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(screenScanBox);
+  screenScanBox.style.display = 'none';
 
   // 🌊 Water Wave Ripple Overlay (Sweeps from left during 6.5s entrance animation)
   var waterWaveOverlay = document.createElement('div');
@@ -2826,75 +2788,29 @@ javascript:(function(){
 
       pillTime.innerText = 'SCAN..';
 
-      var activeAsset = currentMarket || extractQuotexAsset() || 'USD/BDT (OTC)';
-      var titleEl = document.getElementById('ishak-scan-analyzing-title');
-      if (titleEl) {
-        titleEl.innerText = 'ANALYZING ' + activeAsset + '...';
-      }
-      var scanSubTextEl = document.getElementById('ishak-scan-sub-text');
-      if (scanSubTextEl) scanSubTextEl.innerText = activeAsset + ' | ' + (tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S');
-      screenScanBox.classList.add('scanning-active');
       laserEl.classList.add('scanning-active');
-
-      // Initialize Progress Counter
-      var scanStartTime = Date.now();
-      var scanDurationMs = 3500;
-      var dotsEl = document.getElementById('ishak-scan-dots');
-      var percentEl = document.getElementById('ishak-scan-percent');
-      var percentNumEl = document.getElementById('ishak-scan-percent-num');
-      var progressBarEl = document.getElementById('ishak-scan-progress-bar');
-      var circleBarEl = document.getElementById('ishak-scan-circle-bar');
-
-      if (dotsEl) dotsEl.innerText = '.';
-      if (percentEl) percentEl.innerText = '0%';
-      if (percentNumEl) percentNumEl.innerText = '0';
-      if (progressBarEl) progressBarEl.style.width = '0%';
-      if (circleBarEl) circleBarEl.style.strokeDashoffset = '314.16';
-
-      var scanProgressInterval = setInterval(function() {
-        var elapsed = Date.now() - scanStartTime;
-        var pct = Math.min(100, Math.floor((elapsed / scanDurationMs) * 100));
-        if (percentEl) percentEl.innerText = pct + '%';
-        if (percentNumEl) percentNumEl.innerText = pct + '';
-        if (progressBarEl) progressBarEl.style.width = pct + '%';
-        if (circleBarEl) {
-          circleBarEl.style.strokeDashoffset = (314.16 - (pct / 100) * 314.16) + '';
-        }
-
-        // Dots grow sequentially
-        var numDots = Math.min(7, (Math.floor(elapsed / 450) % 7) + 1);
-        if (dotsEl) dotsEl.innerText = '.'.repeat(numDots);
-      }, 35);
 
       playPhotostatScannerSound();
 
-      // Real-Time High-Frequency Price Sampler during 3.6s Laser Scan (every 50ms = ~72 live samples)
+      // Real-Time High-Frequency Price Sampler during 3.5s Laser Scan
       var livePriceSamples = [];
       var pInit = extractQuotexLivePrice();
       if (pInit) livePriceSamples.push(pInit);
       var priceSamplerInterval = setInterval(function() {
         var p = extractQuotexLivePrice();
         if (p) livePriceSamples.push(p);
-      }, 50);
+      }, 250);
 
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();
 
       setTimeout(function() {
-        if (scanProgressInterval) clearInterval(scanProgressInterval);
         if (priceSamplerInterval) clearInterval(priceSamplerInterval);
-        if (percentEl) percentEl.innerText = '100%';
-        if (percentNumEl) percentNumEl.innerText = '100';
-        if (progressBarEl) progressBarEl.style.width = '100%';
-        if (circleBarEl) circleBarEl.style.strokeDashoffset = '0';
-        if (dotsEl) dotsEl.innerText = '.......';
 
         var pFinal = extractQuotexLivePrice();
         if (pFinal) livePriceSamples.push(pFinal);
 
         laserEl.classList.remove('scanning-active');
-        gridEl.style.display = 'none';
-        screenScanBox.classList.remove('scanning-active');
         circleBtn.classList.remove('working-pulse');
         var auraEl = document.getElementById('ishak-logo-aura');
         if (auraEl) auraEl.classList.remove('aura-active');

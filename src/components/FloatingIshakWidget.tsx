@@ -394,7 +394,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     };
     readPrice();
-    const priceSampleInterval = setInterval(readPrice, 50);
+    const priceSampleInterval = setInterval(readPrice, 250);
 
     // Realistic 0% to 100% progress counter & sequential loading dots
     const progressInterval = setInterval(() => {
@@ -866,166 +866,49 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       {/* Bot Scanning UI: Laser Scanner Sweep + Pure Circular Gauge (no bg) + Percentage inside + Stylish Analyzing below */}
       {isScanning && (
         <>
-          {/* 🌟 ULTRA-REALISTIC MARKET-TOUCHING PHOTONIC LASER SCANNER (3.5s Sweep, No Extra Text) */}
+          {/* 🌟 ULTRA-SMOOTH, CONTINUOUS UNIFIED GOLDEN LASER SCANNER (Lag-Free GPU Transform) */}
           <div
-            className="fixed left-0 w-screen pointer-events-none z-[999998]"
+            className="fixed top-0 left-0 w-screen pointer-events-none z-[999998] will-change-transform"
             style={{
-              height: '36px',
-              animation: 'ishakGoldenLaserSweep 3.5s cubic-bezier(0.42, 0, 0.58, 1) infinite'
+              height: '32px',
+              animation: 'ishakGoldenLaserSweep 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
             }}
           >
-            {/* Top Volumetric Market Contact Light Wash (Silky, luminous ambient illumination on candles) */}
+            {/* Top Volumetric Smooth Glow */}
             <div
               className="absolute bottom-1/2 left-0 w-full pointer-events-none"
               style={{
-                height: '42px',
-                background: 'linear-gradient(to top, rgba(255,190,0,0.38) 0%, rgba(245,158,11,0.15) 35%, rgba(217,119,6,0.02) 80%, transparent 100%)',
-                filter: 'blur(6px)',
-                opacity: 0.95
+                height: '30px',
+                background: 'linear-gradient(to top, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%)'
               }}
             />
 
-            {/* Top Micro-Optic Photonic Rail */}
-            <div
-              className="absolute left-0 w-full h-[1.5px] -top-0.5 pointer-events-none"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.15) 8%, #FFD700 35%, #FFFFFF 50%, #FFD700 65%, rgba(255,184,0,0.15) 92%, transparent 100%)',
-                boxShadow: '0 0 10px #FFB800'
-              }}
-            />
-
-            {/* ⚡ Incandescent Laser Contact Blade (Living Photonic Wave Reading Price Action) */}
-            <div className="relative w-full h-[6px] flex items-center justify-center">
-              {/* Traveling Plasma Energy Wave */}
+            {/* Continuous, Solid, Silky Golden Laser Beam (Zero fragmentation, Zero gaps) */}
+            <div className="relative w-full h-[3.5px] flex items-center justify-center">
               <div
-                className="w-full h-full rounded-full"
+                className="w-full h-full"
                 style={{
-                  background: 'linear-gradient(90deg, transparent 0%, rgba(245,158,11,0.2) 6%, #FF9E00 20%, #FFE066 38%, #FFFFFF 50%, #FFE066 62%, #FF9E00 80%, rgba(245,158,11,0.2) 94%, transparent 100%)',
-                  backgroundSize: '200% 100%',
-                  animation: 'ishakPlasmaWave 2.2s linear infinite',
-                  boxShadow: '0 0 8px #FFFFFF, 0 0 18px #FFD700, 0 0 35px #FF9E00, 0 0 60px rgba(245,158,11,0.8), inset 0 0 2px #FFFFFF'
+                  background: 'linear-gradient(90deg, rgba(255,184,0,0) 0%, rgba(255,215,0,0.9) 3%, #FFFFFF 15%, #FFFFFF 85%, rgba(255,215,0,0.9) 97%, rgba(255,184,0,0) 100%)',
+                  boxShadow: '0 0 10px #FFFFFF, 0 0 20px #FFD700, 0 0 35px #FF9E00, 0 0 55px rgba(255,158,11,0.7)'
                 }}
               />
 
-              {/* Optical Laser Focus Head (Pure Crystal Sensor, Zero Text Clutter) */}
+              {/* Optical Laser Focus Core (Crystal Diamond, Stable and Sharp) */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
-                {/* Expansive Photonic Resonance Rings */}
-                <div
-                  className="w-9 h-9 rounded-full border border-amber-300/80 animate-ping absolute"
-                  style={{ animationDuration: '1.75s' }}
-                />
-                <div
-                  className="w-5 h-5 rounded-full border border-yellow-200/90 absolute"
-                  style={{ animation: 'pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
-                />
-                {/* Precision Diamond Crystal Prism Core */}
                 <div
                   className="w-3.5 h-3.5 bg-gradient-to-br from-white via-amber-200 to-yellow-500 border border-white rotate-45 shadow-[0_0_15px_#FFE066,0_0_30px_#FFB800]"
-                  style={{
-                    animation: 'ishakDiamondSpinPulse 1.75s ease-in-out infinite'
-                  }}
                 />
               </div>
             </div>
 
-            {/* Bottom Micro-Optic Photonic Rail */}
-            <div
-              className="absolute left-0 w-full h-[1.5px] -bottom-0.5 pointer-events-none"
-              style={{
-                background: 'linear-gradient(90deg, transparent 0%, rgba(255,184,0,0.15) 8%, #FFD700 35%, #FFFFFF 50%, #FFD700 65%, rgba(255,184,0,0.15) 92%, transparent 100%)',
-                boxShadow: '0 0 10px #FFB800'
-              }}
-            />
-
-            {/* Bottom Volumetric Market Contact Light Wash */}
+            {/* Bottom Volumetric Smooth Glow */}
             <div
               className="absolute top-1/2 left-0 w-full pointer-events-none"
               style={{
-                height: '42px',
-                background: 'linear-gradient(to bottom, rgba(255,190,0,0.38) 0%, rgba(245,158,11,0.15) 35%, rgba(217,119,6,0.02) 80%, transparent 100%)',
-                filter: 'blur(6px)',
-                opacity: 0.95
+                height: '30px',
+                background: 'linear-gradient(to bottom, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%)'
               }}
             />
-          </div>
-
-          {/* Centered Circular Gauge (Without Background) with Stylish Analyzing */}
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[999999] pointer-events-none flex flex-col items-center justify-center select-none">
-            {/* Subtle Ambient Radial Glow */}
-            <div className="absolute -inset-14 rounded-full blur-3xl pointer-events-none opacity-35 bg-gradient-to-r from-cyan-500/25 via-sky-400/20 to-emerald-400/20" />
-
-            <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                <defs>
-                  <linearGradient id="ishakPureCircleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#00E5FF" />
-                    <stop offset="50%" stopColor="#38BDF8" />
-                    <stop offset="100%" stopColor="#00FF66" />
-                  </linearGradient>
-                  <filter id="ishakPureGlow" x="-30%" y="-30%" width="160%" height="160%">
-                    <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#00E5FF" floodOpacity="0.85" />
-                    <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#00FF66" floodOpacity="0.5" />
-                  </filter>
-                </defs>
-
-                {/* Background Circular Track (Translucent subtle glow line, NO background fill) */}
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  fill="none"
-                  stroke="rgba(0, 229, 255, 0.12)"
-                  strokeWidth="3.5"
-                />
-
-                {/* Progress Arc: Sweeps clockwise from 12 o'clock and completes 100% full round circle */}
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  fill="none"
-                  stroke="url(#ishakPureCircleGrad)"
-                  strokeWidth="4.5"
-                  strokeLinecap="round"
-                  strokeDasharray={314.16}
-                  strokeDashoffset={314.16 - (Math.max(0, Math.min(100, scanProgress)) / 100) * 314.16}
-                  filter="url(#ishakPureGlow)"
-                  className="transition-all duration-75 linear"
-                />
-              </svg>
-
-              {/* Percentage centered inside circle (without background) */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span
-                  className="text-4xl sm:text-5xl font-black font-mono tracking-tighter text-white drop-shadow-[0_0_18px_rgba(0,229,255,0.95)] leading-none select-none"
-                  style={{ fontFamily: '"Orbitron", monospace' }}
-                >
-                  {scanProgress}
-                </span>
-                <span
-                  className="text-xl sm:text-2xl font-black font-mono text-cyan-400 drop-shadow-[0_0_12px_rgba(0,229,255,0.85)] ml-0.5 leading-none select-none"
-                  style={{ fontFamily: '"Orbitron", monospace' }}
-                >
-                  %
-                </span>
-              </div>
-            </div>
-
-            {/* Stylish "Analyzing" text under the circle with opacity oscillation & live market name */}
-            <div className="mt-3.5 flex items-center justify-center gap-1.5 select-none animate-[ishakAnalyzingPulse_1.3s_infinite_ease-in-out]">
-              <span
-                className="text-xs sm:text-sm font-black tracking-[0.2em] uppercase text-cyan-300 drop-shadow-[0_0_14px_rgba(0,229,255,0.95)]"
-                style={{ fontFamily: '"Orbitron", "Rajdhani", sans-serif' }}
-              >
-                ANALYZING {currentMarket || 'USD/BDT (OTC)'}...
-              </span>
-              <span
-                className="text-cyan-400 font-mono font-bold tracking-widest text-xs inline-block w-5 text-left"
-                style={{ fontFamily: '"Orbitron", monospace' }}
-              >
-                {scanDots}
-              </span>
-            </div>
           </div>
         </>
       )}
