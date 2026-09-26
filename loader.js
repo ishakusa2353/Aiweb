@@ -639,14 +639,37 @@ javascript:(function(){
   }
 
   // 🌊 6.5-SECOND LUXURY RELAXING WATER WAVE & OCEAN ENTRANCE SYNTHESIZER
-  function playWaterWaveIntroSound() {
+  var introSoundStarted = false;
+  var introSoundNodes = [];
+
+  function stopAndClearIntroSound() {
+    introSoundStarted = true;
+    try {
+      if (introSoundNodes && introSoundNodes.length) {
+        introSoundNodes.forEach(function(node) {
+          try { if (node.stop) node.stop(); } catch(e){}
+          try { if (node.disconnect) node.disconnect(); } catch(e){}
+        });
+        introSoundNodes = [];
+      }
+    } catch(e){}
+  }
+
+  function executeWaterWaveSound() {
+    if (introSoundStarted) return;
     try {
       var AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
       if (!audioCtx) audioCtx = new AudioContext();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (audioCtx.state !== 'running') return; // Strictly never schedule on suspended context!
+      introSoundStarted = true;
       var t = audioCtx.currentTime;
       var dur = 6.5;
+
+      var masterIntroGain = audioCtx.createGain();
+      masterIntroGain.gain.setValueAtTime(1, t);
+      masterIntroGain.connect(audioCtx.destination);
+      introSoundNodes.push(masterIntroGain);
 
       // 1. Warm Oceanic Sub-Bass Drone (Ethereal Foundation)
       var subOsc = audioCtx.createOscillator();
@@ -660,9 +683,10 @@ javascript:(function(){
       subGain.gain.linearRampToValueAtTime(0.09, t + 4.2);
       subGain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       subOsc.connect(subGain);
-      subGain.connect(audioCtx.destination);
+      subGain.connect(masterIntroGain);
       subOsc.start(t);
       subOsc.stop(t + dur);
+      introSoundNodes.push(subOsc);
 
       // 2. Multi-Stage Natural Ocean Wave Surge & Recede (Filtered Fluid Pink Noise)
       var bufferSize = Math.floor(audioCtx.sampleRate * dur);
@@ -695,11 +719,12 @@ javascript:(function(){
 
       noiseSrc.connect(filter);
       filter.connect(waveGain);
-      waveGain.connect(audioCtx.destination);
+      waveGain.connect(masterIntroGain);
       noiseSrc.start(t);
       noiseSrc.stop(t + dur);
+      introSoundNodes.push(noiseSrc);
 
-      // 3. Realistic Crystal Water Drop Echoes (High-Q sine frequency pitch-drop)
+      // 3. Realistic Crystal Water Drop Echoes
       var dropNotes = [
         { time: 0.8, startF: 1450, endF: 920 },
         { time: 2.1, startF: 1720, endF: 1080 },
@@ -715,12 +740,13 @@ javascript:(function(){
         dropGain.gain.setValueAtTime(0.12, t + d.time);
         dropGain.gain.exponentialRampToValueAtTime(0.0001, t + d.time + 0.35);
         dropOsc.connect(dropGain);
-        dropGain.connect(audioCtx.destination);
+        dropGain.connect(masterIntroGain);
         dropOsc.start(t + d.time);
         dropOsc.stop(t + d.time + 0.4);
+        introSoundNodes.push(dropOsc);
       });
 
-      // 4. Relaxing Ambient Celestial Chimes (Warm Pentatonic Chord: F# -> A# -> C# -> F#)
+      // 4. Relaxing Ambient Celestial Chimes
       var chimes = [
         { f: 370.00, time: 0.6, d: 2.2 },
         { f: 466.16, time: 1.8, d: 2.4 },
@@ -736,10 +762,61 @@ javascript:(function(){
         g.gain.linearRampToValueAtTime(0.12, t + item.time + 0.3);
         g.gain.exponentialRampToValueAtTime(0.0001, t + item.time + item.d);
         osc.connect(g);
-        g.connect(audioCtx.destination);
+        g.connect(masterIntroGain);
         osc.start(t + item.time);
         osc.stop(t + item.time + item.d + 0.1);
+        introSoundNodes.push(osc);
       });
+    } catch(e){}
+  }
+
+  function playWaterWaveIntroSound() {
+    if (introSoundStarted) return;
+    try {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!audioCtx) audioCtx = new AudioContext();
+
+      if (audioCtx.state === 'running') {
+        executeWaterWaveSound();
+        return;
+      }
+
+      // Try resuming in case page already has interaction permission
+      audioCtx.resume().then(function() {
+        if (audioCtx && audioCtx.state === 'running' && !introSoundStarted && !isScanning) {
+          executeWaterWaveSound();
+        }
+      }).catch(function(){});
+
+      // Listen for earliest user gesture anywhere on screen
+      var unlockOnGesture = function(ev) {
+        var onBot = ev && ev.target && ev.target.closest && (ev.target.closest('#ishak-circle-btn') || ev.target.closest('#ishak-trade-wrap'));
+        window.removeEventListener('pointerdown', unlockOnGesture, true);
+        window.removeEventListener('touchstart', unlockOnGesture, true);
+        window.removeEventListener('keydown', unlockOnGesture, true);
+
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().then(function() {
+            if (!onBot && !introSoundStarted && !isScanning) {
+              executeWaterWaveSound();
+            } else {
+              stopAndClearIntroSound();
+            }
+          }).catch(function(){});
+        }
+      };
+      window.addEventListener('pointerdown', unlockOnGesture, true);
+      window.addEventListener('touchstart', unlockOnGesture, true);
+      window.addEventListener('keydown', unlockOnGesture, true);
+
+      // Cancel intro sound listener after 7 seconds
+      setTimeout(function() {
+        window.removeEventListener('pointerdown', unlockOnGesture, true);
+        window.removeEventListener('touchstart', unlockOnGesture, true);
+        window.removeEventListener('keydown', unlockOnGesture, true);
+        if (!introSoundStarted) introSoundStarted = true;
+      }, 7000);
     } catch(e){}
   }
 
@@ -1286,21 +1363,31 @@ javascript:(function(){
     '.ishak-wave-1 { animation: ishakWaterWaveSweep1 6.5s cubic-bezier(0.16, 0.9, 0.2, 1) forwards; }' +
     '.ishak-wave-2 { animation: ishakWaterWaveSweep2 6.5s cubic-bezier(0.2, 0.95, 0.25, 1) 0.4s forwards; }' +
     '.ishak-wave-3 { animation: ishakWaterWaveSweep3 6.5s cubic-bezier(0.25, 1, 0.3, 1) 0.8s forwards; }' +
-    '@keyframes ishakSignalAppear1s { ' +
-      '0% { transform: translate(-50%, -50%) scale(0.45); opacity: 0; filter: blur(14px); } ' +
-      '18% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; filter: blur(0px); } ' +
-      '28% { transform: translate(-50%, -50%) scale(1); opacity: 1; } ' +
-      '75% { transform: translate(-50%, -50%) scale(1); opacity: 1; filter: blur(0px); } ' +
-      '100% { transform: translate(-50%, -55%) scale(0.78); opacity: 0; filter: blur(10px); } ' +
+    '@keyframes ishakBuyFlyUp1500 { ' +
+      '0% { transform: translate(-50%, calc(-50% + 95px)) scale(0.68); opacity: 0; filter: blur(14px); } ' +
+      '24% { transform: translate(-50%, -50%) scale(1.14); opacity: 1; filter: blur(0px); } ' +
+      '65% { transform: translate(-50%, calc(-50% - 22px)) scale(1.04); opacity: 1; filter: blur(0px); } ' +
+      '100% { transform: translate(-50%, calc(-50% - 95px)) scale(0.85); opacity: 0; filter: blur(12px); } ' +
     '}' +
+    '@keyframes ishakSellFlyDown1500 { ' +
+      '0% { transform: translate(-50%, calc(-50% - 95px)) scale(0.68); opacity: 0; filter: blur(14px); } ' +
+      '24% { transform: translate(-50%, -50%) scale(1.14); opacity: 1; filter: blur(0px); } ' +
+      '65% { transform: translate(-50%, calc(-50% + 22px)) scale(1.04); opacity: 1; filter: blur(0px); } ' +
+      '100% { transform: translate(-50%, calc(-50% + 95px)) scale(0.85); opacity: 0; filter: blur(12px); } ' +
+    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 64px; height: 64px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; border-radius: 50%; }' +
+    '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; }' +
+    '@keyframes ishakOrbitSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
+    '@keyframes ishakOrbitSpinCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }' +
+    '.ishak-orbit-spin-cw { transform-origin: 32px 32px; animation: ishakOrbitSpinCW 3.6s linear infinite; }' +
+    '.ishak-orbit-spin-ccw { transform-origin: 32px 32px; animation: ishakOrbitSpinCCW 2.4s linear infinite; }' +
     '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
     '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn6s 6.5s cubic-bezier(0.16, 1, 0.22, 1) forwards; }' +
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
-    '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(0,229,255,0.95) 0%, rgba(0,229,255,0.7) 40%, rgba(0,229,255,0.2) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 1; width: 56px; height: 56px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 3px solid #FFB800; box-shadow: 0 4px 14px rgba(0,0,0,0.85); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
-    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.95); }' +
-    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 28px #00E5FF, 0 0 55px rgba(0,229,255,0.85), inset 0 0 14px rgba(0,229,255,0.5); }' +
+    '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(255,184,0,0.85) 0%, rgba(255,158,11,0.5) 40%, rgba(255,184,0,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
+    '#ishak-circle-btn { position: relative; z-index: 5; width: 56px; height: 56px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 1.5px solid rgba(255,184,0,0.5); box-shadow: 0 4px 16px rgba(0,0,0,0.9), inset 0 0 10px rgba(255,184,0,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(255,184,0,0.4); }' +
+    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #FFD700; box-shadow: 0 0 28px #FFD700, 0 0 55px rgba(255,184,0,0.85), inset 0 0 14px rgba(255,184,0,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 8px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; }' +
     '#ishak-pill-time { background: linear-gradient(135deg, #00E5FF, #22D3EE); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1px 5px; border-radius: 8px; }' +
@@ -1331,7 +1418,8 @@ javascript:(function(){
     '.ishak-close-btn:hover { transform: scale(1.1); background: #D50000; }' +
     '.ishak-dialog-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #0B132B; border: 2px solid #00E5FF; padding: 16px; border-radius: 16px; z-index: 2147483647; color: #fff; box-shadow: 0 25px 60px rgba(0,0,0,0.95), inset 0 1px 1px rgba(255,255,255,0.15); width: 330px; max-width: 92vw; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; box-sizing: border-box; }' +
     '#ishak-fly-signal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147483647; pointer-events: none; user-select: none; display: none; text-align: center; font-family: "Syncopate","Michroma","Orbitron",sans-serif; }' +
-    '#ishak-fly-signal.flying-active { display: flex; align-items: center; justify-content: center; animation: ishakSignalAppear1s 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }';
+    '#ishak-fly-signal.ishak-fly-buy-active { display: flex !important; align-items: center; justify-content: center; animation: ishakBuyFlyUp1500 1.5s cubic-bezier(0.18, 0.9, 0.25, 1) forwards; }' +
+    '#ishak-fly-signal.ishak-fly-sell-active { display: flex !important; align-items: center; justify-content: center; animation: ishakSellFlyDown1500 1.5s cubic-bezier(0.18, 0.9, 0.25, 1) forwards; }';
   document.head.appendChild(styleTag);
 
   // Flying UP/DOWN Signal Element (3D Cyber Holographic Energy Shield)
@@ -1357,26 +1445,36 @@ javascript:(function(){
   function showFlySignalAnimation(direction) {
     var fly = document.getElementById('ishak-fly-signal');
     if (!fly) return;
-    fly.classList.remove('flying-active');
+    fly.className = '';
     void fly.offsetWidth;
 
     var isUp = direction === 'UP';
+    var text = isUp ? 'BUY' : 'SELL';
     var themeColor = isUp ? '#00FF66' : '#FF1744';
-    var glowShadow = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
-    var outerBloom = isUp ? 'rgba(0,229,255,0.6)' : 'rgba(255,50,75,0.6)';
+    var glowShadow = isUp ? 'rgba(0,255,102,0.95)' : 'rgba(255,23,68,0.95)';
+    var outerBloom = isUp ? 'rgba(0,229,255,0.7)' : 'rgba(255,50,75,0.7)';
 
     fly.innerHTML =
-      '<div style="position:relative; display:flex; align-items:center; justify-content:center; user-select:none; font-family:\'Syncopate\',\'Michroma\',\'Orbitron\',sans-serif;">' +
-        '<div style="position:absolute; width:180px; height:180px; border-radius:50%; filter:blur(36px); pointer-events:none; opacity:0.85; background:' + (isUp ? 'radial-gradient(circle, rgba(0,255,102,0.5) 0%, rgba(0,229,255,0.2) 50%, transparent 75%)' : 'radial-gradient(circle, rgba(255,23,68,0.55) 0%, rgba(255,82,82,0.2) 50%, transparent 75%)') + ';"></div>' +
-        '<span style="font-size:44px; font-weight:900; letter-spacing:4px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 45px ' + glowShadow + ', 0 0 80px ' + outerBloom + ', 0 4px 20px rgba(0,0,0,0.95); line-height:1; position:relative; white-space:nowrap; font-family:\'Syncopate\',\'Michroma\',\'Orbitron\',sans-serif;">' +
-          (isUp ? 'UP ↑' : 'DOWN ↓') +
-        '</span>' +
+      '<div style="position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
+        '<div style="position:absolute; width:260px; height:200px; border-radius:50%; filter:blur(45px); pointer-events:none; opacity:0.85; background:' + (isUp ? 'radial-gradient(circle, rgba(0,255,102,0.45) 0%, rgba(0,229,255,0.2) 50%, transparent 75%)' : 'radial-gradient(circle, rgba(255,23,68,0.5) 0%, rgba(255,82,82,0.2) 50%, transparent 75%)') + ';"></div>' +
+        '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative;">' +
+          '<span style="font-size:56px; font-weight:900; letter-spacing:10px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 45px ' + glowShadow + ', 0 0 85px ' + outerBloom + ', 0 4px 28px rgba(0,0,0,0.95); line-height:1; position:relative; white-space:nowrap; text-transform:uppercase;">' +
+            text +
+          '</span>' +
+          '<div style="margin-top:6px; display:flex; align-items:center; gap:8px; font-size:16px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 12px ' + themeColor + '; letter-spacing:6px; opacity:0.9;">' +
+            (isUp ? '▲ ▲ ▲' : '▼ ▼ ▼') +
+          '</div>' +
+        '</div>' +
       '</div>';
 
-    fly.classList.add('flying-active');
+    fly.className = isUp ? 'ishak-fly-buy-active' : 'ishak-fly-sell-active';
+    fly.style.display = 'flex';
     setTimeout(function() {
-      fly.classList.remove('flying-active');
-    }, 1000);
+      if (fly) {
+        fly.style.display = 'none';
+        fly.className = '';
+      }
+    }, 1500);
   }
 
   // Sonic quantum shockwave trigger for signal confirmation (uncluttered clean chart)
@@ -1460,6 +1558,63 @@ javascript:(function(){
   var btnBox = document.createElement('div'); btnBox.id = 'ishak-btn-box'; mainWrap.appendChild(btnBox);
   var logoAura = document.createElement('div'); logoAura.id = 'ishak-logo-aura'; btnBox.appendChild(logoAura);
   var circleBtn = document.createElement('div'); circleBtn.id = 'ishak-circle-btn'; btnBox.appendChild(circleBtn);
+
+  // ⚡ Continuous Rotating Golden Quantum Orbital Photon Ring (Laser Scanner Matched, Luxury Bezel, Zero Logo Face Intrusion)
+  var orbitalWrap = document.createElement('div');
+  orbitalWrap.id = 'ishak-orbital-wrap';
+  orbitalWrap.innerHTML =
+    '<svg class="ishak-orbital-svg" viewBox="0 0 64 64">' +
+      '<defs>' +
+        '<linearGradient id="ishakGoldBeamCW" x1="0%" y1="0%" x2="100%" y2="100%">' +
+          '<stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>' +
+          '<stop offset="20%" stop-color="#FFE066" stop-opacity="0.95"/>' +
+          '<stop offset="50%" stop-color="#FFD700" stop-opacity="0.85"/>' +
+          '<stop offset="80%" stop-color="#FF9E00" stop-opacity="0.3"/>' +
+          '<stop offset="100%" stop-color="#FF9E00" stop-opacity="0"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="ishakGoldBeamCCW" x1="100%" y1="0%" x2="0%" y2="100%">' +
+          '<stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>' +
+          '<stop offset="30%" stop-color="#FFD700" stop-opacity="0.9"/>' +
+          '<stop offset="70%" stop-color="#FFA000" stop-opacity="0.35"/>' +
+          '<stop offset="100%" stop-color="#FFB800" stop-opacity="0"/>' +
+        '</linearGradient>' +
+        '<filter id="ishakGoldBloom" x="-30%" y="-30%" width="160%" height="160%">' +
+          '<feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#FFD700" flood-opacity="0.95"/>' +
+          '<feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#FF9E00" flood-opacity="0.75"/>' +
+        '</filter>' +
+      '</defs>' +
+      '<!-- Subtle Golden Bezel Orbit Guide -->' +
+      '<circle cx="32" cy="32" r="29.5" fill="none" stroke="rgba(255, 215, 0, 0.22)" stroke-width="1"/>' +
+      '<!-- Precision Luxury Chrono Ticks along the outer rim (Strictly r=28.4 to r=29.6) -->' +
+      '<g stroke="rgba(255, 224, 102, 0.45)" stroke-width="0.75">' +
+        '<line x1="32" y1="2.4" x2="32" y2="3.8"/>' +
+        '<line x1="45.8" y1="6.1" x2="45.1" y2="7.4"/>' +
+        '<line x1="56.9" y1="17.2" x2="55.6" y2="17.9"/>' +
+        '<line x1="61.6" y1="32" x2="60.2" y2="32"/>' +
+        '<line x1="56.9" y1="46.8" x2="55.6" y2="46.1"/>' +
+        '<line x1="45.8" y1="57.9" x2="45.1" y2="56.6"/>' +
+        '<line x1="32" y1="61.6" x2="32" y2="60.2"/>' +
+        '<line x1="18.2" y1="57.9" x2="18.9" y2="56.6"/>' +
+        '<line x1="7.1" y1="46.8" x2="8.4" y2="46.1"/>' +
+        '<line x1="2.4" y1="32" x2="3.8" y2="32"/>' +
+        '<line x1="7.1" y1="17.2" x2="8.4" y2="17.9"/>' +
+        '<line x1="18.2" y1="6.1" x2="18.9" y2="7.4"/>' +
+      '</g>' +
+      '<!-- Primary Golden Plasma Arc with Traveling Comet Head (Clockwise, 3.6s) -->' +
+      '<g class="ishak-orbit-spin-cw" filter="url(#ishakGoldBloom)">' +
+        '<circle cx="32" cy="32" r="29.5" fill="none" stroke="url(#ishakGoldBeamCW)" stroke-width="2" stroke-linecap="round" stroke-dasharray="65 120"/>' +
+        '<circle cx="32" cy="2.5" r="1.8" fill="#FFFFFF"/>' +
+        '<circle cx="32" cy="2.5" r="3.2" fill="none" stroke="#FFE066" stroke-width="0.8" opacity="0.85"/>' +
+      '</g>' +
+      '<!-- Secondary Rapid Counter-Orbital Laser Streak with Diamond Photon (Counter-Clockwise, 2.4s) -->' +
+      '<g class="ishak-orbit-spin-ccw" filter="url(#ishakGoldBloom)">' +
+        '<circle cx="32" cy="32" r="28.4" fill="none" stroke="url(#ishakGoldBeamCCW)" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="45 140"/>' +
+        '<polygon points="32,60.4 33.6,62 32,63.6 30.4,62" fill="#FFE066"/>' +
+        '<circle cx="3.6" cy="32" r="1.2" fill="#FFFFFF"/>' +
+      '</g>' +
+    '</svg>';
+  btnBox.appendChild(orbitalWrap);
+
   var pillBadge = document.createElement('div'); pillBadge.id = 'ishak-pill-badge';
   pillBadge.innerHTML = '<div id="ishak-pill-name"><span>⚡</span><span>ISHAK AI</span></div><div id="ishak-pill-time">SETUP</div>';
   mainWrap.appendChild(pillBadge);
@@ -2592,6 +2747,7 @@ javascript:(function(){
 
   // 7. CLICK TRIGGER WITH MANDATORY PRE-SCAN LIVE DATABASE LICENSE VERIFICATION
   function triggerScanAndTrade() {
+    stopAndClearIntroSound();
     if (isScanning) return;
 
     // ⚡ 1. SMART SCREEN MARKET & TIMEFRAME AUTO-DETECTION
@@ -2848,6 +3004,7 @@ javascript:(function(){
   // Click & Double click handles
   circleBtn.addEventListener('click', function(e) {
     e.stopPropagation();
+    stopAndClearIntroSound();
     if (isDragging) return;
 
     // Immediate maintenance check

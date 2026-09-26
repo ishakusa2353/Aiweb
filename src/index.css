@@ -316,30 +316,67 @@
   }
 }
 
-@keyframes ishakSignalAppear1s {
+@keyframes ishakBuyFlyUp1500 {
   0% {
-    transform: translate(-50%, -50%) scale(0.45);
+    transform: translate(-50%, calc(-50% + 95px)) scale(0.68);
     opacity: 0;
     filter: blur(14px);
   }
-  18% {
-    transform: translate(-50%, -50%) scale(1.08);
+  24% {
+    transform: translate(-50%, -50%) scale(1.14);
     opacity: 1;
     filter: blur(0px);
   }
-  28% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
-  75% {
-    transform: translate(-50%, -50%) scale(1);
+  65% {
+    transform: translate(-50%, calc(-50% - 22px)) scale(1.04);
     opacity: 1;
     filter: blur(0px);
   }
   100% {
-    transform: translate(-50%, -55%) scale(0.78);
+    transform: translate(-50%, calc(-50% - 95px)) scale(0.85);
     opacity: 0;
-    filter: blur(10px);
+    filter: blur(12px);
+  }
+}
+
+@keyframes ishakSellFlyDown1500 {
+  0% {
+    transform: translate(-50%, calc(-50% - 95px)) scale(0.68);
+    opacity: 0;
+    filter: blur(14px);
+  }
+  24% {
+    transform: translate(-50%, -50%) scale(1.14);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  65% {
+    transform: translate(-50%, calc(-50% + 22px)) scale(1.04);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translate(-50%, calc(-50% + 95px)) scale(0.85);
+    opacity: 0;
+    filter: blur(12px);
+  }
+}
+
+@keyframes ishakOrbitSpinCW {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ishakOrbitSpinCCW {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
   }
 }
 

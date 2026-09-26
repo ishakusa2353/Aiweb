@@ -792,11 +792,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         setShockwaveState(null);
       }, 1200);
 
-      // 2. Ultra-stylish, minimalist UP/DOWN signal HUD (ZERO clutter, ZERO candle lock)
+      // 2. Ultra-stylish, minimalist BUY/SELL signal (1.5s Duration)
       setFlySignal(isCall ? 'UP' : 'DOWN');
       setTimeout(() => {
         setFlySignal(null);
-      }, 1000);
+      }, 1500);
 
       if (onTradeSignal) {
         onTradeSignal(signal);
@@ -1070,9 +1070,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               e.stopPropagation();
               setShowHub(true);
             }}
-            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[3px] border-[#FFB800] ring-2 ring-[#F59E0B] ring-offset-1 ring-offset-[#070D1E] bg-[#070D1E] shadow-[0_4px_14px_rgba(0,0,0,0.85)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden ${
+            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[1.5px] border-amber-400/50 bg-[#070D1E] shadow-[0_4px_16px_rgba(0,0,0,0.9),inset_0_0_10px_rgba(255,184,0,0.25)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden ${
               isScanning
-                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#00E5FF] ring-[#00E5FF] shadow-[0_0_30px_#00E5FF,0_0_55px_rgba(0,229,255,0.85),inset_0_0_16px_rgba(0,229,255,0.5)]'
+                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#FFD700] shadow-[0_0_30px_#FFD700,0_0_55px_rgba(255,184,0,0.85),inset_0_0_14px_rgba(255,184,0,0.5)]'
                 : ''
             }`}
             title="Single Click: Setup & Scan | Double Click: Control Panel"
@@ -1084,6 +1084,60 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               referrerPolicy="no-referrer"
             />
           </button>
+
+          {/* ⚡ Continuous Rotating Golden Quantum Orbital Photon Ring (Laser Scanner Matched, Luxury Bezel, Zero Logo Face Intrusion) */}
+          <div className="absolute -inset-[3px] w-[calc(100%+6px)] h-[calc(100%+6px)] pointer-events-none z-20 flex items-center justify-center">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 64 64">
+              <defs>
+                <linearGradient id="ishakGoldBeamCWWidget" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                  <stop offset="20%" stopColor="#FFE066" stopOpacity="0.95" />
+                  <stop offset="50%" stopColor="#FFD700" stopOpacity="0.85" />
+                  <stop offset="80%" stopColor="#FF9E00" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="#FF9E00" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="ishakGoldBeamCCWWidget" x1="100%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                  <stop offset="30%" stopColor="#FFD700" stopOpacity="0.9" />
+                  <stop offset="70%" stopColor="#FFA000" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#FFB800" stopOpacity="0" />
+                </linearGradient>
+                <filter id="ishakGoldBloomWidget" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#FFD700" floodOpacity="0.95" />
+                  <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#FF9E00" floodOpacity="0.75" />
+                </filter>
+              </defs>
+              {/* Subtle Golden Bezel Orbit Guide */}
+              <circle cx="32" cy="32" r="29.5" fill="none" stroke="rgba(255, 215, 0, 0.22)" strokeWidth="1" />
+              {/* Precision Luxury Chrono Ticks along the outer rim */}
+              <g stroke="rgba(255, 224, 102, 0.45)" strokeWidth="0.75">
+                <line x1="32" y1="2.4" x2="32" y2="3.8" />
+                <line x1="45.8" y1="6.1" x2="45.1" y2="7.4" />
+                <line x1="56.9" y1="17.2" x2="55.6" y2="17.9" />
+                <line x1="61.6" y1="32" x2="60.2" y2="32" />
+                <line x1="56.9" y1="46.8" x2="55.6" y2="46.1" />
+                <line x1="45.8" y1="57.9" x2="45.1" y2="56.6" />
+                <line x1="32" y1="61.6" x2="32" y2="60.2" />
+                <line x1="18.2" y1="57.9" x2="18.9" y2="56.6" />
+                <line x1="7.1" y1="46.8" x2="8.4" y2="46.1" />
+                <line x1="2.4" y1="32" x2="3.8" y2="32" />
+                <line x1="7.1" y1="17.2" x2="8.4" y2="17.9" />
+                <line x1="18.2" y1="6.1" x2="18.9" y2="7.4" />
+              </g>
+              {/* Primary Golden Plasma Arc with Traveling Comet Head (Clockwise, 3.6s) */}
+              <g className="animate-[ishakOrbitSpinCW_3.6s_linear_infinite] [transform-origin:32px_32px]" filter="url(#ishakGoldBloomWidget)">
+                <circle cx="32" cy="32" r="29.5" fill="none" stroke="url(#ishakGoldBeamCWWidget)" strokeWidth="2" strokeLinecap="round" strokeDasharray="65 120" />
+                <circle cx="32" cy="2.5" r="1.8" fill="#FFFFFF" />
+                <circle cx="32" cy="2.5" r="3.2" fill="none" stroke="#FFE066" strokeWidth="0.8" opacity="0.85" />
+              </g>
+              {/* Secondary Rapid Counter-Orbital Laser Streak with Diamond Photon (Counter-Clockwise, 2.4s) */}
+              <g className="animate-[ishakOrbitSpinCCW_2.4s_linear_infinite] [transform-origin:32px_32px]" filter="url(#ishakGoldBloomWidget)">
+                <circle cx="32" cy="32" r="28.4" fill="none" stroke="url(#ishakGoldBeamCCWWidget)" strokeWidth="1.3" strokeLinecap="round" strokeDasharray="45 140" />
+                <polygon points="32,60.4 33.6,62 32,63.6 30.4,62" fill="#FFE066" />
+                <circle cx="3.6" cy="32" r="1.2" fill="#FFFFFF" />
+              </g>
+            </svg>
+          </div>
         </div>
 
         {/* Small 3D Pill Badge - Matched size and proportions */}
@@ -1115,37 +1169,51 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         />
       )}
 
-      {/* SIMPLE, ULTRA-PREMIUM UP / DOWN SIGNAL ANIMATION (1s Duration) */}
+      {/* ⚡ ULTRA-PREMIUM BUY / SELL SIGNAL ANIMATION (1.5s Duration) */}
       {flySignal && (
         <div
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[999999] select-none text-center flex items-center justify-center"
           style={{
-            animation: 'ishakSignalAppear1s 1s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            fontFamily: '"Orbitron", "Rajdhani", system-ui, sans-serif'
+            animation: flySignal === 'UP'
+              ? 'ishakBuyFlyUp1500 1.5s cubic-bezier(0.18, 0.9, 0.25, 1) forwards'
+              : 'ishakSellFlyDown1500 1.5s cubic-bezier(0.18, 0.9, 0.25, 1) forwards',
+            fontFamily: '"Syncopate", "Orbitron", "Montserrat", sans-serif'
           }}
         >
           {/* Ambient Radiant Glow Aura */}
           <div
-            className="absolute -inset-16 rounded-full blur-3xl pointer-events-none opacity-85"
+            className="absolute -inset-24 rounded-full blur-3xl pointer-events-none opacity-85"
             style={{
               background: flySignal === 'UP'
-                ? 'radial-gradient(circle, rgba(0,255,102,0.5) 0%, rgba(0,229,255,0.2) 50%, transparent 75%)'
-                : 'radial-gradient(circle, rgba(255,23,68,0.55) 0%, rgba(255,82,82,0.2) 50%, transparent 75%)'
+                ? 'radial-gradient(circle, rgba(0,255,102,0.45) 0%, rgba(0,229,255,0.2) 50%, transparent 75%)'
+                : 'radial-gradient(circle, rgba(255,23,68,0.5) 0%, rgba(255,82,82,0.2) 50%, transparent 75%)'
             }}
           />
 
-          <span
-            className={`text-5xl sm:text-6xl md:text-7xl font-black tracking-[0.14em] leading-none select-none relative whitespace-nowrap ${
-              flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
-            }`}
-            style={{
-              textShadow: flySignal === 'UP'
-                ? '0 0 20px #00FF66, 0 0 50px rgba(0,255,102,0.85), 0 0 90px rgba(0,229,255,0.6), 0 4px 24px rgba(0,0,0,0.95)'
-                : '0 0 20px #FF1744, 0 0 50px rgba(255,23,68,0.85), 0 0 90px rgba(255,50,75,0.6), 0 4px 24px rgba(0,0,0,0.95)'
-            }}
-          >
-            {flySignal === 'UP' ? 'UP ↑' : 'DOWN ↓'}
-          </span>
+          <div className="relative flex flex-col items-center justify-center">
+            <span
+              className={`text-6xl sm:text-7xl md:text-8xl font-black tracking-[0.18em] leading-none select-none relative whitespace-nowrap uppercase ${
+                flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
+              }`}
+              style={{
+                textShadow: flySignal === 'UP'
+                  ? '0 0 20px #00FF66, 0 0 45px rgba(0,255,102,0.95), 0 0 85px rgba(0,229,255,0.7), 0 4px 28px rgba(0,0,0,0.95)'
+                  : '0 0 20px #FF1744, 0 0 45px rgba(255,23,68,0.95), 0 0 85px rgba(255,50,75,0.7), 0 4px 28px rgba(0,0,0,0.95)'
+              }}
+            >
+              {flySignal === 'UP' ? 'BUY' : 'SELL'}
+            </span>
+            <div
+              className={`mt-2 flex items-center gap-2 text-lg sm:text-xl font-black tracking-[0.3em] ${
+                flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
+              }`}
+              style={{
+                textShadow: flySignal === 'UP' ? '0 0 12px #00FF66' : '0 0 12px #FF1744'
+              }}
+            >
+              {flySignal === 'UP' ? '▲ ▲ ▲' : '▼ ▼ ▼'}
+            </div>
+          </div>
         </div>
       )}
 
