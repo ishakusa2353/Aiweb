@@ -2080,22 +2080,24 @@ javascript:(function(){
 
       // Factor 3: Dynamic Support & Resistance Zones
       if (distToResistance <= 0.22) {
-        if (upperWick > lowerWick || !isRunningGreen || calculatedRsi >= 60) {
-          candleScore -= 8; // Resistance Rejection (PUT)
+        if (!isRunningGreen && upperWick >= candleBody * 0.5 && upperWick > lowerWick * 1.4) {
+          candleScore -= 8; // Valid Resistance Rejection with upper wick (PUT)
           srPattern = 'Resistance Level Rejection (Bearish Reversal)';
-          srReason = 'প্রাইজ রেজিস্টেন্স লেভেল (' + resistance.toFixed(5) + ') স্পর্শ করে বিক্রয় চাপে রিভার্সাল হয়েছে।';
-        } else if (currentPrice >= resistance && isRunningGreen && upperWick < candleBody * 0.25) {
-          candleScore += 6; // Resistance breakout
+          srReason = 'প্রাইজ রেজিস্টেন্স লেভেল স্পর্শ করে সেলারদের উইক রিজেকশনে বিয়ারিশ রিভার্সাল হয়েছে।';
+        } else if (isRunningGreen) {
+          candleScore += 7; // Resistance breakout with green momentum (CALL)
           srPattern = 'Resistance Level Breakout (Bullish Continuation)';
+          srReason = 'প্রাইজ রেজিস্টেন্স লেভেল ব্রেক করে বায়ারদের ভলিউমে শক্তিশালী আপট্রেন্ড অব্যাহত রেখেছে।';
         }
       } else if (distToSupport <= 0.22) {
-        if (lowerWick > upperWick || isRunningGreen || calculatedRsi <= 40) {
-          candleScore += 8; // Support Bounce (CALL)
+        if (isRunningGreen && lowerWick >= candleBody * 0.5 && lowerWick > upperWick * 1.4) {
+          candleScore += 8; // Valid Support Bounce with lower wick (CALL)
           srPattern = 'Support Level Rejection & Bullish Bounce';
-          srReason = 'প্রাইজ সাপোর্ট লেভেল (' + support.toFixed(5) + ') স্পর্শ করে ক্রেতাদের বাউন্স তৈরি করেছে।';
-        } else if (currentPrice <= support && !isRunningGreen && lowerWick < candleBody * 0.25) {
-          candleScore -= 6; // Support breakdown
+          srReason = 'প্রাইজ সাপোর্ট লেভেল স্পর্শ করে ক্রেতাদের বাউন্সে শক্তিশালী আপট্রেন্ড শুরু করেছে।';
+        } else if (!isRunningGreen) {
+          candleScore -= 7; // Support breakdown with red momentum (PUT)
           srPattern = 'Support Level Breakdown (Bearish Continuation)';
+          srReason = 'প্রাইজ সাপোর্ট লেভেল ভেঙে সেলারদের অতিরিক্ত বিক্রয় চাপে ডাউনট্রেন্ড অব্যাহত রেখেছে।';
         }
       }
 
@@ -2104,30 +2106,45 @@ javascript:(function(){
         var prevCandle = candleData[candleData.length - 2];
         var isPrevGreen = prevCandle.close >= prevCandle.open;
         if (isRunningGreen && !isPrevGreen && lastCandle.close > prevCandle.open) {
-          candleScore += 6; // Bullish Engulfing
+          candleScore += 7; // Bullish Engulfing
           if (!srPattern) srPattern = 'Bullish Engulfing Pattern';
         } else if (!isRunningGreen && isPrevGreen && lastCandle.close < prevCandle.open) {
-          candleScore -= 6; // Bearish Engulfing
+          candleScore -= 7; // Bearish Engulfing
           if (!srPattern) srPattern = 'Bearish Engulfing Pattern';
         } else if (isRunningGreen && isPrevGreen) {
-          candleScore += 4; // Bullish continuation
+          candleScore += 5; // Bullish continuation
         } else if (!isRunningGreen && !isPrevGreen) {
-          candleScore -= 4; // Bearish continuation
+          candleScore -= 5; // Bearish continuation
         }
       }
 
-      // Factor 5: EMA Trend
-      if (ema5 > ema13) candleScore += 4;
-      else if (ema5 < ema13) candleScore -= 4;
+      // Factor 5: EMA Trend (Core Binary Trend Driver)
+      if (ema5 > ema13) {
+        candleScore += 7; // Bullish EMA cross
+        if (ema5 > ema13 && ema13 > ema30) candleScore += 4; // Perfect Triple Bullish Alignment
+      } else if (ema5 < ema13) {
+        candleScore -= 7; // Bearish EMA cross
+        if (ema5 < ema13 && ema13 < ema30) candleScore -= 4; // Perfect Triple Bearish Alignment
+      }
 
-      if (ema5 > ema13 && ema13 > ema30) candleScore += 2;
-      else if (ema5 < ema13 && ema13 < ema30) candleScore -= 2;
-
-      // Factor 6: RSI Extremes
-      if (calculatedRsi >= 70) candleScore -= 6;
-      else if (calculatedRsi <= 30) candleScore += 6;
-      else if (calculatedRsi > 54) candleScore += 3;
-      else if (calculatedRsi < 46) candleScore -= 3;
+      // Factor 6: RSI Momentum & Trend Health
+      if (calculatedRsi >= 76) {
+        if (!isRunningGreen && upperWick > lowerWick) {
+          candleScore -= 6; // Confirmed overbought drop with red candle
+        } else {
+          candleScore += 4; // Extreme bullish power continuation
+        }
+      } else if (calculatedRsi <= 24) {
+        if (isRunningGreen && lowerWick > upperWick) {
+          candleScore += 6; // Confirmed oversold bounce with green candle
+        } else {
+          candleScore -= 4; // Extreme bearish dump continuation
+        }
+      } else if (calculatedRsi >= 52) {
+        candleScore += 5; // Healthy bullish momentum zone
+      } else if (calculatedRsi <= 48) {
+        candleScore -= 5; // Healthy bearish momentum zone
+      }
     } else if (domCandle) {
       // DOM Candle fallback
       var domDir = domCandle.getAttribute('data-direction');
@@ -2138,8 +2155,8 @@ javascript:(function(){
       var dUpW = domHigh - Math.max(domOpen, domClose);
       var dLoW = Math.min(domOpen, domClose) - domLow;
 
-      if (dUpW > dLoW * 1.3 && dUpW >= Math.abs(domClose - domOpen) * 0.4) candleScore -= 7;
-      else if (dLoW > dUpW * 1.3 && dLoW >= Math.abs(domClose - domOpen) * 0.4) candleScore += 7;
+      if (dUpW > dLoW * 1.4 && dUpW >= Math.abs(domClose - domOpen) * 0.5) candleScore -= 7;
+      else if (dLoW > dUpW * 1.4 && dLoW >= Math.abs(domClose - domOpen) * 0.5) candleScore += 7;
       else if (domClose < domOpen || domDir === 'DOWN') candleScore -= 7;
       else if (domClose > domOpen || domDir === 'UP') candleScore += 7;
     }
@@ -2193,8 +2210,8 @@ javascript:(function(){
       }
 
       // Linear Regression Slope Impact
-      if (slope > 0.000002) tickScore += 8;
-      else if (slope < -0.000002) tickScore -= 8;
+      if (slope > 0.000002) tickScore += 9;
+      else if (slope < -0.000002) tickScore -= 9;
 
       // Micro-RSI on live tick sequence
       var mGains = 0, mLosses = 0;
@@ -2209,17 +2226,24 @@ javascript:(function(){
         microRsi = Math.round(100 - (100 / (1 + mRs)));
       }
 
-      if (microRsi <= 30) tickScore += 7; // Deep oversold bounce CALL
-      else if (microRsi >= 70) tickScore -= 7; // Deep overbought drop PUT
-      else if (microRsi > 54) tickScore += 4;
-      else if (microRsi < 46) tickScore -= 4;
+      if (microRsi >= 78) {
+        if (downTicks > upTicks) tickScore -= 5;
+        else tickScore += 4; // High momentum surge
+      } else if (microRsi <= 22) {
+        if (upTicks > downTicks) tickScore += 5;
+        else tickScore -= 4; // High dump surge
+      } else if (microRsi > 52) {
+        tickScore += 5; // Positive tick flow
+      } else if (microRsi < 48) {
+        tickScore -= 5; // Negative tick flow
+      }
 
       tickDelta = mergedTicks[n - 1] - mergedTicks[0];
-      if (tickDelta > 0.00001) tickScore += 5;
-      else if (tickDelta < -0.00001) tickScore -= 5;
+      if (tickDelta > 0.00001) tickScore += 7;
+      else if (tickDelta < -0.00001) tickScore -= 7;
 
-      if (upTicks > downTicks) tickScore += 4;
-      else if (downTicks > upTicks) tickScore -= 4;
+      if (upTicks > downTicks) tickScore += 5;
+      else if (downTicks > upTicks) tickScore -= 5;
     }
 
     // Canvas pixel inspection
@@ -2233,30 +2257,29 @@ javascript:(function(){
           if (ctx2d) {
             var cW = cEl.width;
             var cH = cEl.height;
-            var sliceWidth = Math.max(8, Math.floor(cW * 0.04));
+            var sliceWidth = Math.max(10, Math.floor(cW * 0.05));
             var gHitsTotal = 0, rHitsTotal = 0;
 
             for (var sIdx = 0; sIdx < 3; sIdx++) {
-              var sX = Math.max(0, Math.floor(cW * (0.84 + sIdx * 0.045)));
+              var sX = Math.max(0, Math.floor(cW * (0.80 + sIdx * 0.05)));
               var imgD = ctx2d.getImageData(sX, 0, sliceWidth, cH);
               var px = imgD.data;
               for (var p = 0; p < px.length; p += 16) {
                 var redP = px[p], grnP = px[p + 1], bluP = px[p + 2];
-                var isBullPx = (grnP > 110 && grnP > redP + 30) ||
-                               (grnP > 150 && bluP > 140 && redP < 110) ||
-                               (grnP > 120 && bluP > 100 && redP < 80);
-                var isBearPx = (redP > 120 && redP > grnP + 30 && redP > bluP + 15) ||
-                               (redP > 170 && grnP < 100 && bluP < 100);
+                var isBullPx = (grnP > 110 && grnP > redP + 25) ||
+                               (grnP > 140 && bluP > 120 && redP < 120);
+                var isBearPx = (redP > 120 && redP > grnP + 25) ||
+                               (redP > 160 && grnP < 110 && bluP < 110);
 
                 if (isBullPx) gHitsTotal++;
                 else if (isBearPx) rHitsTotal++;
               }
             }
 
-            if (gHitsTotal > rHitsTotal * 1.3 && gHitsTotal > 20) {
-              tickScore += 5;
-            } else if (rHitsTotal > gHitsTotal * 1.3 && rHitsTotal > 20) {
-              tickScore -= 5;
+            if (gHitsTotal > rHitsTotal * 1.25 && gHitsTotal > 15) {
+              tickScore += 6;
+            } else if (rHitsTotal > gHitsTotal * 1.25 && rHitsTotal > 15) {
+              tickScore -= 6;
             }
           }
         }
@@ -2264,12 +2287,24 @@ javascript:(function(){
     } catch(e){}
 
     // Rate elements & live ticker visual classes
-    var rateEl = document.querySelector('.deal-form__price, .current-price, .chart-axis-price, .section-deal__rate, .ishak-live-price');
+    var rateEl = document.querySelector('.deal-form__price, .current-price, .chart-axis-price, .section-deal__rate, .ishak-live-price, [class*="price-current"], .axis-price-current');
     if (rateEl) {
       var rClass = (rateEl.className || '').toLowerCase();
       var rStyle = (rateEl.getAttribute('style') || '').toLowerCase();
-      if (rClass.indexOf('up') !== -1 || rClass.indexOf('green') !== -1 || rStyle.indexOf('green') !== -1 || rClass.indexOf('emerald') !== -1) tickScore += 3;
-      else if (rClass.indexOf('down') !== -1 || rClass.indexOf('red') !== -1 || rStyle.indexOf('red') !== -1 || rClass.indexOf('rose') !== -1) tickScore -= 3;
+      var compColor = '';
+      try { compColor = window.getComputedStyle(rateEl).color || ''; } catch(e){}
+      var compBg = '';
+      try { compBg = window.getComputedStyle(rateEl).backgroundColor || ''; } catch(e){}
+
+      var isGreenRate = rClass.indexOf('up') !== -1 || rClass.indexOf('green') !== -1 || rClass.indexOf('emerald') !== -1 || rClass.indexOf('bull') !== -1 ||
+                        rStyle.indexOf('green') !== -1 || rStyle.indexOf('#00c') !== -1 ||
+                        compColor.indexOf('0, 192') !== -1 || compBg.indexOf('0, 192') !== -1;
+      var isRedRate = rClass.indexOf('down') !== -1 || rClass.indexOf('red') !== -1 || rClass.indexOf('rose') !== -1 || rClass.indexOf('bear') !== -1 ||
+                      rStyle.indexOf('red') !== -1 || rStyle.indexOf('#ff1') !== -1 || rStyle.indexOf('#ff6') !== -1 ||
+                      compColor.indexOf('255, 98') !== -1 || compBg.indexOf('255, 98') !== -1;
+
+      if (isGreenRate) tickScore += 5;
+      else if (isRedRate) tickScore -= 5;
     }
 
     // Live Trader Sentiment from Quotex Server
@@ -2288,8 +2323,8 @@ javascript:(function(){
     } catch(e){}
 
     // Incorporate real-time scan price movement and final micro-delta into tick score
-    if (scanPriceDelta > 0.00001) tickScore += 8;
-    else if (scanPriceDelta < -0.00001) tickScore -= 8;
+    if (scanPriceDelta > 0.00001) tickScore += 9;
+    else if (scanPriceDelta < -0.00001) tickScore -= 9;
 
     if (microDelta > 0.00001) tickScore += 8;
     else if (microDelta < -0.00001) tickScore -= 8;
@@ -2314,7 +2349,7 @@ javascript:(function(){
     } else if (totalScore < 0) {
       isCall = false; // PUT / DOWN
     } else {
-      // Pure physical tie-breaker based on micro-delta, scan delta, slope, or last candle close
+      // Symmetrical physical tie-breaker based on live market physics:
       if (microDelta !== 0) {
         isCall = microDelta > 0;
       } else if (scanPriceDelta !== 0) {
@@ -2323,29 +2358,30 @@ javascript:(function(){
         isCall = slope > 0;
       } else if (tickDelta !== 0) {
         isCall = tickDelta > 0;
+      } else if (upTicks !== downTicks) {
+        isCall = upTicks > downTicks;
       } else if (candleData && candleData.length > 0) {
         var cLast = candleData[candleData.length - 1];
         isCall = cLast.close >= cLast.open;
+      } else if (calculatedEma5 !== 0 && calculatedEma13 !== 0) {
+        isCall = calculatedEma5 >= calculatedEma13;
       } else if (sentScore !== 0) {
         isCall = sentScore > 0;
       } else {
-        isCall = false; // Strictly unbiased: do not default to call
+        // Dynamic alternating tie-breaker: NEVER hardcode false!
+        isCall = (Math.floor(Date.now() / 1000) % 2 === 0);
       }
     }
 
-    // 🛡️ ANTI-LOSS GUARDIAN (PREVENTS CALLING UP ON A DUMPING/FALLING CANDLE):
-    // If the live market candle is visibly plunging downward (micro-delta or scan delta negative),
-    // NEVER force an UP (CALL) trade!
-    if (isCall && (microDelta < -0.00001 || scanPriceDelta < -0.00002)) {
-      isCall = false; // Strictly align with the falling candle (PUT)!
+    // 🛡️ SYMMETRICAL ANTI-LOSS GUARDIAN (Only overrides on genuine opposing surge):
+    if (isCall && (microDelta < -0.00012 || scanPriceDelta < -0.00018)) {
+      isCall = false; // Strictly protect capital and take the downward dump (PUT)!
       srPattern = 'Bearish Downward Candle Plunge (PUT)';
-      srReason = 'ক্যান্ডেলটি সরাসরি নিচের দিকে নামছে (সেলিং প্রেসার)—ঝুঁকি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
-    }
-    // Vice versa: if candle is rocketing upward, NEVER execute a DOWN (PUT) trade!
-    if (!isCall && (microDelta > 0.00001 || scanPriceDelta > 0.00002)) {
-      isCall = true; // Strictly align with the rising candle (CALL)!
+      srReason = 'ক্যান্ডেলটি তীব্র সেলিং প্রেসারে নিচের দিকে নেমেছে—ক্ষতি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
+    } else if (!isCall && (microDelta > 0.00012 || scanPriceDelta > 0.00018)) {
+      isCall = true; // Strictly protect capital and take the upward surge (CALL)!
       srPattern = 'Bullish Upward Candle Push (CALL)';
-      srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করছে—কল (UP) ট্রেড কার্যকর করা হয়েছে।';
+      srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করেছে—ক্ষতি এড়াতে কল (UP) ট্রেড কার্যকর করা হয়েছে।';
     }
 
     // Multi-Indicator Quantitative Confluence Agreement Calculation

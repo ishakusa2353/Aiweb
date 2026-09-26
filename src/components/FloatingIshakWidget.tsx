@@ -496,10 +496,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         }
         const rs = l === 0 ? 100 : g / l;
         microRsi = Math.round(l === 0 ? 100 : 100 - (100 / (1 + rs)));
-        if (microRsi >= 68) tickScore -= 4; // Overbought micro-exhaustion
-        else if (microRsi <= 32) tickScore += 4; // Oversold micro-bounce
-        else if (microRsi > 54) tickScore += 2;
-        else if (microRsi < 46) tickScore -= 2;
+        if (microRsi >= 78) {
+          if (downTicks > upTicks) tickScore -= 5;
+          else tickScore += 4; // High momentum surge
+        } else if (microRsi <= 22) {
+          if (upTicks > downTicks) tickScore += 5;
+          else tickScore -= 4; // High dump surge
+        } else if (microRsi > 52) {
+          tickScore += 5; // Positive tick flow
+        } else if (microRsi < 48) {
+          tickScore -= 5; // Negative tick flow
+        }
       }
 
       // 2. CANDLESTICK DATA & TECHNICAL INDICATORS (Historical + Running Candle)
@@ -582,40 +589,40 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
           // Running Candle Body Pressure
           if (candleDelta > 0.00001) {
-            candleScore += 6;
+            candleScore += 7;
           } else if (candleDelta < -0.00001) {
-            candleScore -= 6;
+            candleScore -= 7;
           }
 
           // Candlestick Wick Anatomy (Pin Bar & Wick Rejection Physics)
-          if (upperWick > lowerWick * 1.3 && upperWick >= candleBody * 0.5) {
-            candleScore -= 6;
+          if (upperWick > lowerWick * 1.4 && upperWick >= candleBody * 0.5) {
+            candleScore -= 7;
             srPattern = 'Bearish Shooting Star (Upper Wick Rejection)';
             srReason = 'ক্যান্ডেলে তীব্র আপার উইক রিজেকশন—সেলাররা আগ্রাসী বিক্রয় চাপে মার্কেট নিচে নামাচ্ছে।';
-          } else if (lowerWick > upperWick * 1.3 && lowerWick >= candleBody * 0.5) {
-            candleScore += 6;
+          } else if (lowerWick > upperWick * 1.4 && lowerWick >= candleBody * 0.5) {
+            candleScore += 7;
             srPattern = 'Bullish Hammer (Lower Wick Bounce)';
             srReason = 'ক্যান্ডেলে শক্তিশালী লোয়ার উইক রিজেকশন—বায়াররা মার্কেট নিচ থেকে বাউন্স করিয়ে উপরে তুলছে।';
           }
 
-          // Dynamic S/R Rejections
+          // Dynamic S/R Zones: Breakout vs Rejection (Symmetrical)
           if (distToResistance <= 0.22) {
-            if (upperWick > lowerWick || !isRunningGreen || calculatedRsi >= 60 || tickSlope < 0) {
-              candleScore -= 7;
+            if (!isRunningGreen && upperWick >= candleBody * 0.5 && upperWick > lowerWick * 1.4) {
+              candleScore -= 8;
               srPattern = 'Resistance Level Rejection (Bearish Reversal)';
-              srReason = `প্রাইজ রেজিস্টেন্স লেভেল (${resistance.toFixed(4)}) স্পর্শ করায় সেলারদের বিক্রয় চাপে রিভার্সাল হয়েছে।`;
-            } else if (currentPrice >= resistance && isRunningGreen && upperWick < candleBody * 0.25) {
-              candleScore += 5;
+              srReason = `প্রাইজ রেজিস্টেন্স লেভেল (${resistance.toFixed(4)}) স্পর্শ করায় সেলারদের উইক রিজেকশনে রিভার্সাল হয়েছে।`;
+            } else if (isRunningGreen) {
+              candleScore += 7;
               srPattern = 'Resistance Level Breakout (High Volume)';
               srReason = `রেজিস্টেন্স লেভেল (${resistance.toFixed(4)}) বায়ারদের অতিরিক্ত ভলিউমে ব্রেকআউট করেছে।`;
             }
           } else if (distToSupport <= 0.22) {
-            if (lowerWick > upperWick || isRunningGreen || calculatedRsi <= 40 || tickSlope > 0) {
-              candleScore += 7;
+            if (isRunningGreen && lowerWick >= candleBody * 0.5 && lowerWick > upperWick * 1.4) {
+              candleScore += 8;
               srPattern = 'Support Level Bounce (Bullish Reversal)';
               srReason = `প্রাইজ সাপোর্ট লেভেল (${support.toFixed(4)}) স্পর্শ করায় বায়ারদের ক্রয় চাপে বাউন্স তৈরি হয়েছে।`;
-            } else if (currentPrice <= support && !isRunningGreen && lowerWick < candleBody * 0.25) {
-              candleScore -= 5;
+            } else if (!isRunningGreen) {
+              candleScore -= 7;
               srPattern = 'Support Level Breakdown (High Volume)';
               srReason = `সাপোর্ট লেভেল (${support.toFixed(4)}) ভেঙে সেলারদের অতিরিক্ত ভলিউমে মার্কেট ডাউন হয়েছে।`;
             }
@@ -626,35 +633,46 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             const prevCandle = candleData[candleData.length - 2];
             const isPrevGreen = prevCandle.close >= prevCandle.open;
             if (isRunningGreen && !isPrevGreen && lastCandle.close > prevCandle.open) {
-              candleScore += 5;
+              candleScore += 7;
               if (!srPattern) srPattern = 'Bullish Engulfing Reversal';
             } else if (!isRunningGreen && isPrevGreen && lastCandle.close < prevCandle.open) {
-              candleScore -= 5;
+              candleScore -= 7;
               if (!srPattern) srPattern = 'Bearish Engulfing Reversal';
             } else if (isRunningGreen && isPrevGreen) {
-              candleScore += 3;
+              candleScore += 5;
             } else if (!isRunningGreen && !isPrevGreen) {
-              candleScore -= 3;
+              candleScore -= 5;
             }
           }
 
-          // Dynamic EMA
-          if (ema5 > ema13) candleScore += 3;
-          else if (ema5 < ema13) candleScore -= 3;
-          if (ema5 > ema13 && ema13 > ema30) candleScore += 2;
-          else if (ema5 < ema13 && ema13 < ema30) candleScore -= 2;
+          // Dynamic EMA (Core Binary Trend Driver)
+          if (ema5 > ema13) {
+            candleScore += 7;
+            if (ema5 > ema13 && ema13 > ema30) candleScore += 4;
+          } else if (ema5 < ema13) {
+            candleScore -= 7;
+            if (ema5 < ema13 && ema13 < ema30) candleScore -= 4;
+          }
 
-          // RSI 14
-          if (calculatedRsi >= 68) {
-            candleScore -= 5;
-            if (!srReason) srReason = `RSI (${calculatedRsi}) ওভারবট জোনে—সেলাররা সক্রিয়ভাবে মার্কেট পুশ ডাউন করছে।`;
-          } else if (calculatedRsi <= 32) {
-            candleScore += 5;
-            if (!srReason) srReason = `RSI (${calculatedRsi}) ওভারসোল্ড জোনে—বায়াররা সক্রিয়ভাবে মার্কেট পুশ আপ করছে।`;
-          } else if (calculatedRsi > 54) {
-            candleScore += 2;
-          } else if (calculatedRsi < 46) {
-            candleScore -= 2;
+          // RSI 14 Momentum & Exhaustion
+          if (calculatedRsi >= 76) {
+            if (!isRunningGreen && upperWick > lowerWick) {
+              candleScore -= 6;
+              if (!srReason) srReason = `RSI (${calculatedRsi}) এক্সট্রিম ওভারবটে বিয়ারিশ টার্ন—সেলাররা প্রাইজ নিচে নামাচ্ছে।`;
+            } else {
+              candleScore += 4; // Bullish momentum continuation
+            }
+          } else if (calculatedRsi <= 24) {
+            if (isRunningGreen && lowerWick > upperWick) {
+              candleScore += 6;
+              if (!srReason) srReason = `RSI (${calculatedRsi}) এক্সট্রিম ওভারসোল্ডে বুলিশ বাউন্স—বায়াররা প্রাইজ উপরে তুলছে।`;
+            } else {
+              candleScore -= 4; // Bearish dump continuation
+            }
+          } else if (calculatedRsi >= 52) {
+            candleScore += 5; // Healthy bullish trend zone
+          } else if (calculatedRsi <= 48) {
+            candleScore -= 5; // Healthy bearish trend zone
           }
         }
       } else if (runningCandleEl) {
@@ -666,14 +684,14 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         const upW = highVal - Math.max(openVal, closeVal);
         const loW = Math.min(openVal, closeVal) - lowVal;
 
-        if (upW > loW * 1.3 && upW >= Math.abs(closeVal - openVal) * 0.5) {
+        if (upW > loW * 1.4 && upW >= Math.abs(closeVal - openVal) * 0.5) {
           candleScore -= 7;
-        } else if (loW > upW * 1.3 && loW >= Math.abs(closeVal - openVal) * 0.5) {
+        } else if (loW > upW * 1.4 && loW >= Math.abs(closeVal - openVal) * 0.5) {
           candleScore += 7;
         } else if (closeVal < openVal || dirAttr === 'DOWN') {
-          candleScore -= 6;
+          candleScore -= 7;
         } else if (closeVal > openVal || dirAttr === 'UP') {
-          candleScore += 6;
+          candleScore += 7;
         }
       }
 
@@ -691,34 +709,35 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       // 4. SYMMETRICAL DECISION (ZERO DEFAULT BIAS)
       let isCall: boolean;
       if (totalScore > 0) {
-        isCall = true;
+        isCall = true; // Decisive CALL / UP
       } else if (totalScore < 0) {
         isCall = false; // Decisive PUT / DOWN
       } else {
-        // Tie breaker based on real-time price physics
-        if (tickDelta < -0.000005 || tickSlope < 0) {
-          isCall = false;
-        } else if (tickDelta > 0.000005 || tickSlope > 0) {
+        // Symmetrical physical tie-breaker based on real-time price physics
+        if (tickDelta > 0.000005 || tickSlope > 0) {
           isCall = true;
-        } else if (candleDelta < -0.000005) {
+        } else if (tickDelta < -0.000005 || tickSlope < 0) {
           isCall = false;
         } else if (candleDelta > 0.000005) {
           isCall = true;
+        } else if (candleDelta < -0.000005) {
+          isCall = false;
+        } else if (upTicks !== downTicks) {
+          isCall = upTicks > downTicks;
         } else {
-          const mid = (support + resistance) / 2;
-          isCall = currentPrice < mid;
+          isCall = (Math.floor(Date.now() / 1000) % 2 === 0);
         }
       }
 
-      // 🛡️ ANTI-LOSS GUARDIAN (PREVENTS CALLING UP ON A DUMPING/FALLING CANDLE):
-      if (isCall && (tickDelta < -0.00001 || candleDelta < -0.00001)) {
-        isCall = false; // Strictly align with falling candle (PUT)!
+      // 🛡️ SYMMETRICAL ANTI-LOSS GUARDIAN (Only overrides on genuine opposing surge):
+      if (isCall && (tickDelta < -0.00012 || candleDelta < -0.00015)) {
+        isCall = false; // Strictly protect capital and take the downward dump (PUT)!
         srPattern = 'Bearish Downward Candle Plunge (PUT)';
-        srReason = 'ক্যান্ডেলটি সরাসরি নিচের দিকে নামছে (সেলিং প্রেসার)—ঝুঁকি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
-      } else if (!isCall && (tickDelta > 0.00001 || candleDelta > 0.00001)) {
-        isCall = true; // Strictly align with rising candle (CALL)!
+        srReason = 'ক্যান্ডেলটি তীব্র সেলিং প্রেসারে নিচের দিকে নেমেছে—ক্ষতি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
+      } else if (!isCall && (tickDelta > 0.00012 || candleDelta > 0.00015)) {
+        isCall = true; // Strictly protect capital and take the upward surge (CALL)!
         srPattern = 'Bullish Upward Candle Push (CALL)';
-        srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করছে—কল (UP) ট্রেড কার্যকর করা হয়েছে।';
+        srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করেছে—ক্ষতি এড়াতে কল (UP) ট্রেড কার্যকর করা হয়েছে।';
       }
 
       const confScore = Math.min(99.4, 96.8 + Math.abs(totalScore) * 0.22).toFixed(1);
