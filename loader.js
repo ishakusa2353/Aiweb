@@ -791,7 +791,12 @@ javascript:(function(){
 
       // Listen for earliest user gesture anywhere on screen
       var unlockOnGesture = function(ev) {
-        var onBot = ev && ev.target && ev.target.closest && (ev.target.closest('#ishak-circle-btn') || ev.target.closest('#ishak-trade-wrap'));
+        var onBot = false;
+        try {
+          if (ev && ev.target && typeof ev.target.closest === 'function') {
+            onBot = !!(ev.target.closest('#ishak-circle-btn') || ev.target.closest('#ishak-trade-wrap'));
+          }
+        } catch(err){}
         window.removeEventListener('pointerdown', unlockOnGesture, true);
         window.removeEventListener('touchstart', unlockOnGesture, true);
         window.removeEventListener('keydown', unlockOnGesture, true);
@@ -1374,7 +1379,8 @@ javascript:(function(){
       '24% { transform: translate(-50%, -50%) scale(1.14); opacity: 1; filter: blur(0px); } ' +
       '65% { transform: translate(-50%, calc(-50% + 22px)) scale(1.04); opacity: 1; filter: blur(0px); } ' +
       '100% { transform: translate(-50%, calc(-50% + 95px)) scale(0.85); opacity: 0; filter: blur(12px); } ' +
-    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 64px; height: 64px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; border-radius: 50%; }' +
+    '}' +
+    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 72px; height: 72px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; border-radius: 50%; }' +
     '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; }' +
     '@keyframes ishakOrbitSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
     '@keyframes ishakOrbitSpinCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }' +

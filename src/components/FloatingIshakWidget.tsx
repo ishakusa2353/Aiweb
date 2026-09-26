@@ -1086,7 +1086,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           </button>
 
           {/* ⚡ Continuous Rotating Golden Quantum Orbital Photon Ring (Laser Scanner Matched, Luxury Bezel, Zero Logo Face Intrusion) */}
-          <div className="absolute -inset-[3px] w-[calc(100%+6px)] h-[calc(100%+6px)] pointer-events-none z-20 flex items-center justify-center">
+          <div className="absolute -inset-2 w-[calc(100%+16px)] h-[calc(100%+16px)] pointer-events-none z-20 flex items-center justify-center">
             <svg className="w-full h-full overflow-visible" viewBox="0 0 64 64">
               <defs>
                 <linearGradient id="ishakGoldBeamCWWidget" x1="0%" y1="0%" x2="100%" y2="100%">
