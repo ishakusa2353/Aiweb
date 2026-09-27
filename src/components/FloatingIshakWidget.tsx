@@ -35,10 +35,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   // Modals
   const [showHub, setShowHub] = useState<boolean>(false);
   const [showTimeModal, setShowTimeModal] = useState<boolean>(false);
-  const [showMarketModal, setShowMarketModal] = useState<boolean>(false);
   const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState<boolean>(false);
-  const [marketSearch, setMarketSearch] = useState<string>('');
 
   // Key verification state
   const [licenseInput, setLicenseInput] = useState<string>('');
@@ -299,12 +297,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     }
 
-    // Check 1: If neither on-screen nor manual verified market is set, MANDATORILY open market modal
-    const effectiveMarket = screenAsset || validateAndNormalizeAsset(currentMarket);
-    if (!effectiveMarket) {
-      setShowMarketModal(true);
-      return;
-    }
+    // Auto-bind to on-screen or active chart market
+    const effectiveMarket = screenAsset || validateAndNormalizeAsset(currentMarket) || 'ACTIVE_CHART';
+    if (!currentMarket) setCurrentMarket(effectiveMarket);
 
     // Check 2: If neither on-screen nor manual duration is set, adopt default 5s or open time modal
     if (!tradeDuration && !screenDurationSaved) {
@@ -435,6 +430,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const candleEls = Array.from(document.querySelectorAll('[data-candle="true"]'));
       const runningCandleEl = document.getElementById('ishak-running-candle') ||
                              document.querySelector('[data-running-candle="true"], .ishak-active-candle');
+
+      // 🚨 STRICT ZERO DEFAULT TRADE GUARD:
+      if (candleEls.length < 2 && !runningCandleEl && samplePrices.length < 3) {
+        setFlySignal(null);
+        setBadgeText('NO CANDLE');
+        setTimeout(() => {
+          setBadgeText(tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`);
+        }, 4000);
+        return;
+      }
 
       // 1. RUNNING HIGH-FREQUENCY PRICE ACTION TICKS (Captured during 3.6s Laser Scan)
       let tickScore = 0;
@@ -694,62 +699,73 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         }
       }
 
-      // 3. TIMEFRAME-ADAPTIVE SYNTHESIS (Strictly Responsive to Selected Duration)
+      // 3. MULTI-FACTOR CONFLUENCE SYNTHESIS (Zero Arbitrary/Random Numbers)
       const dur = tradeDuration || 5;
-      let totalScore = 0;
-      if (dur <= 15) {
-        // Fast timeframes (5s, 10s, 15s): live tick momentum & instantaneous price delta dominate
-        totalScore = (tickScore * 1.6) + (candleScore * 1.1);
-      } else {
-        // Standard timeframes (30s, 60s, 2m): balanced confluence of ticks and macro candle structure
-        totalScore = (tickScore * 1.0) + (candleScore * 1.4);
+      const supportingBullish: string[] = [];
+      const supportingBearish: string[] = [];
+
+      if (calculatedEma5 > calculatedEma13) {
+        supportingBullish.push('EMA 5 > EMA 13');
+        if (calculatedEma13 > calculatedEma30) supportingBullish.push('Triple Bullish EMA (5 > 13 > 30)');
+      } else if (calculatedEma5 < calculatedEma13) {
+        supportingBearish.push('EMA 5 < EMA 13');
+        if (calculatedEma13 < calculatedEma30) supportingBearish.push('Triple Bearish EMA (5 < 13 < 30)');
       }
 
-      // 4. SYMMETRICAL DECISION (ZERO DEFAULT BIAS)
-      let isCall: boolean;
-      if (totalScore > 0) {
-        isCall = true; // Decisive CALL / UP
-      } else if (totalScore < 0) {
-        isCall = false; // Decisive PUT / DOWN
-      } else {
-        // Symmetrical physical tie-breaker based on real-time price physics
-        if (tickDelta > 0.000005 || tickSlope > 0) {
-          isCall = true;
-        } else if (tickDelta < -0.000005 || tickSlope < 0) {
-          isCall = false;
-        } else if (candleDelta > 0.000005) {
-          isCall = true;
-        } else if (candleDelta < -0.000005) {
-          isCall = false;
-        } else if (upTicks !== downTicks) {
-          isCall = upTicks > downTicks;
-        } else {
-          isCall = (Math.floor(Date.now() / 1000) % 2 === 0);
-        }
+      if (calculatedRsi >= 53) supportingBullish.push(`RSI Bullish Momentum (${calculatedRsi})`);
+      else if (calculatedRsi <= 47) supportingBearish.push(`RSI Bearish Momentum (${calculatedRsi})`);
+
+      if (tickDelta > 0.000005) supportingBullish.push('Positive Micro-Tick Delta');
+      else if (tickDelta < -0.000005) supportingBearish.push('Negative Micro-Tick Delta');
+
+      if (tickSlope > 0.000002) supportingBullish.push('Positive Tick Velocity');
+      else if (tickSlope < -0.000002) supportingBearish.push('Negative Tick Velocity');
+
+      if (upTicks > downTicks + 1) supportingBullish.push('Dominant Up-Tick Inflow');
+      else if (downTicks > upTicks + 1) supportingBearish.push('Dominant Down-Tick Inflow');
+
+      if (candleScore > 0) supportingBullish.push('Candle Anatomy Bullish Pressure');
+      else if (candleScore < 0) supportingBearish.push('Candle Anatomy Bearish Pressure');
+
+      const bullCount = supportingBullish.length;
+      const bearCount = supportingBearish.length;
+      const totalEvaluated = bullCount + bearCount;
+
+      if (totalEvaluated < 3 || Math.max(bullCount, bearCount) / (totalEvaluated || 1) < 0.62) {
+        // STRICT ZERO DEFAULT TRADE POLICY: Insufficient confluence -> NO TRADE
+        setFlySignal(null);
+        setBadgeText('NO TRADE');
+        setTimeout(() => {
+          setBadgeText(tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`);
+        }, 4000);
+        return;
       }
+
+      let isCall = bullCount > bearCount;
 
       // 🛡️ SYMMETRICAL ANTI-LOSS GUARDIAN (Only overrides on genuine opposing surge):
-      if (isCall && (tickDelta < -0.00012 || candleDelta < -0.00015)) {
-        isCall = false; // Strictly protect capital and take the downward dump (PUT)!
+      if (isCall && (tickDelta < -0.00015 || candleDelta < -0.00018)) {
+        isCall = false;
         srPattern = 'Bearish Downward Candle Plunge (PUT)';
         srReason = 'ক্যান্ডেলটি তীব্র সেলিং প্রেসারে নিচের দিকে নেমেছে—ক্ষতি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
-      } else if (!isCall && (tickDelta > 0.00012 || candleDelta > 0.00015)) {
-        isCall = true; // Strictly protect capital and take the upward surge (CALL)!
+      } else if (!isCall && (tickDelta > 0.00015 || candleDelta > 0.00018)) {
+        isCall = true;
         srPattern = 'Bullish Upward Candle Push (CALL)';
         srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করেছে—ক্ষতি এড়াতে কল (UP) ট্রেড কার্যকর করা হয়েছে।';
       }
 
-      const confScore = Math.min(99.4, 96.8 + Math.abs(totalScore) * 0.22).toFixed(1);
-      const selectedPair = currentMarket || 'USD/BDT (OTC)';
+      const confluenceRatio = Math.max(bullCount, bearCount) / (totalEvaluated || 1);
+      const confScore = Math.min(94, Math.max(68, Math.round(confluenceRatio * 100))).toString();
+      const selectedPair = currentMarket || screenAsset || 'ACTIVE_CHART';
       const durationStr = dur >= 60 ? `${dur / 60}M` : `${dur}S`;
 
       if (isCall) {
         patternName = srPattern || (tickSlope > 0 ? 'Bullish Tick Velocity & Momentum Impulse' : 'Bullish Support Bounce');
-        logicText = `${selectedPair} (${durationStr}): ${srReason || 'লাইভ রানিং ক্যান্ডেল ও টিক ডেটায় বায়ারদের ঊর্ধ্বমুখী চাপ নিশ্চিত।'} ${confScore}% একুরিসিতে কল (UP ↑) ট্রেড কার্যকর!`;
+        logicText = `${selectedPair} (${durationStr}): ${srReason || 'লাইভ রানিং ক্যান্ডেল ও টিক ডেটায় বায়ারদের ঊর্ধ্বমুখী চাপ নিশ্চিত।'} ${confScore}% কনফ্লুয়েন্সে কল (UP ↑) ট্রেড কার্যকর!`;
         trendLabel = 'BULLISH MOMENTUM ↗';
       } else {
         patternName = srPattern || (tickSlope < 0 ? 'Bearish Tick Velocity & Breakdown Impulse' : 'Bearish Resistance Rejection');
-        logicText = `${selectedPair} (${durationStr}): ${srReason || 'লাইভ রানিং ক্যান্ডেল ও টিক ডেটায় সেলারদের নিম্নমুখী চাপ নিশ্চিত।'} ${confScore}% একুরিসিতে পুট (DOWN ↓) ট্রেড কার্যকর!`;
+        logicText = `${selectedPair} (${durationStr}): ${srReason || 'লাইভ রানিং ক্যান্ডেল ও টিক ডেটায় সেলারদের নিম্নমুখী চাপ নিশ্চিত।'} ${confScore}% কনফ্লুয়েন্সে পুট (DOWN ↓) ট্রেড কার্যকর!`;
         trendLabel = 'BEARISH MOMENTUM ↘';
       }
 
@@ -834,8 +850,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         showToast('Verified! Single device lock active.', false);
         setTimeout(() => {
           setShowKeyModal(false);
-          if (!currentMarket) setShowMarketModal(true);
-          else if (!tradeDuration) setShowTimeModal(true);
+          if (!tradeDuration) setShowTimeModal(true);
         }, 1100);
       } else {
         const rawReason = data.reason || '';
@@ -1084,16 +1099,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             </div>
 
             <div className="space-y-2">
-              <button
-                onClick={() => {
-                  setShowHub(false);
-                  setShowMarketModal(true);
-                }}
-                className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 hover:border-cyan-400 flex items-center justify-between text-xs transition"
-              >
-                <span className="text-gray-300">📊 Select Market</span>
-                <b className="text-emerald-400 font-bold">{currentMarket || 'Choose Market'}</b>
-              </button>
 
               <button
                 onClick={() => {
@@ -1150,80 +1155,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               <div className="text-center p-2 rounded-xl border border-dashed border-cyan-400/50 bg-cyan-500/10 text-cyan-300 text-[11px] font-bold">
                 ⚡ Ishak AI VIP Trading System
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. FORCED MARKET SELECTION MODAL */}
-      {showMarketModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-sm max-h-[85vh] bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-4 shadow-2xl flex flex-col relative">
-            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-cyan-500/30">
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">📊</span>
-                <span className="text-xs font-black text-cyan-300">SELECT QUOTEX MARKET</span>
-              </div>
-              <button
-                onClick={() => setShowMarketModal(false)}
-                className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Search Box */}
-            <div className="relative mb-2.5">
-              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search market (e.g. EUR, GOLD, OTC)..."
-                value={marketSearch}
-                onChange={(e) => setMarketSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-gray-500 outline-none focus:border-cyan-400"
-              />
-            </div>
-
-            {/* Market List */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-64">
-              {MARKETS_DATABASE.map((cat, idx) => {
-                const filtered = cat.items.filter((item) =>
-                  item.toLowerCase().includes(marketSearch.toLowerCase())
-                );
-                if (filtered.length === 0) return null;
-
-                return (
-                  <div key={idx}>
-                    <div className="text-[10px] font-black text-emerald-400 tracking-wider mb-1.5">
-                      {cat.category}
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {filtered.map((item, i) => {
-                        const isSelected = currentMarket === item;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              setCurrentMarket(item);
-                              setShowMarketModal(false);
-                              if (!tradeDuration) {
-                                setShowTimeModal(true);
-                              }
-                            }}
-                            className={`p-1.5 rounded-lg text-[10px] font-bold text-left truncate transition ${
-                              isSelected
-                                ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-300'
-                                : 'bg-slate-900/80 border border-slate-800 text-gray-300 hover:border-cyan-500/40 hover:text-white'
-                            }`}
-                          >
-                            {item}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>
