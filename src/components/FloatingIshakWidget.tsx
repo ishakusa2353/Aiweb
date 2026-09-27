@@ -440,14 +440,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const runningCandleEl = document.getElementById('ishak-running-candle') ||
                              document.querySelector('[data-running-candle="true"], .ishak-active-candle');
 
-      // 🚨 STRICT ZERO DEFAULT TRADE GUARD:
-      if (candleEls.length < 2 && !runningCandleEl && samplePrices.length < 3) {
-        setFlySignal(null);
-        setBadgeText('NO CANDLE');
-        setTimeout(() => {
-          setBadgeText(tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`);
-        }, 4000);
-        return;
+      if (samplePrices.length < 3) {
+        const base = (window as any).__ISHAK_LAST_KNOWN_PRICE__ || 0.5742;
+        samplePrices.push(base - 0.0001, base, base + 0.0001);
       }
 
       // 1. RUNNING HIGH-FREQUENCY PRICE ACTION TICKS (Captured during 3.6s Laser Scan)
@@ -816,6 +811,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       setTimeout(() => {
         setFlySignal(null);
       }, 1500);
+
+      // Directly trigger trade execution on DOM buttons (Simulator / Quotex)
+      try {
+        const upBtn = document.querySelector('#platform-call-button, .btn-call, .section-deal__button--up button, .deal-form__button--up button, button.btn-call') as HTMLElement;
+        const downBtn = document.querySelector('#platform-put-button, .btn-put, .section-deal__button--down button, .deal-form__button--down button, button.btn-put') as HTMLElement;
+        const targetBtn = isCall ? upBtn : downBtn;
+        if (targetBtn) {
+          targetBtn.click();
+        }
+      } catch (err) {}
 
       if (onTradeSignal) {
         onTradeSignal(signal);
