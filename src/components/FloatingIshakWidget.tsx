@@ -4,6 +4,7 @@ import { MARKETS_DATABASE, TIME_OPTIONS } from '../data/markets';
 import { SignalData } from '../types';
 import { Search, ShieldAlert, Sparkles, KeyRound } from 'lucide-react';
 import { supabaseService } from '../lib/supabaseService';
+import { evaluateMarketData, Candle } from '../utils/marketAnalysisEngine';
 
 interface FloatingIshakWidgetProps {
   soundEnabled: boolean;
@@ -431,327 +432,53 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       // Generate unique signal ID for idempotency & ONE SIGNAL = ONE TRADE rule
       const signalId = 'SIG_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7).toUpperCase();
 
-      // High-Accuracy Quantitative Multi-Factor Confluence Analysis (Triple EMA + RSI + Price Action)
+      // High-Accuracy Quantitative Multi-Factor Confluence Analysis (OHLC + EMA/SMA + RSI + MACD + ATR + Momentum + S/R + Price Action)
       const candleEls = Array.from(document.querySelectorAll('[data-candle="true"]'));
       const runningCandleEl = document.getElementById('ishak-running-candle') ||
                              document.querySelector('[data-running-candle="true"], .ishak-active-candle');
 
-      // 1. RUNNING HIGH-FREQUENCY PRICE ACTION TICKS (Captured during 3.6s Laser Scan)
-      let tickScore = 0;
-      let tickSlope = 0;
-      let tickDelta = 0;
-      let upTicks = 0;
-      let downTicks = 0;
-      let microRsi = 50;
-      let acceleration = 0;
-
-      if (samplePrices.length >= 3) {
-        const n = samplePrices.length;
-        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-        for (let s = 0; s < n; s++) {
-          sumX += s;
-          sumY += samplePrices[s];
-          sumXY += s * samplePrices[s];
-          sumX2 += s * s;
-          if (s > 0) {
-            if (samplePrices[s] > samplePrices[s - 1]) upTicks++;
-            else if (samplePrices[s] < samplePrices[s - 1]) downTicks++;
-          }
-        }
-        const denom = (n * sumX2 - sumX * sumX);
-        if (denom !== 0) {
-          tickSlope = (n * sumXY - sumX * sumY) / denom;
-        }
-        tickDelta = samplePrices[n - 1] - samplePrices[0];
-
-        // Up vs Down tick pressure
-        if (upTicks > downTicks + 1) tickScore += 5;
-        else if (downTicks > upTicks + 1) tickScore -= 5;
-
-        // Net price displacement during scan
-        if (tickDelta > 0.00001) tickScore += 6;
-        else if (tickDelta < -0.00001) tickScore -= 6;
-
-        // Linear Regression Slope
-        if (tickSlope > 0.000002) tickScore += 6;
-        else if (tickSlope < -0.000002) tickScore -= 6;
-
-        // Acceleration (1st half slope vs 2nd half slope)
-        if (n >= 6) {
-          const half = Math.floor(n / 2);
-          const s1 = (samplePrices[half - 1] - samplePrices[0]) / (half || 1);
-          const s2 = (samplePrices[n - 1] - samplePrices[half]) / (half || 1);
-          acceleration = s2 - s1;
-          if (acceleration > 0.000002) tickScore += 4;
-          else if (acceleration < -0.000002) tickScore -= 4;
-        }
-
-        // Micro-RSI over ticks
-        let g = 0, l = 0;
-        for (let m = 1; m < n; m++) {
-          const diff = samplePrices[m] - samplePrices[m - 1];
-          if (diff > 0) g += diff;
-          else l += Math.abs(diff);
-        }
-        const rs = l === 0 ? 100 : g / l;
-        microRsi = Math.round(l === 0 ? 100 : 100 - (100 / (1 + rs)));
-        if (microRsi >= 78) {
-          if (downTicks > upTicks) tickScore -= 5;
-          else tickScore += 4; // High momentum surge
-        } else if (microRsi <= 22) {
-          if (upTicks > downTicks) tickScore += 5;
-          else tickScore -= 4; // High dump surge
-        } else if (microRsi > 52) {
-          tickScore += 5; // Positive tick flow
-        } else if (microRsi < 48) {
-          tickScore -= 5; // Negative tick flow
-        }
-      }
-
-      // 2. CANDLESTICK DATA & TECHNICAL INDICATORS (Historical + Running Candle)
-      let candleScore = 0;
-      let calculatedRsi = 50;
-      let calculatedEma5 = 1.0848;
-      let calculatedEma13 = 1.0840;
-      let calculatedEma30 = 1.0832;
-      let patternName = '';
-      let logicText = '';
-      let trendLabel = '';
-      let srPattern = '';
-      let srReason = '';
-      let resistance = 0;
-      let support = 0;
-      let currentPrice = samplePrices[samplePrices.length - 1] || 1.0845;
-      let candleDelta = 0;
-
+      let parsedCandles: Candle[] = [];
       if (candleEls.length >= 3) {
-        const candleData = candleEls.map(el => {
+        parsedCandles = candleEls.map((el, idx) => {
           const open = parseFloat(el.getAttribute('data-open') || '0');
           const close = parseFloat(el.getAttribute('data-close') || '0');
           const high = parseFloat(el.getAttribute('data-high') || '0');
           const low = parseFloat(el.getAttribute('data-low') || '0');
-          const dir = el.getAttribute('data-direction');
-          return { open, close, high, low, dir };
+          return { time: Date.now() - (candleEls.length - idx) * (tradeDuration || 5) * 1000, open, close, high, low };
         }).filter(c => c.close > 0);
+      }
 
-        if (candleData.length >= 3) {
-          const closes = candleData.map(c => c.close);
-          const lastCandle = candleData[candleData.length - 1];
-          currentPrice = lastCandle.close;
-          candleDelta = lastCandle.close - lastCandle.open;
-          const isRunningGreen = candleDelta > 0;
-          const candleBody = Math.abs(candleDelta);
-          const upperWick = lastCandle.high - Math.max(lastCandle.open, lastCandle.close);
-          const lowerWick = Math.min(lastCandle.open, lastCandle.close) - lastCandle.low;
-
-          // EMA Calculation
-          const calcEMA = (data: number[], period: number) => {
-            if (data.length < period) return data[data.length - 1] || 1.084;
-            const k = 2 / (period + 1);
-            let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
-            for (let i = period; i < data.length; i++) {
-              ema = data[i] * k + ema * (1 - k);
-            }
-            return ema;
-          };
-
-          const ema5 = calcEMA(closes, 5);
-          const ema13 = calcEMA(closes, 13);
-          const ema30 = calcEMA(closes, Math.min(30, closes.length));
-          calculatedEma5 = parseFloat(ema5.toFixed(5));
-          calculatedEma13 = parseFloat(ema13.toFixed(5));
-          calculatedEma30 = parseFloat(ema30.toFixed(5));
-
-          // RSI (14 periods)
-          let gains = 0, losses = 0;
-          const rsiPeriod = Math.min(14, closes.length - 1);
-          for (let i = closes.length - rsiPeriod; i < closes.length; i++) {
-            const diff = closes[i] - closes[i - 1];
-            if (diff > 0) gains += diff;
-            else losses += Math.abs(diff);
-          }
-          const avgGain = gains / (rsiPeriod || 1);
-          const avgLoss = losses / (rsiPeriod || 1);
-          const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-          calculatedRsi = Math.round(avgLoss === 0 ? 100 : 100 - (100 / (1 + rs)));
-
-          // Dynamic S/R Zones
-          const lookback = Math.min(25, candleData.length);
-          const recentCandles = candleData.slice(-lookback);
-          const highs = recentCandles.map(c => c.high);
-          const lows = recentCandles.map(c => c.low);
-          resistance = Math.max(...highs);
-          support = Math.min(...lows);
-          const priceRange = Math.max(0.0001, resistance - support);
-          const distToResistance = (resistance - currentPrice) / priceRange;
-          const distToSupport = (currentPrice - support) / priceRange;
-
-          // Running Candle Body Pressure
-          if (candleDelta > 0.00001) {
-            candleScore += 7;
-          } else if (candleDelta < -0.00001) {
-            candleScore -= 7;
-          }
-
-          // Candlestick Wick Anatomy (Pin Bar & Wick Rejection Physics)
-          if (upperWick > lowerWick * 1.4 && upperWick >= candleBody * 0.5) {
-            candleScore -= 7;
-            srPattern = 'Bearish Shooting Star (Upper Wick Rejection)';
-            srReason = 'ক্যান্ডেলে তীব্র আপার উইক রিজেকশন—সেলাররা আগ্রাসী বিক্রয় চাপে মার্কেট নিচে নামাচ্ছে।';
-          } else if (lowerWick > upperWick * 1.4 && lowerWick >= candleBody * 0.5) {
-            candleScore += 7;
-            srPattern = 'Bullish Hammer (Lower Wick Bounce)';
-            srReason = 'ক্যান্ডেলে শক্তিশালী লোয়ার উইক রিজেকশন—বায়াররা মার্কেট নিচ থেকে বাউন্স করিয়ে উপরে তুলছে।';
-          }
-
-          // Dynamic S/R Zones: Breakout vs Rejection (Symmetrical)
-          if (distToResistance <= 0.22) {
-            if (!isRunningGreen && upperWick >= candleBody * 0.5 && upperWick > lowerWick * 1.4) {
-              candleScore -= 8;
-              srPattern = 'Resistance Level Rejection (Bearish Reversal)';
-              srReason = `প্রাইজ রেজিস্টেন্স লেভেল (${resistance.toFixed(4)}) স্পর্শ করায় সেলারদের উইক রিজেকশনে রিভার্সাল হয়েছে।`;
-            } else if (isRunningGreen) {
-              candleScore += 7;
-              srPattern = 'Resistance Level Breakout (High Volume)';
-              srReason = `রেজিস্টেন্স লেভেল (${resistance.toFixed(4)}) বায়ারদের অতিরিক্ত ভলিউমে ব্রেকআউট করেছে।`;
-            }
-          } else if (distToSupport <= 0.22) {
-            if (isRunningGreen && lowerWick >= candleBody * 0.5 && lowerWick > upperWick * 1.4) {
-              candleScore += 8;
-              srPattern = 'Support Level Bounce (Bullish Reversal)';
-              srReason = `প্রাইজ সাপোর্ট লেভেল (${support.toFixed(4)}) স্পর্শ করায় বায়ারদের ক্রয় চাপে বাউন্স তৈরি হয়েছে।`;
-            } else if (!isRunningGreen) {
-              candleScore -= 7;
-              srPattern = 'Support Level Breakdown (High Volume)';
-              srReason = `সাপোর্ট লেভেল (${support.toFixed(4)}) ভেঙে সেলারদের অতিরিক্ত ভলিউমে মার্কেট ডাউন হয়েছে।`;
-            }
-          }
-
-          // Candlestick Pattern Momentum
-          if (candleData.length >= 2) {
-            const prevCandle = candleData[candleData.length - 2];
-            const isPrevGreen = prevCandle.close >= prevCandle.open;
-            if (isRunningGreen && !isPrevGreen && lastCandle.close > prevCandle.open) {
-              candleScore += 7;
-              if (!srPattern) srPattern = 'Bullish Engulfing Reversal';
-            } else if (!isRunningGreen && isPrevGreen && lastCandle.close < prevCandle.open) {
-              candleScore -= 7;
-              if (!srPattern) srPattern = 'Bearish Engulfing Reversal';
-            } else if (isRunningGreen && isPrevGreen) {
-              candleScore += 5;
-            } else if (!isRunningGreen && !isPrevGreen) {
-              candleScore -= 5;
-            }
-          }
-
-          // Dynamic EMA (Core Binary Trend Driver)
-          if (ema5 > ema13) {
-            candleScore += 7;
-            if (ema5 > ema13 && ema13 > ema30) candleScore += 4;
-          } else if (ema5 < ema13) {
-            candleScore -= 7;
-            if (ema5 < ema13 && ema13 < ema30) candleScore -= 4;
-          }
-
-          // RSI 14 Momentum & Exhaustion
-          if (calculatedRsi >= 76) {
-            if (!isRunningGreen && upperWick > lowerWick) {
-              candleScore -= 6;
-              if (!srReason) srReason = `RSI (${calculatedRsi}) এক্সট্রিম ওভারবটে বিয়ারিশ টার্ন—সেলাররা প্রাইজ নিচে নামাচ্ছে।`;
-            } else {
-              candleScore += 4; // Bullish momentum continuation
-            }
-          } else if (calculatedRsi <= 24) {
-            if (isRunningGreen && lowerWick > upperWick) {
-              candleScore += 6;
-              if (!srReason) srReason = `RSI (${calculatedRsi}) এক্সট্রিম ওভারসোল্ডে বুলিশ বাউন্স—বায়াররা প্রাইজ উপরে তুলছে।`;
-            } else {
-              candleScore -= 4; // Bearish dump continuation
-            }
-          } else if (calculatedRsi >= 52) {
-            candleScore += 5; // Healthy bullish trend zone
-          } else if (calculatedRsi <= 48) {
-            candleScore -= 5; // Healthy bearish trend zone
-          }
-        }
-      } else if (runningCandleEl) {
-        const dirAttr = runningCandleEl.getAttribute('data-direction');
-        const openVal = parseFloat(runningCandleEl.getAttribute('data-open') || '0');
-        const closeVal = parseFloat(runningCandleEl.getAttribute('data-close') || '0');
-        const highVal = parseFloat(runningCandleEl.getAttribute('data-high') || '0');
-        const lowVal = parseFloat(runningCandleEl.getAttribute('data-low') || '0');
-        const upW = highVal - Math.max(openVal, closeVal);
-        const loW = Math.min(openVal, closeVal) - lowVal;
-
-        if (upW > loW * 1.4 && upW >= Math.abs(closeVal - openVal) * 0.5) {
-          candleScore -= 7;
-        } else if (loW > upW * 1.4 && loW >= Math.abs(closeVal - openVal) * 0.5) {
-          candleScore += 7;
-        } else if (closeVal < openVal || dirAttr === 'DOWN') {
-          candleScore -= 7;
-        } else if (closeVal > openVal || dirAttr === 'UP') {
-          candleScore += 7;
+      if (runningCandleEl) {
+        const rOpen = parseFloat(runningCandleEl.getAttribute('data-open') || '0');
+        const rClose = parseFloat(runningCandleEl.getAttribute('data-close') || '0');
+        const rHigh = parseFloat(runningCandleEl.getAttribute('data-high') || '0');
+        const rLow = parseFloat(runningCandleEl.getAttribute('data-low') || '0');
+        if (rClose > 0) {
+          parsedCandles.push({
+            time: Date.now(),
+            open: rOpen || rClose,
+            high: Math.max(rHigh || rClose, rClose, rOpen || rClose),
+            low: Math.min(rLow || rClose, rClose, rOpen || rClose),
+            close: rClose
+          });
         }
       }
 
-      // 3. TIMEFRAME-ADAPTIVE SYNTHESIS (Strictly Responsive to Selected Duration)
       const dur = tradeDuration || 5;
-      let totalScore = 0;
-      if (dur <= 15) {
-        // Fast timeframes (5s, 10s, 15s): live tick momentum & instantaneous price delta dominate
-        totalScore = (tickScore * 1.6) + (candleScore * 1.1);
-      } else {
-        // Standard timeframes (30s, 60s, 2m): balanced confluence of ticks and macro candle structure
-        totalScore = (tickScore * 1.0) + (candleScore * 1.4);
-      }
-
-      // 4. SYMMETRICAL DECISION (ZERO DEFAULT BIAS)
-      let isCall: boolean;
-      if (totalScore > 0) {
-        isCall = true; // Decisive CALL / UP
-      } else if (totalScore < 0) {
-        isCall = false; // Decisive PUT / DOWN
-      } else {
-        // Symmetrical physical tie-breaker based on real-time price physics
-        if (tickDelta > 0.000005 || tickSlope > 0) {
-          isCall = true;
-        } else if (tickDelta < -0.000005 || tickSlope < 0) {
-          isCall = false;
-        } else if (candleDelta > 0.000005) {
-          isCall = true;
-        } else if (candleDelta < -0.000005) {
-          isCall = false;
-        } else if (upTicks !== downTicks) {
-          isCall = upTicks > downTicks;
-        } else {
-          isCall = (Math.floor(Date.now() / 1000) % 2 === 0);
-        }
-      }
-
-      // 🛡️ SYMMETRICAL ANTI-LOSS GUARDIAN (Only overrides on genuine opposing surge):
-      if (isCall && (tickDelta < -0.00012 || candleDelta < -0.00015)) {
-        isCall = false; // Strictly protect capital and take the downward dump (PUT)!
-        srPattern = 'Bearish Downward Candle Plunge (PUT)';
-        srReason = 'ক্যান্ডেলটি তীব্র সেলিং প্রেসারে নিচের দিকে নেমেছে—ক্ষতি এড়াতে পুট (DOWN) ট্রেড কার্যকর করা হয়েছে।';
-      } else if (!isCall && (tickDelta > 0.00012 || candleDelta > 0.00015)) {
-        isCall = true; // Strictly protect capital and take the upward surge (CALL)!
-        srPattern = 'Bullish Upward Candle Push (CALL)';
-        srReason = 'ক্যান্ডেলটি শক্তিশালী বায়ার চাপে ওপরের দিকে পুশ করেছে—ক্ষতি এড়াতে কল (UP) ট্রেড কার্যকর করা হয়েছে।';
-      }
-
-      const confScore = Math.min(99.4, 96.8 + Math.abs(totalScore) * 0.22).toFixed(1);
-      const selectedPair = currentMarket || 'USD/BDT (OTC)';
       const durationStr = dur >= 60 ? `${dur / 60}M` : `${dur}S`;
+      const selectedPair = currentMarket || 'USD/BDT (OTC)';
 
-      if (isCall) {
-        patternName = srPattern || (tickSlope > 0 ? 'Bullish Tick Velocity & Momentum Impulse' : 'Bullish Support Bounce');
-        logicText = `${selectedPair} (${durationStr}): ${srReason || 'লাইভ রানিং ক্যান্ডেল ও টিক ডেটায় বায়ারদের ঊর্ধ্বমুখী চাপ নিশ্চিত।'} ${confScore}% একুরিসিতে কল (UP ↑) ট্রেড কার্যকর!`;
-        trendLabel = 'BULLISH MOMENTUM ↗';
-      } else {
-        patternName = srPattern || (tickSlope < 0 ? 'Bearish Tick Velocity & Breakdown Impulse' : 'Bearish Resistance Rejection');
-        logicText = `${selectedPair} (${durationStr}): ${srReason || 'লাইভ রানিং ক্যান্ডেল ও টিক ডেটায় সেলারদের নিম্নমুখী চাপ নিশ্চিত।'} ${confScore}% একুরিসিতে পুট (DOWN ↓) ট্রেড কার্যকর!`;
-        trendLabel = 'BEARISH MOMENTUM ↘';
-      }
+      // Background Quantitative Multi-Factor Confluence & Signal Quality Filter
+      const analysis = evaluateMarketData(parsedCandles, samplePrices, dur);
+      const isCall = analysis.isCall ?? (samplePrices.length >= 2 ? samplePrices[samplePrices.length - 1] >= samplePrices[0] : true);
+      const confScore = analysis.accuracyEstimate.replace('%', '');
+      const calculatedRsi = analysis.indicators.rsi14;
+      const calculatedEma5 = analysis.indicators.ema5;
+      const calculatedEma13 = analysis.indicators.ema13;
+      const calculatedEma30 = analysis.indicators.ema50;
+      const patternName = analysis.pattern;
+      const trendLabel = analysis.trendLabel;
+      const logicText = `${selectedPair} (${durationStr}): ${analysis.reason}`;
 
       if (soundEnabled) {
         playResultSound(isCall);

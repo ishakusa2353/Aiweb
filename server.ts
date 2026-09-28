@@ -5,6 +5,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { licenseDb, LicenseRecord, parseDurationToMs } from "./server/db.ts";
 import { generateBookmarkletCode, generateRawScriptCode, generateOfflineSignedKey } from "./server/bookmarkletTemplate.ts";
+import { runCompleteMultiTimeframeSimulation } from "./src/utils/paperSimulationEngine.ts";
 
 // Safe directory resolver for both dev tsx and bundled CJS production
 const getRootDir = () => process.cwd();
@@ -501,6 +502,16 @@ async function startServer() {
       const keyParam = req.params.key.trim().toUpperCase();
       await licenseDb.deleteLicense(keyParam);
       res.json({ success: true, deletedKey: keyParam });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // 2.5. BACKGROUND PAPER / HISTORICAL SIMULATION ACCURACY REPORT ENDPOINT
+  app.get("/api/simulation-report", (req, res) => {
+    try {
+      const report = runCompleteMultiTimeframeSimulation();
+      res.json({ success: true, report });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
