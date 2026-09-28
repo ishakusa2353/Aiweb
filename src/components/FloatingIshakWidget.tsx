@@ -448,7 +448,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         }).filter(c => c.close > 0);
       }
 
-      if (runningCandleEl) {
+      if (runningCandleEl && !candleEls.includes(runningCandleEl)) {
         const rOpen = parseFloat(runningCandleEl.getAttribute('data-open') || '0');
         const rClose = parseFloat(runningCandleEl.getAttribute('data-close') || '0');
         const rHigh = parseFloat(runningCandleEl.getAttribute('data-high') || '0');
@@ -470,7 +470,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       // Background Quantitative Multi-Factor Confluence & Signal Quality Filter
       const analysis = evaluateMarketData(parsedCandles, samplePrices, dur);
-      const isCall = analysis.isCall ?? (samplePrices.length >= 2 ? samplePrices[samplePrices.length - 1] >= samplePrices[0] : true);
+      let isCall: boolean;
+      if (analysis.isCall !== null) {
+        isCall = analysis.isCall;
+      } else if (samplePrices.length >= 2) {
+        const pDelta = samplePrices[samplePrices.length - 1] - samplePrices[0];
+        isCall = pDelta !== 0 ? pDelta > 0 : (parsedCandles.length > 0 ? parsedCandles[parsedCandles.length - 1].close > parsedCandles[parsedCandles.length - 1].open : false);
+      } else if (parsedCandles.length > 0) {
+        const lastC = parsedCandles[parsedCandles.length - 1];
+        isCall = lastC.close !== lastC.open ? lastC.close > lastC.open : (Math.floor(Date.now() / 1000) % 2 === 0);
+      } else {
+        // Zero data edge case: 50/50 alternating parity, zero hardcoded UP bias
+        isCall = Math.floor(Date.now() / 1000) % 2 === 0;
+      }
+
       const confScore = analysis.accuracyEstimate.replace('%', '');
       const calculatedRsi = analysis.indicators.rsi14;
       const calculatedEma5 = analysis.indicators.ema5;
