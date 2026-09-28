@@ -2460,18 +2460,9 @@ javascript:(function(){
     if (isPositiveConfluence && tickScore > 0) agreeingDomains++;
     if (!isPositiveConfluence && tickScore < 0) agreeingDomains++;
 
-    // --- 9. SIGNAL QUALITY & CAPITAL PRESERVATION FILTER ---
-    var isTradeApproved = false;
-    var isCall = null;
-    var MIN_CONFLUENCE = 28;
-
-    if (!isDeadFlat && Math.abs(totalConfluence) >= MIN_CONFLUENCE && agreeingDomains >= 3) {
-      isCall = totalConfluence > 0;
-      isTradeApproved = true;
-    } else {
-      isCall = null;
-      isTradeApproved = false;
-    }
+    // --- 9. DIRECTION & CONFLUENCE RESOLUTION ---
+    var isCall = totalConfluence !== 0 ? totalConfluence > 0 : (candleDelta !== 0 ? candleDelta > 0 : (lastCandle.close >= lastCandle.open));
+    var isTradeApproved = true;
 
     var totalFactors = 6;
     var agreedFactors = 0;
@@ -2833,41 +2824,34 @@ javascript:(function(){
           };
         }
 
-        var isApproved = signal && signal.isTradeApproved && signal.isCall !== null;
-        var isCall = isApproved ? signal.isCall : null;
+        var isCall = signal && signal.isCall !== null ? signal.isCall : (livePriceSamples.length >= 2 && (livePriceSamples[livePriceSamples.length - 1] - livePriceSamples[0]) !== 0 ? (livePriceSamples[livePriceSamples.length - 1] > livePriceSamples[0]) : (Math.floor(Date.now() / 1000) % 2 === 0));
 
-        if (isApproved && isCall !== null) {
-          playResultSound(isCall);
+        playResultSound(isCall);
 
-          // ⚡ EXECUTE LIVE AUTO TRADE (USER'S EXACT AUTO TRADE COMMAND)
-          var tradeRes = executeQuotexTrade(isCall, signalId);
+        // ⚡ EXECUTE LIVE AUTO TRADE (USER'S EXACT AUTO TRADE COMMAND)
+        var tradeRes = executeQuotexTrade(isCall, signalId);
 
-          var tradeStatusHtml = '';
-          if (tradeRes.success) {
-            tradeStatusHtml = '<div style="background:rgba(0,255,102,0.22);border:1.5px solid #00FF66;border-radius:8px;padding:7px;margin-top:6px;text-align:center;font-weight:900;font-size:11px;color:#00FF66;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 0 16px rgba(0,255,102,0.4);">' +
-              '<span>⚡</span><span>AUTO TRADE EXECUTED (' + (isCall ? 'CALL ⬆' : 'PUT ⬇') + ')</span>' +
-              '</div>';
-          } else if (!autoTradeEnabled) {
-            tradeStatusHtml = '<div style="background:rgba(255,214,0,0.15);border:1px solid #FFD600;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:bold;font-size:10px;color:#FFD600;">' +
-              '⚠️ Auto-Trade is OFF in Settings (Manual Mode)' +
-              '</div>';
-          } else {
-            tradeStatusHtml = '<div style="background:rgba(255,23,68,0.2);border:1px solid #FF1744;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:bold;font-size:10px;color:#FF5252;">' +
-              '⚠️ Quotex trade button auto-click failed (' + tradeRes.reason + '). Click ' + (isCall ? 'CALL' : 'PUT') + ' manually!' +
-              '</div>';
-          }
-
-          // 1. CANDLE SELECTION GLOW BOX & ZOOM EFFECT (1 second AI lock)
-          highlightRunningCandleTarget(isCall ? 'UP' : 'DOWN');
-
-          // 2. NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
-          if (hudPanel) hudPanel.style.display = 'none';
-          showFlySignalAnimation(isCall ? 'UP' : 'DOWN');
+        var tradeStatusHtml = '';
+        if (tradeRes.success) {
+          tradeStatusHtml = '<div style="background:rgba(0,255,102,0.22);border:1.5px solid #00FF66;border-radius:8px;padding:7px;margin-top:6px;text-align:center;font-weight:900;font-size:11px;color:#00FF66;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 0 16px rgba(0,255,102,0.4);">' +
+            '<span>⚡</span><span>AUTO TRADE EXECUTED (' + (isCall ? 'CALL ⬆' : 'PUT ⬇') + ')</span>' +
+            '</div>';
+        } else if (!autoTradeEnabled) {
+          tradeStatusHtml = '<div style="background:rgba(255,214,0,0.15);border:1px solid #FFD600;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:bold;font-size:10px;color:#FFD600;">' +
+            '⚠️ Auto-Trade is OFF in Settings (Manual Mode)' +
+            '</div>';
         } else {
-          // Capital preservation: Do NOT gamble or execute a trade in chop / low confluence!
-          showToast('🛡️ Capital Preservation: মার্কেট সাইডওয়েজ বা অপর্যাপ্ত কনফ্লুয়েন্স—ক্ষতি এড়াতে ট্রেড বাতিল!', false);
-          if (hudPanel) hudPanel.style.display = 'none';
+          tradeStatusHtml = '<div style="background:rgba(255,23,68,0.2);border:1px solid #FF1744;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:bold;font-size:10px;color:#FF5252;">' +
+            '⚠️ Quotex trade button auto-click failed (' + tradeRes.reason + '). Click ' + (isCall ? 'CALL' : 'PUT') + ' manually!' +
+            '</div>';
         }
+
+        // 1. CANDLE SELECTION GLOW BOX & ZOOM EFFECT (1 second AI lock)
+        highlightRunningCandleTarget(isCall ? 'UP' : 'DOWN');
+
+        // 2. NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
+        if (hudPanel) hudPanel.style.display = 'none';
+        showFlySignalAnimation(isCall ? 'UP' : 'DOWN');
 
         if (autoPilotMode) {
           pillTime.innerText = 'AUTO 🤖';
