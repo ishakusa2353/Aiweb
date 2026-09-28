@@ -470,21 +470,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       // Background Quantitative Multi-Factor Confluence & Signal Quality Filter
       const analysis = evaluateMarketData(parsedCandles, samplePrices, dur);
-      let isCall: boolean;
-      if (analysis.isCall !== null) {
-        isCall = analysis.isCall;
-      } else if (samplePrices.length >= 2) {
-        const pDelta = samplePrices[samplePrices.length - 1] - samplePrices[0];
-        isCall = pDelta !== 0 ? pDelta > 0 : (parsedCandles.length > 0 ? parsedCandles[parsedCandles.length - 1].close > parsedCandles[parsedCandles.length - 1].open : false);
-      } else if (parsedCandles.length > 0) {
-        const lastC = parsedCandles[parsedCandles.length - 1];
-        isCall = lastC.close !== lastC.open ? lastC.close > lastC.open : (Math.floor(Date.now() / 1000) % 2 === 0);
-      } else {
-        // Zero data edge case: 50/50 alternating parity, zero hardcoded UP bias
-        isCall = Math.floor(Date.now() / 1000) % 2 === 0;
-      }
+      const isApproved = analysis.isTradeApproved && analysis.isCall !== null;
+      const isCall: boolean | null = isApproved ? analysis.isCall : null;
 
-      const confScore = analysis.accuracyEstimate.replace('%', '');
+      const confScore = isApproved ? analysis.accuracyEstimate.replace('%', '') : '0';
       const calculatedRsi = analysis.indicators.rsi14;
       const calculatedEma5 = analysis.indicators.ema5;
       const calculatedEma13 = analysis.indicators.ema13;
@@ -493,15 +482,25 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const trendLabel = analysis.trendLabel;
       const logicText = `${selectedPair} (${durationStr}): ${analysis.reason}`;
 
-      if (soundEnabled) {
-        playResultSound(isCall);
+      if (isApproved && isCall !== null) {
+        if (soundEnabled) {
+          playResultSound(isCall);
+        }
+
+        // Clean, compact BUY/SELL signal (1.5s Duration, No circles/shockwaves)
+        setFlySignal(isCall ? 'UP' : 'DOWN');
+        setTimeout(() => {
+          setFlySignal(null);
+        }, 1500);
+      } else {
+        showToast('🛡️ Capital Preservation: মার্কেট সাইডওয়েজ বা চপ—ক্ষতি এড়াতে ট্রেড বাতিল!', false);
       }
 
       const signal: SignalData = {
         isCall,
-        isLowConfidence: false,
-        isRiskDetected: false,
-        confidence: `${confScore}% Confluence`,
+        isLowConfidence: !isApproved,
+        isRiskDetected: !isApproved,
+        confidence: isApproved ? `${confScore}% Confluence` : 'Capital Preservation',
         accuracy: confScore,
         rsi: calculatedRsi,
         pattern: patternName,
@@ -510,21 +509,15 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         ema5: calculatedEma5,
         ema13: calculatedEma13,
         ema30: calculatedEma30,
-        livePrice: isCall ? 1.0850 : 1.0830,
+        livePrice: isCall === true ? 1.0850 : isCall === false ? 1.0830 : 1.0840,
         signalId,
         finishTime: new Date().toLocaleTimeString(),
         durationLabel: tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`,
         payout: '+93%',
         investment: realInvestment,
         liveExecutionTime,
-        statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
+        statusLabel: isCall === true ? 'CALL / UP ⬆' : isCall === false ? 'PUT / DOWN ⬇' : 'NO TRADE / PRESERVE CAPITAL'
       };
-
-      // Clean, compact BUY/SELL signal (1.5s Duration, No circles/shockwaves)
-      setFlySignal(isCall ? 'UP' : 'DOWN');
-      setTimeout(() => {
-        setFlySignal(null);
-      }, 1500);
 
       if (onTradeSignal) {
         onTradeSignal(signal);
