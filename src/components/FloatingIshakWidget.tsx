@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playPhotostatScannerSound, playResultSound, playRiskWarningSound } from '../utils/audio';
-import { MARKETS_DATABASE, TIME_OPTIONS } from '../data/markets';
+import { TIME_OPTIONS } from '../data/markets';
 import { SignalData } from '../types';
 import { Search, ShieldAlert, Sparkles, KeyRound } from 'lucide-react';
 import { supabaseService } from '../lib/supabaseService';
@@ -26,20 +26,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const hudDragStartRef = useRef<{ startX: number; startY: number; initX: number; initY: number } | null>(null);
 
   // States
-  const [tradeDuration, setTradeDuration] = useState<number | null>(null); // Forced selection
-  const [currentMarket, setCurrentMarket] = useState<string | null>(null); // Forced selection
+  const [tradeDuration, setTradeDuration] = useState<number | null>(null);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanProgress, setScanProgress] = useState<number>(0);
   const [scanDots, setScanDots] = useState<string>('.......');
-  const [badgeText, setBadgeText] = useState<string>('SETUP');
+  const [badgeText, setBadgeText] = useState<string>('5S');
 
   // Modals
   const [showHub, setShowHub] = useState<boolean>(false);
   const [showTimeModal, setShowTimeModal] = useState<boolean>(false);
-  const [showMarketModal, setShowMarketModal] = useState<boolean>(false);
   const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState<boolean>(false);
-  const [marketSearch, setMarketSearch] = useState<string>('');
 
   // Key verification state
   const [licenseInput, setLicenseInput] = useState<string>('');
@@ -256,12 +253,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   useEffect(() => {
     if (isScanning) {
       setBadgeText('SCAN..');
-    } else if (!currentMarket || !tradeDuration) {
-      setBadgeText('SETUP');
+    } else if (!tradeDuration) {
+      setBadgeText('5S');
     } else {
       setBadgeText(tradeDuration >= 60 ? `${tradeDuration / 60}M` : `${tradeDuration}S`);
     }
-  }, [tradeDuration, currentMarket, isScanning]);
+  }, [tradeDuration, isScanning]);
 
   // Dragging Circular Button
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -325,99 +322,23 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  // 🛡️ Strict Asset Whitelist & Normalizer (Filters out "tradin", "trading", etc.)
-  const validateAndNormalizeAsset = (raw: string | null | undefined): string | null => {
-    if (!raw || typeof raw !== 'string') return null;
-    const cleaned = raw.replace(/\+\d+%.*$/, '').replace(/\d+%/g, '').replace(/[\r\n\t]/g, ' ').trim();
-    if (!cleaned || cleaned.length < 3 || cleaned.length > 40) return null;
-
-    const lower = cleaned.toLowerCase();
-    const bannedWords = [
-      'tradin', 'trading', 'trade', 'market', 'quotex', 'broker', 'chart', 'platform',
-      'login', 'account', 'wallet', 'history', 'profile', 'setup', 'deposit', 'withdraw',
-      'payout', 'info', 'ishak', 'dashboard', 'indicator', 'signals', 'overview', 'demo',
-      'tournament', 'support', 'help', 'settings', 'live', 'time', 'amount', 'invest'
-    ];
-    for (const b of bannedWords) {
-      if (lower === b || lower.startsWith(b + ' ') || lower.includes(' ' + b)) {
-        return null;
-      }
-    }
-
-    for (const cat of MARKETS_DATABASE) {
-      for (const item of cat.items) {
-        if (item.toLowerCase() === lower) return item;
-        const baseDb = item.replace(/\s*\(OTC\)/i, '').trim();
-        const baseRaw = cleaned.replace(/\s*\(OTC\)/i, '').replace(/_otc/i, '').replace(/_/g, '/').trim();
-        if (baseDb.toLowerCase() === baseRaw.toLowerCase()) {
-          const hasOtc = lower.includes('otc') || item.includes('(OTC)');
-          return hasOtc ? `${baseDb} (OTC)` : baseDb;
-        }
-      }
-    }
-
-    const pairMatch = cleaned.match(/([A-Za-z]{3})[\s/_]*([A-Za-z]{3})/);
-    if (pairMatch) {
-      const cur1 = pairMatch[1].toUpperCase();
-      const cur2 = pairMatch[2].toUpperCase();
-      const knownCurs = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','NZD','BDT','INR','PKR','BRL','EGP','IDR','MYR','NGN','PHP','RUB','THB','TRY','VND','ZAR','NOK','SEK','SGD'];
-      if (knownCurs.includes(cur1) && knownCurs.includes(cur2)) {
-        return `${cur1}/${cur2}${lower.includes('otc') ? ' (OTC)' : ''}`;
-      }
-    }
-
-    if (lower.includes('bitcoin') || lower.includes('btc')) return lower.includes('otc') ? 'Bitcoin (OTC)' : 'BTC/USD';
-    if (lower.includes('ethereum') || lower.includes('eth')) return lower.includes('otc') ? 'Ethereum (OTC)' : 'ETH/USD';
-    if (lower.includes('gold') || lower.includes('xau')) return lower.includes('otc') ? 'Gold (OTC)' : 'GOLD (XAU/USD)';
-    if (lower.includes('silver') || lower.includes('xag')) return lower.includes('otc') ? 'Silver (OTC)' : 'SILVER (XAG/USD)';
-    if (lower.includes('crude') || lower.includes('brent')) return 'Crude Oil (OTC)';
-    if (lower.includes('crypto idx')) return 'Crypto IDX';
-
-    return null;
-  };
-
-  // 🔒 TRIGGER SCAN / LOGO CLICK: FIRST DETECTS ON-SCREEN MARKET & TIMEFRAME
+  // 🔒 TRIGGER SCAN / LOGO CLICK: DIRECT SCANNING WITHOUT MARKET RESTRICTIONS
   const triggerScan = async () => {
     if (isScanning) return;
 
-    // ⚡ Auto-Detect active Market and selected Duration from the screen
-    const screenAssetEl = document.querySelector('.current-asset, [data-asset], #current-asset');
-    const screenRaw = screenAssetEl ? (screenAssetEl.getAttribute('data-asset') || screenAssetEl.textContent || '').trim() : '';
-    const screenAsset = validateAndNormalizeAsset(screenRaw);
-    if (screenAsset) {
-      setCurrentMarket(screenAsset);
-      try { localStorage.setItem('ISHAK_SELECTED_MARKET', screenAsset); } catch (e) {}
-    } else if (currentMarket) {
-      const valMkt = validateAndNormalizeAsset(currentMarket);
-      if (valMkt !== currentMarket) setCurrentMarket(valMkt);
-    } else {
-      try {
-        const savedMkt = localStorage.getItem('ISHAK_SELECTED_MARKET');
-        if (savedMkt) {
-          const valSaved = validateAndNormalizeAsset(savedMkt);
-          if (valSaved) setCurrentMarket(valSaved);
+    // Direct duration check: use state, saved preference, or default 5s
+    if (!tradeDuration) {
+      const screenDurationSaved = localStorage.getItem('ISHAK_TRADE_DURATION');
+      if (screenDurationSaved) {
+        const durNum = parseInt(screenDurationSaved, 10);
+        if (!isNaN(durNum) && durNum > 0) {
+          setTradeDuration(durNum);
+        } else {
+          setTradeDuration(5);
         }
-      } catch (e) {}
-    }
-
-    const screenDurationSaved = localStorage.getItem('ISHAK_TRADE_DURATION');
-    if (screenDurationSaved) {
-      const durNum = parseInt(screenDurationSaved, 10);
-      if (!isNaN(durNum) && durNum > 0) {
-        setTradeDuration(durNum);
+      } else {
+        setTradeDuration(5);
       }
-    }
-
-    // Check 1: If neither on-screen nor manual verified market is set, MANDATORILY open market modal
-    const effectiveMarket = screenAsset || validateAndNormalizeAsset(currentMarket);
-    if (!effectiveMarket) {
-      setShowMarketModal(true);
-      return;
-    }
-
-    // Check 2: If neither on-screen nor manual duration is set, adopt default 5s or open time modal
-    if (!tradeDuration && !screenDurationSaved) {
-      setTradeDuration(5);
     }
 
     // 🛠️ Check 0: Maintenance mode check
@@ -574,7 +495,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       const dur = tradeDuration || 5;
       const durationStr = dur >= 60 ? `${dur / 60}M` : `${dur}S`;
-      const selectedPair = currentMarket || 'USD/BDT (OTC)';
 
       // Background Quantitative Multi-Factor Confluence & Signal Quality Filter
       const analysis = evaluateMarketData(parsedCandles, samplePrices, dur);
@@ -599,7 +519,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const calculatedEma30 = analysis.indicators.ema50;
       const patternName = analysis.pattern;
       const trendLabel = analysis.trendLabel;
-      const logicText = `${selectedPair} (${durationStr}): ${analysis.reason}`;
+      const logicText = `টাইমফ্রেম ${durationStr}: ${analysis.reason}`;
 
       if (soundEnabled) {
         playResultSound(isCall);
@@ -685,8 +605,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         showToast('Verified! Single device lock active.', false);
         setTimeout(() => {
           setShowKeyModal(false);
-          if (!currentMarket) setShowMarketModal(true);
-          else if (!tradeDuration) setShowTimeModal(true);
+          if (!tradeDuration) setShowTimeModal(true);
         }, 1100);
       } else {
         const rawReason = data.reason || '';
@@ -938,24 +857,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               <button
                 onClick={() => {
                   setShowHub(false);
-                  setShowMarketModal(true);
-                }}
-                className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 hover:border-cyan-400 flex items-center justify-between text-xs transition"
-              >
-                <span className="text-gray-300">📊 Select Market</span>
-                <b className="text-emerald-400 font-bold">{currentMarket || 'Choose Market'}</b>
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowHub(false);
                   setShowTimeModal(true);
                 }}
                 className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 hover:border-cyan-400 flex items-center justify-between text-xs transition"
               >
                 <span className="text-gray-300">⏱️ Trade Duration</span>
                 <b className="text-amber-400 font-mono font-bold">
-                  {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`) : 'Choose Time'}
+                  {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`) : '5 Sec ⚡'}
                 </b>
               </button>
 
@@ -1006,79 +914,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 2. FORCED MARKET SELECTION MODAL */}
-      {showMarketModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-sm max-h-[85vh] bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-4 shadow-2xl flex flex-col relative">
-            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-cyan-500/30">
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">📊</span>
-                <span className="text-xs font-black text-cyan-300">SELECT QUOTEX MARKET</span>
-              </div>
-              <button
-                onClick={() => setShowMarketModal(false)}
-                className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold"
-              >
-                ✕
-              </button>
-            </div>
 
-            {/* Search Box */}
-            <div className="relative mb-2.5">
-              <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search market (e.g. EUR, GOLD, OTC)..."
-                value={marketSearch}
-                onChange={(e) => setMarketSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-gray-500 outline-none focus:border-cyan-400"
-              />
-            </div>
-
-            {/* Market List */}
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-64">
-              {MARKETS_DATABASE.map((cat, idx) => {
-                const filtered = cat.items.filter((item) =>
-                  item.toLowerCase().includes(marketSearch.toLowerCase())
-                );
-                if (filtered.length === 0) return null;
-
-                return (
-                  <div key={idx}>
-                    <div className="text-[10px] font-black text-emerald-400 tracking-wider mb-1.5">
-                      {cat.category}
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {filtered.map((item, i) => {
-                        const isSelected = currentMarket === item;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              setCurrentMarket(item);
-                              setShowMarketModal(false);
-                              if (!tradeDuration) {
-                                setShowTimeModal(true);
-                              }
-                            }}
-                            className={`p-1.5 rounded-lg text-[10px] font-bold text-left truncate transition ${
-                              isSelected
-                                ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-300'
-                                : 'bg-slate-900/80 border border-slate-800 text-gray-300 hover:border-cyan-500/40 hover:text-white'
-                            }`}
-                          >
-                            {item}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 3. TIME DURATION MODAL */}
       {showTimeModal && (
