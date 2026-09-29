@@ -97,10 +97,19 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     return '$100';
   };
 
-  // Quotex Live Trade Auto-Click Dispatcher
+  // Pocket Option / Quotex / Simulator Universal Auto-Click Dispatcher
   const executeQuotexTrade = (isCall: boolean): boolean => {
     try {
       const upSelectors = [
+        '#platform-call-button',
+        '#call-button',
+        '#deal-call',
+        '.btn-call',
+        'a.btn-call',
+        'a.btn-up',
+        '.btn-up',
+        '.btn-higher',
+        'a.btn-higher',
         '.section-deal__button--up button',
         'button.section-deal__button--up',
         '.section-deal__button--up',
@@ -111,13 +120,30 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         'button.button--call',
         'button.btn-call',
         'button.call',
+        'button.button-call',
         'button.button--success',
+        '[data-action="call"]',
+        '[data-action="up"]',
+        '[data-button="call"]',
+        '[data-button="up"]',
         '[data-test="call-button"]',
         '[data-test-id="call-button"]',
         '[data-test="button-call"]',
-        '[data-test-id="button-call"]'
+        '[data-test-id="button-call"]',
+        '[data-test="deal-up"]',
+        '[data-qa="btn-call"]',
+        '[data-qa="deal-call"]'
       ];
       const downSelectors = [
+        '#platform-put-button',
+        '#put-button',
+        '#deal-put',
+        '.btn-put',
+        'a.btn-put',
+        'a.btn-down',
+        '.btn-down',
+        '.btn-lower',
+        'a.btn-lower',
         '.section-deal__button--down button',
         'button.section-deal__button--down',
         '.section-deal__button--down',
@@ -128,36 +154,53 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         'button.button--put',
         'button.btn-put',
         'button.put',
+        'button.button-put',
         'button.button--danger',
+        '[data-action="put"]',
+        '[data-action="down"]',
+        '[data-button="put"]',
+        '[data-button="down"]',
         '[data-test="put-button"]',
         '[data-test-id="put-button"]',
         '[data-test="button-put"]',
-        '[data-test-id="button-put"]'
+        '[data-test-id="button-put"]',
+        '[data-test="deal-down"]',
+        '[data-qa="btn-put"]',
+        '[data-qa="deal-put"]'
       ];
 
       const selectors = isCall ? upSelectors : downSelectors;
       let targetEl: HTMLElement | null = null;
       for (const sel of selectors) {
         const el = document.querySelector(sel) as HTMLElement | null;
-        if (el) {
+        if (el && !el.closest('#ishak-trade-wrap') && !el.closest('.ishak-dialog-modal')) {
           targetEl = el;
           break;
         }
       }
 
       if (!targetEl) {
-        const dealContainer = document.querySelector('.deal-form, .section-deal, aside, [class*="deal"]') as HTMLElement | null;
-        if (dealContainer) {
-          const btns = dealContainer.querySelectorAll('button, div[role="button"]');
-          for (let i = 0; i < btns.length; i++) {
-            const b = btns[i] as HTMLElement;
-            const style = window.getComputedStyle(b);
-            const bg = (style.backgroundColor || '').toLowerCase();
-            const txt = (b.textContent || '').trim().toLowerCase();
-            if (isCall && (bg.includes('0, 192, 108') || bg.includes('16, 185, 129') || /(up|call|higher|বাই|কল)/i.test(txt))) {
+        const candidateEls = Array.from(document.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]')) as HTMLElement[];
+        for (let i = 0; i < candidateEls.length; i++) {
+          const b = candidateEls[i];
+          if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal')) continue;
+
+          const txt = (b.textContent || '').trim().toLowerCase();
+          const style = window.getComputedStyle(b);
+          const bg = (style.backgroundColor || '').toLowerCase();
+          const cls = (b.className || '').toLowerCase();
+
+          if (isCall) {
+            const isGreen = bg.includes('0, 192, 108') || bg.includes('16, 185, 129') || bg.includes('5, 150, 105') || bg.includes('38, 166, 154') || bg.includes('green') || cls.includes('call') || cls.includes('up');
+            const isUpTxt = /(^|\s)(up|call|higher|বাই|কল|buy|выше|হায়ার)($|\s)/i.test(txt);
+            if (isGreen || isUpTxt) {
               targetEl = b;
               break;
-            } else if (!isCall && (bg.includes('255, 98, 89') || bg.includes('225, 29, 72') || /(down|put|lower|সেল|পুট)/i.test(txt))) {
+            }
+          } else {
+            const isRed = bg.includes('255, 98, 89') || bg.includes('225, 29, 72') || bg.includes('235, 64, 52') || bg.includes('244, 63, 94') || bg.includes('red') || cls.includes('put') || cls.includes('down');
+            const isDownTxt = /(^|\s)(down|put|lower|সেল|পুট|sell|ниже|লোয়ার)($|\s)/i.test(txt);
+            if (isRed || isDownTxt) {
               targetEl = b;
               break;
             }
@@ -175,12 +218,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           const cx = (rect.left || 0) + (rect.width || 80) / 2;
           const cy = (rect.top || 0) + (rect.height || 40) / 2;
 
+          const pOver = new PointerEvent('pointerover', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0 });
+          const mOver = new MouseEvent('mouseover', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0 });
           const pDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1 });
           const mDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1 });
           const pUp = new PointerEvent('pointerup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
           const mUp = new MouseEvent('mouseup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
           const clickEv = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
 
+          el.dispatchEvent(pOver);
+          el.dispatchEvent(mOver);
           el.dispatchEvent(pDown);
           el.dispatchEvent(mDown);
           el.dispatchEvent(pUp);
@@ -189,14 +236,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           if (typeof el.click === 'function') el.click();
         };
 
-        const target = (targetEl.tagName === 'BUTTON') ? targetEl : (targetEl.querySelector('button') as HTMLElement || targetEl);
+        const target = (targetEl.tagName === 'BUTTON' || targetEl.tagName === 'A') ? targetEl : (targetEl.querySelector('button, a') as HTMLElement || targetEl);
         const inner = target.querySelector('span, div') as HTMLElement | null;
         clickNode(target);
         if (inner && inner !== target) clickNode(inner);
         if (targetEl !== target) clickNode(targetEl);
 
         setTimeout(() => {
-          try { clickNode(target); } catch (e) {}
+          try {
+            clickNode(target);
+            if (targetEl !== target) clickNode(targetEl);
+          } catch (e) {}
         }, 50);
 
         return true;

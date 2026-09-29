@@ -1568,9 +1568,14 @@ javascript:(function(){
   btnBox.appendChild(orbitalWrap);
 
   var pillBadge = document.createElement('div'); pillBadge.id = 'ishak-pill-badge';
-  pillBadge.innerHTML = '<div id="ishak-pill-time">5S ⚡</div>';
+  pillBadge.innerHTML = '<span id="ishak-pill-name">⚡ ISHAK AI</span><span id="ishak-pill-time">5S</span>';
   mainWrap.appendChild(pillBadge);
+  var pillName = document.getElementById('ishak-pill-name');
   var pillTime = document.getElementById('ishak-pill-time');
+  pillBadge.onclick = function(e) {
+    e.stopPropagation();
+    showSettingsHub();
+  };
 
   // Independent Compact 3D Draggable HUD Banner
   var hudPanel = document.createElement('div');
@@ -1690,8 +1695,9 @@ javascript:(function(){
     var detectedDur = extractQuotexDuration();
     if (detectedDur) tradeDuration = detectedDur;
     if (!tradeDuration) tradeDuration = 5;
-    var timeTxt = tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S ⚡';
-    pillTime.innerText = timeTxt;
+    var timeTxt = tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S';
+    if (pillTime) pillTime.innerText = timeTxt;
+    if (pillName) pillName.innerHTML = '⚡ ISHAK AI';
   }
 
   // 3. FORCED TIME DURATION SELECTION MODAL
@@ -2515,62 +2521,67 @@ javascript:(function(){
     };
   }
 
-  // ⚡ 6.5. QUOTEX AUTO-TRADE BULLETPROOF NATIVE CLICK DISPATCHER (SEP 26 HIGH-RELIABILITY METHOD)
+  // ⚡ 6.5. POCKET OPTION / QUOTEX / UNIVERSAL AUTO-TRADE BULLETPROOF NATIVE DISPATCHER
   function findQuotexTradeButtons() {
     var cBtn = null;
     var pBtn = null;
 
-    // 1. Direct Quotex Platform Call / Put Selectors
+    // 1. Direct Pocket Option, Quotex, and Universal Platform Selectors
     cBtn = document.querySelector(
+      '#platform-call-button, #call-button, #deal-call, ' +
+      'a.btn-call, a.btn-up, .btn-call, .btn-up, a.btn-higher, .btn-higher, ' +
       '.section-deal__button--up button, button.section-deal__button--up, .section-deal__button--up, ' +
       '.deal-form__button--up button, button.deal-form__button--up, .deal-form__button--up, ' +
-      'button.button--up, button.button--call, button.btn-call, button.call, button.button-call, ' +
-      '#platform-call-button, [data-test="call-button"], [data-test-id="call-button"], [data-qa="deal-call"]'
+      'button.button--up, button.button--call, button.btn-call, button.call, button.button-call, button.button--success, ' +
+      '[data-action="call"], [data-action="up"], [data-button="call"], [data-button="up"], ' +
+      '[data-test="call-button"], [data-test-id="call-button"], [data-test="button-call"], [data-test-id="button-call"], ' +
+      '[data-test="deal-up"], [data-qa="btn-call"], [data-qa="deal-call"]'
     );
 
     pBtn = document.querySelector(
+      '#platform-put-button, #put-button, #deal-put, ' +
+      'a.btn-put, a.btn-down, .btn-put, .btn-down, a.btn-lower, .btn-lower, ' +
       '.section-deal__button--down button, button.section-deal__button--down, .section-deal__button--down, ' +
       '.deal-form__button--down button, button.deal-form__button--down, .deal-form__button--down, ' +
-      'button.button--down, button.button--put, button.btn-put, button.put, button.button-put, ' +
-      '#platform-put-button, [data-test="put-button"], [data-test-id="put-button"], [data-qa="deal-put"]'
+      'button.button--down, button.button--put, button.btn-put, button.put, button.button-put, button.button--danger, ' +
+      '[data-action="put"], [data-action="down"], [data-button="put"], [data-button="down"], ' +
+      '[data-test="put-button"], [data-test-id="put-button"], [data-test="button-put"], [data-test-id="button-put"], ' +
+      '[data-test="deal-down"], [data-qa="btn-put"], [data-qa="deal-put"]'
     );
 
-    // 2. High-Fidelity Fallback: Search inside Quotex Deal Container by Style & Text
+    // 2. High-Fidelity Universal Fallback: Search all interactive buttons & links across the broker DOM
     if (!cBtn || !pBtn) {
-      var dealPanel = document.querySelector('.section-deal, .deal-form, aside.deal-form, aside, [class*="deal"], .trade-panel');
-      if (dealPanel) {
-        var allButtons = dealPanel.querySelectorAll('button, div[role="button"], div[class*="button"]');
-        for (var i = 0; i < allButtons.length; i++) {
-          var b = allButtons[i];
-          if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal')) continue;
+      var allButtons = document.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]');
+      for (var i = 0; i < allButtons.length; i++) {
+        var b = allButtons[i];
+        if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal') || b.closest('#ishak-hud-panel')) continue;
 
-          var bTxt = (b.textContent || '').trim().toLowerCase();
-          var bStyle = window.getComputedStyle(b);
-          var bBg = (bStyle.backgroundColor || '').toLowerCase();
-          var bCls = (b.className || '').toLowerCase();
+        var bTxt = (b.textContent || '').trim().toLowerCase();
+        var bStyle = window.getComputedStyle(b);
+        var bBg = (bStyle.backgroundColor || '').toLowerCase();
+        var bCls = (b.className || '').toLowerCase();
 
-          // UP / CALL:
-          if (!cBtn) {
-            var isGreen = bBg.indexOf('0, 192, 108') !== -1 || bBg.indexOf('0, 176, 116') !== -1 ||
-                          bBg.indexOf('38, 166, 154') !== -1 || bBg.indexOf('5, 150, 105') !== -1 ||
-                          bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('0, 255') !== -1 ||
-                          bBg.indexOf('green') !== -1 || bCls.indexOf('up') !== -1 || bCls.indexOf('call') !== -1;
-            var isUpWord = /(^|\s)(up|call|higher|বাই|কল|выше|arriba)($|\s)/i.test(bTxt);
-            if (isGreen || isUpWord) cBtn = b;
-          }
-
-          // DOWN / PUT:
-          if (!pBtn) {
-            var isRed = bBg.indexOf('255, 98, 89') !== -1 || bBg.indexOf('235, 64, 52') !== -1 ||
-                        bBg.indexOf('242, 54, 69') !== -1 || bBg.indexOf('255, 75, 75') !== -1 ||
-                        bBg.indexOf('225, 29, 72') !== -1 || bBg.indexOf('244, 63, 94') !== -1 ||
-                        bBg.indexOf('red') !== -1 || bCls.indexOf('down') !== -1 || bCls.indexOf('put') !== -1;
-            var isDownWord = /(^|\s)(down|put|lower|সেল|পুট|ниже|abajo)($|\s)/i.test(bTxt);
-            if (isRed || isDownWord) pBtn = b;
-          }
-
-          if (cBtn && pBtn) break;
+        // UP / CALL / HIGHER / BUY:
+        if (!cBtn) {
+          var isGreen = bBg.indexOf('0, 192, 108') !== -1 || bBg.indexOf('0, 176, 116') !== -1 ||
+                        bBg.indexOf('38, 166, 154') !== -1 || bBg.indexOf('5, 150, 105') !== -1 ||
+                        bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('0, 255') !== -1 ||
+                        bBg.indexOf('green') !== -1 || bCls.indexOf('call') !== -1 || bCls.indexOf('up') !== -1;
+          var isUpWord = /(^|\s)(up|call|higher|বাই|কল|buy|выше|arriba|হায়ার)($|\s)/i.test(bTxt);
+          if (isGreen || isUpWord) cBtn = b;
         }
+
+        // DOWN / PUT / LOWER / SELL:
+        if (!pBtn) {
+          var isRed = bBg.indexOf('255, 98, 89') !== -1 || bBg.indexOf('235, 64, 52') !== -1 ||
+                      bBg.indexOf('242, 54, 69') !== -1 || bBg.indexOf('255, 75, 75') !== -1 ||
+                      bBg.indexOf('225, 29, 72') !== -1 || bBg.indexOf('244, 63, 94') !== -1 ||
+                      bBg.indexOf('red') !== -1 || bCls.indexOf('put') !== -1 || bCls.indexOf('down') !== -1;
+          var isDownWord = /(^|\s)(down|put|lower|সেল|পুট|sell|ниже|abajo|লোয়ার)($|\s)/i.test(bTxt);
+          if (isRed || isDownWord) pBtn = b;
+        }
+
+        if (cBtn && pBtn) break;
       }
     }
 
@@ -2592,27 +2603,44 @@ javascript:(function(){
       // Scroll into view if needed
       try { target.scrollIntoView({ block: 'nearest' }); } catch(e){}
 
-      // Standard native click sequence
-      var btn = (target.tagName === 'BUTTON') ? target : (target.querySelector('button') || target);
-      try {
-        if (typeof btn.click === 'function') {
-          btn.click();
-        }
-      } catch(e){}
+      var btn = (target.tagName === 'BUTTON' || target.tagName === 'A') ? target : (target.querySelector('button, a') || target);
 
-      // Dispatch standard synthetic click event
-      try {
-        var clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-        btn.dispatchEvent(clickEvent);
-      } catch(e){}
+      var rect = target.getBoundingClientRect();
+      var cx = (rect.left || 0) + (rect.width || 80) / 2;
+      var cy = (rect.top || 0) + (rect.height || 40) / 2;
 
-      // Trigger target wrapper as well if distinct
-      if (target !== btn) {
-        try {
-          if (typeof target.click === 'function') target.click();
-          target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-        } catch(e){}
+      function dispatchDeepClick(el) {
+        if (!el) return;
+        try { el.disabled = false; } catch(e){}
+        try { el.removeAttribute('disabled'); } catch(e){}
+        try { el.focus(); } catch(e){}
+
+        var evInit = { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy };
+        try { el.dispatchEvent(new PointerEvent('pointerover', Object.assign({}, evInit, { buttons: 0 }))); } catch(e){}
+        try { el.dispatchEvent(new MouseEvent('mouseover', Object.assign({}, evInit, { buttons: 0 }))); } catch(e){}
+        try { el.dispatchEvent(new PointerEvent('pointerdown', Object.assign({}, evInit, { buttons: 1, button: 0, which: 1 }))); } catch(e){}
+        try { el.dispatchEvent(new MouseEvent('mousedown', Object.assign({}, evInit, { buttons: 1, button: 0, which: 1 }))); } catch(e){}
+        try { el.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
+        try { el.dispatchEvent(new MouseEvent('mouseup', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
+        try { el.dispatchEvent(new MouseEvent('click', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
+        try { if (typeof el.click === 'function') el.click(); } catch(e){}
       }
+
+      dispatchDeepClick(btn);
+      if (target !== btn) dispatchDeepClick(target);
+
+      var innerEl = btn.querySelector('span, div, i, svg') || target.querySelector('span, div, i, svg');
+      if (innerEl && innerEl !== btn && innerEl !== target) {
+        dispatchDeepClick(innerEl);
+      }
+
+      // Instant follow-up tap at 40ms to guarantee execution on debounce-protected broker platforms
+      setTimeout(function() {
+        try {
+          dispatchDeepClick(btn);
+          if (target !== btn) dispatchDeepClick(target);
+        } catch(e){}
+      }, 40);
 
       return { success: true, element: btn, isCall: isCall };
     } catch(err) {

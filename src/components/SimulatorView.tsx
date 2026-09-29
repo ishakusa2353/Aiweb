@@ -43,6 +43,21 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     timeLeft: number;
   } | null>(null);
 
+  // 📊 Authentic Win / Loss Tracker (Zero Fake Wins)
+  const [stats, setStats] = useState<{ wins: number; losses: number; ties: number; totalProfit: number }>(() => {
+    try {
+      const saved = localStorage.getItem('ISHAK_SIM_STATS');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return { wins: 0, losses: 0, ties: 0, totalProfit: 0 };
+  });
+
+  const resetStats = () => {
+    const fresh = { wins: 0, losses: 0, ties: 0, totalProfit: 0 };
+    setStats(fresh);
+    try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(fresh)); } catch (e) {}
+  };
+
   const activeTradeRef = useRef(activeTrade);
   activeTradeRef.current = activeTrade;
   const tickCountRef = useRef(0);
@@ -104,57 +119,104 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     setLivePrice(current);
   }, []);
 
-  // Tick generator & Duration-aligned Trade Progression Engine
+  // Tick generator & Duration-aligned Trade Progression Engine (100% Genuine, Zero Fake Wins)
   useEffect(() => {
     const interval = setInterval(() => {
       tickCountRef.current++;
       const trade = activeTradeRef.current;
       const now = Date.now();
 
-      if (trade) {
-        const remaining = Math.max(0, Math.ceil((trade.endTime - now) / 1000));
-        
-        // Active trade: strictly propels the candle and price in the winning direction during selected duration!
-        // CALL (UP): price and candle climb higher
-        // PUT (DOWN): price and candle drop lower
-        const stepDelta = trade.type === 'CALL'
-          ? 0.00016 + (tickCountRef.current % 3) * 0.00004
-          : -0.00016 - (tickCountRef.current % 3) * 0.00004;
+      // Realistic natural price evolution driven by harmonic market waves and tick velocity
+      const t = tickCountRef.current;
+      const trendCycle = Math.sin(t * 0.08) * 0.00018;
+      const microTick = Math.sin(t * 0.28) * 0.00009 + Math.cos(t * 0.44) * 0.00006;
+      
+      let nextPrice = 0.5730;
+      setLivePrice((prev) => {
+        const meanReversion = (0.5730 - prev) * 0.035;
+        const waveDelta = trendCycle + microTick + meanReversion;
+        nextPrice = parseFloat(Math.max(0.5692, Math.min(0.5778, prev + waveDelta)).toFixed(5));
 
-        setLivePrice((prev) => {
-          const next = parseFloat((prev + stepDelta).toFixed(5));
-          setCandles((prevCandles) => {
-            if (prevCandles.length === 0) return prevCandles;
-            const updated = [...prevCandles];
-            const last = { ...updated[updated.length - 1] };
-            last.close = next;
-            if (trade.type === 'CALL') {
-              last.high = Math.max(last.high, next);
-            } else {
-              last.low = Math.min(last.low, next);
-            }
-            updated[updated.length - 1] = last;
-            return updated;
-          });
-          return next;
+        setCandles((prevCandles) => {
+          if (prevCandles.length === 0) return prevCandles;
+          const updated = [...prevCandles];
+          const last = { ...updated[updated.length - 1] };
+          last.close = nextPrice;
+          last.high = Math.max(last.high, nextPrice);
+          last.low = Math.min(last.low, nextPrice);
+          updated[updated.length - 1] = last;
+          return updated;
         });
 
-        // Time finished: candle closes solidly in profit above (CALL) or below (PUT) strike price!
-        if (now >= trade.endTime) {
-          const profit = Math.round((trade.amount * payout) / 100);
-          const totalReturn = trade.amount + profit;
-          setBalance((prev) => prev + totalReturn);
+        return nextPrice;
+      });
 
-          setTradeLogs((prev) =>
-            prev.map((l) =>
-              l.id === trade.id
-                ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
-                : l
-            )
-          );
+      if (trade) {
+        const remaining = Math.max(0, Math.ceil((trade.endTime - now) / 1000));
+
+        // Time finished: Authentic Real Expiry Decision based on Strike vs Exit price
+        if (now >= trade.endTime) {
+          const exitPrice = nextPrice;
+          let isWin = false;
+          let isTie = false;
+
+          if (trade.type === 'CALL') {
+            isWin = exitPrice > trade.entryPrice;
+            isTie = exitPrice === trade.entryPrice;
+          } else {
+            isWin = exitPrice < trade.entryPrice;
+            isTie = exitPrice === trade.entryPrice;
+          }
+
+          if (isWin) {
+            const profit = Math.round((trade.amount * payout) / 100);
+            const totalReturn = trade.amount + profit;
+            setBalance((prev) => prev + totalReturn);
+            setStats((prev) => {
+              const updated = { ...prev, wins: prev.wins + 1, totalProfit: prev.totalProfit + profit };
+              try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
+              return updated;
+            });
+            setTradeLogs((prev) =>
+              prev.map((l) =>
+                l.id === trade.id
+                  ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
+                  : l
+              )
+            );
+          } else if (isTie) {
+            setBalance((prev) => prev + trade.amount);
+            setStats((prev) => {
+              const updated = { ...prev, ties: prev.ties + 1 };
+              try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
+              return updated;
+            });
+            setTradeLogs((prev) =>
+              prev.map((l) =>
+                l.id === trade.id
+                  ? { ...l, status: `TIE (ATM) ⚪ $0.00` }
+                  : l
+              )
+            );
+          } else {
+            // Authentic LOSS (OTM) - ZERO Fake Win
+            setStats((prev) => {
+              const updated = { ...prev, losses: prev.losses + 1, totalProfit: prev.totalProfit - trade.amount };
+              try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
+              return updated;
+            });
+            setTradeLogs((prev) =>
+              prev.map((l) =>
+                l.id === trade.id
+                  ? { ...l, status: `LOSS (OTM) 🔴 -$${trade.amount.toFixed(2)}` }
+                  : l
+              )
+            );
+          }
+
           setActiveTrade(null);
 
-          // ⚡ Open a fresh new candle from the closing price level so future trades have clean, unskewed momentum!
+          // ⚡ Open a fresh new candle from the closing price level
           setCandles((prev) => {
             if (prev.length === 0) return prev;
             const lastClosed = prev[prev.length - 1];
@@ -186,30 +248,6 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             return [...prev.slice(1), freshCandle];
           });
         }
-
-        // Idle market tick: harmonic dual-wave with alternating macro-trend cycles (Uptrend & Downtrend)
-        const t = tickCountRef.current;
-        setLivePrice((prev) => {
-          // Macro trend cycle (shifts between bullish impulse and bearish drop every ~40 ticks / 10s)
-          const trendCycle = Math.sin(t * 0.08) * 0.00018;
-          // Micro tick fluctuations generating realistic wicks and volume pressure
-          const microTick = Math.sin(t * 0.28) * 0.00009 + Math.cos(t * 0.44) * 0.00006;
-          // Soft mean-reversion around mid-level 0.5730 to stay strictly bounded
-          const meanReversion = (0.5730 - prev) * 0.035;
-          const waveDelta = trendCycle + microTick + meanReversion;
-          const next = parseFloat(Math.max(0.5692, Math.min(0.5778, prev + waveDelta)).toFixed(5));
-          setCandles((prevCandles) => {
-            if (prevCandles.length === 0) return prevCandles;
-            const updated = [...prevCandles];
-            const last = { ...updated[updated.length - 1] };
-            last.close = next;
-            last.high = Math.max(last.high, next);
-            last.low = Math.min(last.low, next);
-            updated[updated.length - 1] = last;
-            return updated;
-          });
-          return next;
-        });
       }
     }, 250);
 
@@ -600,6 +638,54 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         {/* Trade Control Panel (1 Col on lg) */}
         <div className="bg-[#0B132B] border border-cyan-500/20 rounded-2xl p-4 flex flex-col justify-between shadow-xl space-y-4">
           <div>
+            {/* 📊 REAL WIN / LOSS REPORT (ZERO FAKE WINS) */}
+            <div className="mb-4 p-3 rounded-xl bg-slate-900/90 border border-cyan-500/30 shadow-inner">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black text-cyan-300 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  রিয়েল ট্রেড রিপোর্ট (সরাসরি লাইভ ফলাফল)
+                </span>
+                <button
+                  type="button"
+                  onClick={resetStats}
+                  className="text-[9px] text-gray-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition"
+                  title="পরিসংখ্যান রিসেট করুন"
+                >
+                  রিসেট
+                </button>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1.5 text-center">
+                <div className="bg-slate-800/80 p-1.5 rounded-lg border border-slate-700/60">
+                  <div className="text-[9px] text-gray-400">টোটাল</div>
+                  <div className="text-xs font-black text-white font-mono">{stats.wins + stats.losses + stats.ties}</div>
+                </div>
+                <div className="bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-500/30">
+                  <div className="text-[9px] text-emerald-400 font-bold">উইন (ITM)</div>
+                  <div className="text-xs font-black text-emerald-400 font-mono">{stats.wins}</div>
+                </div>
+                <div className="bg-rose-950/40 p-1.5 rounded-lg border border-rose-500/30">
+                  <div className="text-[9px] text-rose-400 font-bold">লস (OTM)</div>
+                  <div className="text-xs font-black text-rose-400 font-mono">{stats.losses}</div>
+                </div>
+                <div className="bg-cyan-950/40 p-1.5 rounded-lg border border-cyan-500/30">
+                  <div className="text-[9px] text-cyan-300 font-bold">উইন রেট</div>
+                  <div className="text-xs font-black text-cyan-300 font-mono">
+                    {stats.wins + stats.losses > 0
+                      ? `${Math.round((stats.wins / (stats.wins + stats.losses)) * 100)}%`
+                      : '0%'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                <span className="text-gray-400">নেট প্রফিট/লস:</span>
+                <span className={`font-mono font-bold ${stats.totalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {stats.totalProfit >= 0 ? `+$${stats.totalProfit.toFixed(2)}` : `-$${Math.abs(stats.totalProfit).toFixed(2)}`}
+                </span>
+              </div>
+            </div>
+
             <h3 className="text-white font-bold text-xs uppercase tracking-wider text-gray-400 mb-3">
               ডিল কন্ট্রোল (Deal Form)
             </h3>
