@@ -2532,7 +2532,7 @@ javascript:(function(){
     };
   }
 
-  // ⚡ 6.5. QUOTEX AUTO-TRADE BULLETPROOF NATIVE CLICK DISPATCHER (STRICT TRADING BUTTONS ONLY)
+  // ⚡ 6.5. QUOTEX AUTO-TRADE BULLETPROOF NATIVE CLICK DISPATCHER (GUARANTEED QUOTEX PLATFORM EXECUTION)
   function findQuotexTradeButtons() {
     var cBtn = null;
     var pBtn = null;
@@ -2540,108 +2540,128 @@ javascript:(function(){
     function isSafeTradeBtn(el) {
       if (!el || !(el instanceof Element)) return false;
       if (el.tagName === 'A' || el.closest('a')) return false;
-      if (el.closest('header, nav, .header, #header, [class*="header"], [class*="navbar"], #ishak-trade-wrap, .ishak-modal-overlay')) return false;
+      if (el.closest('header, nav, .header, #header, [class*="header"], [class*="navbar"], #ishak-trade-wrap, .ishak-modal-overlay, .ishak-dialog-modal')) return false;
 
       var txt = (el.textContent || '').trim().toLowerCase();
       var cls = (el.className || '').toString().toLowerCase();
       var id = (el.id || '').toLowerCase();
-      var testId = (el.getAttribute('data-test-id') || '').toLowerCase();
+      var testId = (el.getAttribute('data-test-id') || el.getAttribute('data-test') || '').toLowerCase();
       var aria = (el.getAttribute('aria-label') || '').toLowerCase();
       var combo = txt + ' ' + cls + ' ' + id + ' ' + testId + ' ' + aria;
 
-      // Strictly reject non-trading navigation / account / deposit actions
-      if (combo.includes('top-up') || combo.includes('topup') || combo.includes('deposit') ||
-          combo.includes('sign') || combo.includes('register') || combo.includes('login') ||
-          combo.includes('logout') || combo.includes('account') || combo.includes('profile') ||
-          combo.includes('wallet') || combo.includes('cashier') || combo.includes('withdraw') ||
-          combo.includes('support') || combo.includes('help') || combo.includes('close') ||
-          combo.includes('upload') || combo.includes('upgrade') || combo.includes('bonus')) {
+      // Reject only true account/deposit/navigation words (using word boundaries so 'signal', 'design' are NEVER rejected)
+      if (/\b(top-up|topup|deposit|sign-in|signin|register|login|logout|account|profile|wallet|cashier|withdraw|support|upgrade|bonus)\b/i.test(combo)) {
         return false;
       }
       return true;
     }
 
-    // Step 1: Search inside dedicated Quotex trade/deal panels first
-    var dealPanels = document.querySelectorAll(
-      '.deal-form, .section-deal, aside.deal-form, .trade-panel, .panel-deal, ' +
-      'div[class*="deal-form"], div[class*="section-deal"], div[class*="trade-box"], [class*="deal-panel"]'
-    );
+    var upSelectors = [
+      '.section-deal__button--up button',
+      'button.section-deal__button--up',
+      '.section-deal__button--up',
+      '.deal-form__button--up button',
+      'button.deal-form__button--up',
+      '.deal-form__button--up',
+      'button.button--up',
+      'button.button--call',
+      'button.btn-call',
+      'button.call',
+      'button.button-call',
+      'button.button--success',
+      '[data-test="call-button"]',
+      '[data-test-id="call-button"]',
+      '[data-test="button-call"]',
+      '[data-test-id="button-call"]',
+      '[data-qa="deal-call"]',
+      '[data-qa="button-call"]',
+      '#platform-call-button',
+      '.deal-button-up',
+      '.deal-form [class*="button--up"]',
+      '.section-deal [class*="button--up"]',
+      '.section-deal [class*="button--call"]',
+      '.deal-form [class*="button--call"]'
+    ];
 
-    for (var i = 0; i < dealPanels.length; i++) {
-      var panel = dealPanels[i];
-      if (panel.closest('#ishak-trade-wrap')) continue;
+    var downSelectors = [
+      '.section-deal__button--down button',
+      'button.section-deal__button--down',
+      '.section-deal__button--down',
+      '.deal-form__button--down button',
+      'button.deal-form__button--down',
+      '.deal-form__button--down',
+      'button.button--down',
+      'button.button--put',
+      'button.btn-put',
+      'button.put',
+      'button.button-put',
+      'button.button--danger',
+      '[data-test="put-button"]',
+      '[data-test-id="put-button"]',
+      '[data-test="button-put"]',
+      '[data-test-id="button-put"]',
+      '[data-qa="deal-put"]',
+      '[data-qa="button-put"]',
+      '#platform-put-button',
+      '.deal-button-down',
+      '.deal-form [class*="button--down"]',
+      '.section-deal [class*="button--down"]',
+      '.section-deal [class*="button--put"]',
+      '.deal-form [class*="button--put"]'
+    ];
 
-      var upCandidate = panel.querySelector(
-        '.section-deal__button--up button, .deal-form__button--up button, ' +
-        'button.btn-call, button.call, button.button-call, ' +
-        '.section-deal__button--up, .deal-form__button--up, ' +
-        '#platform-call-button'
-      );
-      var downCandidate = panel.querySelector(
-        '.section-deal__button--down button, .deal-form__button--down button, ' +
-        'button.btn-put, button.put, button.button-put, ' +
-        '.section-deal__button--down, .deal-form__button--down, ' +
-        '#platform-put-button'
-      );
-
-      if (upCandidate && isSafeTradeBtn(upCandidate)) cBtn = upCandidate;
-      if (downCandidate && isSafeTradeBtn(downCandidate)) pBtn = downCandidate;
-
-      if (cBtn && pBtn) break;
+    // Pass 1: Try specific selectors
+    for (var u = 0; u < upSelectors.length; u++) {
+      var elUp = document.querySelector(upSelectors[u]);
+      if (elUp && isSafeTradeBtn(elUp)) { cBtn = elUp; break; }
+    }
+    for (var d = 0; d < downSelectors.length; d++) {
+      var elDown = document.querySelector(downSelectors[d]);
+      if (elDown && isSafeTradeBtn(elDown)) { pBtn = elDown; break; }
     }
 
-    // Step 2: Global specific trading selectors (excluding dangerous substrings)
-    if (!cBtn) {
-      var gUp = document.querySelector(
-        '#platform-call-button, ' +
-        '.deal-form .btn-call, .section-deal .btn-call, ' +
-        '.deal-form__button--up button, .section-deal__button--up button, ' +
-        '.section-deal__button--up, .deal-form__button--up, ' +
-        'button.btn-call, button.button-call'
-      );
-      if (gUp && isSafeTradeBtn(gUp)) cBtn = gUp;
-    }
-    if (!pBtn) {
-      var gDown = document.querySelector(
-        '#platform-put-button, ' +
-        '.deal-form .btn-put, .section-deal .btn-put, ' +
-        '.deal-form__button--down button, .section-deal__button--down button, ' +
-        '.section-deal__button--down, .deal-form__button--down, ' +
-        'button.btn-put, button.button-put'
-      );
-      if (gDown && isSafeTradeBtn(gDown)) pBtn = gDown;
-    }
-
-    // Step 3: Scan buttons inside trading areas by exact wording and verified theme colors
+    // Pass 2: Search inside deal panels / trading sections
     if (!cBtn || !pBtn) {
-      var candidates = document.querySelectorAll(
-        '.deal-form button, .section-deal button, aside button, .trade-panel button, ' +
-        'button, div[role="button"]'
+      var dealPanels = document.querySelectorAll(
+        '.deal-form, .section-deal, aside.deal-form, .trade-panel, .panel-deal, ' +
+        'div[class*="deal-form"], div[class*="section-deal"], div[class*="trade-box"], [class*="deal-panel"]'
       );
-      for (var j = 0; j < candidates.length; j++) {
-        var b = candidates[j];
-        if (!isSafeTradeBtn(b)) continue;
+      for (var i = 0; i < dealPanels.length; i++) {
+        var panel = dealPanels[i];
+        if (panel.closest('#ishak-trade-wrap')) continue;
 
-        var text = (b.textContent || '').trim().toLowerCase();
-        var style = window.getComputedStyle(b);
-        var bg = style.backgroundColor || '';
+        var allButtons = panel.querySelectorAll('button, div[role="button"], div[class*="button"]');
+        for (var b = 0; b < allButtons.length; b++) {
+          var btn = allButtons[b];
+          if (!isSafeTradeBtn(btn)) continue;
 
-        // UP / CALL:
-        var isGreen = bg.includes('0, 192, 108') || bg.includes('0, 176, 116') || bg.includes('38, 166, 154') || bg.includes('5, 150, 105') || bg.includes('16, 185, 129');
-        var isExactUpWord = /(^|\s)(up|call|higher|বাই|কল)($|\s)/i.test(text);
+          var bTxt = (btn.textContent || '').trim().toLowerCase();
+          var bStyle = window.getComputedStyle(btn);
+          var bBg = (bStyle.backgroundColor || '').toLowerCase();
+          var bCls = (btn.className || '').toString().toLowerCase();
 
-        if (!cBtn && (isGreen || isExactUpWord)) {
-          cBtn = b;
+          // UP check
+          if (!cBtn) {
+            var isGreen = bBg.indexOf('0, 192, 108') !== -1 || bBg.indexOf('0, 176, 116') !== -1 ||
+                          bBg.indexOf('38, 166, 154') !== -1 || bBg.indexOf('5, 150, 105') !== -1 ||
+                          bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('0, 255') !== -1 ||
+                          bBg.indexOf('green') !== -1 || bCls.indexOf('up') !== -1 || bCls.indexOf('call') !== -1;
+            var isUpWord = /(^|\s)(up|call|higher|বাই|কল|выশে|arriba|subir)($|\s)/i.test(bTxt);
+            if (isGreen || isUpWord) cBtn = btn;
+          }
+
+          // DOWN check
+          if (!pBtn) {
+            var isRed = bBg.indexOf('255, 98, 89') !== -1 || bBg.indexOf('235, 64, 52') !== -1 ||
+                        bBg.indexOf('242, 54, 69') !== -1 || bBg.indexOf('255, 75, 75') !== -1 ||
+                        bBg.indexOf('225, 29, 72') !== -1 || bBg.indexOf('244, 63, 94') !== -1 ||
+                        bBg.indexOf('red') !== -1 || bCls.indexOf('down') !== -1 || bCls.indexOf('put') !== -1;
+            var isDownWord = /(^|\s)(down|put|lower|সেল|পুট|ниже|abajo|baixar)($|\s)/i.test(bTxt);
+            if (isRed || isDownWord) pBtn = btn;
+          }
+
+          if (cBtn && pBtn) break;
         }
-
-        // DOWN / PUT:
-        var isRed = bg.includes('255, 98, 89') || bg.includes('235, 64, 52') || bg.includes('242, 54, 69') || bg.includes('255, 75, 75') || bg.includes('225, 29, 72') || bg.includes('244, 63, 94');
-        var isExactDownWord = /(^|\s)(down|put|lower|সেল|পুট)($|\s)/i.test(text);
-
-        if (!pBtn && (isRed || isExactDownWord)) {
-          pBtn = b;
-        }
-
         if (cBtn && pBtn) break;
       }
     }
@@ -2661,15 +2681,51 @@ javascript:(function(){
         return { success: false, reason: 'BUTTON_NOT_FOUND' };
       }
 
-      // If target is a wrapper element containing a button, click the button
-      var target = (rawTarget.tagName === 'BUTTON') ? rawTarget : (rawTarget.querySelector('button') || rawTarget);
+      function clickNode(el) {
+        if (!el) return;
+        try { el.disabled = false; } catch(e){}
+        try { el.removeAttribute('disabled'); } catch(e){}
+        try { el.focus(); } catch(e){}
 
-      var opts = { bubbles: true, cancelable: true, view: window };
-      target.dispatchEvent(new PointerEvent('pointerdown', opts));
-      target.dispatchEvent(new MouseEvent('mousedown', opts));
-      target.dispatchEvent(new PointerEvent('pointerup', opts));
-      target.dispatchEvent(new MouseEvent('mouseup', opts));
-      target.click();
+        var rect = el.getBoundingClientRect();
+        var cx = (rect.left || 0) + (rect.width || 80) / 2;
+        var cy = (rect.top || 0) + (rect.height || 40) / 2;
+
+        var pDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1, isPrimary: true });
+        var mDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1 });
+        var pUp = new PointerEvent('pointerup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1, isPrimary: true });
+        var mUp = new MouseEvent('mouseup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
+        var clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
+
+        el.dispatchEvent(pDown);
+        el.dispatchEvent(mDown);
+        el.dispatchEvent(pUp);
+        el.dispatchEvent(mUp);
+        el.dispatchEvent(clickEvent);
+        if (typeof el.click === 'function') el.click();
+      }
+
+      var target = (rawTarget.tagName === 'BUTTON') ? rawTarget : (rawTarget.querySelector('button') || rawTarget);
+      var innerChild = target.querySelector('span, div, b') || target.firstElementChild;
+
+      // Dispatch complete click sequence to target, inner elements, and wrapper for React synthetic event propagation
+      clickNode(target);
+      if (innerChild && innerChild !== target) clickNode(innerChild);
+      if (rawTarget && rawTarget !== target) clickNode(rawTarget);
+
+      // Micro-retry at 50ms and 150ms to ensure frame/render cycle registers the trade
+      setTimeout(function() {
+        try {
+          clickNode(target);
+          if (innerChild && innerChild !== target) clickNode(innerChild);
+        } catch(e){}
+      }, 50);
+
+      setTimeout(function() {
+        try {
+          clickNode(target);
+        } catch(e){}
+      }, 150);
 
       return { success: true, element: target, isCall: isCall };
     } catch(err) {
@@ -2830,6 +2886,18 @@ javascript:(function(){
 
         // ⚡ EXECUTE LIVE AUTO TRADE (USER'S EXACT AUTO TRADE COMMAND)
         var tradeRes = executeQuotexTrade(isCall, signalId);
+
+        // Instant retry sequence to guarantee trade is clicked even if DOM updates dynamically
+        if (!tradeRes.success && tradeRes.reason === 'BUTTON_NOT_FOUND') {
+          setTimeout(function() {
+            var r1 = executeQuotexTrade(isCall, signalId);
+            if (!r1.success) {
+              setTimeout(function() {
+                executeQuotexTrade(isCall, signalId);
+              }, 120);
+            }
+          }, 60);
+        }
 
         var tradeStatusHtml = '';
         if (tradeRes.success) {

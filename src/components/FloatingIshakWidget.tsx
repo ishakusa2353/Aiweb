@@ -100,6 +100,114 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     return '$100';
   };
 
+  // Quotex Live Trade Auto-Click Dispatcher
+  const executeQuotexTrade = (isCall: boolean): boolean => {
+    try {
+      const upSelectors = [
+        '.section-deal__button--up button',
+        'button.section-deal__button--up',
+        '.section-deal__button--up',
+        '.deal-form__button--up button',
+        'button.deal-form__button--up',
+        '.deal-form__button--up',
+        'button.button--up',
+        'button.button--call',
+        'button.btn-call',
+        'button.call',
+        'button.button--success',
+        '[data-test="call-button"]',
+        '[data-test-id="call-button"]',
+        '[data-test="button-call"]',
+        '[data-test-id="button-call"]'
+      ];
+      const downSelectors = [
+        '.section-deal__button--down button',
+        'button.section-deal__button--down',
+        '.section-deal__button--down',
+        '.deal-form__button--down button',
+        'button.deal-form__button--down',
+        '.deal-form__button--down',
+        'button.button--down',
+        'button.button--put',
+        'button.btn-put',
+        'button.put',
+        'button.button--danger',
+        '[data-test="put-button"]',
+        '[data-test-id="put-button"]',
+        '[data-test="button-put"]',
+        '[data-test-id="button-put"]'
+      ];
+
+      const selectors = isCall ? upSelectors : downSelectors;
+      let targetEl: HTMLElement | null = null;
+      for (const sel of selectors) {
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (el) {
+          targetEl = el;
+          break;
+        }
+      }
+
+      if (!targetEl) {
+        const dealContainer = document.querySelector('.deal-form, .section-deal, aside, [class*="deal"]') as HTMLElement | null;
+        if (dealContainer) {
+          const btns = dealContainer.querySelectorAll('button, div[role="button"]');
+          for (let i = 0; i < btns.length; i++) {
+            const b = btns[i] as HTMLElement;
+            const style = window.getComputedStyle(b);
+            const bg = (style.backgroundColor || '').toLowerCase();
+            const txt = (b.textContent || '').trim().toLowerCase();
+            if (isCall && (bg.includes('0, 192, 108') || bg.includes('16, 185, 129') || /(up|call|higher|বাই|কল)/i.test(txt))) {
+              targetEl = b;
+              break;
+            } else if (!isCall && (bg.includes('255, 98, 89') || bg.includes('225, 29, 72') || /(down|put|lower|সেল|পুট)/i.test(txt))) {
+              targetEl = b;
+              break;
+            }
+          }
+        }
+      }
+
+      if (targetEl) {
+        const clickNode = (el: HTMLElement) => {
+          try { (el as HTMLButtonElement).disabled = false; } catch (e) {}
+          try { el.removeAttribute('disabled'); } catch (e) {}
+          try { el.focus(); } catch (e) {}
+
+          const rect = el.getBoundingClientRect();
+          const cx = (rect.left || 0) + (rect.width || 80) / 2;
+          const cy = (rect.top || 0) + (rect.height || 40) / 2;
+
+          const pDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1 });
+          const mDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1 });
+          const pUp = new PointerEvent('pointerup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
+          const mUp = new MouseEvent('mouseup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
+          const clickEv = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
+
+          el.dispatchEvent(pDown);
+          el.dispatchEvent(mDown);
+          el.dispatchEvent(pUp);
+          el.dispatchEvent(mUp);
+          el.dispatchEvent(clickEv);
+          if (typeof el.click === 'function') el.click();
+        };
+
+        const target = (targetEl.tagName === 'BUTTON') ? targetEl : (targetEl.querySelector('button') as HTMLElement || targetEl);
+        const inner = target.querySelector('span, div') as HTMLElement | null;
+        clickNode(target);
+        if (inner && inner !== target) clickNode(inner);
+        if (targetEl !== target) clickNode(targetEl);
+
+        setTimeout(() => {
+          try { clickNode(target); } catch (e) {}
+        }, 50);
+
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  };
+
   // Load local license on mount (strictly no hardcoded default keys)
   useEffect(() => {
     try {
@@ -496,6 +604,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       if (soundEnabled) {
         playResultSound(isCall);
       }
+
+      // ⚡ EXECUTE LIVE QUOTEX AUTO TRADE IMMEDIATELY ON SCAN COMPLETION
+      executeQuotexTrade(isCall);
 
       // Clean, compact BUY/SELL signal (1.5s Duration, No circles/shockwaves)
       setFlySignal(isCall ? 'UP' : 'DOWN');
