@@ -1124,84 +1124,110 @@ export function evaluateMarketData(
 
   if (timeframeSec <= 5) {
     // =========================================================
-    // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision)
-    // Priority: Micro Tick Slope (40%) + Wick Physics (35%) + Instant Delta (25%)
-    // Eliminates the fatal "আপে নিলে মার্কেট ফুল ডাউনে যায়" trap!
+    // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision & Macro Trend Alignment)
+    // Anti-Trap Architecture: Prevents taking counter-trend spikes that cause loss streaks!
     // =========================================================
 
-    // 1. Instant Tick Direction & Velocity (Dominant in 5S)
+    // 0. Macro Trend Shield (EMA 9, 21, 50 Alignment)
+    const isMacroBull = ema9 > ema21 && ema21 > ema50;
+    const isMacroBear = ema9 < ema21 && ema21 < ema50;
+    if (isMacroBull) {
+      score += 24;
+      upFactors.push(`5S Macro Bullish Trend Shield (EMA 9>21>50) [+24]`);
+    } else if (isMacroBear) {
+      score -= 24;
+      downFactors.push(`5S Macro Bearish Trend Shield (EMA 9<21<50) [-24]`);
+    }
+
+    // 1. Instant Tick Direction & Velocity
     if (tickSlope > 0.000002) {
-      score += 35;
-      upFactors.push(`5S Micro Tick Slope Bullish (+${tickSlope.toFixed(6)}) [+35]`);
+      score += 28;
+      upFactors.push(`5S Micro Tick Slope Bullish (+${tickSlope.toFixed(6)}) [+28]`);
     } else if (tickSlope < -0.000002) {
-      score -= 35;
-      downFactors.push(`5S Micro Tick Slope Bearish (${tickSlope.toFixed(6)}) [-35]`);
+      score -= 28;
+      downFactors.push(`5S Micro Tick Slope Bearish (${tickSlope.toFixed(6)}) [-28]`);
     }
 
     if (velocity > 0.000005) {
-      score += 15;
-      upFactors.push(`5S Instant Velocity Push Up (+${velocity.toFixed(5)}) [+15]`);
+      score += 14;
+      upFactors.push(`5S Instant Velocity Push Up (+${velocity.toFixed(5)}) [+14]`);
     } else if (velocity < -0.000005) {
-      score -= 15;
-      downFactors.push(`5S Instant Velocity Push Down (${velocity.toFixed(5)}) [-15]`);
+      score -= 14;
+      downFactors.push(`5S Instant Velocity Push Down (${velocity.toFixed(5)}) [-14]`);
     }
 
-    // 2. Active Candle Anatomy & Color Delta
+    // 2. Active Candle Anatomy & Color Delta with Trend Alignment
     if (isGreen) {
-      score += 22;
-      upFactors.push(`5S Active Bar Bullish Close > Open [+22]`);
+      score += isMacroBull ? 25 : 12; // Extra strong in aligned bull market
+      upFactors.push(`5S Active Bar Bullish Close > Open [+${isMacroBull ? 25 : 12}]`);
     } else if (isRed) {
-      score -= 22;
-      downFactors.push(`5S Active Bar Bearish Close < Open [-22]`);
+      score -= isMacroBear ? 25 : 12; // Extra strong in aligned bear market
+      downFactors.push(`5S Active Bar Bearish Close < Open [-${isMacroBear ? 25 : 12}]`);
     }
 
-    // 3. ANTI-TRAP & WICK REJECTION PHYSICS (Solves Peak Retracements!)
-    // If candle has a tall upper wick, buyers are getting dumped on -> MUST TAKE DOWN!
+    // 3. ANTI-TRAP & WICK REJECTION PHYSICS (Rejects fake traps)
     if (upperWick >= candleRange * 0.35 && upperWick > lowerWick * 1.3) {
-      score -= 38;
-      downFactors.push(`5S Upper Wick Rejection Physics (Sellers Rejecting High) [-38]`);
+      score -= 36;
+      downFactors.push(`5S Upper Wick Rejection Physics (Sellers Rejecting High) [-36]`);
     }
-    // If candle has a tall lower wick, sellers are getting absorbed -> MUST TAKE UP!
     if (lowerWick >= candleRange * 0.35 && lowerWick > upperWick * 1.3) {
-      score += 38;
-      upFactors.push(`5S Lower Wick Rejection Physics (Buyers Absorbing Low) [+38]`);
+      score += 36;
+      upFactors.push(`5S Lower Wick Rejection Physics (Buyers Absorbing Low) [+36]`);
     }
 
-    // 4. Overbought / Oversold Mean Reversion at 5s Boundaries
+    // 4. Dynamic Pullback Re-entry (Highest win-rate binary setup)
+    if (isMacroBull && isRed && (currentCandle.low <= ema9 || currentCandle.low <= ema21)) {
+      score += 32;
+      upFactors.push(`5S Bullish Dynamic Support Pullback & Absorb [+32]`);
+    } else if (isMacroBear && isGreen && (currentCandle.high >= ema9 || currentCandle.high >= ema21)) {
+      score -= 32;
+      downFactors.push(`5S Bearish Dynamic Resistance Pullback & Reject [-32]`);
+    }
+
+    // 5. Overbought / Oversold Mean Reversion at Boundaries
     if (rsi14 >= 72 || isNearResistance) {
       if (upperWick > 0 || isRed || tickSlope <= 0) {
-        score -= 42;
-        downFactors.push(`5S Anti-Trap: Overbought Peak Exhaustion Reversal [-42]`);
+        score -= 38;
+        downFactors.push(`5S Anti-Trap: Overbought Peak Exhaustion Reversal [-38]`);
       }
     } else if (rsi14 <= 28 || isNearSupport) {
       if (lowerWick > 0 || isGreen || tickSlope >= 0) {
-        score += 42;
-        upFactors.push(`5S Anti-Trap: Oversold Floor Exhaustion Bounce [+42]`);
+        score += 38;
+        upFactors.push(`5S Anti-Trap: Oversold Floor Exhaustion Bounce [+38]`);
       }
     }
 
-    // 5. Short-term Micro EMA Vector (Dampened to prevent overriding micro reality)
+    // 6. Short-term Micro EMA Vector
     if (ema5 > ema9) {
-      score += 8;
-      upFactors.push(`Micro EMA5 > EMA9 [+8]`);
+      score += 12;
+      upFactors.push(`Micro EMA5 > EMA9 [+12]`);
     } else if (ema5 < ema9) {
-      score -= 8;
-      downFactors.push(`Micro EMA5 < EMA9 [-8]`);
+      score -= 12;
+      downFactors.push(`Micro EMA5 < EMA9 [-12]`);
     }
 
   } else if (timeframeSec <= 15) {
     // =========================================================
-    // ⏱️ 10-SECOND ENGINE (Dual-Candle Momentum & Micro-Swings)
-    // Priority: 2-Bar Sequence (35%) + Micro-Tick Slope (30%) + Rejection/S&R (25%) + Short EMA (10%)
+    // ⏱️ 10-SECOND ENGINE (Dual-Candle Momentum & Macro Alignment)
     // =========================================================
+
+    const isMacroBull10 = ema9 > ema21 && ema21 > ema50;
+    const isMacroBear10 = ema9 < ema21 && ema21 < ema50;
+    if (isMacroBull10) {
+      score += 22;
+      upFactors.push(`10S Macro Bullish Trend Stack (EMA 9>21>50) [+22]`);
+    } else if (isMacroBear10) {
+      score -= 22;
+      downFactors.push(`10S Macro Bearish Trend Stack (EMA 9<21<50) [-22]`);
+    }
 
     // 1. Tick Slope & Velocity
     if (tickSlope > 0.000002) {
-      score += 26;
-      upFactors.push(`10S Tick Slope Bullish [+26]`);
+      score += 24;
+      upFactors.push(`10S Tick Slope Bullish [+24]`);
     } else if (tickSlope < -0.000002) {
-      score -= 26;
-      downFactors.push(`10S Tick Slope Bearish [-26]`);
+      score -= 24;
+      downFactors.push(`10S Tick Slope Bearish [-24]`);
     }
 
     // 2. 2-Bar Sequence & Engulfing Formations
@@ -1210,35 +1236,44 @@ export function evaluateMarketData(
       if (pa.scoreImpact > 0) upFactors.push(`10S Price Action: ${pa.patternName} [+${Math.round(pa.scoreImpact * 1.4)}]`);
       else downFactors.push(`10S Price Action: ${pa.patternName} [${Math.round(pa.scoreImpact * 1.4)}]`);
     } else {
-      if (isGreen) { score += 18; upFactors.push('10S Green Impulse [+18]'); }
-      else if (isRed) { score -= 18; downFactors.push('10S Red Impulse [-18]'); }
+      if (isGreen) { score += isMacroBull10 ? 24 : 16; upFactors.push(`10S Green Impulse [+${isMacroBull10 ? 24 : 16}]`); }
+      else if (isRed) { score -= isMacroBear10 ? 24 : 16; downFactors.push(`10S Red Impulse [-${isMacroBear10 ? 24 : 16}]`); }
     }
 
-    // 3. Wick Rejections & S/R Touch
-    if (upperWick >= candleRange * 0.40) {
-      score -= 28;
-      downFactors.push(`10S Upper Wick Resistance Rejection [-28]`);
-    } else if (lowerWick >= candleRange * 0.40) {
+    // 3. Dynamic Pullbacks
+    if (isMacroBull10 && prevCandle.close < prevCandle.open && isGreen) {
       score += 28;
-      upFactors.push(`10S Lower Wick Support Bounce [+28]`);
+      upFactors.push(`10S Dynamic Support Pullback & Continuation [+28]`);
+    } else if (isMacroBear10 && prevCandle.close > prevCandle.open && isRed) {
+      score -= 28;
+      downFactors.push(`10S Dynamic Resistance Pullback & Continuation [-28]`);
     }
 
-    // 4. Overbought / Oversold Protection
+    // 4. Wick Rejections & S/R Touch
+    if (upperWick >= candleRange * 0.40) {
+      score -= 26;
+      downFactors.push(`10S Upper Wick Resistance Rejection [-26]`);
+    } else if (lowerWick >= candleRange * 0.40) {
+      score += 26;
+      upFactors.push(`10S Lower Wick Support Bounce [+26]`);
+    }
+
+    // 5. Overbought / Oversold Protection
     if (rsi14 >= 74 && (upperWick > 0 || isRed)) {
-      score -= 32;
-      downFactors.push(`10S RSI Overbought Turnaround [-32]`);
+      score -= 30;
+      downFactors.push(`10S RSI Overbought Turnaround [-30]`);
     } else if (rsi14 <= 26 && (lowerWick > 0 || isGreen)) {
-      score += 32;
-      upFactors.push(`10S RSI Oversold Turnaround [+32]`);
+      score += 30;
+      upFactors.push(`10S RSI Oversold Turnaround [+30]`);
     }
 
-    // 5. Short EMA Vectors
+    // 6. Short EMA Vectors
     if (ema5 > ema9 && ema9 > ema13) {
-      score += 14;
-      upFactors.push(`10S EMA Alignment 5>9>13 [+14]`);
+      score += 15;
+      upFactors.push(`10S EMA Alignment 5>9>13 [+15]`);
     } else if (ema5 < ema9 && ema9 < ema13) {
-      score -= 14;
-      downFactors.push(`10S EMA Alignment 5<9<13 [-14]`);
+      score -= 15;
+      downFactors.push(`10S EMA Alignment 5<9<13 [-15]`);
     }
 
   } else if (timeframeSec <= 45) {

@@ -38,9 +38,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState<boolean>(false);
 
-  // Key verification state
+  // Key verification state (Trader ID removed as requested)
   const [licenseInput, setLicenseInput] = useState<string>('');
-  const [traderIdInput, setTraderIdInput] = useState<string>('');
   const [verifying, setVerifying] = useState<boolean>(false);
   const [keyInputError, setKeyInputError] = useState<boolean>(false);
   const [activeLicense, setActiveLicense] = useState<any>(null);
@@ -68,6 +67,30 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       setModalToast(null);
     }, 3500);
   };
+
+  // 🛡️ STRICT VIEWPORT BOUNDARY CLAMPING: Widget CANNOT be dragged outside the screen
+  const clampWidgetPosition = (x: number, y: number) => {
+    const pad = 6;
+    const w = 78; // Approx width of circular button + orbital bezel
+    const h = 94; // Approx height including pill badge
+    const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
+    const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
+    const maxX = Math.max(pad, winW - w - pad);
+    const maxY = Math.max(pad, winH - h - pad);
+    return {
+      x: Math.max(pad, Math.min(maxX, x)),
+      y: Math.max(pad, Math.min(maxY, y)),
+    };
+  };
+
+  // Re-clamp position on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((prev) => clampWidgetPosition(prev.x, prev.y));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Helper: Get real Quotex investment amount
   const getLiveQuotexInvestmentAmount = (): string => {
@@ -105,7 +128,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       Array.from(document.querySelectorAll('button, div, a')).forEach((b) => {
         const el = b as HTMLElement;
-        if (el.closest('#ishak-trade-wrap') || el.closest('.ishak-dialog-modal') || el.closest('#ishak-hud-panel')) return;
+        if (el.closest('#ishak-robot-anchor') || el.closest('#ishak-trade-wrap') || el.closest('.ishak-dialog-modal') || el.closest('#ishak-hud-panel')) return;
         const txt = el.innerText ? el.innerText.trim().toLowerCase() : '';
         if (txt === 'buy' || txt.startsWith('buy\n')) cBtn = el;
         if (txt === 'sell' || txt.startsWith('sell\n')) pBtn = el;
@@ -139,12 +162,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         if (parsed && parsed.key) {
           setActiveLicense(parsed);
           setLicenseInput(parsed.key);
-          if (parsed.traderId) setTraderIdInput(parsed.traderId);
         }
       }
     } catch (e) {}
-
-    // Bot loaded: Logo animates in from above first. Modals appear when user clicks logo!
   }, []);
 
   // Countdown timer
@@ -185,7 +205,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     }
   }, [tradeDuration, isScanning]);
 
-  // Dragging Circular Button
+  // 🖱️ Mouse Dragging (Strict Screen Boundary Clamped)
   const handleMouseDown = (e: React.MouseEvent) => {
     dragStartRef.current = {
       startX: e.clientX,
@@ -198,25 +218,59 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       if (!dragStartRef.current) return;
       const dx = moveEvent.clientX - dragStartRef.current.startX;
       const dy = moveEvent.clientY - dragStartRef.current.startY;
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
         setIsDragging(true);
       }
-      const newX = Math.max(10, Math.min(window.innerWidth - 80, dragStartRef.current.initX + dx));
-      const newY = Math.max(80, Math.min(window.innerHeight - 90, dragStartRef.current.initY + dy));
-      setPosition({ x: newX, y: newY });
+      const targetX = dragStartRef.current.initX + dx;
+      const targetY = dragStartRef.current.initY + dy;
+      setPosition(clampWidgetPosition(targetX, targetY));
     };
 
     const handleMouseUp = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
-      setTimeout(() => setIsDragging(false), 60);
+      setTimeout(() => setIsDragging(false), 80);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Dragging Independent HUD Banner
+  // 📱 Touch Dragging (Mobile / Tablet - Strict Screen Boundary Clamped)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    dragStartRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      initX: position.x,
+      initY: position.y,
+    };
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (!dragStartRef.current || moveEvent.touches.length === 0) return;
+      const t = moveEvent.touches[0];
+      const dx = t.clientX - dragStartRef.current.startX;
+      const dy = t.clientY - dragStartRef.current.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        setIsDragging(true);
+      }
+      const targetX = dragStartRef.current.initX + dx;
+      const targetY = dragStartRef.current.initY + dy;
+      setPosition(clampWidgetPosition(targetX, targetY));
+    };
+
+    const handleTouchEnd = () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      setTimeout(() => setIsDragging(false), 80);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
+  // Dragging Independent HUD Banner (Boundary Clamped)
   const handleHudMouseDown = (e: React.MouseEvent) => {
     hudDragStartRef.current = {
       startX: e.clientX,
@@ -511,7 +565,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       const data = await supabaseService.verifyLicense(
         licenseInput.trim(),
-        traderIdInput.trim(),
+        '',
         devId
       );
       setVerifying(false);
@@ -521,17 +575,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           key: licenseInput.trim().toUpperCase(),
           exp: data.exp,
           duration: data.duration || '30d',
-          traderId: traderIdInput.trim(),
+          traderId: '',
           tier: data.tier || 'VIP',
         };
         localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(lic));
         setActiveLicense(lic);
         setKeyInputError(false);
-        showToast('Verified! Single device lock active.', false);
+        showToast('Verified! VIP Cloud License Activated.', false);
         setTimeout(() => {
           setShowKeyModal(false);
           if (!tradeDuration) setShowTimeModal(true);
-        }, 1100);
+        }, 1000);
       } else {
         const rawReason = data.reason || '';
         const isWrong = !rawReason || rawReason.includes('পাওয়া যায়নি') || rawReason.includes('not found') || rawReason.includes('Invalid') || rawReason.includes('WRONG') || rawReason.includes('যাচাই করা যায়নি');
@@ -628,6 +682,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           <button
             id="btn-ishak-logo"
             onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
             onClick={(e) => {
               e.stopPropagation();
               if (!isDragging) triggerScan();
@@ -636,7 +691,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               e.stopPropagation();
               setShowHub(true);
             }}
-            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[1.5px] border-amber-400/50 bg-[#070D1E] shadow-[0_4px_16px_rgba(0,0,0,0.9),inset_0_0_10px_rgba(255,184,0,0.25)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden ${
+            className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-[1.5px] border-amber-400/50 bg-[#070D1E] shadow-[0_4px_16px_rgba(0,0,0,0.9),inset_0_0_10px_rgba(255,184,0,0.25)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden select-none touch-none ${
               isScanning
                 ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-[#FFD700] shadow-[0_0_30px_#FFD700,0_0_55px_rgba(255,184,0,0.85),inset_0_0_14px_rgba(255,184,0,0.5)]'
                 : ''
@@ -761,33 +816,35 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 1. SETTINGS HUB MODAL */}
+      {/* 1. SETTINGS HUB MODAL (CYBER-TRADING LUXURY DESIGN) */}
       {showHub && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-xs bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-4 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-cyan-500/30">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999996] flex items-center justify-center p-4">
+          <div className="w-full max-w-xs bg-gradient-to-b from-[#0A1226] via-[#070D1E] to-[#040814] border-2 border-cyan-400 rounded-3xl p-5 shadow-[0_0_50px_rgba(0,229,255,0.25),0_20px_50px_rgba(0,0,0,0.95)] relative">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/25">
               <div className="flex items-center gap-2">
-                <span className="text-cyan-400">⚙️</span>
-                <span className="text-xs font-black text-cyan-300">ISHAK AI CONTROL PANEL</span>
+                <span className="text-cyan-400 text-sm filter drop-shadow-[0_0_8px_#00E5FF]">⚙️</span>
+                <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-amber-300 font-['Orbitron',sans-serif] tracking-wider">
+                  CONTROL PANEL
+                </span>
               </div>
               <button
                 onClick={() => setShowHub(false)}
-                className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold"
+                className="w-6 h-6 rounded-full bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold transition shadow-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <button
                 onClick={() => {
                   setShowHub(false);
                   setShowTimeModal(true);
                 }}
-                className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 hover:border-cyan-400 flex items-center justify-between text-xs transition"
+                className="w-full p-3 rounded-2xl bg-[#030712]/90 border border-cyan-500/40 hover:border-cyan-300 flex items-center justify-between text-xs transition shadow-sm hover:shadow-[0_0_15px_rgba(0,229,255,0.2)] cursor-pointer"
               >
-                <span className="text-gray-300">⏱️ Trade Duration</span>
-                <b className="text-amber-400 font-mono font-bold">
+                <span className="text-gray-300 font-medium flex items-center gap-1.5">⏱️ Trade Duration</span>
+                <b className="text-amber-300 font-mono font-bold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30">
                   {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`) : '5 Sec ⚡'}
                 </b>
               </button>
@@ -801,13 +858,15 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     triggerScan();
                   }
                 }}
-                className={`w-full p-2.5 rounded-xl bg-slate-900/90 border flex items-center justify-between text-xs transition ${
-                  autoPilotMode ? 'border-cyan-400' : 'border-slate-700'
+                className={`w-full p-3 rounded-2xl bg-[#030712]/90 border flex items-center justify-between text-xs transition shadow-sm cursor-pointer ${
+                  autoPilotMode
+                    ? 'border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                    : 'border-slate-800 hover:border-cyan-500/40'
                 }`}
               >
-                <span className="text-gray-300">🤖 Auto-Pilot Mode</span>
-                <b className={`font-bold ${autoPilotMode ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED'}
+                <span className="text-gray-300 font-medium flex items-center gap-1.5">🤖 Auto-Pilot Mode</span>
+                <b className={`font-bold px-2 py-0.5 rounded-lg text-[10px] ${autoPilotMode ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/40' : 'text-amber-400 bg-amber-500/10 border border-amber-500/30'}`}>
+                  {autoPilotMode ? '▶ ACTIVE' : '⏹ OFF'}
                 </b>
               </button>
 
@@ -816,53 +875,53 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   setShowKeyModal(true);
                 }}
-                className="w-full p-2.5 rounded-xl bg-slate-900/90 border border-cyan-500/40 hover:border-cyan-400 flex items-center justify-between text-xs transition"
+                className="w-full p-3 rounded-2xl bg-[#030712]/90 border border-cyan-500/40 hover:border-cyan-300 flex items-center justify-between text-xs transition shadow-sm hover:shadow-[0_0_15px_rgba(0,229,255,0.2)] cursor-pointer"
               >
-                <span className="text-gray-300">🔑 VIP Key & Logout</span>
-                <b className="text-cyan-400 font-mono font-bold">
-                  {activeLicense && activeLicense.key ? `${activeLicense.key.substring(0, 10)}..` : 'Not Set'}
+                <span className="text-gray-300 font-medium flex items-center gap-1.5">🔑 VIP License Key</span>
+                <b className="text-cyan-300 font-mono font-bold text-[11px]">
+                  {activeLicense && activeLicense.key ? `${activeLicense.key.substring(0, 10)}..` : 'Verify 🔓'}
                 </b>
               </button>
 
               {activeLicense && activeLicense.exp && (
-                <div className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-[10px]">
-                  <span className="text-gray-400">⌛ Live Expiry:</span>
-                  <b className="text-amber-400 font-mono font-bold">{remainingTimeStr}</b>
+                <div className="p-2.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-[10px]">
+                  <span className="text-gray-400 font-bold">⌛ Live Expiry:</span>
+                  <b className="text-amber-300 font-mono font-bold">{remainingTimeStr}</b>
                 </div>
               )}
 
-              <div className="text-center p-2 rounded-xl border border-dashed border-cyan-400/50 bg-cyan-500/10 text-cyan-300 text-[11px] font-bold">
-                ⚡ Ishak AI VIP Trading System
+              <div className="text-center p-2.5 rounded-2xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 via-teal-500/10 to-blue-500/10 text-cyan-300 text-[11px] font-bold tracking-wider font-['Orbitron',sans-serif]">
+                ⚡ ISHAK AI VIP QUANTUM BOT
               </div>
             </div>
           </div>
         </div>
       )}
 
-
-
-      {/* 3. TIME DURATION MODAL */}
+      {/* 3. TIME DURATION MODAL (CYBER-TRADING LUXURY DESIGN) */}
       {showTimeModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-xs bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-4 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-cyan-500/30">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999996] flex items-center justify-center p-4">
+          <div className="w-full max-w-xs bg-gradient-to-b from-[#0A1226] via-[#070D1E] to-[#040814] border-2 border-cyan-400 rounded-3xl p-5 shadow-[0_0_50px_rgba(0,229,255,0.25),0_20px_50px_rgba(0,0,0,0.95)] relative">
+            <div className="flex items-center justify-between pb-3 mb-2.5 border-b border-cyan-500/25">
               <div className="flex items-center gap-2">
-                <span className="text-amber-400">⏱️</span>
-                <span className="text-xs font-black text-amber-300">SELECT TRADE DURATION</span>
+                <span className="text-amber-400 text-sm filter drop-shadow-[0_0_8px_#FFD700]">⏱️</span>
+                <span className="text-xs font-black text-amber-300 font-['Orbitron',sans-serif] tracking-wider">
+                  SELECT TIMEFRAME
+                </span>
               </div>
               <button
                 onClick={() => setShowTimeModal(false)}
-                className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold"
+                className="w-6 h-6 rounded-full bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold transition shadow-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-[10px] text-gray-400 mb-3">
-              The bot executes trades strictly according to the selected timeframe:
+            <p className="text-[10px] text-gray-400 mb-3 font-medium">
+              Choose the exact trade duration for analysis & auto-execution:
             </p>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               {TIME_OPTIONS.map((opt) => {
                 const isSelected = tradeDuration === opt.sec;
                 return (
@@ -870,18 +929,22 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     key={opt.sec}
                     onClick={() => {
                       setTradeDuration(opt.sec);
+                      try { localStorage.setItem('ISHAK_TRADE_DURATION', opt.sec.toString()); } catch(e){}
                       setShowTimeModal(false);
                     }}
-                    className={`p-2.5 rounded-xl text-left border transition ${
+                    className={`p-3 rounded-2xl text-left border transition cursor-pointer ${
                       opt.sec === 60 ? 'col-span-2' : ''
                     } ${
                       isSelected
-                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/20'
-                        : 'bg-slate-900 border-slate-800 text-gray-300 hover:border-cyan-500/40'
+                        ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/20 border-cyan-400 text-cyan-200 shadow-[0_0_18px_rgba(0,229,255,0.35)] scale-[1.02]'
+                        : 'bg-[#030712]/90 border-slate-800 hover:border-cyan-500/50 text-gray-300'
                     }`}
                   >
-                    <div className="text-xs font-black">{opt.label}</div>
-                    <div className="text-[9px] text-amber-400 font-medium">{opt.sub}</div>
+                    <div className="text-xs font-black font-['Orbitron',sans-serif] flex items-center justify-between">
+                      <span>{opt.label}</span>
+                      {isSelected && <span className="text-emerald-400 text-xs">●</span>}
+                    </div>
+                    <div className="text-[9px] text-amber-400/90 font-medium mt-0.5">{opt.sub}</div>
                   </button>
                 );
               })}
@@ -890,18 +953,26 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 4. VIP KEY & DEVICE LOCK MODAL */}
+      {/* 4. VIP KEY MODAL (TRADER ID REMOVED & CYBER LUXURY DESIGN UPGRADE) */}
       {showKeyModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-xs bg-[#0B132B] border-2 border-cyan-400 rounded-2xl p-4 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-cyan-500/30">
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400">👑</span>
-                <span className="text-xs font-black text-cyan-300">VIP LICENSE & DEVICE VERIFY</span>
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999996] flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-gradient-to-b from-[#0A1226] via-[#070D1E] to-[#040814] border-2 border-cyan-400 rounded-3xl p-5 shadow-[0_0_50px_rgba(0,229,255,0.25),0_20px_50px_rgba(0,0,0,0.95)] relative">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/25">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-cyan-500/10 border border-cyan-400/50 flex items-center justify-center text-cyan-300 text-sm shadow-[0_0_12px_rgba(0,229,255,0.3)]">
+                  👑
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-amber-300 tracking-wider font-['Orbitron',sans-serif]">
+                    ISHAK AI VIP LICENSE
+                  </h3>
+                  <p className="text-[9px] text-gray-400 font-medium">Single-Device Cloud Protection</p>
+                </div>
               </div>
               <button
                 onClick={() => setShowKeyModal(false)}
-                className="w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold"
+                className="w-6 h-6 rounded-full bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold transition shadow-sm"
               >
                 ✕
               </button>
@@ -909,10 +980,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
             {modalToast && (
               <div
-                className={`p-2 rounded-xl text-[11px] font-bold mb-3 border flex items-center gap-1.5 ${
+                className={`p-2.5 rounded-xl text-xs font-bold mb-3 border flex items-center gap-2 ${
                   modalToast.isError
-                    ? 'bg-red-950/70 border-red-500 text-red-300'
-                    : 'bg-emerald-950/70 border-emerald-500 text-emerald-300'
+                    ? 'bg-red-950/80 border-red-500 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                    : 'bg-emerald-950/80 border-emerald-500 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                 }`}
               >
                 <span>{modalToast.isError ? '⚠️' : '✅'}</span>
@@ -920,16 +991,33 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleVerifyKey} className="space-y-3">
+            <form onSubmit={handleVerifyKey} className="space-y-3.5">
               <div>
-                <label className="text-[10px] text-gray-300 block mb-1">
-                  1. VIP License Key:
-                </label>
+                <div className="flex items-center justify-between text-[11px] text-gray-300 mb-1.5 font-bold">
+                  <span className="flex items-center gap-1.5 text-cyan-300">
+                    <KeyRound className="w-3.5 h-3.5 text-cyan-400" /> VIP License Key:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const txt = await navigator.clipboard.readText();
+                        if (txt) {
+                          setLicenseInput(txt.trim());
+                          setKeyInputError(false);
+                          showToast('📋 কি পেস্ট করা হয়েছে!', false);
+                        }
+                      } catch (e) {}
+                    }}
+                    className="text-[9.5px] text-amber-400 hover:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>📋</span> Paste Key
+                  </button>
+                </div>
                 <div className="relative">
-                  <KeyRound className="w-3.5 h-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="ISHAK-VIP-XXXX"
+                    placeholder="ENTER VIP KEY (e.g. ISHAK-VIP-...)"
                     value={licenseInput}
                     onChange={(e) => {
                       setKeyInputError(false);
@@ -947,33 +1035,29 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                         setKeyInputError(false);
                       }
                     }}
-                    className={`w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border text-xs font-mono font-bold outline-none transition ${
+                    className={`w-full px-3.5 py-2.5 rounded-xl bg-[#030712] border text-xs font-mono font-bold tracking-wider outline-none text-center transition ${
                       keyInputError
-                        ? 'border-red-500 text-red-500 bg-red-950/40 animate-pulse'
-                        : 'border-slate-700 text-emerald-400 focus:border-cyan-400'
+                        ? 'border-red-500 text-red-400 bg-red-950/40 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse'
+                        : 'border-cyan-500/50 text-emerald-400 focus:border-cyan-300 focus:shadow-[0_0_15px_rgba(0,229,255,0.3)]'
                     }`}
                   />
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between text-[10px] text-gray-300 mb-1">
-                  <span>2. Trader ID (Optional):</span>
-                  <span className="text-amber-400 font-bold text-[9px]">Device Lock Active 🔒</span>
+              {/* Security & Lock Status Chips */}
+              <div className="grid grid-cols-2 gap-2 text-[9.5px] font-bold">
+                <div className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 flex items-center gap-1.5">
+                  <span>🔒</span> 1-Device Lock
                 </div>
-                <input
-                  type="text"
-                  placeholder="e.g. 84920184"
-                  value={traderIdInput}
-                  onChange={(e) => setTraderIdInput(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-amber-400 font-mono font-bold outline-none focus:border-cyan-400"
-                />
+                <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
+                  <span>⚡</span> Cloud Verified
+                </div>
               </div>
 
               {activeLicense && activeLicense.exp && (
-                <div className="p-2 rounded-xl bg-amber-500/10 border border-dashed border-amber-500/40 text-center">
-                  <span className="text-[10px] text-gray-400">⌛ Live Expiry: </span>
-                  <b className="text-amber-400 font-mono font-bold text-xs">{remainingTimeStr}</b>
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-center flex items-center justify-between">
+                  <span className="text-[10px] text-gray-300 font-bold">⌛ Live Expiry:</span>
+                  <b className="text-amber-300 font-mono font-bold text-xs">{remainingTimeStr}</b>
                 </div>
               )}
 
@@ -981,31 +1065,31 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 <button
                   type="submit"
                   disabled={verifying}
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow hover:brightness-110 disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-[#070D1E] font-black text-xs tracking-wide shadow-[0_0_20px_rgba(0,229,255,0.4)] active:scale-98 transition disabled:opacity-50 cursor-pointer"
                 >
-                  {verifying ? 'Verifying...' : 'Verify & Unlock'}
+                  {verifying ? 'VERIFYING...' : 'VERIFY & UNLOCK ⚡'}
                 </button>
 
                 {activeLicense && activeLicense.key && (
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="px-3 py-2 rounded-xl bg-red-950/40 border border-red-500/50 text-red-400 hover:bg-red-900/50 font-bold text-xs transition"
+                    className="px-3.5 py-2.5 rounded-xl bg-red-950/50 border border-red-500/50 text-red-300 hover:bg-red-900/60 font-bold text-xs transition cursor-pointer"
                   >
                     Logout
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-[10px] pt-1">
-                <span className="text-gray-400">Get Key & Support:</span>
+              <div className="flex items-center justify-between text-[10px] pt-1 border-t border-cyan-500/20">
+                <span className="text-gray-400">VIP Support & Key:</span>
                 <a
                   href="https://t.me/IshakVhai"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-cyan-400 font-bold"
+                  className="text-cyan-400 font-bold hover:underline flex items-center gap-1"
                 >
-                  ⚡ @IshakVhai
+                  <span>⚡</span> @IshakVhai
                 </a>
               </div>
             </form>

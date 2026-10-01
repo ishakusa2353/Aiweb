@@ -1591,8 +1591,23 @@ javascript:(function(){
     e.stopPropagation(); hudPanel.style.display = 'none';
   };
 
-  // 🖱️ + 📱 DRAGGABLE LOGO
+  // 🖱️ + 📱 DRAGGABLE LOGO (STRICT SCREEN VIEWPORT BOUNDARY CLAMPING)
   var isDragging = false, startX, startY, initX, initY;
+
+  function clampBotPosition(x, y) {
+    var pad = 6;
+    var w = (mainWrap.offsetWidth && mainWrap.offsetWidth > 40) ? mainWrap.offsetWidth : 78;
+    var h = (mainWrap.offsetHeight && mainWrap.offsetHeight > 40) ? mainWrap.offsetHeight : 94;
+    var winW = window.innerWidth || document.documentElement.clientWidth || 360;
+    var winH = window.innerHeight || document.documentElement.clientHeight || 640;
+    var maxW = Math.max(pad, winW - w - pad);
+    var maxH = Math.max(pad, winH - h - pad);
+    return {
+      x: Math.max(pad, Math.min(maxW, x)),
+      y: Math.max(pad, Math.min(maxH, y))
+    };
+  }
+
   circleBtn.addEventListener('mousedown', function(e) {
     isDragging = false;
     startX = e.clientX;
@@ -1600,17 +1615,21 @@ javascript:(function(){
     initX = mainWrap.offsetLeft;
     initY = mainWrap.offsetTop;
     function onMove(ev) {
-      if (Math.abs(ev.clientX - startX) > 5 || Math.abs(ev.clientY - startY) > 5) {
+      if (Math.abs(ev.clientX - startX) > 3 || Math.abs(ev.clientY - startY) > 3) {
         isDragging = true;
       }
-      mainWrap.style.left = (initX + ev.clientX - startX) + 'px';
-      mainWrap.style.top = (initY + ev.clientY - startY) + 'px';
+      var targetX = initX + ev.clientX - startX;
+      var targetY = initY + ev.clientY - startY;
+      var clamped = clampBotPosition(targetX, targetY);
+      mainWrap.style.left = clamped.x + 'px';
+      mainWrap.style.top = clamped.y + 'px';
       mainWrap.style.bottom = 'auto';
       mainWrap.style.right = 'auto';
     }
     function onUp() {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      setTimeout(function() { isDragging = false; }, 80);
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -1625,23 +1644,38 @@ javascript:(function(){
     initY = mainWrap.offsetTop;
     function onTouchMove(ev) {
       var tc = ev.touches[0];
-      if (Math.abs(tc.clientX - startX) > 5 || Math.abs(tc.clientY - startY) > 5) {
+      if (Math.abs(tc.clientX - startX) > 3 || Math.abs(tc.clientY - startY) > 3) {
         isDragging = true;
       }
-      mainWrap.style.left = (initX + tc.clientX - startX) + 'px';
-      mainWrap.style.top = (initY + tc.clientY - startY) + 'px';
+      var targetX = initX + tc.clientX - startX;
+      var targetY = initY + tc.clientY - startY;
+      var clamped = clampBotPosition(targetX, targetY);
+      mainWrap.style.left = clamped.x + 'px';
+      mainWrap.style.top = clamped.y + 'px';
       mainWrap.style.bottom = 'auto';
       mainWrap.style.right = 'auto';
     }
     function onTouchEnd() {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
+      setTimeout(function() { isDragging = false; }, 80);
     }
-    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
     document.addEventListener('touchend', onTouchEnd);
   }, { passive: true });
 
-  // 🖱️ + 📱 DRAGGABLE BANNER
+  // Auto-snap inside screen on window resize
+  window.addEventListener('resize', function() {
+    var curX = mainWrap.offsetLeft;
+    var curY = mainWrap.offsetTop;
+    var clamped = clampBotPosition(curX, curY);
+    mainWrap.style.left = clamped.x + 'px';
+    mainWrap.style.top = clamped.y + 'px';
+    mainWrap.style.bottom = 'auto';
+    mainWrap.style.right = 'auto';
+  });
+
+  // 🖱️ + 📱 DRAGGABLE BANNER (STRICT BOUNDARY CLAMPED)
   var isHudDragging = false, hudStartX, hudStartY, hudInitX, hudInitY;
   function startHudDrag(clientX, clientY) {
     isHudDragging = false;
@@ -1654,8 +1688,17 @@ javascript:(function(){
     if (Math.abs(clientX - hudStartX) > 4 || Math.abs(clientY - hudStartY) > 4) {
       isHudDragging = true;
     }
-    hudPanel.style.left = (hudInitX + clientX - hudStartX) + 'px';
-    hudPanel.style.top = (hudInitY + clientY - hudStartY) + 'px';
+    var pad = 8;
+    var hw = (hudPanel.offsetWidth && hudPanel.offsetWidth > 100) ? hudPanel.offsetWidth : 300;
+    var hh = (hudPanel.offsetHeight && hudPanel.offsetHeight > 100) ? hudPanel.offsetHeight : 180;
+    var winW = window.innerWidth || document.documentElement.clientWidth || 360;
+    var winH = window.innerHeight || document.documentElement.clientHeight || 640;
+    var maxW = Math.max(pad, winW - hw - pad);
+    var maxH = Math.max(pad, winH - hh - pad);
+    var targetX = hudInitX + clientX - hudStartX;
+    var targetY = hudInitY + clientY - hudStartY;
+    hudPanel.style.left = Math.max(pad, Math.min(maxW, targetX)) + 'px';
+    hudPanel.style.top = Math.max(pad, Math.min(maxH, targetY)) + 'px';
     hudPanel.style.right = 'auto';
     hudPanel.style.bottom = 'auto';
   }
@@ -1739,44 +1782,68 @@ javascript:(function(){
     });
   }
 
-  // 4. VIP KEY & LOGOUT MODAL
+  // 4. VIP KEY & AUTHENTICATION MODAL (STREAMLINED & LUXURY CYBER DESIGN)
   function showKeyModal(onSuccess) {
     var old = document.getElementById('k-modal'); if (old) old.remove();
     var local = getLocalLicense();
 
     var km = document.createElement('div');
     km.id = 'k-modal'; km.className = 'ishak-dialog-modal';
-    km.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid rgba(0,229,255,0.3);padding-bottom:8px;margin-bottom:10px;">' +
-      '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;">👑</span><b style="color:#00E5FF;font-size:12px;letter-spacing:0.5px;">VIP LICENSE & DEVICE VERIFY</b></div>' +
+    km.style.padding = '20px';
+    km.style.borderRadius = '18px';
+    km.style.border = '1.8px solid #00E5FF';
+    km.style.background = 'linear-gradient(170deg, #070D1E 0%, #0B1736 100%)';
+    km.style.boxShadow = '0 25px 60px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.25), inset 0 1px 1px rgba(255,255,255,0.2)';
+
+    km.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,229,255,0.25);padding-bottom:10px;margin-bottom:14px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+      '<span style="font-size:16px;filter:drop-shadow(0 0 6px #FFD700);">💎</span>' +
+      '<b style="color:#00E5FF;font-size:13px;letter-spacing:1px;font-family:\'Orbitron\',monospace,sans-serif;">ISHAK AI VIP LICENSE</b>' +
+      '</div>' +
       '<div class="ishak-close-btn" id="k-close">✕</div>' +
       '</div>' +
-      '<div style="font-size:10px;color:#A0AEC0;margin-bottom:4px;">1. VIP License Key (Database Protected):</div>' +
-      '<div style="margin-bottom:8px;">' +
-      '<input id="k-input" type="text" placeholder="ISHAK-VIP-XXXX" style="width:100%;box-sizing:border-box;background:#070D1E;border:1.5px solid #00E5FF;border-radius:8px;padding:8px 10px;color:#00FF66;font-weight:bold;font-size:12px;letter-spacing:1px;text-align:center;outline:none;" />' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+      '<span style="font-size:10px;color:#94A3B8;font-weight:bold;">VIP License Key:</span>' +
+      '<button id="k-paste-btn" type="button" style="background:rgba(255,184,0,0.12);color:#FBBF24;border:1px solid rgba(255,184,0,0.35);padding:2px 7px;border-radius:6px;font-size:9.5px;font-weight:bold;cursor:pointer;">📋 Paste Key</button>' +
       '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#A0AEC0;margin-bottom:4px;">' +
-      '<span>2. Trader ID (Optional):</span>' +
-      '<span style="color:#FFD600;font-size:9px;">Device Lock Active 🔒</span>' +
+      '<div style="margin-bottom:12px;">' +
+      '<div style="display:flex;align-items:center;background:#030712;border:1.5px solid #00E5FF;border-radius:10px;padding:3px 10px;box-shadow:inset 0 0 14px rgba(0,229,255,0.12);">' +
+      '<span style="color:#00E5FF;font-size:13px;margin-right:8px;">🔑</span>' +
+      '<input id="k-input" type="text" placeholder="ENTER VIP KEY (e.g. ISHAK-VIP-...)" style="width:100%;box-sizing:border-box;background:transparent;border:none;color:#00FF66;font-weight:900;font-size:12px;letter-spacing:1px;font-family:\'Orbitron\',monospace;text-align:center;outline:none;padding:8px 0;" />' +
       '</div>' +
-      '<div style="margin-bottom:10px;">' +
-      '<input id="t-input" type="text" placeholder="e.g. 84920184" style="width:100%;box-sizing:border-box;background:#070D1E;border:1.5px solid #00E5FF;border-radius:8px;padding:8px 10px;color:#FFD600;font-weight:bold;font-size:12px;letter-spacing:1px;text-align:center;outline:none;" />' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;padding:0 2px;font-size:9.5px;">' +
+      '<span style="color:#64748B;">Device Security: Active 🔒</span>' +
+      '<span style="color:#38BDF8;font-weight:bold;">Direct Cloud License Lock</span>' +
       '</div>' +
-      (local && local.exp ? '<div style="background:rgba(255,214,0,0.1);border:1px dashed #FFD600;border-radius:8px;padding:6px;text-align:center;margin-bottom:8px;"><span style="color:#A0AEC0;font-size:10px;">⌛ Live Expiry Remaining: </span><b id="k-live-timer" style="color:#FFD600;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
-      '<div style="display:flex;gap:6px;margin-bottom:10px;">' +
-      '<button id="k-submit-btn" style="flex:1;background:linear-gradient(135deg,#00E5FF,#00B0FF);color:#070D1E;border:none;padding:9px;border-radius:8px;font-weight:900;font-size:11px;cursor:pointer;">Verify & Unlock</button>' +
-      (local && local.key ? '<button id="k-logout-btn" style="background:rgba(255,23,68,0.15);color:#FF5252;border:1.5px solid #FF1744;padding:9px 12px;border-radius:8px;font-weight:900;font-size:11px;cursor:pointer;">Logout</button>' : '') +
       '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;padding:0 2px;">' +
-      '<span style="color:#A0AEC0;font-size:10px;">Get Key & Support:</span>' +
-      '<a href="https://t.me/IshakVhai" target="_blank" style="color:#00E5FF;font-weight:900;font-size:11px;text-decoration:none;">⚡ @IshakVhai</a>' +
-      '</div>';
+      (local && local.exp ? '<div style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.3);border-radius:10px;padding:8px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#CBD5E1;font-size:10px;">⏳ Access Remaining:</span><b id="k-live-timer" style="color:#FFD700;font-size:11px;font-family:monospace;letter-spacing:0.5px;">' + formatCountdown(local.exp) + '</b></div>' : '') +
+      '<div style="display:flex;gap:8px;margin-bottom:12px;">' +
+      '<button id="k-submit-btn" style="flex:1;background:linear-gradient(135deg,#00E5FF 0%,#0088FF 100%);color:#070D1E;border:none;padding:10px;border-radius:10px;font-weight:900;font-size:12px;letter-spacing:0.5px;cursor:pointer;box-shadow:0 4px 18px rgba(0,229,255,0.35);transition:transform 0.15s,filter 0.15s;">VERIFY & UNLOCK</button>' +
+      (local && local.key ? '<button id="k-logout-btn" style="background:rgba(255,23,68,0.12);color:#FF4081;border:1.2px solid rgba(255,23,68,0.45);padding:10px 14px;border-radius:10px;font-weight:900;font-size:11px;cursor:pointer;">Logout</button>' : '') +
+      '</div>' +
+      '<a href="https://t.me/IshakVhai" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;color:#00E5FF;font-weight:bold;font-size:11px;text-decoration:none;padding:8px;border-radius:8px;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.22);transition:background 0.2s;">' +
+      '<span>⚡ Telegram Support:</span><b style="letter-spacing:0.4px;">@IshakVhai</b>' +
+      '</a>';
 
     document.body.appendChild(km);
     var inputEl = document.getElementById('k-input');
-    var traderEl = document.getElementById('t-input');
     if (local && local.key) inputEl.value = local.key;
-    if (local && local.traderId) traderEl.value = local.traderId;
     inputEl.focus();
+
+    var pasteBtn = document.getElementById('k-paste-btn');
+    if (pasteBtn) {
+      pasteBtn.onclick = function(e) {
+        e.stopPropagation();
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          navigator.clipboard.readText().then(function(clipText) {
+            if (clipText) {
+              inputEl.value = clipText.trim().toUpperCase();
+              showModalToast(km, '📋 কি পেস্ট করা হয়েছে!', false);
+            }
+          }).catch(function(){});
+        }
+      };
+    }
 
     if (countdownInterval) clearInterval(countdownInterval);
     if (local && local.exp) {
@@ -1808,7 +1875,6 @@ javascript:(function(){
     document.getElementById('k-submit-btn').onclick = function(e) {
       e.stopPropagation();
       var val = inputEl.value.trim().toUpperCase();
-      var tId = traderEl.value.trim();
       if (!val) {
         showModalToast(km, 'Please enter a license key!', true);
         return;
@@ -1816,17 +1882,17 @@ javascript:(function(){
       var submitBtn = document.getElementById('k-submit-btn');
       submitBtn.innerText = 'Verifying...';
 
-      verifyLicenseStatus(val, tId).then(function(result) {
+      verifyLicenseStatus(val, '').then(function(result) {
         if (result.valid) {
-          saveLocalLicense(val, result.exp, result.duration, tId, result.tier);
-          showModalToast(km, 'Verified! Single Device Lock Active.', false);
+          saveLocalLicense(val, result.exp, result.duration, '', result.tier);
+          showModalToast(km, 'Verified! VIP Access Active.', false);
           setTimeout(function() {
             km.remove();
             if (onSuccess) onSuccess();
           }, 1100);
         } else {
-          submitBtn.innerText = 'Verify & Unlock';
-          showModalToast(km, result.reason, true);
+          submitBtn.innerText = 'VERIFY & UNLOCK';
+          showModalToast(km, result.reason || 'Invalid license key!', true);
         }
       });
     };
@@ -2301,84 +2367,123 @@ javascript:(function(){
     var totalConfluence = 0;
 
     if (dur <= 5) {
-      // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision & Instant Momentum Following)
-      // Riding the micro-wave momentum guarantees maximum win rate!
+      // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision & Macro Trend Alignment)
+      // Anti-Trap Architecture: Eliminates counter-trend fake spikes that cause loss streaks!
+
+      // 0. Macro Trend Shield (EMA 9, 21, 50 Alignment)
+      var isMacroBull5 = ema9 > ema21 && ema21 > ema50;
+      var isMacroBear5 = ema9 < ema21 && ema21 < ema50;
+      if (isMacroBull5) {
+        totalConfluence += 26;
+        upFactorsList.push('5S Macro Bullish Trend Shield (EMA 9>21>50) [+26]');
+      } else if (isMacroBear5) {
+        totalConfluence -= 26;
+        downFactorsList.push('5S Macro Bearish Trend Shield (EMA 9<21<50) [-26]');
+      }
 
       // 1. Instant Tick Slope & Velocity
       if (slope > 0.000001) {
-        totalConfluence += 40;
-        upFactorsList.push('5S Micro Tick Slope Bullish [+40]');
+        totalConfluence += 28;
+        upFactorsList.push('5S Micro Tick Slope Bullish [+28]');
       } else if (slope < -0.000001) {
-        totalConfluence -= 40;
-        downFactorsList.push('5S Micro Tick Slope Bearish [-40]');
+        totalConfluence -= 28;
+        downFactorsList.push('5S Micro Tick Slope Bearish [-28]');
       }
 
       if (tickDelta > 0.000003) {
-        totalConfluence += 25;
-        upFactorsList.push('5S Instant Velocity Push Up [+25]');
+        totalConfluence += 16;
+        upFactorsList.push('5S Instant Velocity Push Up [+16]');
       } else if (tickDelta < -0.000003) {
-        totalConfluence -= 25;
-        downFactorsList.push('5S Instant Velocity Push Down [-25]');
+        totalConfluence -= 16;
+        downFactorsList.push('5S Instant Velocity Push Down [-16]');
       }
 
-      // 2. Active Candle Body Impulse
+      // 2. Active Candle Body Impulse aligned with macro trend
       if (isUp) {
-        totalConfluence += 30;
-        upFactorsList.push('5S Active Bar Bullish Close > Open [+30]');
+        totalConfluence += isMacroBull5 ? 30 : 16;
+        upFactorsList.push('5S Active Bar Bullish Close > Open [+' + (isMacroBull5 ? 30 : 16) + ']');
       } else if (isDown) {
-        totalConfluence -= 30;
-        downFactorsList.push('5S Active Bar Bearish Close < Open [-30]');
+        totalConfluence -= isMacroBear5 ? 30 : 16;
+        downFactorsList.push('5S Active Bar Bearish Close < Open [-' + (isMacroBear5 ? 30 : 16) + ']');
       }
 
-      // 3. Micro Moving Average Vector
+      // 3. Dynamic Pullback Re-entry (Highest win-rate binary setup)
+      if (isMacroBull5 && isDown && (lastCandle.low <= ema9 || lastCandle.low <= ema21)) {
+        totalConfluence += 32;
+        upFactorsList.push('5S Bullish Dynamic Support Pullback & Absorb [+32]');
+      } else if (isMacroBear5 && isUp && (lastCandle.high >= ema9 || lastCandle.high >= ema21)) {
+        totalConfluence -= 32;
+        downFactorsList.push('5S Bearish Dynamic Resistance Pullback & Reject [-32]');
+      }
+
+      // 4. Genuine Wick Absorption (Anti-trap)
+      if (lowerWick >= candleRange * 0.45 && lowerWick > upperWick * 1.3) {
+        totalConfluence += 28;
+        upFactorsList.push('5S Lower Wick Absorption Bounce [+28]');
+      } else if (upperWick >= candleRange * 0.45 && upperWick > lowerWick * 1.3) {
+        totalConfluence -= 28;
+        downFactorsList.push('5S Upper Wick Selling Rejection [-28]');
+      }
+
+      // 5. Micro Moving Average Vector
       if (ema5 > ema9) {
-        totalConfluence += 15;
-        upFactorsList.push('5S Micro EMA5 > EMA9 [+15]');
+        totalConfluence += 14;
+        upFactorsList.push('5S Micro EMA5 > EMA9 [+14]');
       } else if (ema5 < ema9) {
-        totalConfluence -= 15;
-        downFactorsList.push('5S Micro EMA5 < EMA9 [-15]');
-      }
-
-      // 4. Genuine Wick Absorption (Only when confirmed by price action)
-      if (lowerWick >= candleRange * 0.55 && isUp) {
-        totalConfluence += 20;
-        upFactorsList.push('5S Lower Wick Absorption Bounce [+20]');
-      } else if (upperWick >= candleRange * 0.55 && isDown) {
-        totalConfluence -= 20;
-        downFactorsList.push('5S Upper Wick Selling Rejection [-20]');
+        totalConfluence -= 14;
+        downFactorsList.push('5S Micro EMA5 < EMA9 [-14]');
       }
 
     } else if (dur <= 15) {
-      // ⏱️ 10-SECOND ENGINE (Dual-Candle Momentum & Micro-Swings)
+      // ⏱️ 10-SECOND ENGINE (Dual-Candle Momentum & Macro Trend Stack)
+      var isMacroBull10 = ema9 > ema21 && ema21 > ema50;
+      var isMacroBear10 = ema9 < ema21 && ema21 < ema50;
+      if (isMacroBull10) {
+        totalConfluence += 24;
+        upFactorsList.push('10S Macro Bullish Trend Stack (EMA 9>21>50) [+24]');
+      } else if (isMacroBear10) {
+        totalConfluence -= 24;
+        downFactorsList.push('10S Macro Bearish Trend Stack (EMA 9<21<50) [-24]');
+      }
+
       if (slope > 0.000001) {
-        totalConfluence += 30;
-        upFactorsList.push('10S Tick Slope Bullish [+30]');
+        totalConfluence += 24;
+        upFactorsList.push('10S Tick Slope Bullish [+24]');
       } else if (slope < -0.000001) {
-        totalConfluence -= 30;
-        downFactorsList.push('10S Tick Slope Bearish [-30]');
+        totalConfluence -= 24;
+        downFactorsList.push('10S Tick Slope Bearish [-24]');
       }
 
       // 2-Bar Sequence
       if (isUp && prevCandle.close >= prevCandle.open) {
-        totalConfluence += 35;
-        upFactorsList.push('10S Consecutive Bullish Bar Flow [+35]');
+        totalConfluence += isMacroBull10 ? 32 : 22;
+        upFactorsList.push('10S Consecutive Bullish Bar Flow [+' + (isMacroBull10 ? 32 : 22) + ']');
       } else if (isDown && prevCandle.close <= prevCandle.open) {
-        totalConfluence -= 35;
-        downFactorsList.push('10S Consecutive Bearish Bar Flow [-35]');
+        totalConfluence -= isMacroBear10 ? 32 : 22;
+        downFactorsList.push('10S Consecutive Bearish Bar Flow [-' + (isMacroBear10 ? 32 : 22) + ']');
       } else if (isUp) {
-        totalConfluence += 20;
-        upFactorsList.push('10S Bullish Bar [+20]');
+        totalConfluence += 18;
+        upFactorsList.push('10S Bullish Bar [+18]');
       } else if (isDown) {
-        totalConfluence -= 20;
-        downFactorsList.push('10S Bearish Bar [-20]');
+        totalConfluence -= 18;
+        downFactorsList.push('10S Bearish Bar [-18]');
+      }
+
+      // Dynamic Pullbacks
+      if (isMacroBull10 && prevCandle.close < prevCandle.open && isUp) {
+        totalConfluence += 28;
+        upFactorsList.push('10S Dynamic Support Pullback & Continuation [+28]');
+      } else if (isMacroBear10 && prevCandle.close > prevCandle.open && isDown) {
+        totalConfluence -= 28;
+        downFactorsList.push('10S Dynamic Resistance Pullback & Continuation [-28]');
       }
 
       if (ema5 > ema9 && ema9 > ema13) {
-        totalConfluence += 18;
-        upFactorsList.push('10S EMA Alignment 5>9>13 [+18]');
+        totalConfluence += 16;
+        upFactorsList.push('10S EMA Alignment 5>9>13 [+16]');
       } else if (ema5 < ema9 && ema9 < ema13) {
-        totalConfluence -= 18;
-        downFactorsList.push('10S EMA Alignment 5<9<13 [-18]');
+        totalConfluence -= 16;
+        downFactorsList.push('10S EMA Alignment 5<9<13 [-16]');
       }
 
       if (paScore !== 0) {
