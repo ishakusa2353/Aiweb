@@ -2522,31 +2522,38 @@ javascript:(function(){
   }
 
   // ⚡ 6.5. POCKET OPTION / QUOTEX / UNIVERSAL AUTO-TRADE BULLETPROOF NATIVE DISPATCHER
+  // ⚡ 6.5. QUOTEX (BUY/SELL & UP/DOWN) & POCKET OPTION AUTO-TRADE BULLETPROOF DISPATCHER
   function findQuotexTradeButtons() {
     var cBtn = null;
     var pBtn = null;
 
-    // 1. Direct Pocket Option, Quotex, and Universal Platform Selectors
+    // 1. Direct Quotex (New Buy/Sell update & Classic Up/Down), Pocket Option & Universal Selectors
     cBtn = document.querySelector(
-      '#platform-call-button, #call-button, #deal-call, ' +
-      'a.btn-call, a.btn-up, .btn-call, .btn-up, a.btn-higher, .btn-higher, ' +
+      '#platform-call-button, #call-button, #deal-call, #platform-buy-button, #buy-button, #deal-buy, ' +
+      '.section-deal__button--buy button, button.section-deal__button--buy, .section-deal__button--buy, ' +
+      '.deal-form__button--buy button, button.deal-form__button--buy, .deal-form__button--buy, ' +
       '.section-deal__button--up button, button.section-deal__button--up, .section-deal__button--up, ' +
       '.deal-form__button--up button, button.deal-form__button--up, .deal-form__button--up, ' +
+      'button.btn-buy, button.buy, a.btn-buy, .btn-buy, ' +
       'button.button--up, button.button--call, button.btn-call, button.call, button.button-call, button.button--success, ' +
-      '[data-action="call"], [data-action="up"], [data-button="call"], [data-button="up"], ' +
-      '[data-test="call-button"], [data-test-id="call-button"], [data-test="button-call"], [data-test-id="button-call"], ' +
-      '[data-test="deal-up"], [data-qa="btn-call"], [data-qa="deal-call"]'
+      'a.btn-call, a.btn-up, .btn-call, .btn-up, a.btn-higher, .btn-higher, ' +
+      '[data-action="buy"], [data-action="call"], [data-action="up"], [data-button="buy"], [data-button="call"], [data-button="up"], ' +
+      '[data-test="buy-button"], [data-test-id="buy-button"], [data-test="call-button"], [data-test-id="call-button"], [data-test="button-call"], [data-test-id="button-call"], ' +
+      '[data-test="deal-buy"], [data-test="deal-up"], [data-qa="btn-buy"], [data-qa="deal-buy"], [data-qa="btn-call"], [data-qa="deal-call"]'
     );
 
     pBtn = document.querySelector(
-      '#platform-put-button, #put-button, #deal-put, ' +
-      'a.btn-put, a.btn-down, .btn-put, .btn-down, a.btn-lower, .btn-lower, ' +
+      '#platform-put-button, #put-button, #deal-put, #platform-sell-button, #sell-button, #deal-sell, ' +
+      '.section-deal__button--sell button, button.section-deal__button--sell, .section-deal__button--sell, ' +
+      '.deal-form__button--sell button, button.deal-form__button--sell, .deal-form__button--sell, ' +
       '.section-deal__button--down button, button.section-deal__button--down, .section-deal__button--down, ' +
       '.deal-form__button--down button, button.deal-form__button--down, .deal-form__button--down, ' +
+      'button.btn-sell, button.sell, a.btn-sell, .btn-sell, ' +
       'button.button--down, button.button--put, button.btn-put, button.put, button.button-put, button.button--danger, ' +
-      '[data-action="put"], [data-action="down"], [data-button="put"], [data-button="down"], ' +
-      '[data-test="put-button"], [data-test-id="put-button"], [data-test="button-put"], [data-test-id="button-put"], ' +
-      '[data-test="deal-down"], [data-qa="btn-put"], [data-qa="deal-put"]'
+      'a.btn-put, a.btn-down, .btn-put, .btn-down, a.btn-lower, .btn-lower, ' +
+      '[data-action="sell"], [data-action="put"], [data-action="down"], [data-button="sell"], [data-button="put"], [data-button="down"], ' +
+      '[data-test="sell-button"], [data-test-id="sell-button"], [data-test="put-button"], [data-test-id="put-button"], [data-test="button-put"], [data-test-id="button-put"], ' +
+      '[data-test="deal-sell"], [data-test="deal-down"], [data-qa="btn-sell"], [data-qa="deal-sell"], [data-qa="btn-put"], [data-qa="deal-put"]'
     );
 
     // 2. High-Fidelity Universal Fallback: Search all interactive buttons & links across the broker DOM
@@ -2565,9 +2572,10 @@ javascript:(function(){
         if (!cBtn) {
           var isGreen = bBg.indexOf('0, 192, 108') !== -1 || bBg.indexOf('0, 176, 116') !== -1 ||
                         bBg.indexOf('38, 166, 154') !== -1 || bBg.indexOf('5, 150, 105') !== -1 ||
-                        bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('0, 255') !== -1 ||
-                        bBg.indexOf('green') !== -1 || bCls.indexOf('call') !== -1 || bCls.indexOf('up') !== -1;
-          var isUpWord = /(^|\s)(up|call|higher|বাই|কল|buy|выше|arriba|হায়ার)($|\s)/i.test(bTxt);
+                        bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('34, 197, 94') !== -1 ||
+                        bBg.indexOf('0, 255') !== -1 || bBg.indexOf('green') !== -1 ||
+                        bCls.indexOf('call') !== -1 || bCls.indexOf('up') !== -1 || bCls.indexOf('buy') !== -1;
+          var isUpWord = /\b(buy|call|up|higher|বাই|কল|buy|выше|arriba|হায়ার)\b/i.test(bTxt) || bTxt.indexOf('buy') !== -1 || bTxt.indexOf('call') !== -1 || bTxt.indexOf('up') !== -1;
           if (isGreen || isUpWord) cBtn = b;
         }
 
@@ -2576,8 +2584,9 @@ javascript:(function(){
           var isRed = bBg.indexOf('255, 98, 89') !== -1 || bBg.indexOf('235, 64, 52') !== -1 ||
                       bBg.indexOf('242, 54, 69') !== -1 || bBg.indexOf('255, 75, 75') !== -1 ||
                       bBg.indexOf('225, 29, 72') !== -1 || bBg.indexOf('244, 63, 94') !== -1 ||
-                      bBg.indexOf('red') !== -1 || bCls.indexOf('put') !== -1 || bCls.indexOf('down') !== -1;
-          var isDownWord = /(^|\s)(down|put|lower|সেল|পুট|sell|ниже|abajo|লোয়ার)($|\s)/i.test(bTxt);
+                      bBg.indexOf('239, 68, 68') !== -1 || bBg.indexOf('220, 38, 38') !== -1 ||
+                      bBg.indexOf('red') !== -1 || bCls.indexOf('put') !== -1 || bCls.indexOf('down') !== -1 || bCls.indexOf('sell') !== -1;
+          var isDownWord = /\b(sell|put|down|lower|সেল|পুট|sell|ниже|abajo|লোয়ার)\b/i.test(bTxt) || bTxt.indexOf('sell') !== -1 || bTxt.indexOf('put') !== -1 || bTxt.indexOf('down') !== -1;
           if (isRed || isDownWord) pBtn = b;
         }
 
@@ -2620,6 +2629,47 @@ javascript:(function(){
         try { el.dispatchEvent(new MouseEvent('mouseover', Object.assign({}, evInit, { buttons: 0 }))); } catch(e){}
         try { el.dispatchEvent(new PointerEvent('pointerdown', Object.assign({}, evInit, { buttons: 1, button: 0, which: 1 }))); } catch(e){}
         try { el.dispatchEvent(new MouseEvent('mousedown', Object.assign({}, evInit, { buttons: 1, button: 0, which: 1 }))); } catch(e){}
+
+        // Mobile TouchEvent support for Quotex mobile browser interface
+        if (typeof window.TouchEvent === 'function') {
+          try {
+            var touch = new Touch({
+              identifier: Date.now(),
+              target: el,
+              clientX: cx,
+              clientY: cy,
+              screenX: cx,
+              screenY: cy,
+              pageX: cx,
+              pageY: cy,
+              radiusX: 5,
+              radiusY: 5,
+              rotationAngle: 0,
+              force: 1
+            });
+            var tStart = new TouchEvent('touchstart', {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              view: window,
+              touches: [touch],
+              targetTouches: [touch],
+              changedTouches: [touch]
+            });
+            var tEnd = new TouchEvent('touchend', {
+              bubbles: true,
+              cancelable: true,
+              composed: true,
+              view: window,
+              touches: [],
+              targetTouches: [],
+              changedTouches: [touch]
+            });
+            el.dispatchEvent(tStart);
+            el.dispatchEvent(tEnd);
+          } catch(e){}
+        }
+
         try { el.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
         try { el.dispatchEvent(new MouseEvent('mouseup', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
         try { el.dispatchEvent(new MouseEvent('click', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
@@ -2647,6 +2697,7 @@ javascript:(function(){
       return { success: false, reason: err.message };
     }
   }
+
 
   // 7. CLICK TRIGGER WITH MANDATORY PRE-SCAN LIVE DATABASE LICENSE VERIFICATION
   function triggerScanAndTrade() {
