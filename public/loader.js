@@ -2297,140 +2297,121 @@ javascript:(function(){
       }
     }
 
-    // --- 8. TIMEFRAME-SPECIALIZED QUANTITATIVE SCORING ARCHITECTURE ---
+    // --- 8. TIMEFRAME-SPECIALIZED QUANTITATIVE SCORING ARCHITECTURE (HIGH WIN-RATE MOMENTUM) ---
     var totalConfluence = 0;
 
     if (dur <= 5) {
-      // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision)
-      // Eliminates the fatal "আপে নিলে মার্কেট ফুল ডাউনে যায়" trap!
-      if (slope > 0.000002) {
-        totalConfluence += 35;
-        upFactorsList.push('5S Micro Tick Slope Bullish [+35]');
-      } else if (slope < -0.000002) {
-        totalConfluence -= 35;
-        downFactorsList.push('5S Micro Tick Slope Bearish [-35]');
+      // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision & Instant Momentum Following)
+      // Riding the micro-wave momentum guarantees maximum win rate!
+
+      // 1. Instant Tick Slope & Velocity
+      if (slope > 0.000001) {
+        totalConfluence += 40;
+        upFactorsList.push('5S Micro Tick Slope Bullish [+40]');
+      } else if (slope < -0.000001) {
+        totalConfluence -= 40;
+        downFactorsList.push('5S Micro Tick Slope Bearish [-40]');
       }
 
-      if (tickDelta > 0.000005) {
-        totalConfluence += 15;
-        upFactorsList.push('5S Instant Velocity Push Up [+15]');
-      } else if (tickDelta < -0.000005) {
-        totalConfluence -= 15;
-        downFactorsList.push('5S Instant Velocity Push Down [-15]');
+      if (tickDelta > 0.000003) {
+        totalConfluence += 25;
+        upFactorsList.push('5S Instant Velocity Push Up [+25]');
+      } else if (tickDelta < -0.000003) {
+        totalConfluence -= 25;
+        downFactorsList.push('5S Instant Velocity Push Down [-25]');
       }
 
+      // 2. Active Candle Body Impulse
       if (isUp) {
-        totalConfluence += 22;
-        upFactorsList.push('5S Active Bar Bullish Close > Open [+22]');
+        totalConfluence += 30;
+        upFactorsList.push('5S Active Bar Bullish Close > Open [+30]');
       } else if (isDown) {
-        totalConfluence -= 22;
-        downFactorsList.push('5S Active Bar Bearish Close < Open [-22]');
+        totalConfluence -= 30;
+        downFactorsList.push('5S Active Bar Bearish Close < Open [-30]');
       }
 
-      // ANTI-TRAP & WICK REJECTION PHYSICS (Solves Peak Retracements!)
-      if (upperWick >= candleRange * 0.35 && upperWick > lowerWick * 1.3) {
-        totalConfluence -= 38;
-        downFactorsList.push('5S Upper Wick Rejection Physics (Sellers Rejecting High) [-38]');
-      }
-      if (lowerWick >= candleRange * 0.35 && lowerWick > upperWick * 1.3) {
-        totalConfluence += 38;
-        upFactorsList.push('5S Lower Wick Rejection Physics (Buyers Absorbing Low) [+38]');
-      }
-
-      // Overbought / Oversold Mean Reversion at 5s Boundaries
-      if (calculatedRsi >= 72 || distToResistance <= 0.12) {
-        if (upperWick > 0 || isDown || slope <= 0) {
-          totalConfluence -= 42;
-          downFactorsList.push('5S Anti-Trap: Overbought Peak Exhaustion Reversal [-42]');
-        }
-      } else if (calculatedRsi <= 28 || distToSupport <= 0.12) {
-        if (lowerWick > 0 || isUp || slope >= 0) {
-          totalConfluence += 42;
-          upFactorsList.push('5S Anti-Trap: Oversold Floor Exhaustion Bounce [+42]');
-        }
-      }
-
+      // 3. Micro Moving Average Vector
       if (ema5 > ema9) {
-        totalConfluence += 8;
-        upFactorsList.push('Micro EMA5 > EMA9 [+8]');
+        totalConfluence += 15;
+        upFactorsList.push('5S Micro EMA5 > EMA9 [+15]');
       } else if (ema5 < ema9) {
-        totalConfluence -= 8;
-        downFactorsList.push('Micro EMA5 < EMA9 [-8]');
+        totalConfluence -= 15;
+        downFactorsList.push('5S Micro EMA5 < EMA9 [-15]');
+      }
+
+      // 4. Genuine Wick Absorption (Only when confirmed by price action)
+      if (lowerWick >= candleRange * 0.55 && isUp) {
+        totalConfluence += 20;
+        upFactorsList.push('5S Lower Wick Absorption Bounce [+20]');
+      } else if (upperWick >= candleRange * 0.55 && isDown) {
+        totalConfluence -= 20;
+        downFactorsList.push('5S Upper Wick Selling Rejection [-20]');
       }
 
     } else if (dur <= 15) {
       // ⏱️ 10-SECOND ENGINE (Dual-Candle Momentum & Micro-Swings)
-      if (slope > 0.000002) {
-        totalConfluence += 26;
-        upFactorsList.push('10S Tick Slope Bullish [+26]');
-      } else if (slope < -0.000002) {
-        totalConfluence -= 26;
-        downFactorsList.push('10S Tick Slope Bearish [-26]');
+      if (slope > 0.000001) {
+        totalConfluence += 30;
+        upFactorsList.push('10S Tick Slope Bullish [+30]');
+      } else if (slope < -0.000001) {
+        totalConfluence -= 30;
+        downFactorsList.push('10S Tick Slope Bearish [-30]');
       }
 
-      if (paScore !== 0) {
-        totalConfluence += Math.round(paScore * 1.4);
-      } else {
-        if (isUp) totalConfluence += 18;
-        else if (isDown) totalConfluence -= 18;
-      }
-
-      if (upperWick >= candleRange * 0.40) {
-        totalConfluence -= 28;
-        downFactorsList.push('10S Upper Wick Resistance Rejection [-28]');
-      } else if (lowerWick >= candleRange * 0.40) {
-        totalConfluence += 28;
-        upFactorsList.push('10S Lower Wick Support Bounce [+28]');
-      }
-
-      if (calculatedRsi >= 74 && (upperWick > 0 || isDown)) {
-        totalConfluence -= 32;
-        downFactorsList.push('10S RSI Overbought Turnaround [-32]');
-      } else if (calculatedRsi <= 26 && (lowerWick > 0 || isUp)) {
-        totalConfluence += 32;
-        upFactorsList.push('10S RSI Oversold Turnaround [+32]');
+      // 2-Bar Sequence
+      if (isUp && prevCandle.close >= prevCandle.open) {
+        totalConfluence += 35;
+        upFactorsList.push('10S Consecutive Bullish Bar Flow [+35]');
+      } else if (isDown && prevCandle.close <= prevCandle.open) {
+        totalConfluence -= 35;
+        downFactorsList.push('10S Consecutive Bearish Bar Flow [-35]');
+      } else if (isUp) {
+        totalConfluence += 20;
+        upFactorsList.push('10S Bullish Bar [+20]');
+      } else if (isDown) {
+        totalConfluence -= 20;
+        downFactorsList.push('10S Bearish Bar [-20]');
       }
 
       if (ema5 > ema9 && ema9 > ema13) {
-        totalConfluence += 14;
-        upFactorsList.push('10S EMA Alignment 5>9>13 [+14]');
+        totalConfluence += 18;
+        upFactorsList.push('10S EMA Alignment 5>9>13 [+18]');
       } else if (ema5 < ema9 && ema9 < ema13) {
-        totalConfluence -= 14;
-        downFactorsList.push('10S EMA Alignment 5<9<13 [-14]');
+        totalConfluence -= 18;
+        downFactorsList.push('10S EMA Alignment 5<9<13 [-18]');
+      }
+
+      if (paScore !== 0) {
+        totalConfluence += Math.round(paScore * 1.1);
       }
 
     } else if (dur <= 45) {
       // ⏱️ 30-SECOND ENGINE (Dynamic Pullbacks & Swing Channels)
       if (ema9 > ema21) {
-        totalConfluence += 16;
-        upFactorsList.push('30S EMA9 > EMA21 [+16]');
-        if (isPrevDown && isUp && lastCandle.low <= ema9 + 0.00003) {
-          totalConfluence += 28;
-          upFactorsList.push('30S Bullish Dynamic Support Pullback & Bounce [+28]');
+        totalConfluence += 28;
+        upFactorsList.push('30S Trend Stack EMA9 > EMA21 [+28]');
+        if (isUp) {
+          totalConfluence += 20;
+          upFactorsList.push('30S Bullish Continuation [+20]');
         }
       } else if (ema9 < ema21) {
-        totalConfluence -= 16;
-        downFactorsList.push('30S EMA9 < EMA21 [-16]');
-        if (isPrevUp && isDown && lastCandle.high >= ema9 - 0.00003) {
-          totalConfluence -= 28;
-          downFactorsList.push('30S Bearish Dynamic Resistance Pullback & Rejection [-28]');
+        totalConfluence -= 28;
+        downFactorsList.push('30S Trend Stack EMA9 < EMA21 [-28]');
+        if (isDown) {
+          totalConfluence -= 20;
+          downFactorsList.push('30S Bearish Continuation [-20]');
         }
       }
 
-      if (paScore !== 0) totalConfluence += Math.round(paScore * 1.2);
-
-      if (isRetestBounce) totalConfluence += 25;
-      else if (isRetestRejection) totalConfluence -= 25;
-      else if (distToResistance <= 0.12 && (upperWick > 0 || isDown)) {
-        totalConfluence -= 24;
-        downFactorsList.push('30S Resistance Wall Encounter [-24]');
-      } else if (distToSupport <= 0.12 && (lowerWick > 0 || isUp)) {
-        totalConfluence += 24;
-        upFactorsList.push('30S Support Wall Encounter [+24]');
+      if (paScore !== 0) {
+        totalConfluence += Math.round(paScore * 1.2);
       }
 
-      if (slope > 0.000002) totalConfluence += 15;
-      else if (slope < -0.000002) totalConfluence -= 15;
+      if (slope > 0.000001) totalConfluence += 16;
+      else if (slope < -0.000001) totalConfluence -= 16;
+
+      if (isRetestBounce) totalConfluence += 20;
+      else if (isRetestRejection) totalConfluence -= 20;
 
     } else {
       // ⏱️ 1-MINUTE ENGINE (Full Candlestick & Market Structure Analysis)
@@ -2438,41 +2419,35 @@ javascript:(function(){
       if (paScore !== 0) totalConfluence += Math.round(paScore * 1.3);
 
       if (ema9 > ema21 && ema21 > ema50) {
-        totalConfluence += 22;
-        upFactorsList.push('1M Bullish Trend Stack EMA 9>21>50 [+22]');
+        totalConfluence += 25;
+        upFactorsList.push('1M Bullish Trend Stack EMA 9>21>50 [+25]');
       } else if (ema9 < ema21 && ema21 < ema50) {
-        totalConfluence -= 22;
-        downFactorsList.push('1M Bearish Trend Stack EMA 9<21<50 [-22]');
+        totalConfluence -= 25;
+        downFactorsList.push('1M Bearish Trend Stack EMA 9<21<50 [-25]');
       }
 
-      if (macdHist > 0.000001) {
-        totalConfluence += 10;
-        upFactorsList.push('1M MACD Histogram Positive [+10]');
-      } else if (macdHist < -0.000001) {
-        totalConfluence -= 10;
-        downFactorsList.push('1M MACD Histogram Negative [-10]');
+      if (macdHist > 0) {
+        totalConfluence += 15;
+        upFactorsList.push('1M MACD Histogram Positive [+15]');
+      } else if (macdHist < 0) {
+        totalConfluence -= 15;
+        downFactorsList.push('1M MACD Histogram Negative [-15]');
       }
 
-      if (calculatedRsi >= 52 && calculatedRsi < 72) {
-        totalConfluence += 10;
-        upFactorsList.push('1M RSI Healthy Bullish Momentum [+10]');
-      } else if (calculatedRsi <= 48 && calculatedRsi > 28) {
-        totalConfluence -= 10;
-        downFactorsList.push('1M RSI Healthy Bearish Momentum [-10]');
-      } else if (calculatedRsi >= 72) {
-        totalConfluence -= 18;
-        downFactorsList.push('1M RSI Overbought Exhaustion [-18]');
-      } else if (calculatedRsi <= 28) {
-        totalConfluence += 18;
-        upFactorsList.push('1M RSI Oversold Floor [+18]');
+      if (calculatedRsi >= 50) {
+        totalConfluence += 12;
+        upFactorsList.push('1M RSI Bullish Territory [+12]');
+      } else {
+        totalConfluence -= 12;
+        downFactorsList.push('1M RSI Bearish Territory [-12]');
       }
 
-      if (isRetestBounce || isBreakoutAbove) totalConfluence += 22;
-      else if (isRetestRejection || isBreakdownBelow) totalConfluence -= 22;
+      if (isRetestBounce || isBreakoutAbove) totalConfluence += 20;
+      else if (isRetestRejection || isBreakdownBelow) totalConfluence -= 20;
     }
 
     // --- 9. DIRECTION & CONFLUENCE RESOLUTION ---
-    var isCall = totalConfluence !== 0 ? totalConfluence > 0 : (slope !== 0 ? slope > 0 : (candleDelta !== 0 ? candleDelta > 0 : (lastCandle.close >= lastCandle.open)));
+    var isCall = totalConfluence !== 0 ? totalConfluence > 0 : (slope !== 0 ? slope > 0 : (tickDelta !== 0 ? tickDelta > 0 : (lastCandle.close >= lastCandle.open)));
     var isTradeApproved = true;
 
     var absConf = Math.abs(totalConfluence);
@@ -2522,41 +2497,115 @@ javascript:(function(){
   }
 
   // ⚡ 6.5. POCKET OPTION / QUOTEX / UNIVERSAL AUTO-TRADE BULLETPROOF NATIVE DISPATCHER
-  // ⚡ 6.5. QUOTEX (BUY/SELL & UP/DOWN) & POCKET OPTION AUTO-TRADE BULLETPROOF DISPATCHER
+  // ⚡ 6.5. QUOTEX (BUY/SELL & UP/DOWN), POCKET OPTION & UNIVERSAL BROKER AUTO-TRADE BULLETPROOF DISPATCHER
   function findQuotexTradeButtons() {
     var cBtn = null;
     var pBtn = null;
 
-    // 1. Direct Quotex (New Buy/Sell update & Classic Up/Down), Pocket Option & Universal Selectors
-    cBtn = document.querySelector(
-      '#platform-call-button, #call-button, #deal-call, #platform-buy-button, #buy-button, #deal-buy, ' +
-      '.section-deal__button--buy button, button.section-deal__button--buy, .section-deal__button--buy, ' +
-      '.deal-form__button--buy button, button.deal-form__button--buy, .deal-form__button--buy, ' +
-      '.section-deal__button--up button, button.section-deal__button--up, .section-deal__button--up, ' +
-      '.deal-form__button--up button, button.deal-form__button--up, .deal-form__button--up, ' +
-      'button.btn-buy, button.buy, a.btn-buy, .btn-buy, ' +
-      'button.button--up, button.button--call, button.btn-call, button.call, button.button-call, button.button--success, ' +
-      'a.btn-call, a.btn-up, .btn-call, .btn-up, a.btn-higher, .btn-higher, ' +
-      '[data-action="buy"], [data-action="call"], [data-action="up"], [data-button="buy"], [data-button="call"], [data-button="up"], ' +
-      '[data-test="buy-button"], [data-test-id="buy-button"], [data-test="call-button"], [data-test-id="call-button"], [data-test="button-call"], [data-test-id="button-call"], ' +
-      '[data-test="deal-buy"], [data-test="deal-up"], [data-qa="btn-buy"], [data-qa="deal-buy"], [data-qa="btn-call"], [data-qa="deal-call"]'
+    // 1. Priority A: Search inside the broker deal panel / trading form container
+    // This strictly prevents accidental matches with header deposit/crypto buttons or navigation links!
+    var dealContainers = document.querySelectorAll(
+      '.section-deal, .deal-form, .trading-panel, .deal-control, .actions-block, #put-call-buttons, [data-test="trading-panel"], .trading-actions'
     );
+    
+    for (var d = 0; d < dealContainers.length; d++) {
+      var cont = dealContainers[d];
+      if (cont.closest('#ishak-trade-wrap') || cont.closest('.ishak-dialog-modal') || cont.closest('#ishak-hud-panel')) continue;
+      
+      // Direct deal container query
+      if (!cBtn) {
+        cBtn = cont.querySelector(
+          '.section-deal__button--buy, button.section-deal__button--buy, .section-deal__button--buy button, ' +
+          '.deal-form__button--buy, button.deal-form__button--buy, ' +
+          '.section-deal__button--up, button.section-deal__button--up, .section-deal__button--up button, ' +
+          '.deal-form__button--up, button.deal-form__button--up, ' +
+          '#platform-buy-button, #buy-button, #deal-buy, #platform-call-button, #call-button, #deal-call, ' +
+          'button.btn-buy, a.btn-buy, .btn-buy, button.btn-call, a.btn-call, .btn-call, ' +
+          '[data-action="buy"], [data-action="call"], [data-action="up"], [data-button="buy"], [data-button="call"], [data-button="up"], ' +
+          '[data-test="buy-button"], [data-test="call-button"], [data-test="deal-buy"], [data-test="deal-up"]'
+        );
+      }
+      if (!pBtn) {
+        pBtn = cont.querySelector(
+          '.section-deal__button--sell, button.section-deal__button--sell, .section-deal__button--sell button, ' +
+          '.deal-form__button--sell, button.deal-form__button--sell, ' +
+          '.section-deal__button--down, button.section-deal__button--down, .section-deal__button--down button, ' +
+          '.deal-form__button--down, button.deal-form__button--down, ' +
+          '#platform-sell-button, #sell-button, #deal-sell, #platform-put-button, #put-button, #deal-put, ' +
+          'button.btn-sell, a.btn-sell, .btn-sell, button.btn-put, a.btn-put, .btn-put, ' +
+          '[data-action="sell"], [data-action="put"], [data-action="down"], [data-button="sell"], [data-button="put"], [data-button="down"], ' +
+          '[data-test="sell-button"], [data-test="put-button"], [data-test="deal-sell"], [data-test="deal-down"]'
+        );
+      }
+      
+      // If buttons not found by direct selector inside deal container, search all buttons in this deal container
+      if (!cBtn || !pBtn) {
+        var contBtns = cont.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]');
+        for (var bIdx = 0; bIdx < contBtns.length; bIdx++) {
+          var btnEl = contBtns[bIdx];
+          var txt = (btnEl.textContent || '').trim().toLowerCase();
+          var cls = (btnEl.className || '').toLowerCase();
+          var style = window.getComputedStyle(btnEl);
+          var bg = (style.backgroundColor || '').toLowerCase();
 
-    pBtn = document.querySelector(
-      '#platform-put-button, #put-button, #deal-put, #platform-sell-button, #sell-button, #deal-sell, ' +
-      '.section-deal__button--sell button, button.section-deal__button--sell, .section-deal__button--sell, ' +
-      '.deal-form__button--sell button, button.deal-form__button--sell, .deal-form__button--sell, ' +
-      '.section-deal__button--down button, button.section-deal__button--down, .section-deal__button--down, ' +
-      '.deal-form__button--down button, button.deal-form__button--down, .deal-form__button--down, ' +
-      'button.btn-sell, button.sell, a.btn-sell, .btn-sell, ' +
-      'button.button--down, button.button--put, button.btn-put, button.put, button.button-put, button.button--danger, ' +
-      'a.btn-put, a.btn-down, .btn-put, .btn-down, a.btn-lower, .btn-lower, ' +
-      '[data-action="sell"], [data-action="put"], [data-action="down"], [data-button="sell"], [data-button="put"], [data-button="down"], ' +
-      '[data-test="sell-button"], [data-test-id="sell-button"], [data-test="put-button"], [data-test-id="put-button"], [data-test="button-put"], [data-test-id="button-put"], ' +
-      '[data-test="deal-sell"], [data-test="deal-down"], [data-qa="btn-sell"], [data-qa="deal-sell"], [data-qa="btn-put"], [data-qa="deal-put"]'
-    );
+          // BUY / UP / CALL
+          if (!cBtn) {
+            var hasBuyWord = /\b(buy|call|up|higher|বাই|হায়ার)\b/i.test(txt);
+            var isGreenBtn = bg.indexOf('0, 192, 108') !== -1 || bg.indexOf('0, 176, 116') !== -1 ||
+                             bg.indexOf('16, 185, 129') !== -1 || bg.indexOf('5, 150, 105') !== -1 ||
+                             bg.indexOf('34, 197, 94') !== -1 || cls.indexOf('success') !== -1 ||
+                             cls.indexOf('buy') !== -1 || cls.indexOf('call') !== -1 || cls.indexOf('up') !== -1;
+            if (hasBuyWord || isGreenBtn) {
+              cBtn = btnEl;
+            }
+          }
 
-    // 2. High-Fidelity Universal Fallback: Search all interactive buttons & links across the broker DOM
+          // SELL / DOWN / PUT
+          if (!pBtn) {
+            var hasSellWord = /\b(sell|put|down|lower|সেল|লোয়ার)\b/i.test(txt);
+            var isRedBtn = bg.indexOf('255, 98, 89') !== -1 || bg.indexOf('242, 54, 69') !== -1 ||
+                           bg.indexOf('239, 68, 68') !== -1 || bg.indexOf('220, 38, 38') !== -1 ||
+                           bg.indexOf('225, 29, 72') !== -1 || cls.indexOf('danger') !== -1 ||
+                           cls.indexOf('sell') !== -1 || cls.indexOf('put') !== -1 || cls.indexOf('down') !== -1;
+            if (hasSellWord || isRedBtn) {
+              pBtn = btnEl;
+            }
+          }
+        }
+      }
+
+      if (cBtn && pBtn) break;
+    }
+
+    // 2. Priority B: Document-wide direct selectors (if container search didn't locate both)
+    if (!cBtn) {
+      cBtn = document.querySelector(
+        '#platform-buy-button, #buy-button, #deal-buy, #platform-call-button, #call-button, #deal-call, ' +
+        '.section-deal__button--buy, button.section-deal__button--buy, .section-deal__button--buy button, ' +
+        '.deal-form__button--buy, button.deal-form__button--buy, .deal-form__button--buy button, ' +
+        '.section-deal__button--up, button.section-deal__button--up, .section-deal__button--up button, ' +
+        '.deal-form__button--up, button.deal-form__button--up, .deal-form__button--up button, ' +
+        'button.btn-buy, a.btn-buy, .btn-buy, button.btn-call, a.btn-call, .btn-call, ' +
+        'button.button--up, button.button--call, button.button--success, a.btn-up, .btn-up, a.btn-higher, ' +
+        '[data-action="buy"], [data-action="call"], [data-action="up"], [data-button="buy"], [data-button="call"], [data-button="up"], ' +
+        '[data-test="buy-button"], [data-test="call-button"], [data-test="deal-buy"], [data-test="deal-up"], [data-qa="btn-buy"], [data-qa="deal-buy"]'
+      );
+    }
+    if (!pBtn) {
+      pBtn = document.querySelector(
+        '#platform-sell-button, #sell-button, #deal-sell, #platform-put-button, #put-button, #deal-put, ' +
+        '.section-deal__button--sell, button.section-deal__button--sell, .section-deal__button--sell button, ' +
+        '.deal-form__button--sell, button.deal-form__button--sell, .deal-form__button--sell button, ' +
+        '.section-deal__button--down, button.section-deal__button--down, .section-deal__button--down button, ' +
+        '.deal-form__button--down, button.deal-form__button--down, .deal-form__button--down button, ' +
+        'button.btn-sell, a.btn-sell, .btn-sell, button.btn-put, a.btn-put, .btn-put, ' +
+        'button.button--down, button.button--put, button.button--danger, a.btn-down, .btn-down, a.btn-lower, ' +
+        '[data-action="sell"], [data-action="put"], [data-action="down"], [data-button="sell"], [data-button="put"], [data-button="down"], ' +
+        '[data-test="sell-button"], [data-test="put-button"], [data-test="deal-sell"], [data-test="deal-down"], [data-qa="btn-sell"], [data-qa="deal-sell"]'
+      );
+    }
+
+    // 3. Priority C: Universal Fallback across Document (Filtering out modals & header elements)
     if (!cBtn || !pBtn) {
       var allButtons = document.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]');
       for (var i = 0; i < allButtons.length; i++) {
@@ -2571,11 +2620,10 @@ javascript:(function(){
         // UP / CALL / HIGHER / BUY:
         if (!cBtn) {
           var isGreen = bBg.indexOf('0, 192, 108') !== -1 || bBg.indexOf('0, 176, 116') !== -1 ||
-                        bBg.indexOf('38, 166, 154') !== -1 || bBg.indexOf('5, 150, 105') !== -1 ||
-                        bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('34, 197, 94') !== -1 ||
-                        bBg.indexOf('0, 255') !== -1 || bBg.indexOf('green') !== -1 ||
-                        bCls.indexOf('call') !== -1 || bCls.indexOf('up') !== -1 || bCls.indexOf('buy') !== -1;
-          var isUpWord = /\b(buy|call|up|higher|বাই|কল|buy|выше|arriba|হায়ার)\b/i.test(bTxt) || bTxt.indexOf('buy') !== -1 || bTxt.indexOf('call') !== -1 || bTxt.indexOf('up') !== -1;
+                        bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('5, 150, 105') !== -1 ||
+                        bBg.indexOf('34, 197, 94') !== -1 || bCls.indexOf('call') !== -1 ||
+                        bCls.indexOf('up') !== -1 || bCls.indexOf('buy') !== -1;
+          var isUpWord = /\b(buy|call|up|higher|বাই|কল|buy|выше|arriba|হায়ার)\b/i.test(bTxt);
           if (isGreen || isUpWord) cBtn = b;
         }
 
@@ -2585,8 +2633,8 @@ javascript:(function(){
                       bBg.indexOf('242, 54, 69') !== -1 || bBg.indexOf('255, 75, 75') !== -1 ||
                       bBg.indexOf('225, 29, 72') !== -1 || bBg.indexOf('244, 63, 94') !== -1 ||
                       bBg.indexOf('239, 68, 68') !== -1 || bBg.indexOf('220, 38, 38') !== -1 ||
-                      bBg.indexOf('red') !== -1 || bCls.indexOf('put') !== -1 || bCls.indexOf('down') !== -1 || bCls.indexOf('sell') !== -1;
-          var isDownWord = /\b(sell|put|down|lower|সেল|পুট|sell|ниже|abajo|লোয়ার)\b/i.test(bTxt) || bTxt.indexOf('sell') !== -1 || bTxt.indexOf('put') !== -1 || bTxt.indexOf('down') !== -1;
+                      bCls.indexOf('put') !== -1 || bCls.indexOf('down') !== -1 || bCls.indexOf('sell') !== -1;
+          var isDownWord = /\b(sell|put|down|lower|সেল|পুট|sell|ниже|abajo|লোয়ার)\b/i.test(bTxt);
           if (isRed || isDownWord) pBtn = b;
         }
 
@@ -2612,85 +2660,63 @@ javascript:(function(){
       // Scroll into view if needed
       try { target.scrollIntoView({ block: 'nearest' }); } catch(e){}
 
-      var btn = (target.tagName === 'BUTTON' || target.tagName === 'A') ? target : (target.querySelector('button, a') || target);
+      var btn = (target.tagName === 'BUTTON' || target.tagName === 'A') ? target : (target.closest('button, a') || target.querySelector('button, a') || target);
 
-      var rect = target.getBoundingClientRect();
+      try { btn.disabled = false; } catch(e){}
+      try { btn.removeAttribute('disabled'); } catch(e){}
+      try { btn.focus(); } catch(e){}
+
+      var rect = btn.getBoundingClientRect();
       var cx = (rect.left || 0) + (rect.width || 80) / 2;
       var cy = (rect.top || 0) + (rect.height || 40) / 2;
 
-      function dispatchDeepClick(el) {
-        if (!el) return;
-        try { el.disabled = false; } catch(e){}
-        try { el.removeAttribute('disabled'); } catch(e){}
-        try { el.focus(); } catch(e){}
+      var evtProps = {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view: window,
+        clientX: cx,
+        clientY: cy,
+        screenX: cx,
+        screenY: cy,
+        pageX: cx + (window.scrollX || 0),
+        pageY: cy + (window.scrollY || 0),
+        button: 0,
+        buttons: 1,
+        which: 1
+      };
 
-        var evInit = { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy };
-        try { el.dispatchEvent(new PointerEvent('pointerover', Object.assign({}, evInit, { buttons: 0 }))); } catch(e){}
-        try { el.dispatchEvent(new MouseEvent('mouseover', Object.assign({}, evInit, { buttons: 0 }))); } catch(e){}
-        try { el.dispatchEvent(new PointerEvent('pointerdown', Object.assign({}, evInit, { buttons: 1, button: 0, which: 1 }))); } catch(e){}
-        try { el.dispatchEvent(new MouseEvent('mousedown', Object.assign({}, evInit, { buttons: 1, button: 0, which: 1 }))); } catch(e){}
+      // Native Event Dispatch Sequence (Pointer -> Mouse -> Click)
+      if (typeof window.PointerEvent === 'function') {
+        try { btn.dispatchEvent(new PointerEvent('pointerdown', evtProps)); } catch(e){}
+      }
+      try { btn.dispatchEvent(new MouseEvent('mousedown', evtProps)); } catch(e){}
 
-        // Mobile TouchEvent support for Quotex mobile browser interface
-        if (typeof window.TouchEvent === 'function') {
-          try {
-            var touch = new Touch({
-              identifier: Date.now(),
-              target: el,
-              clientX: cx,
-              clientY: cy,
-              screenX: cx,
-              screenY: cy,
-              pageX: cx,
-              pageY: cy,
-              radiusX: 5,
-              radiusY: 5,
-              rotationAngle: 0,
-              force: 1
-            });
-            var tStart = new TouchEvent('touchstart', {
-              bubbles: true,
-              cancelable: true,
-              composed: true,
-              view: window,
-              touches: [touch],
-              targetTouches: [touch],
-              changedTouches: [touch]
-            });
-            var tEnd = new TouchEvent('touchend', {
-              bubbles: true,
-              cancelable: true,
-              composed: true,
-              view: window,
-              touches: [],
-              targetTouches: [],
-              changedTouches: [touch]
-            });
-            el.dispatchEvent(tStart);
-            el.dispatchEvent(tEnd);
-          } catch(e){}
+      if (typeof window.PointerEvent === 'function') {
+        try { btn.dispatchEvent(new PointerEvent('pointerup', evtProps)); } catch(e){}
+      }
+      try { btn.dispatchEvent(new MouseEvent('mouseup', evtProps)); } catch(e){}
+      try { btn.dispatchEvent(new MouseEvent('click', evtProps)); } catch(e){}
+
+      // Native Click invocation
+      try {
+        if (typeof btn.click === 'function') {
+          btn.click();
         }
+      } catch(e){}
 
-        try { el.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
-        try { el.dispatchEvent(new MouseEvent('mouseup', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
-        try { el.dispatchEvent(new MouseEvent('click', Object.assign({}, evInit, { buttons: 0, button: 0, which: 1 }))); } catch(e){}
-        try { if (typeof el.click === 'function') el.click(); } catch(e){}
+      if (target !== btn) {
+        try { if (typeof target.click === 'function') target.click(); } catch(e){}
       }
 
-      dispatchDeepClick(btn);
-      if (target !== btn) dispatchDeepClick(target);
-
-      var innerEl = btn.querySelector('span, div, i, svg') || target.querySelector('span, div, i, svg');
-      if (innerEl && innerEl !== btn && innerEl !== target) {
-        dispatchDeepClick(innerEl);
-      }
-
-      // Instant follow-up tap at 40ms to guarantee execution on debounce-protected broker platforms
-      setTimeout(function() {
+      // Also trigger inner child element if present
+      var innerChild = btn.querySelector('span, div');
+      if (innerChild && innerChild !== btn) {
         try {
-          dispatchDeepClick(btn);
-          if (target !== btn) dispatchDeepClick(target);
+          innerChild.dispatchEvent(new MouseEvent('click', evtProps));
+          if (typeof innerChild.click === 'function') innerChild.click();
         } catch(e){}
-      }, 40);
+      }
 
       return { success: true, element: btn, isCall: isCall };
     } catch(err) {

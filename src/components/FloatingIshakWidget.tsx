@@ -97,133 +97,113 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     return '$100';
   };
 
-  // Pocket Option / Quotex / Simulator Universal Auto-Click Dispatcher
+  // Pocket Option / Quotex (Buy/Sell & Up/Down) / Simulator Bulletproof Auto-Click Dispatcher
   const executeQuotexTrade = (isCall: boolean): boolean => {
     try {
-      const upSelectors = [
-        '#platform-call-button',
-        '#call-button',
-        '#deal-call',
-        '#platform-buy-button',
-        '#buy-button',
-        '#deal-buy',
-        '.section-deal__button--buy button',
-        'button.section-deal__button--buy',
-        '.section-deal__button--buy',
-        '.deal-form__button--buy button',
-        'button.deal-form__button--buy',
-        '.deal-form__button--buy',
-        '.section-deal__button--up button',
-        'button.section-deal__button--up',
-        '.section-deal__button--up',
-        '.deal-form__button--up button',
-        'button.deal-form__button--up',
-        '.deal-form__button--up',
-        'button.btn-buy',
-        'button.buy',
-        'a.btn-buy',
-        '.btn-buy',
-        'button.button--up',
-        'button.button--call',
-        'button.btn-call',
-        'button.call',
-        'button.button-call',
-        'button.button--success',
-        '.btn-call',
-        'a.btn-call',
-        'a.btn-up',
-        '.btn-up',
-        '.btn-higher',
-        'a.btn-higher',
-        '[data-action="buy"]',
-        '[data-action="call"]',
-        '[data-action="up"]',
-        '[data-button="buy"]',
-        '[data-button="call"]',
-        '[data-button="up"]',
-        '[data-test="buy-button"]',
-        '[data-test-id="buy-button"]',
-        '[data-test="call-button"]',
-        '[data-test-id="call-button"]',
-        '[data-test="button-call"]',
-        '[data-test-id="button-call"]',
-        '[data-test="deal-buy"]',
-        '[data-test="deal-up"]',
-        '[data-qa="btn-buy"]',
-        '[data-qa="deal-buy"]',
-        '[data-qa="btn-call"]',
-        '[data-qa="deal-call"]'
-      ];
-      const downSelectors = [
-        '#platform-put-button',
-        '#put-button',
-        '#deal-put',
-        '#platform-sell-button',
-        '#sell-button',
-        '#deal-sell',
-        '.section-deal__button--sell button',
-        'button.section-deal__button--sell',
-        '.section-deal__button--sell',
-        '.deal-form__button--sell button',
-        'button.deal-form__button--sell',
-        '.deal-form__button--sell',
-        '.section-deal__button--down button',
-        'button.section-deal__button--down',
-        '.section-deal__button--down',
-        '.deal-form__button--down button',
-        'button.deal-form__button--down',
-        '.deal-form__button--down',
-        'button.btn-sell',
-        'button.sell',
-        'a.btn-sell',
-        '.btn-sell',
-        'button.button--down',
-        'button.button--put',
-        'button.btn-put',
-        'button.put',
-        'button.button-put',
-        'button.button--danger',
-        '.btn-put',
-        'a.btn-put',
-        'a.btn-down',
-        '.btn-down',
-        '.btn-lower',
-        'a.btn-lower',
-        '[data-action="sell"]',
-        '[data-action="put"]',
-        '[data-action="down"]',
-        '[data-button="sell"]',
-        '[data-button="put"]',
-        '[data-button="down"]',
-        '[data-test="sell-button"]',
-        '[data-test-id="sell-button"]',
-        '[data-test="put-button"]',
-        '[data-test-id="put-button"]',
-        '[data-test="button-put"]',
-        '[data-test-id="button-put"]',
-        '[data-test="deal-sell"]',
-        '[data-test="deal-down"]',
-        '[data-qa="btn-sell"]',
-        '[data-qa="deal-sell"]',
-        '[data-qa="btn-put"]',
-        '[data-qa="deal-put"]'
-      ];
-
-      const selectors = isCall ? upSelectors : downSelectors;
       let targetEl: HTMLElement | null = null;
-      for (const sel of selectors) {
-        const el = document.querySelector(sel) as HTMLElement | null;
-        if (el && !el.closest('#ishak-trade-wrap') && !el.closest('.ishak-dialog-modal')) {
-          targetEl = el;
-          break;
+
+      // 1. Priority A: Search inside the broker deal panel / trading form container
+      const dealContainers = Array.from(document.querySelectorAll(
+        '.section-deal, .deal-form, .trading-panel, .deal-control, .actions-block, #put-call-buttons, [data-test="trading-panel"], .trading-actions'
+      )) as HTMLElement[];
+
+      for (const cont of dealContainers) {
+        if (cont.closest('#ishak-trade-wrap') || cont.closest('.ishak-dialog-modal') || cont.closest('#ishak-hud-panel')) continue;
+
+        if (isCall) {
+          const directUp = cont.querySelector(
+            '.section-deal__button--buy, button.section-deal__button--buy, .section-deal__button--buy button, ' +
+            '.deal-form__button--buy, button.deal-form__button--buy, ' +
+            '.section-deal__button--up, button.section-deal__button--up, .section-deal__button--up button, ' +
+            '.deal-form__button--up, button.deal-form__button--up, ' +
+            '#platform-buy-button, #buy-button, #deal-buy, #platform-call-button, #call-button, #deal-call, ' +
+            'button.btn-buy, a.btn-buy, .btn-buy, button.btn-call, a.btn-call, .btn-call, ' +
+            '[data-action="buy"], [data-action="call"], [data-action="up"], [data-button="buy"], [data-button="call"], [data-button="up"], ' +
+            '[data-test="buy-button"], [data-test="call-button"], [data-test="deal-buy"], [data-test="deal-up"]'
+          ) as HTMLElement | null;
+          if (directUp) { targetEl = directUp; break; }
+        } else {
+          const directDown = cont.querySelector(
+            '.section-deal__button--sell, button.section-deal__button--sell, .section-deal__button--sell button, ' +
+            '.deal-form__button--sell, button.deal-form__button--sell, ' +
+            '.section-deal__button--down, button.section-deal__button--down, .section-deal__button--down button, ' +
+            '.deal-form__button--down, button.deal-form__button--down, ' +
+            '#platform-sell-button, #sell-button, #deal-sell, #platform-put-button, #put-button, #deal-put, ' +
+            'button.btn-sell, a.btn-sell, .btn-sell, button.btn-put, a.btn-put, .btn-put, ' +
+            '[data-action="sell"], [data-action="put"], [data-action="down"], [data-button="sell"], [data-button="put"], [data-button="down"], ' +
+            '[data-test="sell-button"], [data-test="put-button"], [data-test="deal-sell"], [data-test="deal-down"]'
+          ) as HTMLElement | null;
+          if (directDown) { targetEl = directDown; break; }
+        }
+
+        // Inner button loop in container
+        const contBtns = Array.from(cont.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]')) as HTMLElement[];
+        for (const btnEl of contBtns) {
+          const txt = (btnEl.textContent || '').trim().toLowerCase();
+          const cls = (btnEl.className || '').toLowerCase();
+          const style = window.getComputedStyle(btnEl);
+          const bg = (style.backgroundColor || '').toLowerCase();
+
+          if (isCall) {
+            const hasBuyWord = /\b(buy|call|up|higher|বাই|হায়ার)\b/i.test(txt);
+            const isGreenBtn = bg.includes('0, 192, 108') || bg.includes('0, 176, 116') ||
+                               bg.includes('16, 185, 129') || bg.includes('5, 150, 105') ||
+                               bg.includes('34, 197, 94') || cls.includes('success') ||
+                               cls.includes('buy') || cls.includes('call') || cls.includes('up');
+            if (hasBuyWord || isGreenBtn) { targetEl = btnEl; break; }
+          } else {
+            const hasSellWord = /\b(sell|put|down|lower|সেল|লোয়ার)\b/i.test(txt);
+            const isRedBtn = bg.includes('255, 98, 89') || bg.includes('242, 54, 69') ||
+                             bg.includes('239, 68, 68') || bg.includes('220, 38, 38') ||
+                             bg.includes('225, 29, 72') || cls.includes('danger') ||
+                             cls.includes('sell') || cls.includes('put') || cls.includes('down');
+            if (hasSellWord || isRedBtn) { targetEl = btnEl; break; }
+          }
+        }
+        if (targetEl) break;
+      }
+
+      // 2. Priority B: Document-wide direct selectors
+      if (!targetEl) {
+        const upSelectors = [
+          '#platform-buy-button', '#buy-button', '#deal-buy', '#platform-call-button', '#call-button', '#deal-call',
+          '.section-deal__button--buy', 'button.section-deal__button--buy', '.section-deal__button--buy button',
+          '.deal-form__button--buy', 'button.deal-form__button--buy',
+          '.section-deal__button--up', 'button.section-deal__button--up', '.section-deal__button--up button',
+          '.deal-form__button--up', 'button.deal-form__button--up',
+          'button.btn-buy', 'a.btn-buy', '.btn-buy', 'button.btn-call', 'a.btn-call', '.btn-call',
+          'button.button--up', 'button.button--call', 'button.button--success', 'a.btn-up', '.btn-up', 'a.btn-higher',
+          '[data-action="buy"]', '[data-action="call"]', '[data-action="up"]', '[data-button="buy"]', '[data-button="call"]', '[data-button="up"]',
+          '[data-test="buy-button"]', '[data-test="call-button"]', '[data-test="deal-buy"]', '[data-test="deal-up"]', '[data-qa="btn-buy"]', '[data-qa="deal-buy"]'
+        ];
+        const downSelectors = [
+          '#platform-sell-button', '#sell-button', '#deal-sell', '#platform-put-button', '#put-button', '#deal-put',
+          '.section-deal__button--sell', 'button.section-deal__button--sell', '.section-deal__button--sell button',
+          '.deal-form__button--sell', 'button.deal-form__button--sell',
+          '.section-deal__button--down', 'button.section-deal__button--down', '.section-deal__button--down button',
+          '.deal-form__button--down', 'button.deal-form__button--down',
+          'button.btn-sell', 'a.btn-sell', '.btn-sell', 'button.btn-put', 'a.btn-put', '.btn-put',
+          'button.button--down', 'button.button--put', 'button.button--danger', 'a.btn-down', '.btn-down', 'a.btn-lower',
+          '[data-action="sell"]', '[data-action="put"]', '[data-action="down"]', '[data-button="sell"]', '[data-button="put"]', '[data-button="down"]',
+          '[data-test="sell-button"]', '[data-test="put-button"]', '[data-test="deal-sell"]', '[data-test="deal-down"]', '[data-qa="btn-sell"]', '[data-qa="deal-sell"]'
+        ];
+
+        const selectors = isCall ? upSelectors : downSelectors;
+        for (const sel of selectors) {
+          const el = document.querySelector(sel) as HTMLElement | null;
+          if (el && !el.closest('#ishak-trade-wrap') && !el.closest('.ishak-dialog-modal') && !el.closest('#ishak-hud-panel')) {
+            targetEl = el;
+            break;
+          }
         }
       }
 
+      // 3. Priority C: Universal Fallback
       if (!targetEl) {
         const candidateEls = Array.from(document.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]')) as HTMLElement[];
         for (let i = 0; i < candidateEls.length; i++) {
           const b = candidateEls[i];
-          if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal')) continue;
+          if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal') || b.closest('#ishak-hud-panel')) continue;
 
           const txt = (b.textContent || '').trim().toLowerCase();
           const style = window.getComputedStyle(b);
@@ -231,63 +211,70 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           const cls = (b.className || '').toLowerCase();
 
           if (isCall) {
-            const isGreen = bg.includes('0, 192, 108') || bg.includes('16, 185, 129') || bg.includes('5, 150, 105') || bg.includes('38, 166, 154') || bg.includes('green') || cls.includes('call') || cls.includes('up');
-            const isUpTxt = /(^|\s)(up|call|higher|বাই|কল|buy|выше|হায়ার)($|\s)/i.test(txt);
-            if (isGreen || isUpTxt) {
-              targetEl = b;
-              break;
-            }
+            const isGreen = bg.includes('0, 192, 108') || bg.includes('0, 176, 116') || bg.includes('16, 185, 129') || bg.includes('5, 150, 105') || bg.includes('34, 197, 94') || cls.includes('call') || cls.includes('up') || cls.includes('buy');
+            const isUpTxt = /\b(buy|call|up|higher|বাই|কল|buy|выше|হায়ার)\b/i.test(txt);
+            if (isGreen || isUpTxt) { targetEl = b; break; }
           } else {
-            const isRed = bg.includes('255, 98, 89') || bg.includes('225, 29, 72') || bg.includes('235, 64, 52') || bg.includes('244, 63, 94') || bg.includes('red') || cls.includes('put') || cls.includes('down');
-            const isDownTxt = /(^|\s)(down|put|lower|সেল|পুট|sell|ниже|লোয়ার)($|\s)/i.test(txt);
-            if (isRed || isDownTxt) {
-              targetEl = b;
-              break;
-            }
+            const isRed = bg.includes('255, 98, 89') || bg.includes('242, 54, 69') || bg.includes('239, 68, 68') || bg.includes('220, 38, 38') || bg.includes('225, 29, 72') || cls.includes('put') || cls.includes('down') || cls.includes('sell');
+            const isDownTxt = /\b(sell|put|down|lower|সেল|পুট|sell|ниже|লোয়ার)\b/i.test(txt);
+            if (isRed || isDownTxt) { targetEl = b; break; }
           }
         }
       }
 
       if (targetEl) {
-        const clickNode = (el: HTMLElement) => {
-          try { (el as HTMLButtonElement).disabled = false; } catch (e) {}
-          try { el.removeAttribute('disabled'); } catch (e) {}
-          try { el.focus(); } catch (e) {}
+        const target = (targetEl.tagName === 'BUTTON' || targetEl.tagName === 'A') ? targetEl : (targetEl.closest('button, a') as HTMLElement || targetEl.querySelector('button, a') as HTMLElement || targetEl);
 
-          const rect = el.getBoundingClientRect();
-          const cx = (rect.left || 0) + (rect.width || 80) / 2;
-          const cy = (rect.top || 0) + (rect.height || 40) / 2;
+        try { (target as HTMLButtonElement).disabled = false; } catch (e) {}
+        try { target.removeAttribute('disabled'); } catch (e) {}
+        try { target.focus(); } catch (e) {}
 
-          const pOver = new PointerEvent('pointerover', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0 });
-          const mOver = new MouseEvent('mouseover', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0 });
-          const pDown = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1 });
-          const mDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 1, button: 0, which: 1 });
-          const pUp = new PointerEvent('pointerup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
-          const mUp = new MouseEvent('mouseup', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
-          const clickEv = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, view: window, clientX: cx, clientY: cy, buttons: 0, button: 0, which: 1 });
+        const rect = target.getBoundingClientRect();
+        const cx = (rect.left || 0) + (rect.width || 80) / 2;
+        const cy = (rect.top || 0) + (rect.height || 40) / 2;
 
-          el.dispatchEvent(pOver);
-          el.dispatchEvent(mOver);
-          el.dispatchEvent(pDown);
-          el.dispatchEvent(mDown);
-          el.dispatchEvent(pUp);
-          el.dispatchEvent(mUp);
-          el.dispatchEvent(clickEv);
-          if (typeof el.click === 'function') el.click();
+        const evtProps = {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view: window,
+          clientX: cx,
+          clientY: cy,
+          screenX: cx,
+          screenY: cy,
+          pageX: cx + (window.scrollX || 0),
+          pageY: cy + (window.scrollY || 0),
+          button: 0,
+          buttons: 1,
+          which: 1
         };
 
-        const target = (targetEl.tagName === 'BUTTON' || targetEl.tagName === 'A') ? targetEl : (targetEl.querySelector('button, a') as HTMLElement || targetEl);
-        const inner = target.querySelector('span, div') as HTMLElement | null;
-        clickNode(target);
-        if (inner && inner !== target) clickNode(inner);
-        if (targetEl !== target) clickNode(targetEl);
+        if (typeof window.PointerEvent === 'function') {
+          try { target.dispatchEvent(new PointerEvent('pointerdown', evtProps)); } catch (e) {}
+        }
+        try { target.dispatchEvent(new MouseEvent('mousedown', evtProps)); } catch (e) {}
 
-        setTimeout(() => {
+        if (typeof window.PointerEvent === 'function') {
+          try { target.dispatchEvent(new PointerEvent('pointerup', evtProps)); } catch (e) {}
+        }
+        try { target.dispatchEvent(new MouseEvent('mouseup', evtProps)); } catch (e) {}
+        try { target.dispatchEvent(new MouseEvent('click', evtProps)); } catch (e) {}
+
+        if (typeof target.click === 'function') {
+          try { target.click(); } catch (e) {}
+        }
+
+        if (targetEl !== target) {
+          try { if (typeof targetEl.click === 'function') targetEl.click(); } catch (e) {}
+        }
+
+        const inner = target.querySelector('span, div') as HTMLElement | null;
+        if (inner && inner !== target) {
           try {
-            clickNode(target);
-            if (targetEl !== target) clickNode(targetEl);
+            inner.dispatchEvent(new MouseEvent('click', evtProps));
+            if (typeof inner.click === 'function') inner.click();
           } catch (e) {}
-        }, 50);
+        }
 
         return true;
       }
