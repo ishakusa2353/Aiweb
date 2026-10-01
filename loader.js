@@ -2498,149 +2498,20 @@ javascript:(function(){
 
   // ⚡ 6.5. POCKET OPTION / QUOTEX / UNIVERSAL AUTO-TRADE BULLETPROOF NATIVE DISPATCHER
   // ⚡ 6.5. QUOTEX (BUY/SELL & UP/DOWN), POCKET OPTION & UNIVERSAL BROKER AUTO-TRADE BULLETPROOF DISPATCHER
+  // ⚡ 6.5. QUOTEX & BROKER AUTO-TRADE BULLETPROOF DISPATCHER (USER'S EXACT NATIVE COMMAND)
   function findQuotexTradeButtons() {
-    var cBtn = null;
-    var pBtn = null;
+    var cBtn = null, pBtn = null;
+    Array.from(document.querySelectorAll('button, div, a')).forEach(function(b) {
+      if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal') || b.closest('#ishak-hud-panel')) return;
+      var txt = b.innerText ? b.innerText.trim().toLowerCase() : '';
+      if (txt === 'buy' || txt.startsWith('buy\n')) cBtn = b;
+      if (txt === 'sell' || txt.startsWith('sell\n')) pBtn = b;
+      if (!cBtn && (txt === 'up' || txt.startsWith('up\n') || txt === 'call' || txt.startsWith('call\n'))) cBtn = b;
+      if (!pBtn && (txt === 'down' || txt.startsWith('down\n') || txt === 'put' || txt.startsWith('put\n'))) pBtn = b;
+    });
 
-    // 1. Priority A: Search inside the broker deal panel / trading form container
-    // This strictly prevents accidental matches with header deposit/crypto buttons or navigation links!
-    var dealContainers = document.querySelectorAll(
-      '.section-deal, .deal-form, .trading-panel, .deal-control, .actions-block, #put-call-buttons, [data-test="trading-panel"], .trading-actions'
-    );
-    
-    for (var d = 0; d < dealContainers.length; d++) {
-      var cont = dealContainers[d];
-      if (cont.closest('#ishak-trade-wrap') || cont.closest('.ishak-dialog-modal') || cont.closest('#ishak-hud-panel')) continue;
-      
-      // Direct deal container query
-      if (!cBtn) {
-        cBtn = cont.querySelector(
-          '.section-deal__button--buy, button.section-deal__button--buy, .section-deal__button--buy button, ' +
-          '.deal-form__button--buy, button.deal-form__button--buy, ' +
-          '.section-deal__button--up, button.section-deal__button--up, .section-deal__button--up button, ' +
-          '.deal-form__button--up, button.deal-form__button--up, ' +
-          '#platform-buy-button, #buy-button, #deal-buy, #platform-call-button, #call-button, #deal-call, ' +
-          'button.btn-buy, a.btn-buy, .btn-buy, button.btn-call, a.btn-call, .btn-call, ' +
-          '[data-action="buy"], [data-action="call"], [data-action="up"], [data-button="buy"], [data-button="call"], [data-button="up"], ' +
-          '[data-test="buy-button"], [data-test="call-button"], [data-test="deal-buy"], [data-test="deal-up"]'
-        );
-      }
-      if (!pBtn) {
-        pBtn = cont.querySelector(
-          '.section-deal__button--sell, button.section-deal__button--sell, .section-deal__button--sell button, ' +
-          '.deal-form__button--sell, button.deal-form__button--sell, ' +
-          '.section-deal__button--down, button.section-deal__button--down, .section-deal__button--down button, ' +
-          '.deal-form__button--down, button.deal-form__button--down, ' +
-          '#platform-sell-button, #sell-button, #deal-sell, #platform-put-button, #put-button, #deal-put, ' +
-          'button.btn-sell, a.btn-sell, .btn-sell, button.btn-put, a.btn-put, .btn-put, ' +
-          '[data-action="sell"], [data-action="put"], [data-action="down"], [data-button="sell"], [data-button="put"], [data-button="down"], ' +
-          '[data-test="sell-button"], [data-test="put-button"], [data-test="deal-sell"], [data-test="deal-down"]'
-        );
-      }
-      
-      // If buttons not found by direct selector inside deal container, search all buttons in this deal container
-      if (!cBtn || !pBtn) {
-        var contBtns = cont.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]');
-        for (var bIdx = 0; bIdx < contBtns.length; bIdx++) {
-          var btnEl = contBtns[bIdx];
-          var txt = (btnEl.textContent || '').trim().toLowerCase();
-          var cls = (btnEl.className || '').toLowerCase();
-          var style = window.getComputedStyle(btnEl);
-          var bg = (style.backgroundColor || '').toLowerCase();
-
-          // BUY / UP / CALL
-          if (!cBtn) {
-            var hasBuyWord = /\b(buy|call|up|higher|বাই|হায়ার)\b/i.test(txt);
-            var isGreenBtn = bg.indexOf('0, 192, 108') !== -1 || bg.indexOf('0, 176, 116') !== -1 ||
-                             bg.indexOf('16, 185, 129') !== -1 || bg.indexOf('5, 150, 105') !== -1 ||
-                             bg.indexOf('34, 197, 94') !== -1 || cls.indexOf('success') !== -1 ||
-                             cls.indexOf('buy') !== -1 || cls.indexOf('call') !== -1 || cls.indexOf('up') !== -1;
-            if (hasBuyWord || isGreenBtn) {
-              cBtn = btnEl;
-            }
-          }
-
-          // SELL / DOWN / PUT
-          if (!pBtn) {
-            var hasSellWord = /\b(sell|put|down|lower|সেল|লোয়ার)\b/i.test(txt);
-            var isRedBtn = bg.indexOf('255, 98, 89') !== -1 || bg.indexOf('242, 54, 69') !== -1 ||
-                           bg.indexOf('239, 68, 68') !== -1 || bg.indexOf('220, 38, 38') !== -1 ||
-                           bg.indexOf('225, 29, 72') !== -1 || cls.indexOf('danger') !== -1 ||
-                           cls.indexOf('sell') !== -1 || cls.indexOf('put') !== -1 || cls.indexOf('down') !== -1;
-            if (hasSellWord || isRedBtn) {
-              pBtn = btnEl;
-            }
-          }
-        }
-      }
-
-      if (cBtn && pBtn) break;
-    }
-
-    // 2. Priority B: Document-wide direct selectors (if container search didn't locate both)
-    if (!cBtn) {
-      cBtn = document.querySelector(
-        '#platform-buy-button, #buy-button, #deal-buy, #platform-call-button, #call-button, #deal-call, ' +
-        '.section-deal__button--buy, button.section-deal__button--buy, .section-deal__button--buy button, ' +
-        '.deal-form__button--buy, button.deal-form__button--buy, .deal-form__button--buy button, ' +
-        '.section-deal__button--up, button.section-deal__button--up, .section-deal__button--up button, ' +
-        '.deal-form__button--up, button.deal-form__button--up, .deal-form__button--up button, ' +
-        'button.btn-buy, a.btn-buy, .btn-buy, button.btn-call, a.btn-call, .btn-call, ' +
-        'button.button--up, button.button--call, button.button--success, a.btn-up, .btn-up, a.btn-higher, ' +
-        '[data-action="buy"], [data-action="call"], [data-action="up"], [data-button="buy"], [data-button="call"], [data-button="up"], ' +
-        '[data-test="buy-button"], [data-test="call-button"], [data-test="deal-buy"], [data-test="deal-up"], [data-qa="btn-buy"], [data-qa="deal-buy"]'
-      );
-    }
-    if (!pBtn) {
-      pBtn = document.querySelector(
-        '#platform-sell-button, #sell-button, #deal-sell, #platform-put-button, #put-button, #deal-put, ' +
-        '.section-deal__button--sell, button.section-deal__button--sell, .section-deal__button--sell button, ' +
-        '.deal-form__button--sell, button.deal-form__button--sell, .deal-form__button--sell button, ' +
-        '.section-deal__button--down, button.section-deal__button--down, .section-deal__button--down button, ' +
-        '.deal-form__button--down, button.deal-form__button--down, .deal-form__button--down button, ' +
-        'button.btn-sell, a.btn-sell, .btn-sell, button.btn-put, a.btn-put, .btn-put, ' +
-        'button.button--down, button.button--put, button.button--danger, a.btn-down, .btn-down, a.btn-lower, ' +
-        '[data-action="sell"], [data-action="put"], [data-action="down"], [data-button="sell"], [data-button="put"], [data-button="down"], ' +
-        '[data-test="sell-button"], [data-test="put-button"], [data-test="deal-sell"], [data-test="deal-down"], [data-qa="btn-sell"], [data-qa="deal-sell"]'
-      );
-    }
-
-    // 3. Priority C: Universal Fallback across Document (Filtering out modals & header elements)
-    if (!cBtn || !pBtn) {
-      var allButtons = document.querySelectorAll('button, a, div[role="button"], [class*="btn"], [class*="button"]');
-      for (var i = 0; i < allButtons.length; i++) {
-        var b = allButtons[i];
-        if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal') || b.closest('#ishak-hud-panel')) continue;
-
-        var bTxt = (b.textContent || '').trim().toLowerCase();
-        var bStyle = window.getComputedStyle(b);
-        var bBg = (bStyle.backgroundColor || '').toLowerCase();
-        var bCls = (b.className || '').toLowerCase();
-
-        // UP / CALL / HIGHER / BUY:
-        if (!cBtn) {
-          var isGreen = bBg.indexOf('0, 192, 108') !== -1 || bBg.indexOf('0, 176, 116') !== -1 ||
-                        bBg.indexOf('16, 185, 129') !== -1 || bBg.indexOf('5, 150, 105') !== -1 ||
-                        bBg.indexOf('34, 197, 94') !== -1 || bCls.indexOf('call') !== -1 ||
-                        bCls.indexOf('up') !== -1 || bCls.indexOf('buy') !== -1;
-          var isUpWord = /\b(buy|call|up|higher|বাই|কল|buy|выше|arriba|হায়ার)\b/i.test(bTxt);
-          if (isGreen || isUpWord) cBtn = b;
-        }
-
-        // DOWN / PUT / LOWER / SELL:
-        if (!pBtn) {
-          var isRed = bBg.indexOf('255, 98, 89') !== -1 || bBg.indexOf('235, 64, 52') !== -1 ||
-                      bBg.indexOf('242, 54, 69') !== -1 || bBg.indexOf('255, 75, 75') !== -1 ||
-                      bBg.indexOf('225, 29, 72') !== -1 || bBg.indexOf('244, 63, 94') !== -1 ||
-                      bBg.indexOf('239, 68, 68') !== -1 || bBg.indexOf('220, 38, 38') !== -1 ||
-                      bCls.indexOf('put') !== -1 || bCls.indexOf('down') !== -1 || bCls.indexOf('sell') !== -1;
-          var isDownWord = /\b(sell|put|down|lower|সেল|পুট|sell|ниже|abajo|লোয়ার)\b/i.test(bTxt);
-          if (isRed || isDownWord) pBtn = b;
-        }
-
-        if (cBtn && pBtn) break;
-      }
-    }
+    if (!cBtn) cBtn = document.querySelector('#platform-buy-button, #platform-call-button, .btn-buy, .btn-call, .section-deal__button--buy, .section-deal__button--up');
+    if (!pBtn) pBtn = document.querySelector('#platform-sell-button, #platform-put-button, .btn-sell, .btn-put, .section-deal__button--sell, .section-deal__button--down');
 
     return { up: cBtn, down: pBtn };
   }
@@ -2657,68 +2528,14 @@ javascript:(function(){
         return { success: false, reason: 'BUTTON_NOT_FOUND' };
       }
 
-      // Scroll into view if needed
-      try { target.scrollIntoView({ block: 'nearest' }); } catch(e){}
+      var opts = { bubbles: true, cancelable: true, view: window };
+      target.dispatchEvent(new PointerEvent('pointerdown', opts));
+      target.dispatchEvent(new MouseEvent('mousedown', opts));
+      target.dispatchEvent(new PointerEvent('pointerup', opts));
+      target.dispatchEvent(new MouseEvent('mouseup', opts));
+      target.click();
 
-      var btn = (target.tagName === 'BUTTON' || target.tagName === 'A') ? target : (target.closest('button, a') || target.querySelector('button, a') || target);
-
-      try { btn.disabled = false; } catch(e){}
-      try { btn.removeAttribute('disabled'); } catch(e){}
-      try { btn.focus(); } catch(e){}
-
-      var rect = btn.getBoundingClientRect();
-      var cx = (rect.left || 0) + (rect.width || 80) / 2;
-      var cy = (rect.top || 0) + (rect.height || 40) / 2;
-
-      var evtProps = {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        view: window,
-        clientX: cx,
-        clientY: cy,
-        screenX: cx,
-        screenY: cy,
-        pageX: cx + (window.scrollX || 0),
-        pageY: cy + (window.scrollY || 0),
-        button: 0,
-        buttons: 1,
-        which: 1
-      };
-
-      // Native Event Dispatch Sequence (Pointer -> Mouse -> Click)
-      if (typeof window.PointerEvent === 'function') {
-        try { btn.dispatchEvent(new PointerEvent('pointerdown', evtProps)); } catch(e){}
-      }
-      try { btn.dispatchEvent(new MouseEvent('mousedown', evtProps)); } catch(e){}
-
-      if (typeof window.PointerEvent === 'function') {
-        try { btn.dispatchEvent(new PointerEvent('pointerup', evtProps)); } catch(e){}
-      }
-      try { btn.dispatchEvent(new MouseEvent('mouseup', evtProps)); } catch(e){}
-      try { btn.dispatchEvent(new MouseEvent('click', evtProps)); } catch(e){}
-
-      // Native Click invocation
-      try {
-        if (typeof btn.click === 'function') {
-          btn.click();
-        }
-      } catch(e){}
-
-      if (target !== btn) {
-        try { if (typeof target.click === 'function') target.click(); } catch(e){}
-      }
-
-      // Also trigger inner child element if present
-      var innerChild = btn.querySelector('span, div');
-      if (innerChild && innerChild !== btn) {
-        try {
-          innerChild.dispatchEvent(new MouseEvent('click', evtProps));
-          if (typeof innerChild.click === 'function') innerChild.click();
-        } catch(e){}
-      }
-
-      return { success: true, element: btn, isCall: isCall };
+      return { success: true, element: target, isCall: isCall };
     } catch(err) {
       return { success: false, reason: err.message };
     }
