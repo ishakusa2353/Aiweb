@@ -358,6 +358,25 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     setBalance((prev) => prev - investment);
   };
 
+  // ⚡ INSTANTANEOUS NATIVE TRADE EXECUTION (0ms latency, zero render delay)
+  useEffect(() => {
+    const handleInstantTrade = (e: Event) => {
+      const customEvent = e as CustomEvent<{ isCall: boolean; signal?: SignalData }>;
+      if (!customEvent.detail) return;
+      if (activeTradeRef.current) return;
+
+      const { isCall } = customEvent.detail;
+      if (isCall === true) {
+        handleCallTrade();
+      } else if (isCall === false) {
+        handlePutTrade();
+      }
+    };
+
+    window.addEventListener('ishak_trade_execute', handleInstantTrade);
+    return () => window.removeEventListener('ishak_trade_execute', handleInstantTrade);
+  }, [livePrice, investment, selectedDuration]);
+
   return (
     <div className="space-y-4">
       {/* Simulation Info Card */}
