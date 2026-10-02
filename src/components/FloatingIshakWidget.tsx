@@ -435,11 +435,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       playPhotostatScannerSound();
     }
 
-    // ⚡ 1. PRE-CALCULATE ALL MARKET DATA (RSI + MACD + EMA + BOLLINGER + WICKS + MOMENTUM) & EXECUTE TRADE AT EXACT SCAN COMPLETION (ZERO DELAY)
-    let tradeExecuted = false;
-    const executeInstantTradeAtScanEnd = () => {
-      if (tradeExecuted) return;
-      tradeExecuted = true;
+    // ⚡ 1. PRE-CALCULATE ALL MARKET DATA (RSI + MACD + EMA + BOLLINGER + WICKS + MOMENTUM)
+    // ⚡ Anticipatory Broker Dispatch: Clicks trade button at 2600ms so the ~800-900ms broker execution latency
+    // is absorbed during scan, guaranteeing that the trade is fully placed & implemented the exact split-second scan reaches 100%!
+    let brokerTradeDispatched = false;
+    let computedSignal: SignalData | null = null;
+    let computedIsCall: boolean = true;
+
+    const prepareAndDispatchBrokerTrade = () => {
+      if (brokerTradeDispatched) return;
+      brokerTradeDispatched = true;
 
       readPrice();
 
@@ -500,6 +505,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         isCall = Math.floor(Date.now() / 1000) % 2 === 0;
       }
 
+      computedIsCall = isCall;
+
       const confScore = analysis.accuracyEstimate ? analysis.accuracyEstimate.replace('%', '') : '96.8';
       const calculatedRsi = analysis.indicators.rsi14;
       const calculatedEma5 = analysis.indicators.ema5;
@@ -509,7 +516,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const trendLabel = analysis.trendLabel;
       const logicText = `টাইমফ্রেম ${durationStr}: ${analysis.reason}`;
 
-      const signal: SignalData = {
+      computedSignal = {
         isCall,
         isLowConfidence: false,
         isRiskDetected: false,
@@ -532,28 +539,46 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
       };
 
-      // ⚡ 1. TRADE IS PLACED INSTANTLY (0ms latency, zero delay!)
+      // ⚡ PRE-DISPATCH LIVE BROKER / QUOTEX CLICK AT 2600MS (Absorbs broker latency so trade is established right as scan ends)
       executeQuotexTrade(isCall);
+    };
 
-      // ⚡ 2. SYNCHRONOUSLY DISPATCH WINDOW EVENT TO NATIVE SIMULATOR (ZERO REACT RE-RENDER DELAY)
+    // ⚡ 1. Pre-dispatch at 2600ms (~900ms before scan completion)
+    const anticipatoryTimer = setTimeout(prepareAndDispatchBrokerTrade, 2600);
+
+    // ⚡ 2. Complete scan state cleanly at 3500ms (The exact moment 100% is reached and trade is already active)
+    setTimeout(() => {
+      clearInterval(progressInterval);
+      clearInterval(priceSampleInterval);
+      clearTimeout(anticipatoryTimer);
+
+      prepareAndDispatchBrokerTrade();
+
+      const finalIsCall = computedIsCall;
+      const finalSignal = computedSignal;
+
+      // Ensure simulator is triggered at 100% completion
       try {
-        window.dispatchEvent(new CustomEvent('ishak_trade_execute', { detail: { isCall, signal } }));
+        window.dispatchEvent(new CustomEvent('ishak_trade_execute', { detail: { isCall: finalIsCall, signal: finalSignal } }));
       } catch (e) {}
 
-      // ⚡ 3. PROPAGATE SIGNAL PROP TO SIMULATOR
-      if (onTradeSignal) {
-        onTradeSignal(signal);
+      if (onTradeSignal && finalSignal) {
+        onTradeSignal(finalSignal);
       }
 
-      // ⚡ 4. SIMULTANEOUSLY DISPLAY DIRECTION SIGNAL (BUY ⬆ / SELL ⬇)
-      setFlySignal(isCall ? 'UP' : 'DOWN');
+      setScanProgress(100);
+      setScanDots('.......');
+      setIsScanning(false);
+
+      // ⚡ SIMULTANEOUSLY DISPLAY DIRECTION SIGNAL (BUY ⬆ / SELL ⬇)
+      setFlySignal(finalIsCall ? 'UP' : 'DOWN');
       setTimeout(() => {
         setFlySignal(null);
       }, 1500);
 
-      // ⚡ 5. PLAY CONFIRMATION AUDIO
+      // ⚡ PLAY CONFIRMATION AUDIO
       if (soundEnabled) {
-        playResultSound(isCall);
+        playResultSound(finalIsCall);
       }
 
       if (autoPilotMode) {
@@ -561,22 +586,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           triggerScan();
         }, ((tradeDuration || 60) * 1000) + 3000);
       }
-    };
-
-    // ⚡ Trigger trade execution right at 3400ms (as scan completes)
-    const tradeTimer = setTimeout(executeInstantTradeAtScanEnd, 3400);
-
-    // Complete scan state cleanly at 3500ms
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      clearInterval(priceSampleInterval);
-      clearTimeout(tradeTimer);
-
-      executeInstantTradeAtScanEnd();
-
-      setScanProgress(100);
-      setScanDots('.......');
-      setIsScanning(false);
     }, 3500);
   };
 

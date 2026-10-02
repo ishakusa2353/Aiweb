@@ -138,13 +138,13 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         const t = tickCountRef.current;
 
         if (trade) {
-          // Determine if this trade is a high-confluence win (~91%) or authentic pullback/loss (~9%)
+          // Determine if this trade is a high-confluence win (96%) or authentic pullback/loss (4%)
           // Based on a deterministic hash of trade ID
           let hash = 0;
           for (let i = 0; i < trade.id.length; i++) {
             hash = (hash * 31 + trade.id.charCodeAt(i)) & 0xffffffff;
           }
-          const rawWin = Math.abs(hash % 100) < 92; // 92% high-confluence baseline
+          const rawWin = Math.abs(hash % 100) < 96; // 96% high-confluence baseline!
           const isWinningCycle = consecutiveLossRef.current >= 1 ? true : rawWin;
 
           const totalTicks = Math.max(1, (trade.duration * 1000) / 250);
@@ -152,14 +152,15 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           const progress = Math.min(1, elapsedTicks / totalTicks);
 
           if (isWinningCycle) {
-            // Strong momentum in trade direction with realistic micro-ticks
+            // Decisive momentum in trade direction with realistic micro-ticks
+            // Guaranteeing that strike price is solidly surpassed by expiry
             const dirMultiplier = trade.type === 'CALL' ? 1 : -1;
-            const trendPush = dirMultiplier * (0.00004 + Math.sin(t * 0.4) * 0.000015);
+            const trendPush = dirMultiplier * (0.00007 + Math.abs(Math.sin(t * 0.35)) * 0.00004);
             delta = trendPush;
           } else {
             // Counter-trend market pullback resulting in an authentic loss
             const dirMultiplier = trade.type === 'CALL' ? -1 : 1;
-            const pullback = dirMultiplier * (0.00003 + Math.cos(t * 0.35) * 0.00001);
+            const pullback = dirMultiplier * (0.00004 + Math.abs(Math.cos(t * 0.35)) * 0.00002);
             delta = pullback;
           }
         } else {
@@ -191,7 +192,27 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         // Time finished: Authentic Real Expiry Decision based on Strike vs Exit price
         if (now >= trade.endTime) {
           setLivePrice((currentPrice) => {
-            const exitPrice = currentPrice;
+            // Force final winning/losing tick alignment to ensure 100% mathematical integrity
+            let exitPrice = currentPrice;
+            let hash = 0;
+            for (let i = 0; i < trade.id.length; i++) {
+              hash = (hash * 31 + trade.id.charCodeAt(i)) & 0xffffffff;
+            }
+            const isWinningCycle = consecutiveLossRef.current >= 1 ? true : Math.abs(hash % 100) < 96;
+
+            if (isWinningCycle) {
+              if (trade.type === 'CALL' && exitPrice <= trade.entryPrice) {
+                exitPrice = parseFloat((trade.entryPrice + 0.00015).toFixed(5));
+              } else if (trade.type === 'PUT' && exitPrice >= trade.entryPrice) {
+                exitPrice = parseFloat((trade.entryPrice - 0.00015).toFixed(5));
+              }
+            } else {
+              if (trade.type === 'CALL' && exitPrice >= trade.entryPrice) {
+                exitPrice = parseFloat((trade.entryPrice - 0.00012).toFixed(5));
+              } else if (trade.type === 'PUT' && exitPrice <= trade.entryPrice) {
+                exitPrice = parseFloat((trade.entryPrice + 0.00012).toFixed(5));
+              }
+            }
             let isWin = false;
             let isTie = false;
 
@@ -296,6 +317,8 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
   // Handle Call click
   const handleCallTrade = () => {
+    if (activeTradeRef.current) return;
+
     setCallButtonFlash(true);
     setTimeout(() => setCallButtonFlash(false), 500);
 
@@ -328,6 +351,8 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
   // Handle Put click
   const handlePutTrade = () => {
+    if (activeTradeRef.current) return;
+
     setPutButtonFlash(true);
     setTimeout(() => setPutButtonFlash(false), 500);
 

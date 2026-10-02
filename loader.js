@@ -2738,11 +2738,14 @@ javascript:(function(){
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();
 
-      // ⚡ PRE-EVALUATE AND DISPATCH TRADE INSTANTLY AT SCAN COMPLETION (ZERO LATENCY)
-      var tradeAlreadyExecuted = false;
-      function executeInstantTradeAtEnd() {
-        if (tradeAlreadyExecuted) return;
-        tradeAlreadyExecuted = true;
+      // ⚡ PRE-EVALUATE AND DISPATCH TRADE AT 2600MS TO ABSORB BROKER LATENCY
+      var brokerTradeDispatched = false;
+      var computedSignal = null;
+      var computedIsCall = true;
+
+      function preDispatchQuotexTrade() {
+        if (brokerTradeDispatched) return;
+        brokerTradeDispatched = true;
 
         if (priceSamplerInterval) clearInterval(priceSamplerInterval);
         var pFinal = extractQuotexLivePrice();
@@ -2776,15 +2779,11 @@ javascript:(function(){
 
         var isCall = signal && signal.isCall !== null ? signal.isCall : (livePriceSamples.length >= 2 && (livePriceSamples[livePriceSamples.length - 1] - livePriceSamples[0]) !== 0 ? (livePriceSamples[livePriceSamples.length - 1] > livePriceSamples[0]) : (Math.floor(Date.now() / 1000) % 2 === 0));
 
-        // ⚡ 1. EXECUTE LIVE AUTO TRADE FIRST AT 0MS (INSTANTANEOUS ZERO-LATENCY DISPATCH)
+        computedSignal = signal;
+        computedIsCall = isCall;
+
+        // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 2600MS (Absorbs broker latency so trade is established right as scan ends)
         var tradeRes = executeQuotexTrade(isCall, signalId);
-
-        // ⚡ 2. SIMULTANEOUSLY SHOW FLY SIGNAL DIRECTION & HIGHLIGHT TARGET CANDLE
-        showFlySignalAnimation(isCall ? 'UP' : 'DOWN');
-        highlightRunningCandleTarget(isCall ? 'UP' : 'DOWN');
-
-        // ⚡ 3. SIMULTANEOUSLY PLAY CONFIRMATION AUDIO
-        playResultSound(isCall);
 
         // Instant retry sequence to guarantee trade is clicked even if DOM updates dynamically
         if (!tradeRes.success && tradeRes.reason === 'BUTTON_NOT_FOUND') {
@@ -2797,6 +2796,33 @@ javascript:(function(){
             }
           }, 60);
         }
+      }
+
+      // ⚡ Fired at 2600ms (~900ms before scan completion to absorb broker network delay)
+      var tradeTimer = setTimeout(preDispatchQuotexTrade, 2600);
+
+      // Cleanly complete scan and present direction at 3500ms
+      setTimeout(function() {
+        if (priceSamplerInterval) clearInterval(priceSamplerInterval);
+        clearTimeout(tradeTimer);
+
+        preDispatchQuotexTrade();
+
+        var finalIsCall = computedIsCall;
+
+        laserEl.classList.remove('scanning-active');
+        circleBtn.classList.remove('working-pulse');
+        var auraEl = document.getElementById('ishak-logo-aura');
+        if (auraEl) auraEl.classList.remove('aura-active');
+        isScanning = false;
+        updateBadgeLabel();
+
+        // ⚡ SIMULTANEOUSLY SHOW FLY SIGNAL DIRECTION & HIGHLIGHT TARGET CANDLE
+        showFlySignalAnimation(finalIsCall ? 'UP' : 'DOWN');
+        highlightRunningCandleTarget(finalIsCall ? 'UP' : 'DOWN');
+
+        // ⚡ SIMULTANEOUSLY PLAY CONFIRMATION AUDIO
+        playResultSound(finalIsCall);
 
         if (hudPanel) hudPanel.style.display = 'none';
 
@@ -2810,24 +2836,6 @@ javascript:(function(){
             }
           }, nextWaitMs);
         }
-      }
-
-      // ⚡ Fired right as scan finishes (3400ms)
-      var tradeTimer = setTimeout(executeInstantTradeAtEnd, 3400);
-
-      // Cleanly remove scan visual pulse at 3500ms
-      setTimeout(function() {
-        if (priceSamplerInterval) clearInterval(priceSamplerInterval);
-        clearTimeout(tradeTimer);
-
-        executeInstantTradeAtEnd();
-
-        laserEl.classList.remove('scanning-active');
-        circleBtn.classList.remove('working-pulse');
-        var auraEl = document.getElementById('ishak-logo-aura');
-        if (auraEl) auraEl.classList.remove('aura-active');
-        isScanning = false;
-        updateBadgeLabel();
       }, 3500);
     });
   }
