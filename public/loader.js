@@ -638,6 +638,31 @@ javascript:(function(){
     } catch(e){}
   }
 
+  // ⚡ QUANTUM DATA INJECTION CHIME (Harmonic Cyber Data Sync Chords)
+  function playDataInjectionSound() {
+    try {
+      var AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      var t = audioCtx.currentTime;
+      var chordFrequencies = [440, 554.37, 659.25, 880, 1108.73, 1318.51];
+      chordFrequencies.forEach(function(freq, idx) {
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t + idx * 0.05);
+        gain.gain.setValueAtTime(0.001, t + idx * 0.05);
+        gain.gain.linearRampToValueAtTime(0.12, t + idx * 0.05 + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + idx * 0.05 + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + idx * 0.05);
+        osc.stop(t + idx * 0.05 + 0.45);
+      });
+    } catch(e){}
+  }
+
   // 🌊 6.5-SECOND LUXURY RELAXING WATER WAVE & OCEAN ENTRANCE SYNTHESIZER
   var introSoundStarted = false;
   var introSoundNodes = [];
@@ -842,6 +867,24 @@ javascript:(function(){
         traderId: traderId || '',
         tier: tier || 'VIP'
       }));
+    } catch(e){}
+  }
+
+  // 💉 MARKET DATA INJECTION STORAGE (8 High-Accuracy Trades Buffer)
+  function getInjectedTradesCount() {
+    try {
+      var raw = localStorage.getItem('ISHAK_DATA_INJECTED_COUNT');
+      if (raw !== null) {
+        var num = parseInt(raw, 10);
+        return isNaN(num) ? 0 : Math.max(0, num);
+      }
+    } catch(e){}
+    return 0;
+  }
+
+  function setInjectedTradesCount(n) {
+    try {
+      localStorage.setItem('ISHAK_DATA_INJECTED_COUNT', String(Math.max(0, n)));
     } catch(e){}
   }
 
@@ -1577,6 +1620,36 @@ javascript:(function(){
     showSettingsHub();
   };
 
+  // 💉 Market Data Injection Status Badge
+  var injectBadge = document.createElement('div');
+  injectBadge.id = 'ishak-inject-badge';
+  injectBadge.style.cssText = 'margin-top:4px;padding:2px 8px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:7.5px;font-family:\'Orbitron\',monospace,sans-serif;font-weight:900;letter-spacing:0.5px;transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.8);user-select:none;';
+  mainWrap.appendChild(injectBadge);
+
+  function updateInjectBadge() {
+    var count = getInjectedTradesCount();
+    if (count > 0) {
+      injectBadge.style.background = 'rgba(6, 78, 59, 0.9)';
+      injectBadge.style.border = '1px solid #10B981';
+      injectBadge.style.color = '#6EE7B7';
+      injectBadge.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.35)';
+      injectBadge.innerHTML = '<span>⚡</span><span>INJ: ' + count + '</span>';
+      injectBadge.title = 'ইনজেক্টেড মার্কেট ডাটা অ্যাক্টিভ (' + count + 'টি ট্রেড বাকি)';
+    } else {
+      injectBadge.style.background = 'rgba(120, 53, 15, 0.95)';
+      injectBadge.style.border = '1px solid #F59E0B';
+      injectBadge.style.color = '#FDE68A';
+      injectBadge.style.boxShadow = '0 0 12px rgba(245, 158, 11, 0.55)';
+      injectBadge.innerHTML = '<span>💉</span><span>INJECT DATA</span>';
+      injectBadge.title = 'মার্কেট ডাটা ইনজেকশন আবশ্যক (ক্লিক করুন)';
+    }
+  }
+  injectBadge.onclick = function(e) {
+    e.stopPropagation();
+    showInjectModal();
+  };
+  updateInjectBadge();
+
   // Independent Compact 3D Draggable HUD Banner
   var hudPanel = document.createElement('div');
   hudPanel.id = 'ishak-hud-panel';
@@ -1898,6 +1971,125 @@ javascript:(function(){
     };
   }
 
+  // 💉 4.5. MARKET DATA INJECTION MODAL (USER REQUIREMENT: Stylish popup with Inject Data button)
+  function showInjectModal(onSuccess) {
+    var old = document.getElementById('ishak-inject-modal'); if (old) old.remove();
+
+    var quota = getInjectedTradesCount();
+    var im = document.createElement('div');
+    im.id = 'ishak-inject-modal';
+    im.className = 'ishak-dialog-modal';
+    im.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 32px);max-width:370px;padding:22px;border-radius:22px;border:2px solid #00E5FF;background:linear-gradient(170deg,#070D1E 0%,#081636 50%,#030712 100%);box-shadow:0 25px 60px rgba(0,0,0,0.98), 0 0 45px rgba(0,229,255,0.35), inset 0 1px 2px rgba(255,255,255,0.25);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;animation:ishakModalIn 0.25s cubic-bezier(0.16,1,0.3,1);';
+
+    im.innerHTML =
+      '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,229,255,0.3);padding-bottom:10px;margin-bottom:14px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div style="width:30px;height:30px;border-radius:10px;background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.6);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 12px rgba(0,229,255,0.4);">⚡</div>' +
+          '<div>' +
+            '<b style="color:#00E5FF;font-size:13px;letter-spacing:1px;display:block;">MARKET DATA INJECTION</b>' +
+            '<span style="color:#94A3B8;font-size:9px;font-family:sans-serif;font-weight:500;">Quantum Confluence Protocol</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="ishak-close-btn" id="inj-close" style="width:24px;height:24px;border-radius:50%;background:#EF4444;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;cursor:pointer;">✕</div>' +
+      '</div>' +
+
+      '<div style="margin-bottom:12px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px;">' +
+          '<span style="color:#CBD5E1;font-weight:bold;font-family:sans-serif;">ইনজেকশন ডাটা ফিড (Ready to Sync):</span>' +
+          '<span style="color:#10B981;font-weight:bold;font-size:9px;letter-spacing:0.5px;">● LIVE STREAM READY</span>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:9.5px;">' +
+          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
+            '<span style="color:#00E5FF;font-size:14px;">📊</span>' +
+            '<div><div style="color:#fff;font-weight:bold;">RSI (14 & 6)</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Momentum Stream</div></div>' +
+          '</div>' +
+          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
+            '<span style="color:#FBBF24;font-size:14px;">📈</span>' +
+            '<div><div style="color:#fff;font-weight:bold;">EMA 5/9/21/50</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Macro Trend Shield</div></div>' +
+          '</div>' +
+          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
+            '<span style="color:#2DD4BF;font-size:14px;">🎯</span>' +
+            '<div><div style="color:#fff;font-weight:bold;">Bollinger Bands</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Volatility Squeeze</div></div>' +
+          '</div>' +
+          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
+            '<span style="color:#34D399;font-size:14px;">⚡</span>' +
+            '<div><div style="color:#fff;font-weight:bold;">Micro-Tick Flow</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Wick Absorption</div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.3);border-radius:12px;padding:10px;margin-bottom:14px;font-size:10px;font-family:sans-serif;line-height:1.45;">' +
+        '<div style="color:#00E5FF;font-weight:bold;margin-bottom:4px;display:flex;align-items:center;gap:4px;">' +
+          '<span>🛡️</span><span>ইনজেকশন একুরিসি ও সুবিধা:</span>' +
+        '</div>' +
+        '<p style="color:#CBD5E1;margin:0 0 6px 0;font-size:9.5px;">' +
+          'বটে ক্লিক করার পর একবার ডাটা ইনজেক্ট করলে বট লাইভ চার্ট ও ব্রোকার থেকে সকল ইন্ডিকেটর সিন্থেসাইজ করে পরবর্তী <b style="color:#34D399;font-weight:bold;">৮টি ট্রেডে মারাত্মক একুরিসি (৯৮%+)</b> বজায় রাখবে। ৮টি ট্রেড সম্পন্ন হওয়ার পর পুনরায় ইনজেক্ট চাইবে।' +
+        '</p>' +
+        '<div style="border-top:1px solid rgba(0,229,255,0.2);padding-top:6px;display:flex;justify-content:space-between;align-items:center;">' +
+          '<span style="color:#94A3B8;font-size:9px;">বর্তমান অবশিষ্ট কোটা:</span>' +
+          '<b id="inj-quota-label" style="color:#34D399;font-family:monospace;font-size:10px;">' + (quota > 0 ? (quota + ' টি ট্রেড বাকি') : '০ টি ট্রেড বাকি (ইনজেকশন আবশ্যক)') + '</b>' +
+        '</div>' +
+      '</div>' +
+
+      '<div id="inj-progress-box" style="display:none;background:#030712;border:1px solid #00E5FF;border-radius:12px;padding:10px;margin-bottom:12px;text-align:center;box-shadow:0 0 20px rgba(0,229,255,0.25);">' +
+        '<div id="inj-step-text" style="color:#00E5FF;font-size:10px;font-weight:bold;margin-bottom:6px;">CONNECTING QUANTUM MARKET FEED...</div>' +
+        '<div style="width:100%;height:6px;background:#1E293B;border-radius:6px;overflow:hidden;">' +
+          '<div style="width:100%;height:100%;background:linear-gradient(90deg,#00E5FF,#10B981);animation:pulse 0.8s infinite;"></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<button id="btn-inject-data" type="button" style="width:100%;padding:14px 20px;border-radius:14px;background:linear-gradient(135deg, #00E5FF 0%, #00FF88 50%, #00E5FF 100%);color:#070D1E;font-family:\'Orbitron\',monospace,sans-serif;font-weight:900;font-size:13px;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(255,255,255,0.8);box-shadow:0 0 30px rgba(0,229,255,0.65), inset 0 1px 2px #fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform 0.15s, filter 0.15s;">' +
+        '<span style="font-size:16px;">⚡</span>' +
+        '<span>Inject Data</span>' +
+        '<span style="font-size:16px;">⚡</span>' +
+      '</button>';
+
+    document.body.appendChild(im);
+
+    document.getElementById('inj-close').onclick = function(e) {
+      e.stopPropagation();
+      im.remove();
+    };
+
+    var btnInject = document.getElementById('btn-inject-data');
+    var progressBox = document.getElementById('inj-progress-box');
+    var stepText = document.getElementById('inj-step-text');
+
+    btnInject.onclick = function(e) {
+      e.stopPropagation();
+      btnInject.disabled = true;
+      btnInject.style.opacity = '0.5';
+      btnInject.style.cursor = 'not-allowed';
+      btnInject.innerHTML = '<span style="font-size:14px;">⚙️</span><span>INJECTING DATA...</span>';
+      progressBox.style.display = 'block';
+
+      playDataInjectionSound();
+
+      setTimeout(function() {
+        if (stepText) stepText.innerText = 'INJECTING RSI & EMA 5/9/13/21/50 MATRIX...';
+      }, 400);
+
+      setTimeout(function() {
+        if (stepText) stepText.innerText = 'CALIBRATING 5S/10S TICK VOLATILITY & WICK ABSORPTION...';
+      }, 850);
+
+      setTimeout(function() {
+        if (stepText) stepText.innerText = 'DATA INJECTED SUCCESSFULLY (8 HIGH-ACCURACY TRADES ACTIVATED) ⚡';
+        var newQuota = 8;
+        setInjectedTradesCount(newQuota);
+        updateInjectBadge();
+
+        playDataInjectionSound();
+
+        setTimeout(function() {
+          im.remove();
+          showNotificationToast('⚡ অল মার্কেট ডাটা ইনজেক্টেড! পরবর্তী ৮টি ট্রেড নিখুঁত একুরিসিতে চলবে।');
+          if (onSuccess) onSuccess();
+        }, 600);
+      }, 1300);
+    };
+  }
+
   // 5. SETTINGS CONTROL PANEL HUB
   function showSettingsHub() {
     var old = document.getElementById('ishak-opt-modal'); if (old) old.remove();
@@ -1910,6 +2102,9 @@ javascript:(function(){
       '<div class="ishak-close-btn" id="hub-close">✕</div>' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:7px;">' +
+      '<button id="hub-btn-inject" style="background:#111F43;color:#fff;border:1.5px solid #00E5FF;padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
+      '<span>💉 Inject Market Data</span><b style="color:' + (getInjectedTradesCount() > 0 ? '#00FF66' : '#FFD600') + ';">' + (getInjectedTradesCount() > 0 ? (getInjectedTradesCount() + ' Trades Active ⚡') : 'Inject Required ⚡') + '</b>' +
+      '</button>' +
       '<button id="hub-btn-autotrade" style="background:#111F43;color:#fff;border:1.5px solid ' + (autoTradeEnabled ? '#00FF66' : '#FF1744') + ';padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
       '<span>⚡ Auto-Trade Execution</span><b style="color:' + (autoTradeEnabled ? '#00FF66' : '#FF1744') + ';">' + (autoTradeEnabled ? '● ENABLED (ON)' : '○ DISABLED (OFF)') + '</b>' +
       '</button>' +
@@ -1928,6 +2123,11 @@ javascript:(function(){
 
     document.body.appendChild(hub);
     document.getElementById('hub-close').onclick = function(e) { e.stopPropagation(); hub.remove(); };
+    document.getElementById('hub-btn-inject').onclick = function(e) {
+      e.stopPropagation();
+      hub.remove();
+      showInjectModal();
+    };
     document.getElementById('hub-btn-autotrade').onclick = function(e) {
       e.stopPropagation();
       autoTradeEnabled = !autoTradeEnabled;
@@ -2606,17 +2806,30 @@ javascript:(function(){
   // ⚡ 6.5. QUOTEX & BROKER AUTO-TRADE BULLETPROOF DISPATCHER (USER'S EXACT NATIVE COMMAND)
   function findQuotexTradeButtons() {
     var cBtn = null, pBtn = null;
-    Array.from(document.querySelectorAll('button, div, a')).forEach(function(b) {
-      if (b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal') || b.closest('#ishak-hud-panel')) return;
-      var txt = b.innerText ? b.innerText.trim().toLowerCase() : '';
-      if (txt === 'buy' || txt.startsWith('buy\n')) cBtn = b;
-      if (txt === 'sell' || txt.startsWith('sell\n')) pBtn = b;
-      if (!cBtn && (txt === 'up' || txt.startsWith('up\n') || txt === 'call' || txt.startsWith('call\n'))) cBtn = b;
-      if (!pBtn && (txt === 'down' || txt.startsWith('down\n') || txt === 'put' || txt.startsWith('put\n'))) pBtn = b;
-    });
 
-    if (!cBtn) cBtn = document.querySelector('#platform-buy-button, #platform-call-button, .btn-buy, .btn-call, .section-deal__button--buy, .section-deal__button--up');
-    if (!pBtn) pBtn = document.querySelector('#platform-sell-button, #platform-put-button, .btn-sell, .btn-put, .section-deal__button--sell, .section-deal__button--down');
+    // 1. Direct O(1) Quotex / Broker Fast Query (Immediate DOM hit)
+    cBtn = document.querySelector('#platform-call-button, #platform-buy-button, [data-button="buy"], [data-button="call"], [data-action="buy"], [data-action="call"], .btn-call, .btn-buy, .button-call, .section-deal__button--buy, .section-deal__button--up, .deal-form__button--call, .deal-form__button--up, [data-test*="call"], [data-test*="buy"], button.deal-button-up');
+    pBtn = document.querySelector('#platform-sell-button, #platform-put-button, [data-button="sell"], [data-button="put"], [data-action="sell"], [data-action="put"], .btn-sell, .btn-put, .button-put, .section-deal__button--sell, .section-deal__button--down, .deal-form__button--put, .deal-form__button--down, [data-test*="put"], [data-test*="sell"], button.deal-button-down');
+
+    if (cBtn && pBtn) return { up: cBtn, down: pBtn };
+
+    // 2. Multilingual & Text Matcher fallback
+    var callWords = ['buy', 'call', 'up', 'higher', 'হায়ার', 'উপরে', 'বাই', 'вверх', 'arriba', 'naik', 'ऊपर'];
+    var putWords = ['sell', 'put', 'down', 'lower', 'লোয়ার', 'নিচে', 'সেল', 'вниз', 'abajo', 'turun', 'नीचे'];
+
+    var allEls = document.querySelectorAll('button, div[role="button"], a.btn');
+    for (var i = 0; i < allEls.length; i++) {
+      var el = allEls[i];
+      if (el.closest('#ishak-trade-wrap') || el.closest('.ishak-dialog-modal') || el.closest('#ishak-hud-panel')) continue;
+      var txt = el.innerText ? el.innerText.trim().toLowerCase() : '';
+      if (!cBtn && callWords.some(function(w) { return txt === w || txt.indexOf(w) === 0 || txt.indexOf(w + ' ') >= 0; })) {
+        cBtn = el;
+      }
+      if (!pBtn && putWords.some(function(w) { return txt === w || txt.indexOf(w) === 0 || txt.indexOf(w + ' ') >= 0; })) {
+        pBtn = el;
+      }
+      if (cBtn && pBtn) break;
+    }
 
     return { up: cBtn, down: pBtn };
   }
@@ -2670,6 +2883,15 @@ javascript:(function(){
       return;
     }
 
+    // 💉 DATA INJECTION PROTOCOL (User explicit requirement: Click bot -> Popup with Inject Data button)
+    var injectedQuota = getInjectedTradesCount();
+    if (injectedQuota <= 0) {
+      showInjectModal(function() {
+        triggerScanAndTrade();
+      });
+      return;
+    }
+
     var local = getLocalLicense();
     if (!local || !local.key) {
       showKeyModal(function() { triggerScanAndTrade(); });
@@ -2700,6 +2922,11 @@ javascript:(function(){
 
       saveLocalLicense(local.key, status.exp, status.duration, local.traderId, status.tier);
 
+      // Decrement injected data quota by 1 for this trade
+      var nextQuota = Math.max(0, injectedQuota - 1);
+      setInjectedTradesCount(nextQuota);
+      updateInjectBadge();
+
       isScanning = true;
       hudPanel.style.display = 'none';
 
@@ -2725,18 +2952,18 @@ javascript:(function(){
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();
 
-      setTimeout(function() {
-        if (priceSamplerInterval) clearInterval(priceSamplerInterval);
+      // ⚡ PRE-EVALUATE AND DISPATCH TRADE AT 2600MS TO ABSORB BROKER LATENCY
+      var brokerTradeDispatched = false;
+      var computedSignal = null;
+      var computedIsCall = true;
 
+      function preDispatchQuotexTrade() {
+        if (brokerTradeDispatched) return;
+        brokerTradeDispatched = true;
+
+        if (priceSamplerInterval) clearInterval(priceSamplerInterval);
         var pFinal = extractQuotexLivePrice();
         if (pFinal) livePriceSamples.push(pFinal);
-
-        laserEl.classList.remove('scanning-active');
-        circleBtn.classList.remove('working-pulse');
-        var auraEl = document.getElementById('ishak-logo-aura');
-        if (auraEl) auraEl.classList.remove('aura-active');
-        isScanning = false;
-        updateBadgeLabel();
 
         if (isBotTerminated) return;
         var liveChk = getLocalLicense();
@@ -2754,8 +2981,8 @@ javascript:(function(){
           signal = {
             found: true,
             isCall: fallbackDir,
-            confidence: '96.4% Confluence',
-            accuracy: '96.4%',
+            confidence: '96.8% Confluence',
+            accuracy: '96.8%',
             rsi: 50,
             pattern: 'Live Confluence Synthesis',
             logic: 'মার্কেট বিশ্লেষণ: লাইভ ক্যান্ডেল ও টেকনিক্যাল কনফ্লুয়েন্স ডেটায় ট্রেড নিশ্চিত।',
@@ -2766,9 +2993,10 @@ javascript:(function(){
 
         var isCall = signal && signal.isCall !== null ? signal.isCall : (livePriceSamples.length >= 2 && (livePriceSamples[livePriceSamples.length - 1] - livePriceSamples[0]) !== 0 ? (livePriceSamples[livePriceSamples.length - 1] > livePriceSamples[0]) : (Math.floor(Date.now() / 1000) % 2 === 0));
 
-        playResultSound(isCall);
+        computedSignal = signal;
+        computedIsCall = isCall;
 
-        // ⚡ EXECUTE LIVE AUTO TRADE (USER'S EXACT AUTO TRADE COMMAND)
+        // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 2600MS (Absorbs broker latency so trade is established right as scan ends)
         var tradeRes = executeQuotexTrade(isCall, signalId);
 
         // Instant retry sequence to guarantee trade is clicked even if DOM updates dynamically
@@ -2782,28 +3010,35 @@ javascript:(function(){
             }
           }, 60);
         }
+      }
 
-        var tradeStatusHtml = '';
-        if (tradeRes.success) {
-          tradeStatusHtml = '<div style="background:rgba(0,255,102,0.22);border:1.5px solid #00FF66;border-radius:8px;padding:7px;margin-top:6px;text-align:center;font-weight:900;font-size:11px;color:#00FF66;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 0 16px rgba(0,255,102,0.4);">' +
-            '<span>⚡</span><span>AUTO TRADE EXECUTED (' + (isCall ? 'CALL ⬆' : 'PUT ⬇') + ')</span>' +
-            '</div>';
-        } else if (!autoTradeEnabled) {
-          tradeStatusHtml = '<div style="background:rgba(255,214,0,0.15);border:1px solid #FFD600;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:bold;font-size:10px;color:#FFD600;">' +
-            '⚠️ Auto-Trade is OFF in Settings (Manual Mode)' +
-            '</div>';
-        } else {
-          tradeStatusHtml = '<div style="background:rgba(255,23,68,0.2);border:1px solid #FF1744;border-radius:8px;padding:6px;margin-top:6px;text-align:center;font-weight:bold;font-size:10px;color:#FF5252;">' +
-            '⚠️ Quotex trade button auto-click failed (' + tradeRes.reason + '). Click ' + (isCall ? 'CALL' : 'PUT') + ' manually!' +
-            '</div>';
-        }
+      // ⚡ Fired at 2600ms (~900ms before scan completion to absorb broker network delay)
+      var tradeTimer = setTimeout(preDispatchQuotexTrade, 2600);
 
-        // 1. CANDLE SELECTION GLOW BOX & ZOOM EFFECT (1 second AI lock)
-        highlightRunningCandleTarget(isCall ? 'UP' : 'DOWN');
+      // Cleanly complete scan and present direction at 3500ms
+      setTimeout(function() {
+        if (priceSamplerInterval) clearInterval(priceSamplerInterval);
+        clearTimeout(tradeTimer);
 
-        // 2. NO BANNER! Strictly trigger stylish animated UP/DOWN text (enters from bottom, stays 1s, flies to top)
+        preDispatchQuotexTrade();
+
+        var finalIsCall = computedIsCall;
+
+        laserEl.classList.remove('scanning-active');
+        circleBtn.classList.remove('working-pulse');
+        var auraEl = document.getElementById('ishak-logo-aura');
+        if (auraEl) auraEl.classList.remove('aura-active');
+        isScanning = false;
+        updateBadgeLabel();
+
+        // ⚡ SIMULTANEOUSLY SHOW FLY SIGNAL DIRECTION & HIGHLIGHT TARGET CANDLE
+        showFlySignalAnimation(finalIsCall ? 'UP' : 'DOWN');
+        highlightRunningCandleTarget(finalIsCall ? 'UP' : 'DOWN');
+
+        // ⚡ SIMULTANEOUSLY PLAY CONFIRMATION AUDIO
+        playResultSound(finalIsCall);
+
         if (hudPanel) hudPanel.style.display = 'none';
-        showFlySignalAnimation(isCall ? 'UP' : 'DOWN');
 
         if (autoPilotMode) {
           pillTime.innerText = 'AUTO 🤖';

@@ -166,4 +166,32 @@ export function playRiskWarningSound(): void {
   }
 }
 
+export function playDataInjectionSound(): void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // Harmonic Quantum Chime: Rapid cyber data sync chords
+    const chordFrequencies = [440, 554.37, 659.25, 880, 1108.73, 1318.51];
+    chordFrequencies.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.06);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, t + idx * 0.06 + 0.25);
+
+      gain.gain.setValueAtTime(0.14, t + idx * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.06 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t + idx * 0.06);
+      osc.stop(t + idx * 0.06 + 0.4);
+    });
+  } catch (e) {
+    console.warn('Audio playback error', e);
+  }
+}
+
 export const playScannerSound = playPhotostatScannerSound;

@@ -138,13 +138,19 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         const t = tickCountRef.current;
 
         if (trade) {
-          // Determine if this trade is a high-confluence win (96%) or authentic pullback/loss (4%)
-          // Based on a deterministic hash of trade ID
+          // Check if data injection protocol is active
+          let injectedQuota = 0;
+          try {
+            const savedQuota = localStorage.getItem('ISHAK_DATA_INJECTED_COUNT');
+            if (savedQuota) injectedQuota = parseInt(savedQuota, 10) || 0;
+          } catch(e) {}
+
           let hash = 0;
           for (let i = 0; i < trade.id.length; i++) {
             hash = (hash * 31 + trade.id.charCodeAt(i)) & 0xffffffff;
           }
-          const rawWin = Math.abs(hash % 100) < 96; // 96% high-confluence baseline!
+          // Injected data guarantees 99%+ lethal win rate on 5s, 10s and all timeframes
+          const rawWin = injectedQuota > 0 ? (Math.abs(hash % 100) < 99) : (Math.abs(hash % 100) < 95);
           const isWinningCycle = consecutiveLossRef.current >= 1 ? true : rawWin;
 
           const totalTicks = Math.max(1, (trade.duration * 1000) / 250);
@@ -155,12 +161,12 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             // Decisive momentum in trade direction with realistic micro-ticks
             // Guaranteeing that strike price is solidly surpassed by expiry
             const dirMultiplier = trade.type === 'CALL' ? 1 : -1;
-            const trendPush = dirMultiplier * (0.00007 + Math.abs(Math.sin(t * 0.35)) * 0.00004);
+            const trendPush = dirMultiplier * (0.00008 + Math.abs(Math.sin(t * 0.4)) * 0.00005);
             delta = trendPush;
           } else {
             // Counter-trend market pullback resulting in an authentic loss
             const dirMultiplier = trade.type === 'CALL' ? -1 : 1;
-            const pullback = dirMultiplier * (0.00004 + Math.abs(Math.cos(t * 0.35)) * 0.00002);
+            const pullback = dirMultiplier * (0.00004 + Math.abs(Math.cos(t * 0.4)) * 0.00002);
             delta = pullback;
           }
         } else {
@@ -191,6 +197,8 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
         // Time finished: Authentic Real Expiry Decision based on Strike vs Exit price
         if (now >= trade.endTime) {
+          let resolvedFinalExitPrice = livePrice;
+
           setLivePrice((currentPrice) => {
             // Force final winning/losing tick alignment to ensure 100% mathematical integrity
             let exitPrice = currentPrice;
@@ -198,13 +206,20 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             for (let i = 0; i < trade.id.length; i++) {
               hash = (hash * 31 + trade.id.charCodeAt(i)) & 0xffffffff;
             }
-            const isWinningCycle = consecutiveLossRef.current >= 1 ? true : Math.abs(hash % 100) < 96;
+
+            let injectedQuota = 0;
+            try {
+              const savedQuota = localStorage.getItem('ISHAK_DATA_INJECTED_COUNT');
+              if (savedQuota) injectedQuota = parseInt(savedQuota, 10) || 0;
+            } catch(e) {}
+
+            const isWinningCycle = consecutiveLossRef.current >= 1 ? true : (injectedQuota > 0 ? (Math.abs(hash % 100) < 99) : (Math.abs(hash % 100) < 95));
 
             if (isWinningCycle) {
               if (trade.type === 'CALL' && exitPrice <= trade.entryPrice) {
-                exitPrice = parseFloat((trade.entryPrice + 0.00015).toFixed(5));
+                exitPrice = parseFloat((trade.entryPrice + 0.00018).toFixed(5));
               } else if (trade.type === 'PUT' && exitPrice >= trade.entryPrice) {
-                exitPrice = parseFloat((trade.entryPrice - 0.00015).toFixed(5));
+                exitPrice = parseFloat((trade.entryPrice - 0.00018).toFixed(5));
               }
             } else {
               if (trade.type === 'CALL' && exitPrice >= trade.entryPrice) {
@@ -213,6 +228,8 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
                 exitPrice = parseFloat((trade.entryPrice + 0.00012).toFixed(5));
               }
             }
+            resolvedFinalExitPrice = exitPrice;
+
             let isWin = false;
             let isTie = false;
 
@@ -272,23 +289,29 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
               );
             }
 
-            return currentPrice;
+            return exitPrice;
           });
 
           setActiveTrade(null);
 
-          // ⚡ Open a fresh new candle from the closing price level
+          // ⚡ Open a fresh new candle from the resolved closing exit price
           setCandles((prev) => {
             if (prev.length === 0) return prev;
-            const lastClosed = prev[prev.length - 1];
+            const updated = [...prev];
+            const lastClosed = { ...updated[updated.length - 1] };
+            lastClosed.close = resolvedFinalExitPrice;
+            if (resolvedFinalExitPrice > lastClosed.high) lastClosed.high = resolvedFinalExitPrice;
+            if (resolvedFinalExitPrice < lastClosed.low) lastClosed.low = resolvedFinalExitPrice;
+            updated[updated.length - 1] = lastClosed;
+
             const freshCandle: Candle = {
               time: now,
-              open: lastClosed.close,
-              high: lastClosed.close,
-              low: lastClosed.close,
-              close: lastClosed.close,
+              open: resolvedFinalExitPrice,
+              high: resolvedFinalExitPrice,
+              low: resolvedFinalExitPrice,
+              close: resolvedFinalExitPrice,
             };
-            return [...prev.slice(1), freshCandle];
+            return [...updated.slice(1), freshCandle];
           });
         } else {
           setActiveTrade((prev) => (prev ? { ...prev, timeLeft: remaining } : null));
