@@ -138,37 +138,11 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         const t = tickCountRef.current;
 
         if (trade) {
-          // Check if data injection protocol is active
-          let injectedQuota = 0;
-          try {
-            const savedQuota = localStorage.getItem('ISHAK_DATA_INJECTED_COUNT');
-            if (savedQuota) injectedQuota = parseInt(savedQuota, 10) || 0;
-          } catch(e) {}
-
-          let hash = 0;
-          for (let i = 0; i < trade.id.length; i++) {
-            hash = (hash * 31 + trade.id.charCodeAt(i)) & 0xffffffff;
-          }
-          // Injected data guarantees 99%+ lethal win rate on 5s, 10s and all timeframes
-          const rawWin = injectedQuota > 0 ? (Math.abs(hash % 100) < 99) : (Math.abs(hash % 100) < 95);
-          const isWinningCycle = consecutiveLossRef.current >= 1 ? true : rawWin;
-
-          const totalTicks = Math.max(1, (trade.duration * 1000) / 250);
-          const elapsedTicks = Math.max(1, totalTicks - (trade.endTime - now) / 250);
-          const progress = Math.min(1, elapsedTicks / totalTicks);
-
-          if (isWinningCycle) {
-            // Decisive momentum in trade direction with realistic micro-ticks
-            // Guaranteeing that strike price is solidly surpassed by expiry
-            const dirMultiplier = trade.type === 'CALL' ? 1 : -1;
-            const trendPush = dirMultiplier * (0.00008 + Math.abs(Math.sin(t * 0.4)) * 0.00005);
-            delta = trendPush;
-          } else {
-            // Counter-trend market pullback resulting in an authentic loss
-            const dirMultiplier = trade.type === 'CALL' ? -1 : 1;
-            const pullback = dirMultiplier * (0.00004 + Math.abs(Math.cos(t * 0.4)) * 0.00002);
-            delta = pullback;
-          }
+          // ⚡ DEADLY ACCURACY: 100% PROFIT ON SELECTED TIMEFRAME (5s, 10s, etc.)
+          // Every tick moves decisively in the trade's direction towards a solid win!
+          const dirMultiplier = trade.type === 'CALL' ? 1 : -1;
+          const trendPush = dirMultiplier * (0.00007 + ((t % 4) * 0.00002));
+          delta = trendPush;
         } else {
           // Natural resting market drift with harmonic cycles and mean reversion
           const wave = Math.sin(t * 0.05) * 0.00008 + Math.cos(t * 0.12) * 0.00004;
@@ -195,103 +169,33 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
       if (trade) {
         const remaining = Math.max(0, Math.ceil((trade.endTime - now) / 1000));
 
-        // Time finished: Authentic Real Expiry Decision based on Strike vs Exit price
+        // Time finished: Guaranteed Expiry Win at the end of the selected timeframe (5s, 10s, etc.)
         if (now >= trade.endTime) {
-          let resolvedFinalExitPrice = livePrice;
+          const isCall = trade.type === 'CALL';
+          const exitPrice = parseFloat(
+            (isCall
+              ? Math.max(trade.entryPrice + 0.00028, livePrice + 0.00008)
+              : Math.min(trade.entryPrice - 0.00028, livePrice - 0.00008)
+            ).toFixed(5)
+          );
 
-          setLivePrice((currentPrice) => {
-            // Force final winning/losing tick alignment to ensure 100% mathematical integrity
-            let exitPrice = currentPrice;
-            let hash = 0;
-            for (let i = 0; i < trade.id.length; i++) {
-              hash = (hash * 31 + trade.id.charCodeAt(i)) & 0xffffffff;
-            }
+          setLivePrice(exitPrice);
 
-            let injectedQuota = 0;
-            try {
-              const savedQuota = localStorage.getItem('ISHAK_DATA_INJECTED_COUNT');
-              if (savedQuota) injectedQuota = parseInt(savedQuota, 10) || 0;
-            } catch(e) {}
-
-            const isWinningCycle = consecutiveLossRef.current >= 1 ? true : (injectedQuota > 0 ? (Math.abs(hash % 100) < 99) : (Math.abs(hash % 100) < 95));
-
-            if (isWinningCycle) {
-              if (trade.type === 'CALL' && exitPrice <= trade.entryPrice) {
-                exitPrice = parseFloat((trade.entryPrice + 0.00018).toFixed(5));
-              } else if (trade.type === 'PUT' && exitPrice >= trade.entryPrice) {
-                exitPrice = parseFloat((trade.entryPrice - 0.00018).toFixed(5));
-              }
-            } else {
-              if (trade.type === 'CALL' && exitPrice >= trade.entryPrice) {
-                exitPrice = parseFloat((trade.entryPrice - 0.00012).toFixed(5));
-              } else if (trade.type === 'PUT' && exitPrice <= trade.entryPrice) {
-                exitPrice = parseFloat((trade.entryPrice + 0.00012).toFixed(5));
-              }
-            }
-            resolvedFinalExitPrice = exitPrice;
-
-            let isWin = false;
-            let isTie = false;
-
-            if (trade.type === 'CALL') {
-              isWin = exitPrice > trade.entryPrice;
-              isTie = exitPrice === trade.entryPrice;
-            } else {
-              isWin = exitPrice < trade.entryPrice;
-              isTie = exitPrice === trade.entryPrice;
-            }
-
-            if (isWin) {
-              consecutiveLossRef.current = 0; // Reset consecutive losses
-              const profit = Math.round((trade.amount * payout) / 100);
-              const totalReturn = trade.amount + profit;
-              setBalance((prev) => prev + totalReturn);
-              setStats((prev) => {
-                const updated = { ...prev, wins: prev.wins + 1, totalProfit: prev.totalProfit + profit };
-                try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
-                return updated;
-              });
-              setTradeLogs((prev) =>
-                prev.map((l) =>
-                  l.id === trade.id
-                    ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
-                    : l
-                )
-              );
-            } else if (isTie) {
-              setBalance((prev) => prev + trade.amount);
-              setStats((prev) => {
-                const updated = { ...prev, ties: prev.ties + 1 };
-                try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
-                return updated;
-              });
-              setTradeLogs((prev) =>
-                prev.map((l) =>
-                  l.id === trade.id
-                    ? { ...l, status: `TIE (ATM) ⚪ $0.00` }
-                    : l
-                )
-              );
-            } else {
-              // Authentic LOSS (OTM) - REAL LOSS RECORDED
-              consecutiveLossRef.current += 1; // Guard next trade
-              setStats((prev) => {
-                const updated = { ...prev, losses: prev.losses + 1, totalProfit: prev.totalProfit - trade.amount };
-                try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
-                return updated;
-              });
-              setTradeLogs((prev) =>
-                prev.map((l) =>
-                  l.id === trade.id
-                    ? { ...l, status: `LOSS (OTM) 🔴 -$${trade.amount.toFixed(2)}` }
-                    : l
-                )
-              );
-            }
-
-            return exitPrice;
+          const profit = Math.round((trade.amount * payout) / 100);
+          const totalReturn = trade.amount + profit;
+          setBalance((prev) => prev + totalReturn);
+          setStats((prev) => {
+            const updated = { ...prev, wins: prev.wins + 1, totalProfit: prev.totalProfit + profit };
+            try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
+            return updated;
           });
-
+          setTradeLogs((prev) =>
+            prev.map((l) =>
+              l.id === trade.id
+                ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
+                : l
+            )
+          );
           setActiveTrade(null);
 
           // ⚡ Open a fresh new candle from the resolved closing exit price
@@ -299,17 +203,17 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             if (prev.length === 0) return prev;
             const updated = [...prev];
             const lastClosed = { ...updated[updated.length - 1] };
-            lastClosed.close = resolvedFinalExitPrice;
-            if (resolvedFinalExitPrice > lastClosed.high) lastClosed.high = resolvedFinalExitPrice;
-            if (resolvedFinalExitPrice < lastClosed.low) lastClosed.low = resolvedFinalExitPrice;
+            lastClosed.close = exitPrice;
+            if (exitPrice > lastClosed.high) lastClosed.high = exitPrice;
+            if (exitPrice < lastClosed.low) lastClosed.low = exitPrice;
             updated[updated.length - 1] = lastClosed;
 
             const freshCandle: Candle = {
               time: now,
-              open: resolvedFinalExitPrice,
-              high: resolvedFinalExitPrice,
-              low: resolvedFinalExitPrice,
-              close: resolvedFinalExitPrice,
+              open: exitPrice,
+              high: exitPrice,
+              low: exitPrice,
+              close: exitPrice,
             };
             return [...updated.slice(1), freshCandle];
           });
@@ -338,20 +242,33 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     return () => clearInterval(interval);
   }, [payout]);
 
-  // Handle Call click
-  const handleCallTrade = () => {
+  // ⚡ DIRECT NATIVE TRADE EXECUTION (0ms latency, duration synchronized)
+  const executeDirectTrade = (type: 'CALL' | 'PUT', durOverride?: number) => {
     if (activeTradeRef.current) return;
 
-    setCallButtonFlash(true);
-    setTimeout(() => setCallButtonFlash(false), 500);
+    if (type === 'CALL') {
+      setCallButtonFlash(true);
+      setTimeout(() => setCallButtonFlash(false), 500);
+    } else {
+      setPutButtonFlash(true);
+      setTimeout(() => setPutButtonFlash(false), 500);
+    }
 
     const tradeId = 'T_' + Date.now().toString(36) + performance.now().toFixed(0);
-    const dur = selectedDuration;
+    let dur = durOverride;
+    if (!dur) {
+      try {
+        const saved = localStorage.getItem('ISHAK_TRADE_DURATION');
+        if (saved) dur = parseInt(saved, 10);
+      } catch (e) {}
+    }
+    if (!dur || isNaN(dur)) dur = selectedDuration || 5;
+
     const entry = livePrice;
 
     setActiveTrade({
       id: tradeId,
-      type: 'CALL',
+      type,
       entryPrice: entry,
       amount: investment,
       duration: dur,
@@ -362,7 +279,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
     const log = {
       id: tradeId,
-      type: 'CALL' as const,
+      type,
       amount: investment,
       price: entry,
       time: new Date().toLocaleTimeString(),
@@ -371,58 +288,44 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     setTradeLogs((prev) => [log, ...prev.slice(0, 7)]);
     setBalance((prev) => prev - investment);
   };
+
+  // Handle Call click
+  const handleCallTrade = () => executeDirectTrade('CALL');
 
   // Handle Put click
-  const handlePutTrade = () => {
-    if (activeTradeRef.current) return;
-
-    setPutButtonFlash(true);
-    setTimeout(() => setPutButtonFlash(false), 500);
-
-    const tradeId = 'T_' + Date.now().toString(36) + performance.now().toFixed(0);
-    const dur = selectedDuration;
-    const entry = livePrice;
-
-    setActiveTrade({
-      id: tradeId,
-      type: 'PUT',
-      entryPrice: entry,
-      amount: investment,
-      duration: dur,
-      startTime: Date.now(),
-      endTime: Date.now() + dur * 1000,
-      timeLeft: dur,
-    });
-
-    const log = {
-      id: tradeId,
-      type: 'PUT' as const,
-      amount: investment,
-      price: entry,
-      time: new Date().toLocaleTimeString(),
-      status: `ACTIVE (${dur}S EXPIRY) ⏳`,
-    };
-    setTradeLogs((prev) => [log, ...prev.slice(0, 7)]);
-    setBalance((prev) => prev - investment);
-  };
+  const handlePutTrade = () => executeDirectTrade('PUT');
 
   // ⚡ INSTANTANEOUS NATIVE TRADE EXECUTION (0ms latency, zero render delay)
   useEffect(() => {
+    const handleDurationSync = (e: Event) => {
+      const customEvent = e as CustomEvent<number>;
+      if (customEvent.detail && typeof customEvent.detail === 'number') {
+        setSelectedDuration(customEvent.detail);
+      }
+    };
+    window.addEventListener('ishak_duration_changed', handleDurationSync);
+
     const handleInstantTrade = (e: Event) => {
-      const customEvent = e as CustomEvent<{ isCall: boolean; signal?: SignalData }>;
+      const customEvent = e as CustomEvent<{ isCall: boolean; signal?: SignalData; duration?: number }>;
       if (!customEvent.detail) return;
       if (activeTradeRef.current) return;
 
+      const dur = customEvent.detail.duration || selectedDuration || 5;
+      setSelectedDuration(dur);
+
       const { isCall } = customEvent.detail;
       if (isCall === true) {
-        handleCallTrade();
+        executeDirectTrade('CALL', dur);
       } else if (isCall === false) {
-        handlePutTrade();
+        executeDirectTrade('PUT', dur);
       }
     };
 
     window.addEventListener('ishak_trade_execute', handleInstantTrade);
-    return () => window.removeEventListener('ishak_trade_execute', handleInstantTrade);
+    return () => {
+      window.removeEventListener('ishak_duration_changed', handleDurationSync);
+      window.removeEventListener('ishak_trade_execute', handleInstantTrade);
+    };
   }, [livePrice, investment, selectedDuration]);
 
   return (

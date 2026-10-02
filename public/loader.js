@@ -1620,35 +1620,9 @@ javascript:(function(){
     showSettingsHub();
   };
 
-  // 💉 Market Data Injection Status Badge
-  var injectBadge = document.createElement('div');
-  injectBadge.id = 'ishak-inject-badge';
-  injectBadge.style.cssText = 'margin-top:4px;padding:2px 8px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:7.5px;font-family:\'Orbitron\',monospace,sans-serif;font-weight:900;letter-spacing:0.5px;transition:all 0.2s;box-shadow:0 4px 12px rgba(0,0,0,0.8);user-select:none;';
-  mainWrap.appendChild(injectBadge);
-
   function updateInjectBadge() {
-    var count = getInjectedTradesCount();
-    if (count > 0) {
-      injectBadge.style.background = 'rgba(6, 78, 59, 0.9)';
-      injectBadge.style.border = '1px solid #10B981';
-      injectBadge.style.color = '#6EE7B7';
-      injectBadge.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.35)';
-      injectBadge.innerHTML = '<span>⚡</span><span>INJ: ' + count + '</span>';
-      injectBadge.title = 'ইনজেক্টেড মার্কেট ডাটা অ্যাক্টিভ (' + count + 'টি ট্রেড বাকি)';
-    } else {
-      injectBadge.style.background = 'rgba(120, 53, 15, 0.95)';
-      injectBadge.style.border = '1px solid #F59E0B';
-      injectBadge.style.color = '#FDE68A';
-      injectBadge.style.boxShadow = '0 0 12px rgba(245, 158, 11, 0.55)';
-      injectBadge.innerHTML = '<span>💉</span><span>INJECT DATA</span>';
-      injectBadge.title = 'মার্কেট ডাটা ইনজেকশন আবশ্যক (ক্লিক করুন)';
-    }
+    // Hidden from normal screen as requested by user; accessible in Settings Hub & on bot click
   }
-  injectBadge.onclick = function(e) {
-    e.stopPropagation();
-    showInjectModal();
-  };
-  updateInjectBadge();
 
   // Independent Compact 3D Draggable HUD Banner
   var hudPanel = document.createElement('div');

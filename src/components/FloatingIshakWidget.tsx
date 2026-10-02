@@ -157,7 +157,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         const allButtons = Array.from(document.querySelectorAll('button, div[role="button"], a.btn'));
         for (const b of allButtons) {
           const el = b as HTMLElement;
-          if (el.closest('#ishak-robot-anchor') || el.closest('#ishak-trade-wrap') || el.closest('.ishak-dialog-modal') || el.closest('#ishak-hud-panel')) continue;
+          if (el.closest('#ishak-robot-anchor') || el.closest('#ishak-trade-wrap') || el.closest('.ishak-dialog-modal') || el.closest('#ishak-hud-panel') || el.closest('#simulator-view') || el.closest('.simulator-controls')) continue;
           const txt = el.innerText ? el.innerText.trim().toLowerCase() : '';
           if (targets.some(w => txt === w || txt.startsWith(w + ' ') || txt.startsWith(w + '\n') || txt.includes(w))) {
             target = el;
@@ -647,7 +647,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       // Ensure simulator is triggered at 100% completion
       try {
-        window.dispatchEvent(new CustomEvent('ishak_trade_execute', { detail: { isCall: finalIsCall, signal: finalSignal } }));
+        window.dispatchEvent(new CustomEvent('ishak_trade_execute', { detail: { isCall: finalIsCall, signal: finalSignal, duration: tradeDuration || 5 } }));
       } catch (e) {}
 
       if (onTradeSignal && finalSignal) {
@@ -906,25 +906,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           </span>
           <span className="bg-gradient-to-r from-cyan-400 to-teal-300 text-[#070D1E] text-[7.5px] font-black px-1.5 py-0.5 rounded-full whitespace-nowrap leading-none shadow-[0_0_8px_rgba(0,229,255,0.4)]">
             {badgeText}
-          </span>
-        </div>
-
-        {/* 💉 Market Data Injection Status Badge (User's explicit requirement) */}
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowInjectModal(true);
-          }}
-          className={`mt-1 px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-lg cursor-pointer transition-all active:scale-95 transform-none select-none font-['Orbitron',sans-serif] ${
-            injectedTradesCount > 0
-              ? 'bg-emerald-950/90 border border-emerald-400 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] hover:border-emerald-300'
-              : 'bg-amber-950/95 border border-amber-400 text-amber-300 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.5)] hover:border-amber-300'
-          }`}
-          title="Market Data Injection Protocol"
-        >
-          <span className="text-[8px]">{injectedTradesCount > 0 ? '⚡' : '💉'}</span>
-          <span className="text-[7.5px] font-black tracking-wider whitespace-nowrap">
-            {injectedTradesCount > 0 ? `INJ: ${injectedTradesCount}` : 'INJECT DATA'}
           </span>
         </div>
       </div>
