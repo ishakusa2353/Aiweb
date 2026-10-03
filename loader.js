@@ -1791,24 +1791,27 @@ javascript:(function(){
   }
 
   // 3. FORCED TIME DURATION SELECTION MODAL
+  // 3. TIME DURATION SELECTION MODAL (GLASSMORPHISM + SOFT/FAUX 3D + BEVEL/DEPTH)
   function showDurationSelectionModal(onSelected) {
     var old = document.getElementById('t-modal'); if (old) old.remove();
 
     var tm = document.createElement('div');
     tm.id = 't-modal'; tm.className = 'ishak-dialog-modal';
-    tm.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid rgba(0,229,255,0.3);padding-bottom:8px;margin-bottom:10px;">' +
-      '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#FFD600;">⏱️</span><b style="color:#FFD600;font-size:12px;">SELECT TRADE DURATION</b></div>' +
-      '<div class="ishak-close-btn" id="t-close">✕</div>' +
+    tm.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 36px);max-width:340px;padding:20px;border-radius:24px;border-top:1.5px solid rgba(0,229,255,0.45);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.25);border-right:1px solid rgba(0,229,255,0.25);background:linear-gradient(175deg,rgba(11,19,40,0.92) 0%,rgba(7,13,30,0.96) 50%,rgba(3,7,18,0.98) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.2), inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.7);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;animation:ishakModalIn 0.22s cubic-bezier(0.16,1,0.3,1);';
+
+    tm.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,229,255,0.25);padding-bottom:12px;margin-bottom:12px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(180deg,rgba(255,214,0,0.2),rgba(255,214,0,0.05));border-top:1px solid rgba(255,224,102,0.6);border-bottom:1px solid #000;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3);">⏱️</div>' +
+        '<div><b style="color:#FFE066;font-size:12px;letter-spacing:1px;display:block;">SELECT TIMEFRAME</b><span style="color:#94A3B8;font-size:9px;font-family:sans-serif;font-weight:600;">Predicts until timeframe expiry</span></div>' +
       '</div>' +
-      '<p style="font-size:10px;color:#A0AEC0;margin-bottom:10px;">The bot executes trades strictly according to the selected timeframe:</p>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">' +
-      '<button class="t-btn" data-sec="5" style="background:#111F43;border:1.5px solid #00E5FF;border-radius:8px;padding:8px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;">5 Seconds ⚡</button>' +
-      '<button class="t-btn" data-sec="10" style="background:#111F43;border:1.5px solid #00E5FF;border-radius:8px;padding:8px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;">10 Seconds ⚡</button>' +
-      '<button class="t-btn" data-sec="15" style="background:#111F43;border:1.5px solid #00E5FF;border-radius:8px;padding:8px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;">15 Seconds ⚡</button>' +
-      '<button class="t-btn" data-sec="30" style="background:#111F43;border:1.5px solid #00E5FF;border-radius:8px;padding:8px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;">30 Seconds 🚀</button>' +
-      '<button class="t-btn" data-sec="60" style="grid-column:span 2;background:linear-gradient(90deg,#00E5FF,#00B0FF);color:#070D1E;border:none;border-radius:8px;padding:9px;font-weight:900;font-size:12px;cursor:pointer;">1 Minute ⭐ (Recommended)</button>' +
-      '<button class="t-btn" data-sec="120" style="background:#111F43;border:1.5px solid rgba(0,229,255,0.4);border-radius:8px;padding:8px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;">2 Minutes 📊</button>' +
-      '<button class="t-btn" data-sec="300" style="background:#111F43;border:1.5px solid rgba(0,229,255,0.4);border-radius:8px;padding:8px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;">5 Minutes 💎</button>' +
+      '<div class="ishak-close-btn" id="t-close" style="width:26px;height:26px;border-radius:10px;background:linear-gradient(180deg,rgba(239,68,68,0.4),rgba(153,27,27,0.8));border-top:1px solid rgba(248,113,113,0.6);border-bottom:1px solid #000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.3);">✕</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+      '<button class="t-btn" data-sec="5" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));border-top:1px solid rgba(0,229,255,0.35);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);border-radius:14px;padding:10px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">5 Seconds ⚡</button>' +
+      '<button class="t-btn" data-sec="10" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));border-top:1px solid rgba(0,229,255,0.35);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);border-radius:14px;padding:10px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">10 Seconds ⚡</button>' +
+      '<button class="t-btn" data-sec="15" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));border-top:1px solid rgba(0,229,255,0.35);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);border-radius:14px;padding:10px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">15 Seconds ⚡</button>' +
+      '<button class="t-btn" data-sec="30" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));border-top:1px solid rgba(0,229,255,0.35);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);border-radius:14px;padding:10px;color:#fff;font-weight:bold;font-size:11px;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">30 Seconds 🚀</button>' +
+      '<button class="t-btn" data-sec="60" style="grid-column:span 2;background:linear-gradient(180deg,rgba(0,229,255,0.25),rgba(0,180,255,0.1));border-top:1.5px solid rgba(0,229,255,0.7);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.4);border-right:1px solid rgba(0,229,255,0.4);color:#00E5FF;border-radius:14px;padding:12px;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 4px 15px rgba(0,229,255,0.25), inset 0 1px 1px rgba(255,255,255,0.35);">1 Minute ⭐ (Recommended)</button>' +
       '</div>';
 
     document.body.appendChild(tm);
@@ -1836,11 +1839,7 @@ javascript:(function(){
 
     var km = document.createElement('div');
     km.id = 'k-modal'; km.className = 'ishak-dialog-modal';
-    km.style.padding = '20px';
-    km.style.borderRadius = '18px';
-    km.style.border = '1.8px solid #00E5FF';
-    km.style.background = 'linear-gradient(170deg, #070D1E 0%, #0B1736 100%)';
-    km.style.boxShadow = '0 25px 60px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.25), inset 0 1px 1px rgba(255,255,255,0.2)';
+    km.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 36px);max-width:350px;padding:22px;border-radius:24px;border-top:1.5px solid rgba(0,229,255,0.45);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.25);border-right:1px solid rgba(0,229,255,0.25);background:linear-gradient(175deg,rgba(11,19,40,0.92) 0%,rgba(7,13,30,0.96) 50%,rgba(3,7,18,0.98) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.2), inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.7);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;animation:ishakModalIn 0.22s cubic-bezier(0.16,1,0.3,1);';
 
     km.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,229,255,0.25);padding-bottom:10px;margin-bottom:14px;">' +
       '<div style="display:flex;align-items:center;gap:8px;">' +
@@ -1945,163 +1944,47 @@ javascript:(function(){
     };
   }
 
-  // 💉 4.5. MARKET DATA INJECTION MODAL (USER REQUIREMENT: Stylish popup with Inject Data button)
+  // ⚡ SILENT BACKGROUND DATA INJECTION HELPER (No popups, background accuracy auto-calibrated)
   function showInjectModal(onSuccess) {
-    var old = document.getElementById('ishak-inject-modal'); if (old) old.remove();
-
-    var quota = getInjectedTradesCount();
-    var im = document.createElement('div');
-    im.id = 'ishak-inject-modal';
-    im.className = 'ishak-dialog-modal';
-    im.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 32px);max-width:370px;padding:22px;border-radius:22px;border:2px solid #00E5FF;background:linear-gradient(170deg,#070D1E 0%,#081636 50%,#030712 100%);box-shadow:0 25px 60px rgba(0,0,0,0.98), 0 0 45px rgba(0,229,255,0.35), inset 0 1px 2px rgba(255,255,255,0.25);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;animation:ishakModalIn 0.25s cubic-bezier(0.16,1,0.3,1);';
-
-    im.innerHTML =
-      '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,229,255,0.3);padding-bottom:10px;margin-bottom:14px;">' +
-        '<div style="display:flex;align-items:center;gap:8px;">' +
-          '<div style="width:30px;height:30px;border-radius:10px;background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.6);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 12px rgba(0,229,255,0.4);">⚡</div>' +
-          '<div>' +
-            '<b style="color:#00E5FF;font-size:13px;letter-spacing:1px;display:block;">MARKET DATA INJECTION</b>' +
-            '<span style="color:#94A3B8;font-size:9px;font-family:sans-serif;font-weight:500;">Quantum Confluence Protocol</span>' +
-          '</div>' +
-        '</div>' +
-        '<div class="ishak-close-btn" id="inj-close" style="width:24px;height:24px;border-radius:50%;background:#EF4444;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;cursor:pointer;">✕</div>' +
-      '</div>' +
-
-      '<div style="margin-bottom:12px;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px;">' +
-          '<span style="color:#CBD5E1;font-weight:bold;font-family:sans-serif;">ইনজেকশন ডাটা ফিড (Ready to Sync):</span>' +
-          '<span style="color:#10B981;font-weight:bold;font-size:9px;letter-spacing:0.5px;">● LIVE STREAM READY</span>' +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:9.5px;">' +
-          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
-            '<span style="color:#00E5FF;font-size:14px;">📊</span>' +
-            '<div><div style="color:#fff;font-weight:bold;">RSI (14 & 6)</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Momentum Stream</div></div>' +
-          '</div>' +
-          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
-            '<span style="color:#FBBF24;font-size:14px;">📈</span>' +
-            '<div><div style="color:#fff;font-weight:bold;">EMA 5/9/21/50</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Macro Trend Shield</div></div>' +
-          '</div>' +
-          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
-            '<span style="color:#2DD4BF;font-size:14px;">🎯</span>' +
-            '<div><div style="color:#fff;font-weight:bold;">Bollinger Bands</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Volatility Squeeze</div></div>' +
-          '</div>' +
-          '<div style="background:#030712;border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:8px;display:flex;align-items:center;gap:6px;">' +
-            '<span style="color:#34D399;font-size:14px;">⚡</span>' +
-            '<div><div style="color:#fff;font-weight:bold;">Micro-Tick Flow</div><div style="color:#94A3B8;font-size:8px;font-family:sans-serif;">Wick Absorption</div></div>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-
-      '<div style="background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.3);border-radius:12px;padding:10px;margin-bottom:14px;font-size:10px;font-family:sans-serif;line-height:1.45;">' +
-        '<div style="color:#00E5FF;font-weight:bold;margin-bottom:4px;display:flex;align-items:center;gap:4px;">' +
-          '<span>🛡️</span><span>ইনজেকশন একুরিসি ও সুবিধা:</span>' +
-        '</div>' +
-        '<p style="color:#CBD5E1;margin:0 0 6px 0;font-size:9.5px;">' +
-          'বটে ক্লিক করার পর একবার ডাটা ইনজেক্ট করলে বট লাইভ চার্ট ও ব্রোকার থেকে সকল ইন্ডিকেটর সিন্থেসাইজ করে পরবর্তী <b style="color:#34D399;font-weight:bold;">৮টি ট্রেডে মারাত্মক একুরিসি (৯৮%+)</b> বজায় রাখবে। ৮টি ট্রেড সম্পন্ন হওয়ার পর পুনরায় ইনজেক্ট চাইবে।' +
-        '</p>' +
-        '<div style="border-top:1px solid rgba(0,229,255,0.2);padding-top:6px;display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="color:#94A3B8;font-size:9px;">বর্তমান অবশিষ্ট কোটা:</span>' +
-          '<b id="inj-quota-label" style="color:#34D399;font-family:monospace;font-size:10px;">' + (quota > 0 ? (quota + ' টি ট্রেড বাকি') : '০ টি ট্রেড বাকি (ইনজেকশন আবশ্যক)') + '</b>' +
-        '</div>' +
-      '</div>' +
-
-      '<div id="inj-progress-box" style="display:none;background:#030712;border:1px solid #00E5FF;border-radius:12px;padding:10px;margin-bottom:12px;text-align:center;box-shadow:0 0 20px rgba(0,229,255,0.25);">' +
-        '<div id="inj-step-text" style="color:#00E5FF;font-size:10px;font-weight:bold;margin-bottom:6px;">CONNECTING QUANTUM MARKET FEED...</div>' +
-        '<div style="width:100%;height:6px;background:#1E293B;border-radius:6px;overflow:hidden;">' +
-          '<div style="width:100%;height:100%;background:linear-gradient(90deg,#00E5FF,#10B981);animation:pulse 0.8s infinite;"></div>' +
-        '</div>' +
-      '</div>' +
-
-      '<button id="btn-inject-data" type="button" style="width:100%;padding:14px 20px;border-radius:14px;background:linear-gradient(135deg, #00E5FF 0%, #00FF88 50%, #00E5FF 100%);color:#070D1E;font-family:\'Orbitron\',monospace,sans-serif;font-weight:900;font-size:13px;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(255,255,255,0.8);box-shadow:0 0 30px rgba(0,229,255,0.65), inset 0 1px 2px #fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform 0.15s, filter 0.15s;">' +
-        '<span style="font-size:16px;">⚡</span>' +
-        '<span>Inject Data</span>' +
-        '<span style="font-size:16px;">⚡</span>' +
-      '</button>';
-
-    document.body.appendChild(im);
-
-    document.getElementById('inj-close').onclick = function(e) {
-      e.stopPropagation();
-      im.remove();
-    };
-
-    var btnInject = document.getElementById('btn-inject-data');
-    var progressBox = document.getElementById('inj-progress-box');
-    var stepText = document.getElementById('inj-step-text');
-
-    btnInject.onclick = function(e) {
-      e.stopPropagation();
-      btnInject.disabled = true;
-      btnInject.style.opacity = '0.5';
-      btnInject.style.cursor = 'not-allowed';
-      btnInject.innerHTML = '<span style="font-size:14px;">⚙️</span><span>INJECTING DATA...</span>';
-      progressBox.style.display = 'block';
-
-      playDataInjectionSound();
-
-      setTimeout(function() {
-        if (stepText) stepText.innerText = 'INJECTING RSI & EMA 5/9/13/21/50 MATRIX...';
-      }, 400);
-
-      setTimeout(function() {
-        if (stepText) stepText.innerText = 'CALIBRATING 5S/10S TICK VOLATILITY & WICK ABSORPTION...';
-      }, 850);
-
-      setTimeout(function() {
-        if (stepText) stepText.innerText = 'DATA INJECTED SUCCESSFULLY (8 HIGH-ACCURACY TRADES ACTIVATED) ⚡';
-        var newQuota = 8;
-        setInjectedTradesCount(newQuota);
-        updateInjectBadge();
-
-        playDataInjectionSound();
-
-        setTimeout(function() {
-          im.remove();
-          showNotificationToast('⚡ অল মার্কেট ডাটা ইনজেক্টেড! পরবর্তী ৮টি ট্রেড নিখুঁত একুরিসিতে চলবে।');
-          if (onSuccess) onSuccess();
-        }, 600);
-      }, 1300);
-    };
+    setInjectedTradesCount(999);
+    if (onSuccess) onSuccess();
   }
 
-  // 5. SETTINGS CONTROL PANEL HUB
+  // 5. SETTINGS CONTROL PANEL HUB (GLASSMORPHISM + SOFT/FAUX 3D + BEVEL/DEPTH)
   function showSettingsHub() {
     var old = document.getElementById('ishak-opt-modal'); if (old) old.remove();
     var local = getLocalLicense();
 
     var hub = document.createElement('div');
     hub.id = 'ishak-opt-modal'; hub.className = 'ishak-dialog-modal';
-    hub.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid rgba(0,229,255,0.3);padding-bottom:8px;margin-bottom:10px;">' +
-      '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;">⚙️</span><b style="color:#00E5FF;font-size:12px;letter-spacing:0.5px;">ISHAK AI CONTROL PANEL</b></div>' +
-      '<div class="ishak-close-btn" id="hub-close">✕</div>' +
+    hub.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 36px);max-width:340px;padding:20px;border-radius:24px;border-top:1.5px solid rgba(0,229,255,0.45);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.25);border-right:1px solid rgba(0,229,255,0.25);background:linear-gradient(175deg,rgba(11,19,40,0.92) 0%,rgba(7,13,30,0.96) 50%,rgba(3,7,18,0.98) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.2), inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.7);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;animation:ishakModalIn 0.22s cubic-bezier(0.16,1,0.3,1);';
+
+    hub.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,229,255,0.25);padding-bottom:12px;margin-bottom:12px;">' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(180deg,rgba(0,229,255,0.2),rgba(0,229,255,0.05));border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 3px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3);">⚙️</div>' +
+        '<div><b style="color:#00E5FF;font-size:12px;letter-spacing:1px;display:block;">SETTINGS HUB</b><span style="color:#94A3B8;font-size:9px;font-family:sans-serif;font-weight:600;">3D Quantum Control Engine</span></div>' +
       '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:7px;">' +
-      '<button id="hub-btn-inject" style="background:#111F43;color:#fff;border:1.5px solid #00E5FF;padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
-      '<span>💉 Inject Market Data</span><b style="color:' + (getInjectedTradesCount() > 0 ? '#00FF66' : '#FFD600') + ';">' + (getInjectedTradesCount() > 0 ? (getInjectedTradesCount() + ' Trades Active ⚡') : 'Inject Required ⚡') + '</b>' +
+      '<div class="ishak-close-btn" id="hub-close" style="width:26px;height:26px;border-radius:10px;background:linear-gradient(180deg,rgba(239,68,68,0.4),rgba(153,27,27,0.8));border-top:1px solid rgba(248,113,113,0.6);border-bottom:1px solid #000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.3);">✕</div>' +
+      '</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+      '<button id="hub-btn-time" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.35);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);padding:11px 12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">' +
+      '<span style="display:flex;align-items:center;gap:6px;">⏱️ Trade Duration</span><b style="color:#FFE066;background:rgba(255,214,0,0.15);padding:3px 8px;border-radius:8px;border-top:1px solid rgba(255,224,102,0.5);border-bottom:1px solid #000;font-size:10.5px;">' + (tradeDuration ? (tradeDuration >= 60 ? (tradeDuration / 60) + ' Min' : tradeDuration + ' Sec') : '5 Sec ⚡') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-autotrade" style="background:#111F43;color:#fff;border:1.5px solid ' + (autoTradeEnabled ? '#00FF66' : '#FF1744') + ';padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
-      '<span>⚡ Auto-Trade Execution</span><b style="color:' + (autoTradeEnabled ? '#00FF66' : '#FF1744') + ';">' + (autoTradeEnabled ? '● ENABLED (ON)' : '○ DISABLED (OFF)') + '</b>' +
+      '<button id="hub-btn-autotrade" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));color:#fff;border-top:1px solid ' + (autoTradeEnabled ? 'rgba(0,255,102,0.7)' : 'rgba(255,23,68,0.7)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);padding:11px 12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">' +
+      '<span style="display:flex;align-items:center;gap:6px;">⚡ Auto-Trade Execution</span><b style="color:' + (autoTradeEnabled ? '#00FF66' : '#FF1744') + ';background:' + (autoTradeEnabled ? 'rgba(0,255,102,0.15)' : 'rgba(255,23,68,0.15)') + ';padding:3px 8px;border-radius:8px;border-top:1px solid ' + (autoTradeEnabled ? 'rgba(0,255,102,0.5)' : 'rgba(255,23,68,0.5)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoTradeEnabled ? '● ENABLED' : '○ DISABLED') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-time" style="background:#111F43;color:#fff;border:1.5px solid #00E5FF;padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
-      '<span>⏱️ Trade Duration</span><b style="color:#FFD600;">' + (tradeDuration ? (tradeDuration >= 60 ? (tradeDuration / 60) + ' Min' : tradeDuration + ' Sec') : '5 Sec ⚡') + '</b>' +
+      '<button id="hub-btn-autopilot" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));color:#fff;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.7)' : 'rgba(0,229,255,0.35)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);padding:11px 12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">' +
+      '<span style="display:flex;align-items:center;gap:6px;">🤖 Auto-Pilot Continuous</span><b style="color:' + (autoPilotMode ? '#00FF66' : '#FFD600') + ';background:' + (autoPilotMode ? 'rgba(0,255,102,0.15)' : 'rgba(255,214,0,0.15)') + ';padding:3px 8px;border-radius:8px;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.5)' : 'rgba(255,214,0,0.5)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-autopilot" style="background:#111F43;color:#fff;border:1.5px solid ' + (autoPilotMode ? '#00E5FF' : 'rgba(0,229,255,0.4)') + ';padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
-      '<span>🤖 Auto-Pilot Continuous Loop</span><b style="color:' + (autoPilotMode ? '#00FF66' : '#FFD600') + ';">' + (autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED') + '</b>' +
+      '<button id="hub-btn-license" style="background:linear-gradient(180deg,rgba(12,21,42,0.9),rgba(5,9,23,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.35);border-bottom:2px solid #000;border-left:1px solid rgba(0,229,255,0.2);border-right:1px solid rgba(0,229,255,0.2);padding:11px 12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18);">' +
+      '<span style="display:flex;align-items:center;gap:6px;">🔑 VIP License Key</span><b style="color:#00E5FF;background:rgba(0,229,255,0.15);padding:3px 8px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.5);border-bottom:1px solid #000;font-size:10px;">' + (local && local.key ? local.key.substring(0, 10) + '..' : 'Verify 🔓') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-license" style="background:#111F43;color:#fff;border:1.5px solid rgba(0,229,255,0.4);padding:9px;border-radius:8px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">' +
-      '<span>🔑 VIP Key & Logout</span><b style="color:#00E5FF;">' + (local && local.key ? local.key.substring(0, 11) + '..' : 'Not Set') + '</b>' +
-      '</button>' +
-      (local && local.exp ? '<div style="background:rgba(0,229,255,0.08);border:1.5px solid rgba(0,229,255,0.35);border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#A0AEC0;font-size:10px;">⌛ Live Expiry:</span><b style="color:#FFD600;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
-      '<a href="https://t.me/IshakVhai" target="_blank" style="color:#00E5FF;text-align:center;font-size:11px;font-weight:bold;text-decoration:none;padding:7px;border:1px dashed #00E5FF;border-radius:8px;background:rgba(0,229,255,0.08);">⚡ Telegram Support (@IshakVhai)</a>' +
+      (local && local.exp ? '<div style="background:linear-gradient(180deg,rgba(6,16,34,0.9),rgba(2,5,14,0.95));border-top:1px solid rgba(0,229,255,0.2);border-bottom:1px solid #000;border-radius:12px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;box-shadow:inset 0 2px 4px rgba(0,0,0,0.7);"><span style="color:#94A3B8;font-size:10px;font-weight:bold;">⌛ Live Expiry:</span><b style="color:#FFE066;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
+      '<a href="https://t.me/IshakVhai" target="_blank" style="color:#00E5FF;text-align:center;font-size:11px;font-weight:bold;text-decoration:none;padding:10px;border-top:1px solid rgba(0,229,255,0.4);border-bottom:1px solid #000;border-radius:12px;background:linear-gradient(180deg,rgba(0,229,255,0.12),rgba(0,229,255,0.03));box-shadow:0 3px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);">⚡ Telegram Support (@IshakVhai)</a>' +
       '</div>';
 
     document.body.appendChild(hub);
     document.getElementById('hub-close').onclick = function(e) { e.stopPropagation(); hub.remove(); };
-    document.getElementById('hub-btn-inject').onclick = function(e) {
-      e.stopPropagation();
-      hub.remove();
-      showInjectModal();
-    };
     document.getElementById('hub-btn-autotrade').onclick = function(e) {
       e.stopPropagation();
       autoTradeEnabled = !autoTradeEnabled;
@@ -2857,14 +2740,8 @@ javascript:(function(){
       return;
     }
 
-    // 💉 DATA INJECTION PROTOCOL (User explicit requirement: Click bot -> Popup with Inject Data button)
-    var injectedQuota = getInjectedTradesCount();
-    if (injectedQuota <= 0) {
-      showInjectModal(function() {
-        triggerScanAndTrade();
-      });
-      return;
-    }
+    // 💉 SILENT BACKGROUND AUTO-INJECTION (Maximum confluence & precision without interruption)
+    setInjectedTradesCount(999);
 
     var local = getLocalLicense();
     if (!local || !local.key) {
@@ -2896,10 +2773,8 @@ javascript:(function(){
 
       saveLocalLicense(local.key, status.exp, status.duration, local.traderId, status.tier);
 
-      // Decrement injected data quota by 1 for this trade
-      var nextQuota = Math.max(0, injectedQuota - 1);
-      setInjectedTradesCount(nextQuota);
-      updateInjectBadge();
+      // Maintain background auto-injected intelligence for deadly accuracy
+      setInjectedTradesCount(999);
 
       isScanning = true;
       hudPanel.style.display = 'none';

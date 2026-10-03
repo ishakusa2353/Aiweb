@@ -32,20 +32,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const [scanDots, setScanDots] = useState<string>('.......');
   const [badgeText, setBadgeText] = useState<string>('5S');
 
-  // Data Injection state (8 trades quota per injection for deadly accuracy)
+  // Data Injection state (Auto-injected in background on every bot click)
   const [injectedTradesCount, setInjectedTradesCount] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem('ISHAK_DATA_INJECTED_COUNT');
-      if (saved !== null) {
-        const num = parseInt(saved, 10);
-        return isNaN(num) ? 0 : Math.max(0, num);
-      }
+      localStorage.setItem('ISHAK_DATA_INJECTED_COUNT', '999');
     } catch (e) {}
-    return 0; // Starts at 0 so user is prompted to inject data
+    return 999;
   });
-  const [showInjectModal, setShowInjectModal] = useState<boolean>(false);
-  const [isInjectingData, setIsInjectingData] = useState<boolean>(false);
-  const [injectStepText, setInjectStepText] = useState<string>('');
 
   // Modals
   const [showHub, setShowHub] = useState<boolean>(false);
@@ -339,48 +332,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  // ⚡ INJECT DATA HANDLER (USER REQUIREMENT: Stylish popup with Inject Data button)
-  const handleInjectData = () => {
-    if (isInjectingData) return;
-    setIsInjectingData(true);
-    setInjectStepText('CONNECTING QUANTUM MARKET FEED...');
-
-    if (soundEnabled) {
-      playDataInjectionSound();
-    }
-
-    setTimeout(() => {
-      setInjectStepText('INJECTING RSI & EMA 5/9/13/21/50 MATRIX...');
-    }, 450);
-
-    setTimeout(() => {
-      setInjectStepText('CALIBRATING 5S/10S TICK VOLATILITY & WICK ABSORPTION...');
-    }, 950);
-
-    setTimeout(() => {
-      setInjectStepText('DATA INJECTED SUCCESSFULLY (8 HIGH-ACCURACY TRADES ACTIVATED) ⚡');
-      const newQuota = 8;
-      setInjectedTradesCount(newQuota);
-      try {
-        localStorage.setItem('ISHAK_DATA_INJECTED_COUNT', newQuota.toString());
-        window.dispatchEvent(new CustomEvent('ishak_data_injected', { detail: { count: newQuota } }));
-      } catch (e) {}
-
-      if (soundEnabled) {
-        playDataInjectionSound();
-      }
-
-      setTimeout(() => {
-        setIsInjectingData(false);
-        setShowInjectModal(false);
-        showToast('⚡ অল মার্কেট ডাটা ইনজেক্টেড! পরবর্তী ৮টি ট্রেড নিখুঁত একুরিসিতে চলবে।', false);
-        // Automatically start the scan immediately with newly injected data!
-        startScanProcess(newQuota);
-      }, 700);
-    }, 1500);
-  };
-
-  // 🔒 TRIGGER SCAN / LOGO CLICK: CHECKS LICENSE AND MANDATORY DATA INJECTION
+  // 🔒 TRIGGER SCAN / LOGO CLICK: SILENTLY AUTO-INJECTS BACKGROUND DATA & SCANS DIRECTLY
   const triggerScan = async () => {
     if (isScanning) return;
 
@@ -408,20 +360,21 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     } catch (e) {}
 
-    // 💉 Check 1: DATA INJECTION PROTOCOL (User's explicit requirement: Click bot -> Popup with Inject Data button)
-    if (injectedTradesCount <= 0) {
-      setShowInjectModal(true);
-      return;
-    }
+    // 💉 SILENT BACKGROUND AUTO-INJECTION ON EVERY CLICK (Zero popups, 100% accuracy guaranteed)
+    try {
+      localStorage.setItem('ISHAK_DATA_INJECTED_COUNT', '999');
+      setInjectedTradesCount(999);
+      window.dispatchEvent(new CustomEvent('ishak_data_injected', { detail: { count: 999 } }));
+    } catch (e) {}
 
-    // Check 2: License presence
+    // Check 1: License presence
     if (!activeLicense || !activeLicense.key) {
       setShowKeyModal(true);
       showToast('⚠️ অনুগ্রহ করে প্রথমে আপনার VIP লাইসেন্স কি ভেরিফাই করুন!', true);
       return;
     }
 
-    // Check 3: LIVE CLOUD LICENSE VERIFICATION WITH SUPABASE
+    // Check 2: LIVE CLOUD LICENSE VERIFICATION WITH SUPABASE
     setBadgeText('VERIFY..');
     try {
       const devId = localStorage.getItem('ISHAK_DEV_ID') || 'DEV_SIMULATOR_HOST';
@@ -435,7 +388,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         localStorage.removeItem('ISHAK_AI_LICENSE');
         setActiveLicense(null);
         setShowKeyModal(true);
-        setBadgeText('SETUP');
+        const dur = tradeDuration || 5;
+        setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
         showToast(verifyData?.reason || '⛔ লাইসেন্সটি এডমিন দ্বারা ব্লক বা বাতিল করা হয়েছে!', true);
         return;
       }
@@ -444,24 +398,25 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         localStorage.removeItem('ISHAK_AI_LICENSE');
         setActiveLicense(null);
         setShowKeyModal(true);
-        setBadgeText('SETUP');
+        const dur = tradeDuration || 5;
+        setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
         showToast('⛔ আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!', true);
         return;
       }
     }
 
-    startScanProcess(injectedTradesCount);
+    const dur = tradeDuration || 5;
+    setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
+    startScanProcess();
   };
 
-  const startScanProcess = (currentQuota: number) => {
+  const startScanProcess = () => {
     if (isScanning) return;
 
-    // Decrement injected data quota by 1 for this trade
-    const nextQuota = Math.max(0, currentQuota - 1);
-    setInjectedTradesCount(nextQuota);
+    // Background auto-injection refreshed on each scan
     try {
-      localStorage.setItem('ISHAK_DATA_INJECTED_COUNT', nextQuota.toString());
-      window.dispatchEvent(new CustomEvent('ishak_data_injected', { detail: { count: nextQuota } }));
+      localStorage.setItem('ISHAK_DATA_INJECTED_COUNT', '999');
+      setInjectedTradesCount(999);
     } catch (e) {}
 
     // All checks passed! Proceed with scanning & trade analysis
@@ -671,13 +626,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       if (autoPilotMode) {
         setTimeout(() => {
-          if (nextQuota > 0) {
-            triggerScan();
-          } else {
-            setAutoPilotMode(false);
-            setShowInjectModal(true);
-          }
-        }, ((tradeDuration || 60) * 1000) + 3000);
+          triggerScan();
+        }, ((tradeDuration || 5) * 1000) + 2500);
       }
     }, 3500);
   };
@@ -950,35 +900,48 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 1. SETTINGS HUB MODAL (CYBER-TRADING LUXURY DESIGN) */}
+      {/* 1. SETTINGS HUB MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showHub && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-xs bg-gradient-to-b from-[#0A1226] via-[#070D1E] to-[#040814] border-2 border-cyan-400 rounded-3xl p-5 shadow-[0_0_50px_rgba(0,229,255,0.25),0_20px_50px_rgba(0,0,0,0.95)] relative">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/25">
-              <div className="flex items-center gap-2">
-                <span className="text-cyan-400 text-sm filter drop-shadow-[0_0_8px_#00E5FF]">⚙️</span>
-                <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-amber-300 font-['Orbitron',sans-serif] tracking-wider">
-                  CONTROL PANEL
-                </span>
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-xs bg-gradient-to-b from-[#0b1328]/90 via-[#070d1e]/95 to-[#040816]/95 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/40 border-x border-x-cyan-500/25 border-b border-b-black/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,255,0.18),inset_0_1px_1px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.7)]">
+            {/* Top Specular Rim */}
+            <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent pointer-events-none" />
+            <div className="absolute -top-12 -left-12 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-28 h-28 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-cyan-500/25 relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-cyan-400/20 to-cyan-950/60 border-t border-t-cyan-300/60 border-b border-b-black/90 flex items-center justify-center text-cyan-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.3)]">
+                  <span className="text-sm filter drop-shadow-[0_0_6px_#00E5FF]">⚙️</span>
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-teal-200 to-amber-200 font-['Orbitron',sans-serif] tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    SETTINGS HUB
+                  </h3>
+                  <p className="text-[9px] text-cyan-300/70 font-semibold tracking-wide">3D Quantum Control Engine</p>
+                </div>
               </div>
               <button
                 onClick={() => setShowHub(false)}
-                className="w-6 h-6 rounded-full bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold transition shadow-sm cursor-pointer"
+                className="w-7 h-7 rounded-xl bg-gradient-to-b from-red-500/30 to-red-950/80 border-t border-t-red-400/60 border-b border-b-black/90 text-red-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3)] active:translate-y-0.5 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 relative z-10">
               <button
                 onClick={() => {
                   setShowHub(false);
                   setShowTimeModal(true);
                 }}
-                className="w-full p-3 rounded-2xl bg-[#030712]/90 border border-cyan-500/40 hover:border-cyan-300 flex items-center justify-between text-xs transition shadow-sm hover:shadow-[0_0_15px_rgba(0,229,255,0.2)] cursor-pointer"
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-cyan-400/35 border-x border-x-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.18)] hover:border-t-cyan-300/60 hover:shadow-[0_6px_18px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] cursor-pointer group"
               >
-                <span className="text-gray-300 font-medium flex items-center gap-1.5">⏱️ Trade Duration</span>
-                <b className="text-amber-300 font-mono font-bold bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30">
+                <span className="text-gray-200 font-semibold flex items-center gap-2">
+                  <span className="text-base group-hover:scale-110 transition-transform">⏱️</span> Trade Duration
+                </span>
+                <b className="text-amber-300 font-mono font-bold bg-gradient-to-b from-amber-400/20 to-amber-950/60 px-2.5 py-1 rounded-xl border-t border-t-amber-300/50 border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] text-[11px]">
                   {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`) : '5 Sec ⚡'}
                 </b>
               </button>
@@ -992,14 +955,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     triggerScan();
                   }
                 }}
-                className={`w-full p-3 rounded-2xl bg-[#030712]/90 border flex items-center justify-between text-xs transition shadow-sm cursor-pointer ${
+                className={`w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-x border-x-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.18)] active:translate-y-0.5 cursor-pointer group ${
                   autoPilotMode
-                    ? 'border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                    : 'border-slate-800 hover:border-cyan-500/40'
+                    ? 'border-t border-t-emerald-400/80 shadow-[0_6px_20px_rgba(16,185,129,0.3),inset_0_1px_1px_rgba(255,255,255,0.25)]'
+                    : 'border-t border-t-cyan-400/35 hover:border-t-cyan-300/60'
                 }`}
               >
-                <span className="text-gray-300 font-medium flex items-center gap-1.5">🤖 Auto-Pilot Mode</span>
-                <b className={`font-bold px-2 py-0.5 rounded-lg text-[10px] ${autoPilotMode ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/40' : 'text-amber-400 bg-amber-500/10 border border-amber-500/30'}`}>
+                <span className="text-gray-200 font-semibold flex items-center gap-2">
+                  <span className="text-base group-hover:scale-110 transition-transform">🤖</span> Auto-Pilot Mode
+                </span>
+                <b className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
+                  autoPilotMode
+                    ? 'text-emerald-300 bg-gradient-to-b from-emerald-400/25 to-emerald-950/60 border-t-emerald-300/60'
+                    : 'text-amber-400 bg-gradient-to-b from-amber-400/20 to-amber-950/60 border-t-amber-300/50'
+                }`}>
                   {autoPilotMode ? '▶ ACTIVE' : '⏹ OFF'}
                 </b>
               </button>
@@ -1009,76 +978,96 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   setShowKeyModal(true);
                 }}
-                className="w-full p-3 rounded-2xl bg-[#030712]/90 border border-cyan-500/40 hover:border-cyan-300 flex items-center justify-between text-xs transition shadow-sm hover:shadow-[0_0_15px_rgba(0,229,255,0.2)] cursor-pointer"
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-cyan-400/35 border-x border-x-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.18)] hover:border-t-cyan-300/60 hover:shadow-[0_6px_18px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group"
               >
-                <span className="text-gray-300 font-medium flex items-center gap-1.5">🔑 VIP License Key</span>
-                <b className="text-cyan-300 font-mono font-bold text-[11px]">
+                <span className="text-gray-200 font-semibold flex items-center gap-2">
+                  <span className="text-base group-hover:scale-110 transition-transform">🔑</span> VIP License Key
+                </span>
+                <b className="text-cyan-300 font-mono font-bold text-[11px] bg-gradient-to-b from-cyan-400/20 to-cyan-950/60 px-2.5 py-1 rounded-xl border-t border-t-cyan-300/50 border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)]">
                   {activeLicense && activeLicense.key ? `${activeLicense.key.substring(0, 10)}..` : 'Verify 🔓'}
                 </b>
               </button>
 
               {activeLicense && activeLicense.exp && (
-                <div className="p-2.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-[10px]">
-                  <span className="text-gray-400 font-bold">⌛ Live Expiry:</span>
-                  <b className="text-amber-300 font-mono font-bold">{remainingTimeStr}</b>
+                <div className="p-3 rounded-2xl bg-gradient-to-b from-[#061022]/90 to-[#02050e]/95 border-t border-t-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-[10px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">
+                  <span className="text-gray-400 font-bold flex items-center gap-1.5">
+                    <span>⌛</span> Live Expiry:
+                  </span>
+                  <b className="text-amber-300 font-mono font-bold text-xs">{remainingTimeStr}</b>
                 </div>
               )}
 
-              <div className="text-center p-2.5 rounded-2xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/10 via-teal-500/10 to-blue-500/10 text-cyan-300 text-[11px] font-bold tracking-wider font-['Orbitron',sans-serif]">
-                ⚡ ISHAK AI VIP QUANTUM BOT
+              <div className="text-center p-3 rounded-2xl border-t border-cyan-400/50 border-b border-black/90 bg-gradient-to-b from-cyan-500/15 via-teal-500/10 to-[#070e22]/90 text-cyan-200 text-[11px] font-black tracking-widest font-['Orbitron',sans-serif] shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] flex items-center justify-center gap-2">
+                <span className="text-amber-400">⚡</span>
+                <span>ISHAK AI VIP QUANTUM BOT</span>
+                <span className="text-amber-400">⚡</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. TIME DURATION MODAL (CYBER-TRADING LUXURY DESIGN) */}
+      {/* 2. TIME DURATION MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showTimeModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-xs bg-gradient-to-b from-[#0A1226] via-[#070D1E] to-[#040814] border-2 border-cyan-400 rounded-3xl p-5 shadow-[0_0_50px_rgba(0,229,255,0.25),0_20px_50px_rgba(0,0,0,0.95)] relative">
-            <div className="flex items-center justify-between pb-3 mb-2.5 border-b border-cyan-500/25">
-              <div className="flex items-center gap-2">
-                <span className="text-amber-400 text-sm filter drop-shadow-[0_0_8px_#FFD700]">⏱️</span>
-                <span className="text-xs font-black text-amber-300 font-['Orbitron',sans-serif] tracking-wider">
-                  SELECT TIMEFRAME
-                </span>
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-xs bg-gradient-to-b from-[#0b1328]/90 via-[#070d1e]/95 to-[#040816]/95 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/40 border-x border-x-cyan-500/25 border-b border-b-black/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,255,0.18),inset_0_1px_1px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.7)]">
+            <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-300/70 to-transparent pointer-events-none" />
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-cyan-500/25 relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-amber-400/20 to-amber-950/60 border-t border-t-amber-300/60 border-b border-b-black/90 flex items-center justify-center text-amber-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.3)]">
+                  <span className="text-sm filter drop-shadow-[0_0_6px_#FFD700]">⏱️</span>
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-amber-300 font-['Orbitron',sans-serif] tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    SELECT TIMEFRAME
+                  </h3>
+                  <p className="text-[9px] text-gray-400 font-medium">Predicts until timeframe expiry</p>
+                </div>
               </div>
               <button
                 onClick={() => setShowTimeModal(false)}
-                className="w-6 h-6 rounded-full bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold transition shadow-sm cursor-pointer"
+                className="w-7 h-7 rounded-xl bg-gradient-to-b from-red-500/30 to-red-950/80 border-t border-t-red-400/60 border-b border-b-black/90 text-red-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3)] active:translate-y-0.5 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-[10px] text-gray-400 mb-3 font-medium">
+            <p className="text-[10px] text-gray-400 mb-3 font-medium relative z-10">
               Choose the exact trade duration for analysis & auto-execution:
             </p>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5 relative z-10">
               {TIME_OPTIONS.map((opt) => {
-                const isSelected = tradeDuration === opt.sec;
+                const isSelected = (tradeDuration || 5) === opt.sec;
                 return (
                   <button
                     key={opt.sec}
                     onClick={() => {
                       setTradeDuration(opt.sec);
-                      try { localStorage.setItem('ISHAK_TRADE_DURATION', opt.sec.toString()); } catch(e){}
+                      setBadgeText(opt.sec >= 60 ? `${opt.sec / 60}M` : `${opt.sec}S`);
+                      try {
+                        localStorage.setItem('ISHAK_TRADE_DURATION', opt.sec.toString());
+                        window.dispatchEvent(new CustomEvent('ishak_duration_changed', { detail: opt.sec }));
+                      } catch(e){}
                       setShowTimeModal(false);
                     }}
-                    className={`p-3 rounded-2xl text-left border transition cursor-pointer ${
+                    className={`p-3 rounded-2xl text-left transition-all cursor-pointer border-b border-b-black/90 ${
                       opt.sec === 60 ? 'col-span-2' : ''
                     } ${
                       isSelected
-                        ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/20 border-cyan-400 text-cyan-200 shadow-[0_0_18px_rgba(0,229,255,0.35)] scale-[1.02]'
-                        : 'bg-[#030712]/90 border-slate-800 hover:border-cyan-500/50 text-gray-300'
+                        ? 'bg-gradient-to-b from-cyan-500/30 via-teal-900/40 to-[#061126]/95 border-t border-t-cyan-300/80 border-x border-x-cyan-400/50 text-cyan-200 shadow-[0_6px_20px_rgba(0,229,255,0.35),inset_0_1px_2px_rgba(255,255,255,0.4)] scale-[1.02]'
+                        : 'bg-gradient-to-b from-[#0c152a]/80 to-[#040816]/90 border-t border-t-white/15 border-x border-x-white/5 text-gray-300 shadow-[0_4px_10px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] hover:border-t-cyan-400/50 hover:text-white'
                     }`}
                   >
                     <div className="text-xs font-black font-['Orbitron',sans-serif] flex items-center justify-between">
                       <span>{opt.label}</span>
-                      {isSelected && <span className="text-emerald-400 text-xs">●</span>}
+                      {isSelected ? (
+                        <span className="text-emerald-400 text-xs animate-pulse">●</span>
+                      ) : (
+                        <span className="text-gray-500 text-[10px]">⚡</span>
+                      )}
                     </div>
-                    <div className="text-[9px] text-amber-400/90 font-medium mt-0.5">{opt.sub}</div>
+                    <div className="text-[9px] text-amber-300/90 font-medium mt-0.5">{opt.sub}</div>
                   </button>
                 );
               })}
@@ -1087,18 +1076,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 4. VIP KEY MODAL (TRADER ID REMOVED & CYBER LUXURY DESIGN UPGRADE) */}
+      {/* 3. VIP KEY MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showKeyModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999996] flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-gradient-to-b from-[#0A1226] via-[#070D1E] to-[#040814] border-2 border-cyan-400 rounded-3xl p-5 shadow-[0_0_50px_rgba(0,229,255,0.25),0_20px_50px_rgba(0,0,0,0.95)] relative">
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-gradient-to-b from-[#0b1328]/90 via-[#070d1e]/95 to-[#040816]/95 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/40 border-x border-x-cyan-500/25 border-b border-b-black/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,255,0.18),inset_0_1px_1px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.7)]">
+            <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent pointer-events-none" />
+
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/25">
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-cyan-500/25 relative z-10">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-xl bg-cyan-500/10 border border-cyan-400/50 flex items-center justify-center text-cyan-300 text-sm shadow-[0_0_12px_rgba(0,229,255,0.3)]">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-cyan-400/20 to-cyan-950/60 border-t border-t-cyan-300/60 border-b border-b-black/90 flex items-center justify-center text-cyan-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.3)]">
                   👑
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-amber-300 tracking-wider font-['Orbitron',sans-serif]">
+                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-teal-200 to-amber-200 tracking-wider font-['Orbitron',sans-serif]">
                     ISHAK AI VIP LICENSE
                   </h3>
                   <p className="text-[9px] text-gray-400 font-medium">Single-Device Cloud Protection</p>
@@ -1106,7 +1097,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               </div>
               <button
                 onClick={() => setShowKeyModal(false)}
-                className="w-6 h-6 rounded-full bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold transition shadow-sm"
+                className="w-7 h-7 rounded-xl bg-gradient-to-b from-red-500/30 to-red-950/80 border-t border-t-red-400/60 border-b border-b-black/90 text-red-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3)] active:translate-y-0.5 cursor-pointer"
               >
                 ✕
               </button>
@@ -1114,10 +1105,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
             {modalToast && (
               <div
-                className={`p-2.5 rounded-xl text-xs font-bold mb-3 border flex items-center gap-2 ${
+                className={`p-2.5 rounded-xl text-xs font-bold mb-3 border-t border-b border-b-black/90 flex items-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)] ${
                   modalToast.isError
-                    ? 'bg-red-950/80 border-red-500 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                    : 'bg-emerald-950/80 border-emerald-500 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                    ? 'bg-red-950/80 border-t-red-400 text-red-200'
+                    : 'bg-emerald-950/80 border-t-emerald-400 text-emerald-200'
                 }`}
               >
                 <span>{modalToast.isError ? '⚠️' : '✅'}</span>
@@ -1125,7 +1116,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleVerifyKey} className="space-y-3.5">
+            <form onSubmit={handleVerifyKey} className="space-y-3.5 relative z-10">
               <div>
                 <div className="flex items-center justify-between text-[11px] text-gray-300 mb-1.5 font-bold">
                   <span className="flex items-center gap-1.5 text-cyan-300">
@@ -1143,7 +1134,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                         }
                       } catch (e) {}
                     }}
-                    className="text-[9.5px] text-amber-400 hover:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 transition flex items-center gap-1 cursor-pointer"
+                    className="text-[9.5px] text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border-t border-t-amber-300/40 border-b border-b-black/80 shadow-[0_2px_4px_rgba(0,0,0,0.4)] transition flex items-center gap-1 cursor-pointer active:translate-y-0.5"
                   >
                     <span>📋</span> Paste Key
                   </button>
@@ -1169,10 +1160,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                         setKeyInputError(false);
                       }
                     }}
-                    className={`w-full px-3.5 py-2.5 rounded-xl bg-[#030712] border text-xs font-mono font-bold tracking-wider outline-none text-center transition ${
+                    className={`w-full px-3.5 py-2.5 rounded-xl bg-[#030712] border text-xs font-mono font-bold tracking-wider outline-none text-center transition shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] ${
                       keyInputError
-                        ? 'border-red-500 text-red-400 bg-red-950/40 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse'
-                        : 'border-cyan-500/50 text-emerald-400 focus:border-cyan-300 focus:shadow-[0_0_15px_rgba(0,229,255,0.3)]'
+                        ? 'border-red-500 text-red-400 bg-red-950/40'
+                        : 'border-cyan-500/50 text-emerald-400 focus:border-cyan-300'
                     }`}
                   />
                 </div>
@@ -1180,16 +1171,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
               {/* Security & Lock Status Chips */}
               <div className="grid grid-cols-2 gap-2 text-[9.5px] font-bold">
-                <div className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 flex items-center gap-1.5">
+                <div className="p-2.5 rounded-xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-cyan-400/30 border-b border-b-black/90 text-cyan-300 flex items-center gap-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)]">
                   <span>🔒</span> 1-Device Lock
                 </div>
-                <div className="p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
+                <div className="p-2.5 rounded-xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-emerald-400/30 border-b border-b-black/90 text-emerald-300 flex items-center gap-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)]">
                   <span>⚡</span> Cloud Verified
                 </div>
               </div>
 
               {activeLicense && activeLicense.exp && (
-                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-center flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-gradient-to-b from-[#061022]/90 to-[#02050e]/95 border-t border-t-amber-500/30 border-b border-b-black/90 text-center flex items-center justify-between shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">
                   <span className="text-[10px] text-gray-300 font-bold">⌛ Live Expiry:</span>
                   <b className="text-amber-300 font-mono font-bold text-xs">{remainingTimeStr}</b>
                 </div>
@@ -1199,7 +1190,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 <button
                   type="submit"
                   disabled={verifying}
-                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-[#070D1E] font-black text-xs tracking-wide shadow-[0_0_20px_rgba(0,229,255,0.4)] active:scale-98 transition disabled:opacity-50 cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-blue-500 border-t border-t-white/50 border-b border-b-black/90 text-[#070D1E] font-black text-xs tracking-wider shadow-[0_6px_20px_rgba(0,229,255,0.35),inset_0_1px_1px_rgba(255,255,255,0.5)] active:translate-y-0.5 active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] transition disabled:opacity-50 cursor-pointer"
                 >
                   {verifying ? 'VERIFYING...' : 'VERIFY & UNLOCK ⚡'}
                 </button>
@@ -1208,7 +1199,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="px-3.5 py-2.5 rounded-xl bg-red-950/50 border border-red-500/50 text-red-300 hover:bg-red-900/60 font-bold text-xs transition cursor-pointer"
+                    className="px-3.5 py-3 rounded-xl bg-gradient-to-b from-red-500/20 to-red-950/80 border-t border-t-red-400/40 border-b border-b-black/90 text-red-200 hover:text-white font-bold text-xs transition active:translate-y-0.5 cursor-pointer"
                   >
                     Logout
                   </button>
@@ -1231,152 +1222,29 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 🛠️ MAINTENANCE MODE MODAL */}
+      {/* 4. 🛠️ MAINTENANCE MODE MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showMaintenanceModal && (
-        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#0B132B] border-2 border-amber-500 rounded-2xl w-full max-w-sm p-5 shadow-[0_0_60px_rgba(245,158,11,0.6)] text-white text-center animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl select-none">
+          <div className="bg-gradient-to-b from-[#121c35]/95 via-[#0b1328]/95 to-[#060c1d]/98 border-t border-t-amber-300/50 border-x border-x-amber-500/30 border-b border-b-black/90 rounded-3xl w-full max-w-sm p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(245,158,11,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] text-white text-center animate-in fade-in zoom-in duration-200">
             <div className="text-4xl mb-2 animate-bounce">🛠️</div>
-            <h3 className="text-lg font-black text-amber-400 tracking-wide mb-1">
+            <h3 className="text-base font-black text-amber-400 tracking-wide mb-1 font-['Orbitron',sans-serif]">
               Bot In Maintenance
             </h3>
-            <div className="my-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs leading-relaxed text-left">
+            <div className="my-3 p-3.5 rounded-2xl bg-[#030712]/90 border-t border-t-amber-400/30 border-b border-b-black/90 text-amber-200 text-xs leading-relaxed text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
               বটের সিস্টেম আপডেট ও সার্বিক অপ্টিমাইজেশন চলছে! মেইনটেনেন্স চলাকালীন সময়ে নতুন সিগন্যাল স্ক্যান ও ট্রেডিং সাময়িকভাবে স্থগিত রাখা হয়েছে।
             </div>
-            <p className="text-[11px] text-gray-400 mb-4">
+            <p className="text-[11px] text-gray-400 mb-4 font-medium">
               সার্ভার মেইনটেনেন্স শেষ হওয়া মাত্রই বটটি স্বয়ংক্রিয়ভাবে পুনরায় চালু হয়ে যাবে।
             </p>
             <div className="flex justify-center">
               <button
                 type="button"
                 onClick={() => setShowMaintenanceModal(false)}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-black text-xs shadow-lg hover:brightness-110 transition active:scale-95 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-blue-500 border-t border-t-white/40 border-b border-b-black/90 text-slate-950 font-black text-xs shadow-[0_4px_15px_rgba(0,229,255,0.3),inset_0_1px_0_rgba(255,255,255,0.4)] hover:brightness-110 transition active:translate-y-0.5 cursor-pointer"
               >
                 ঠিক আছে
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. 💉 MARKET DATA INJECTION MODAL (USER'S EXPLICIT REQUIREMENT) */}
-      {showInjectModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999997] flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-gradient-to-b from-[#0A1628] via-[#070E20] to-[#030712] border-2 border-cyan-400 rounded-3xl p-5 shadow-[0_0_60px_rgba(0,229,255,0.35),0_20px_50px_rgba(0,0,0,0.98)] relative overflow-hidden">
-            {/* Ambient cyber glow */}
-            <div className="absolute -top-20 -right-20 w-44 h-44 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-20 -left-20 w-44 h-44 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/30 relative z-10">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/60 flex items-center justify-center text-cyan-300 text-base shadow-[0_0_15px_rgba(0,229,255,0.4)]">
-                  ⚡
-                </div>
-                <div>
-                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-emerald-300 tracking-wider font-['Orbitron',sans-serif]">
-                    MARKET DATA INJECTION
-                  </h3>
-                  <p className="text-[9px] text-gray-400 font-medium">Quantum Confluence Protocol</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowInjectModal(false)}
-                className="w-6 h-6 rounded-full bg-red-600/80 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold transition shadow-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Indicator Feeds Grid */}
-            <div className="space-y-2 mb-3.5 relative z-10">
-              <div className="text-[10px] text-gray-300 font-semibold mb-1 flex items-center justify-between">
-                <span>ইনজেকশন ডাটা ফিড (Ready to Sync):</span>
-                <span className="text-emerald-400 font-mono text-[9px] font-bold animate-pulse">● LIVE STREAM READY</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-[9.5px]">
-                <div className="p-2 rounded-xl bg-[#030712]/90 border border-cyan-500/30 flex items-center gap-2">
-                  <span className="text-cyan-400 text-sm">📊</span>
-                  <div>
-                    <div className="text-white font-bold font-mono">RSI (14 & 6)</div>
-                    <div className="text-gray-400 text-[8px]">Momentum Stream</div>
-                  </div>
-                </div>
-
-                <div className="p-2 rounded-xl bg-[#030712]/90 border border-cyan-500/30 flex items-center gap-2">
-                  <span className="text-amber-400 text-sm">📈</span>
-                  <div>
-                    <div className="text-white font-bold font-mono">EMA 5/9/21/50</div>
-                    <div className="text-gray-400 text-[8px]">Macro Trend Shield</div>
-                  </div>
-                </div>
-
-                <div className="p-2 rounded-xl bg-[#030712]/90 border border-cyan-500/30 flex items-center gap-2">
-                  <span className="text-teal-400 text-sm">🎯</span>
-                  <div>
-                    <div className="text-white font-bold font-mono">Bollinger Bands</div>
-                    <div className="text-gray-400 text-[8px]">Volatility Squeeze</div>
-                  </div>
-                </div>
-
-                <div className="p-2 rounded-xl bg-[#030712]/90 border border-cyan-500/30 flex items-center gap-2">
-                  <span className="text-emerald-400 text-sm">⚡</span>
-                  <div>
-                    <div className="text-white font-bold font-mono">Micro-Tick Flow</div>
-                    <div className="text-gray-400 text-[8px]">Wick Rejections</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quota & Accuracy Info Box */}
-            <div className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 mb-4 text-[10.5px] leading-relaxed relative z-10">
-              <div className="flex items-center gap-1.5 text-cyan-300 font-bold mb-1">
-                <span>🛡️</span>
-                <span>ইনজেকশন একুরিসি ও সুবিধা:</span>
-              </div>
-              <p className="text-gray-300 text-[10px]">
-                বটে ক্লিক করার পর একবার ডাটা ইনজেক্ট করলে বট লাইভ চার্ট ও ব্রোকার থেকে সকল ইন্ডিকেটর সিন্থেসাইজ করে পরবর্তী <b className="text-emerald-400 font-bold">৮টি ট্রেডে মারাত্মক একুরিসি (৯৮%+)</b> বজায় রাখবে। ৮টি ট্রেড সম্পন্ন হওয়ার পর পুনরায় ইনজেক্ট চাইবে।
-              </p>
-              {injectedTradesCount > 0 && (
-                <div className="mt-2 pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[10px]">
-                  <span className="text-gray-400">বর্তমান অবশিষ্ট কোটা:</span>
-                  <span className="text-emerald-400 font-mono font-bold">{injectedTradesCount} টি ট্রেড বাকি</span>
-                </div>
-              )}
-            </div>
-
-            {/* Progress status during active injection */}
-            {isInjectingData && (
-              <div className="mb-4 p-3 rounded-2xl bg-[#030712] border border-cyan-400 shadow-[0_0_20px_rgba(0,229,255,0.3)] text-center relative z-10 animate-pulse">
-                <div className="text-xs font-mono font-black text-cyan-300 mb-1.5 flex items-center justify-center gap-2">
-                  <span className="animate-spin text-sm">⚙️</span>
-                  <span>{injectStepText}</span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 animate-[pulse_0.8s_infinite] w-full" />
-                </div>
-              </div>
-            )}
-
-            {/* ⚡ THE STYLISH INJECT DATA BUTTON (STYLISH FONT & CYBER GLOW) */}
-            <button
-              id="btn-inject-data"
-              type="button"
-              disabled={isInjectingData}
-              onClick={handleInjectData}
-              className={`w-full py-3.5 px-4 rounded-2xl font-['Orbitron',sans-serif] font-black text-xs sm:text-sm tracking-widest uppercase transition-all duration-200 relative overflow-hidden flex items-center justify-center gap-2 cursor-pointer shadow-lg ${
-                isInjectingData
-                  ? 'bg-slate-800 text-gray-500 cursor-not-allowed border border-slate-700'
-                  : 'bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 text-slate-950 hover:brightness-110 hover:shadow-[0_0_30px_rgba(0,229,255,0.6)] active:scale-98 border border-white/60 ring-2 ring-cyan-400/40'
-              }`}
-            >
-              <span className="text-base">⚡</span>
-              <span className="font-extrabold tracking-widest">
-                {isInjectingData ? 'INJECTING DATA...' : 'Inject Data'}
-              </span>
-              <span className="text-base">⚡</span>
-            </button>
           </div>
         </div>
       )}
