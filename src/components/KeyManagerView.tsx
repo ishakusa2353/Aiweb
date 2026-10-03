@@ -483,78 +483,84 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       )}
 
-      {/* Top 3D Stat Cards - Mobile Compact Grid */}
+      {/* Top 3D Stat Cards - Mobile Compact Grid (Cosmic Glassmorphism + Soft 3D + Bevel/Depth) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]">
-          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
-            <span className="truncate">মোট কী</span>
-            <KeyRound className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
+        <div className="bg-gradient-to-b from-[#182458]/75 via-[#0e173e]/85 to-[#080d26]/95 backdrop-blur-2xl border-t border-t-white/30 border-b-2 border-b-black/90 border-x border-cyan-400/35 rounded-2xl p-3 sm:p-4 shadow-[0_12px_32px_rgba(2,6,23,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between text-cyan-200/80 text-[11px] sm:text-xs mb-0.5 sm:mb-1 font-semibold">
+            <span className="truncate">মোট কী (Total)</span>
+            <div className="p-1 rounded-lg bg-cyan-500/20 border border-cyan-400/40 shadow-inner">
+              <KeyRound className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-300 shrink-0" />
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-white">{keys.length}</div>
-          <div className="text-[10px] sm:text-[11px] text-cyan-400/80 mt-1 flex items-center gap-1 truncate">
-            <RefreshCw className="w-3 h-3 cursor-pointer hover:rotate-180 transition shrink-0" onClick={onRefresh} />
+          <div className="text-xl sm:text-2xl font-black text-white font-mono tracking-tight">{keys.length}</div>
+          <div className="text-[10px] sm:text-[11px] text-cyan-400/90 mt-1 flex items-center gap-1 truncate font-medium">
+            <RefreshCw className="w-3 h-3 cursor-pointer hover:rotate-180 transition shrink-0 text-cyan-300" onClick={onRefresh} />
             <span className="truncate">সুপাবেস ডাটাবেস</span>
           </div>
         </div>
 
-        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]">
-          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
-            <span className="truncate">সক্রিয় কী</span>
-            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+        <div className="bg-gradient-to-b from-[#182458]/75 via-[#0e173e]/85 to-[#080d26]/95 backdrop-blur-2xl border-t border-t-white/30 border-b-2 border-b-black/90 border-x border-emerald-400/35 rounded-2xl p-3 sm:p-4 shadow-[0_12px_32px_rgba(2,6,23,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between text-emerald-200/80 text-[11px] sm:text-xs mb-0.5 sm:mb-1 font-semibold">
+            <span className="truncate">সক্রিয় কী (Active)</span>
+            <div className="p-1 rounded-lg bg-emerald-500/20 border border-emerald-400/40 shadow-inner">
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-300 shrink-0" />
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-emerald-400">{activeCount}</div>
-          <div className="text-[10px] sm:text-[11px] text-gray-400 mt-1 truncate">ভ্যালিড ও লাইভ</div>
+          <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono tracking-tight">{activeCount}</div>
+          <div className="text-[10px] sm:text-[11px] text-emerald-300/80 mt-1 truncate font-medium">ভ্যালিড ও লাইভ</div>
         </div>
 
-        <div className="bg-[#0B132B] border border-cyan-500/30 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)]">
-          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
+        <div className="bg-gradient-to-b from-[#182458]/75 via-[#0e173e]/85 to-[#080d26]/95 backdrop-blur-2xl border-t border-t-white/30 border-b-2 border-b-black/90 border-x border-amber-400/35 rounded-2xl p-3 sm:p-4 shadow-[0_12px_32px_rgba(2,6,23,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center justify-between text-amber-200/80 text-[11px] sm:text-xs mb-0.5 sm:mb-1 font-semibold">
             <span className="truncate">লকড ডিভাইস</span>
-            <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+            <div className="p-1 rounded-lg bg-amber-500/20 border border-amber-400/40 shadow-inner">
+              <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-amber-400">{lockedDeviceCount}</div>
-          <div className="text-[10px] sm:text-[11px] text-gray-400 mt-1 truncate">ডিভাইসে আবদ্ধ</div>
+          <div className="text-xl sm:text-2xl font-black text-amber-400 font-mono tracking-tight">{lockedDeviceCount}</div>
+          <div className="text-[10px] sm:text-[11px] text-amber-300/80 mt-1 truncate font-medium">ডিভাইসে আবদ্ধ</div>
         </div>
 
         <div 
           onClick={openSupabaseModal}
-          className="bg-[#0B132B] border border-cyan-500/30 hover:border-cyan-400 rounded-2xl p-3 sm:p-4 shadow-[0_10px_25px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.08)] cursor-pointer transition group"
+          className="bg-gradient-to-b from-[#182458]/75 via-[#0e173e]/85 to-[#080d26]/95 backdrop-blur-2xl border-t border-t-white/30 border-b-2 border-b-black/90 border-x border-cyan-400/35 hover:border-cyan-300/80 rounded-2xl p-3 sm:p-4 shadow-[0_12px_32px_rgba(2,6,23,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.5)] cursor-pointer transition group"
           title="Supabase ডাটাবেস সেটিংস দেখতে ক্লিক করুন"
         >
-          <div className="flex items-center justify-between text-gray-400 text-[11px] sm:text-xs mb-0.5 sm:mb-1">
+          <div className="flex items-center justify-between text-cyan-200/80 text-[11px] sm:text-xs mb-0.5 sm:mb-1 font-semibold">
             <span className="truncate">স্টোরেজ</span>
             <div className="flex items-center gap-1">
               <Database className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition shrink-0" />
-              <span className="text-[9px] sm:text-[10px] text-cyan-400 font-bold group-hover:underline">সেটিংস</span>
+              <span className="text-[9px] sm:text-[10px] text-cyan-300 font-bold group-hover:underline">সেটিংস</span>
             </div>
           </div>
           <div className="text-sm sm:text-base font-bold text-white truncate flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full shrink-0 ${isSupabaseActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
             <span className="truncate">{isSupabaseActive ? 'Supabase' : 'Server Memory'}</span>
           </div>
-          <div className="text-[10px] sm:text-[11px] text-cyan-400 mt-1 flex items-center justify-between">
+          <div className="text-[10px] sm:text-[11px] text-cyan-300 mt-1 flex items-center justify-between font-medium">
             <span className="truncate">{isSupabaseActive ? 'লাইভ কানেক্টেড' : 'কানেক্ট করুন'}</span>
-            <ExternalLink className="w-3 h-3 text-gray-500 group-hover:text-cyan-400 shrink-0" />
+            <ExternalLink className="w-3 h-3 text-cyan-400/70 group-hover:text-cyan-300 shrink-0" />
           </div>
         </div>
       </div>
 
-      {/* 📱 ADMIN MOBILE APP INSTALL DOCK */}
-      <div className="bg-gradient-to-r from-cyan-950/90 via-[#0B132B] to-blue-950/90 border border-cyan-400/50 rounded-2xl p-3.5 sm:p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* 📱 ADMIN MOBILE APP INSTALL DOCK (Cosmic Glassmorphism + Soft 3D Bevel) */}
+      <div className="bg-gradient-to-r from-[#182356]/90 via-[#0e163d]/95 to-[#162152]/90 backdrop-blur-2xl border-t border-t-white/30 border-b-2 border-b-black/90 border-x border-cyan-400/40 rounded-2xl p-3.5 sm:p-4 shadow-[0_12px_32px_rgba(2,6,23,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.25)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-b from-cyan-400/20 to-blue-900/60 border-t border-t-cyan-300/60 border-b border-b-black/80 border-x border-cyan-500/30 flex items-center justify-center text-xl sm:text-2xl shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
             🛡️
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
+              <h3 className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5 font-['Orbitron',sans-serif]">
                 <span>এডমিন কন্ট্রোল অ্যাপ (WebAPK)</span>
               </h3>
-              <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold flex items-center gap-1">
+              <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-bold flex items-center gap-1 shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span>লাইভ ডাটাবেজ</span>
               </span>
             </div>
-            <p className="text-[11px] text-gray-300 mt-0.5">
+            <p className="text-[11px] text-cyan-100/70 mt-0.5">
               লাইসেন্স কি তৈরি, ব্লক ও রিচার্জ করার জন্য অ্যাডমিন ফোন অ্যাপ।
             </p>
           </div>
@@ -563,43 +569,43 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         <div className="w-full sm:w-auto pt-1 sm:pt-0 shrink-0">
           <button
             onClick={handleInstallApp}
-            className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+            className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 text-[#050b1e] font-black text-xs border-t border-t-white/60 border-b-2 border-b-black/80 shadow-[0_6px_20px_rgba(0,229,255,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)] hover:brightness-110 active:translate-y-0.5 flex items-center justify-center gap-2 transition cursor-pointer"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4 stroke-[2.5]" />
             <span>{isAppInstalled ? '✅ এডমিন অ্যাপ ইনস্টল্ড' : '১-ক্লিকে Admin অ্যাপ ইনস্টল'}</span>
           </button>
         </div>
       </div>
 
-      {/* 🛠️ MAINTENANCE MODE CONTROL CARD */}
-      <div className={`border rounded-2xl p-3.5 sm:p-5 shadow-2xl transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 ${
+      {/* 🛠️ MAINTENANCE MODE CONTROL CARD (Cosmic Glassmorphism + Soft 3D Bevel) */}
+      <div className={`border-t rounded-2xl p-3.5 sm:p-5 transition-all duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 backdrop-blur-2xl border-b-2 border-b-black/90 ${
         maintenanceMode 
-          ? 'bg-gradient-to-r from-red-950/90 via-rose-950/80 to-red-900/70 border-red-500/70 shadow-[0_0_35px_rgba(239,68,68,0.3)]' 
-          : 'bg-gradient-to-r from-slate-900/90 via-[#0B132B] to-slate-900/90 border-cyan-500/30'
+          ? 'bg-gradient-to-r from-red-950/90 via-rose-950/85 to-red-900/80 border-t-red-400/60 border-x-red-500/50 shadow-[0_12px_35px_rgba(239,68,68,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]' 
+          : 'bg-gradient-to-r from-[#182356]/90 via-[#0e163d]/95 to-[#162152]/90 border-t-white/30 border-x-cyan-400/35 shadow-[0_12px_32px_rgba(2,6,23,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.25)]'
       }`}>
         <div className="flex items-start sm:items-center gap-3 w-full sm:w-auto">
-          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl sm:text-2xl shrink-0 border transition ${
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-xl sm:text-2xl shrink-0 border-t border-b-2 border-b-black/80 transition shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
             maintenanceMode 
-              ? 'bg-red-500/20 border-red-500 text-red-400 animate-pulse' 
-              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+              ? 'bg-red-500/25 border-t-red-300 border-x-red-500/50 text-red-400 animate-pulse' 
+              : 'bg-emerald-500/15 border-t-emerald-300/60 border-x-emerald-500/40 text-emerald-400'
           }`}>
             {maintenanceMode ? '⚠️' : '🛡️'}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <h3 className="text-xs sm:text-sm font-black text-white">
+              <h3 className="text-xs sm:text-sm font-black text-white font-['Orbitron',sans-serif]">
                 বট মেইনটেনেন্স মোড
               </h3>
-              <span className={`px-2 py-0.2 rounded-full text-[9px] font-black border uppercase tracking-wider flex items-center gap-1 ${
+              <span className={`px-2 py-0.2 rounded-full text-[9px] font-black border uppercase tracking-wider flex items-center gap-1 shadow-sm ${
                 maintenanceMode
                   ? 'bg-red-500/20 text-red-300 border-red-500/60 animate-pulse'
-                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${maintenanceMode ? 'bg-red-500 animate-ping' : 'bg-emerald-400'}`} />
                 <span>{maintenanceMode ? 'অন (Maintenance)' : 'অফ (সচল)'}</span>
               </span>
             </div>
-            <p className="text-[11px] text-gray-300 mt-0.5 leading-snug">
+            <p className="text-[11px] text-cyan-100/70 mt-0.5 leading-snug">
               {maintenanceMode
                 ? '🔴 এই মোড চালু রয়েছে! ইউজারের বটে ক্লিক করলে "Bot In Maintenance" দেখাবে।'
                 : '🟢 সাধারণ অবস্থা: অন করলে বট চালু হওয়া বন্ধ হয়ে মেইনটেনেন্স মেসেজ দেখাবে।'}
@@ -612,10 +618,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
             type="button"
             disabled={isTogglingMaintenance}
             onClick={handleToggleMaintenance}
-            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition active:scale-95 shadow-xl cursor-pointer ${
+            className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition active:translate-y-0.5 border-t border-t-white/40 border-b-2 border-b-black/90 cursor-pointer ${
               maintenanceMode
-                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
-                : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30'
+                ? 'bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-700 text-slate-950 shadow-[0_6px_20px_rgba(16,185,129,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)]'
+                : 'bg-gradient-to-b from-rose-500 via-red-600 to-rose-800 text-white shadow-[0_6px_20px_rgba(239,68,68,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)]'
             }`}
           >
             {isTogglingMaintenance ? (
@@ -627,13 +633,13 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       </div>
 
-      {/* Mobile-First Action & Quick Create Bar */}
-      <div className="bg-[#0B132B] border border-cyan-500/20 rounded-2xl p-3 sm:p-4 shadow-xl space-y-3">
-        {/* Prominent Primary Create Key Button */}
+      {/* Mobile-First Action & Quick Create Bar (Cosmic Glassmorphism + Soft 3D Bevel) */}
+      <div className="bg-gradient-to-b from-[#182356]/85 via-[#0e173e]/90 to-[#080d26]/95 backdrop-blur-2xl border-t border-t-white/30 border-b-2 border-b-black/90 border-x border-cyan-400/35 rounded-2xl p-3 sm:p-4 shadow-[0_12px_32px_rgba(2,6,23,0.7),inset_0_1px_1.5px_rgba(255,255,255,0.25)] space-y-3">
+        {/* Prominent Primary Create Key Button (3D Raised Bevel Button) */}
         <button
           id="btn-create-key-primary"
           onClick={() => setShowCreateModal(true)}
-          className="w-full py-3 sm:py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs sm:text-xs shadow-lg shadow-cyan-500/30 hover:brightness-110 active:scale-98 flex items-center justify-center gap-2 transition"
+          className="w-full py-3 sm:py-2.5 px-4 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 text-[#050b1e] font-black text-xs sm:text-xs border-t border-t-white/60 border-b-2 border-b-black/80 shadow-[0_6px_20px_rgba(0,229,255,0.45),inset_0_1px_1.5px_rgba(255,255,255,0.55),inset_0_-2px_0_rgba(0,0,0,0.35)] hover:brightness-110 active:translate-y-0.5 flex items-center justify-center gap-2 transition cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span>নতুন VIP কী তৈরি করুন (Create Key)</span>
@@ -642,13 +648,13 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         {/* Search and Mobile Segmented Filter Tabs */}
         <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-cyan-400/80 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="কী, ডিভাইস বা ট্রেডার আইডি দিয়ে খুঁজুন..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs text-white placeholder-gray-500 outline-none focus:border-cyan-400 transition"
+              className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-[#070b22]/95 border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 text-xs text-cyan-100 placeholder-cyan-400/40 outline-none focus:border-cyan-300 transition shadow-[inset_0_2px_6px_rgba(0,0,0,0.8),0_1px_0_rgba(255,255,255,0.08)]"
             />
             {searchTerm && (
               <button
@@ -662,43 +668,43 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
 
           {/* Quick Segmented Filter Tabs & Compact Layout Switcher */}
           <div className="flex items-center justify-between gap-1 overflow-x-auto scrollbar-none py-0.5">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setFilterStatus('all')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition whitespace-nowrap border-t border-b-2 active:translate-y-0.5 ${
                   filterStatus === 'all'
-                    ? 'bg-cyan-500 text-[#070D1E] shadow-sm'
-                    : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+                    ? 'bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 text-[#050b1e] border-t-white/60 border-b-black/80 shadow-[0_4px_12px_rgba(0,229,255,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)]'
+                    : 'bg-gradient-to-b from-[#182352]/80 to-[#0b112c]/90 text-cyan-100/70 hover:text-white border-t-white/15 border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]'
                 }`}
               >
                 সব ({keys.length})
               </button>
               <button
                 onClick={() => setFilterStatus('active')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition whitespace-nowrap border-t border-b-2 active:translate-y-0.5 ${
                   filterStatus === 'active'
-                    ? 'bg-emerald-500 text-[#070D1E] shadow-sm'
-                    : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+                    ? 'bg-gradient-to-b from-emerald-400 via-teal-400 to-emerald-700 text-[#050b1e] border-t-white/60 border-b-black/80 shadow-[0_4px_12px_rgba(16,185,129,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)]'
+                    : 'bg-gradient-to-b from-[#182352]/80 to-[#0b112c]/90 text-cyan-100/70 hover:text-white border-t-white/15 border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]'
                 }`}
               >
                 সক্রিয় ({activeCount})
               </button>
               <button
                 onClick={() => setFilterStatus('blocked')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition whitespace-nowrap border-t border-b-2 active:translate-y-0.5 ${
                   filterStatus === 'blocked'
-                    ? 'bg-red-500 text-white shadow-sm'
-                    : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+                    ? 'bg-gradient-to-b from-rose-400 via-red-500 to-rose-700 text-white border-t-white/60 border-b-black/80 shadow-[0_4px_12px_rgba(239,68,68,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)]'
+                    : 'bg-gradient-to-b from-[#182352]/80 to-[#0b112c]/90 text-cyan-100/70 hover:text-white border-t-white/15 border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]'
                 }`}
               >
                 ব্লকড
               </button>
               <button
                 onClick={() => setFilterStatus('expired')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition whitespace-nowrap border-t border-b-2 active:translate-y-0.5 ${
                   filterStatus === 'expired'
-                    ? 'bg-amber-500 text-[#070D1E] shadow-sm'
-                    : 'bg-slate-900/80 text-gray-300 hover:text-white border border-slate-800'
+                    ? 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-700 text-[#050b1e] border-t-white/60 border-b-black/80 shadow-[0_4px_12px_rgba(245,158,11,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)]'
+                    : 'bg-gradient-to-b from-[#182352]/80 to-[#0b112c]/90 text-cyan-100/70 hover:text-white border-t-white/15 border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]'
                 }`}
               >
                 মেয়াদ শেষ
@@ -706,14 +712,14 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
             </div>
 
             {/* Mobile View Toggle: 2-Col (Default) vs 3-Col vs 1-Col */}
-            <div className="flex items-center gap-1 shrink-0 border-l border-slate-700/60 pl-1.5 ml-1">
+            <div className="flex items-center gap-1.5 shrink-0 border-l border-cyan-500/30 pl-2 ml-1">
               <button
                 onClick={() => setMobileViewMode('grid2')}
                 title="২টি পাশাপাশি (Default Mobile Grid)"
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 ${
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black transition flex items-center gap-1 border-t border-b-2 active:translate-y-0.5 ${
                   mobileViewMode === 'grid2'
-                    ? 'bg-cyan-500 text-[#070D1E]'
-                    : 'bg-slate-900/80 text-gray-400 hover:text-white border border-slate-800'
+                    ? 'bg-gradient-to-b from-cyan-400 to-blue-600 text-[#050b1e] border-t-white/60 border-b-black/80 shadow-md'
+                    : 'bg-[#0f173d]/80 text-cyan-200/70 hover:text-white border-t-white/15 border-b-black/80'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -722,10 +728,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
               <button
                 onClick={() => setMobileViewMode('grid3')}
                 title="৩টি পাশাপাশি (Mini Grid)"
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 ${
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black transition flex items-center gap-1 border-t border-b-2 active:translate-y-0.5 ${
                   mobileViewMode === 'grid3'
-                    ? 'bg-cyan-500 text-[#070D1E]'
-                    : 'bg-slate-900/80 text-gray-400 hover:text-white border border-slate-800'
+                    ? 'bg-gradient-to-b from-cyan-400 to-blue-600 text-[#050b1e] border-t-white/60 border-b-black/80 shadow-md'
+                    : 'bg-[#0f173d]/80 text-cyan-200/70 hover:text-white border-t-white/15 border-b-black/80'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -734,10 +740,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
               <button
                 onClick={() => setMobileViewMode('compact')}
                 title="১টি বক্স (Full Width List)"
-                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 ${
+                className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black transition flex items-center gap-1 border-t border-b-2 active:translate-y-0.5 ${
                   mobileViewMode === 'compact'
-                    ? 'bg-cyan-500 text-[#070D1E]'
-                    : 'bg-slate-900/80 text-gray-400 hover:text-white border border-slate-800'
+                    ? 'bg-gradient-to-b from-cyan-400 to-blue-600 text-[#050b1e] border-t-white/60 border-b-black/80 shadow-md'
+                    : 'bg-[#0f173d]/80 text-cyan-200/70 hover:text-white border-t-white/15 border-b-black/80'
                 }`}
               >
                 <List className="w-3.5 h-3.5" />
@@ -748,18 +754,18 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       </div>
 
-      {/* License Keys Grid - Side by Side (2 or 3 side-by-side on mobile, highly accessible) */}
+      {/* License Keys Grid - Side by Side (Cosmic Glassmorphism + Soft 3D Bevel Cards) */}
       <div
         className={`grid ${
           mobileViewMode === 'grid3'
-            ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-1 sm:gap-2'
+            ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-1.5 sm:gap-2.5'
             : mobileViewMode === 'compact'
-            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3'
-            : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-1.5 sm:gap-2.5'
+            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5'
+            : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3'
         }`}
       >
         {filteredKeys.length === 0 ? (
-          <div className="col-span-full py-10 text-center text-gray-400 text-xs bg-[#0B132B]/60 rounded-xl border border-slate-800">
+          <div className="col-span-full py-12 text-center text-cyan-200/60 text-xs bg-gradient-to-b from-[#182356]/60 via-[#0e163d]/70 to-[#080d26]/80 backdrop-blur-xl rounded-2xl border-t border-t-white/20 border-b border-b-black/80 border-x border-cyan-400/25 shadow-lg">
             কোনো লাইসেন্স কি পাওয়া যায়নি
           </div>
         ) : (
@@ -776,41 +782,41 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
             return (
               <div
                 key={k.key}
-                className={`rounded-xl p-2 sm:p-2.5 border transition-all duration-150 flex flex-col justify-between shadow-md relative overflow-hidden ${
+                className={`rounded-2xl p-2.5 sm:p-3 border-t border-b-2 border-b-black/90 border-x transition-all duration-200 flex flex-col justify-between shadow-[0_8px_24px_rgba(2,6,23,0.65),inset_0_1px_1px_rgba(255,255,255,0.2)] relative overflow-hidden backdrop-blur-2xl ${
                   !k.active
-                    ? 'bg-red-950/20 border-red-500/40'
+                    ? 'bg-gradient-to-b from-red-950/80 via-[#180a14]/90 to-[#10050c]/95 border-t-red-400/50 border-x-red-500/40'
                     : remaining.isExpired
-                    ? 'bg-amber-950/20 border-amber-500/40'
-                    : 'bg-[#0A122A] border-cyan-500/30 hover:border-cyan-400/80 shadow-cyan-950/20'
+                    ? 'bg-gradient-to-b from-amber-950/80 via-[#1c120a]/90 to-[#110904]/95 border-t-amber-400/50 border-x-amber-500/40'
+                    : 'bg-gradient-to-b from-[#182356]/85 via-[#0e173e]/90 to-[#080d26]/95 border-t-white/30 border-x-cyan-400/35 hover:border-cyan-300/80 hover:shadow-[0_12px_32px_rgba(6,182,212,0.3)]'
                 }`}
               >
                 <div>
                   {/* Card Header: Tier Badge, Duration & Status Indicator */}
-                  <div className="flex items-center justify-between gap-1 mb-1.5">
-                    <div className="flex items-center gap-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1 mb-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-black uppercase tracking-wider shrink-0 shadow-sm ${
+                        className={`px-2 py-0.5 rounded-lg text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-wider shrink-0 border-t border-b border-b-black/80 shadow-sm ${
                           k.tier === 'LIFETIME'
-                            ? 'bg-purple-500/25 text-purple-300 border border-purple-500/50'
+                            ? 'bg-gradient-to-b from-purple-500/30 to-purple-900/60 text-purple-300 border-t-purple-400/50 border-x-purple-500/40'
                             : k.tier === 'TRIAL'
-                            ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50'
-                            : 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/50'
+                            ? 'bg-gradient-to-b from-amber-500/30 to-amber-900/60 text-amber-300 border-t-amber-400/50 border-x-amber-500/40'
+                            : 'bg-gradient-to-b from-cyan-500/30 to-blue-900/60 text-cyan-300 border-t-cyan-400/50 border-x-cyan-500/40'
                         }`}
                       >
                         {k.tier}
                       </span>
-                      <span className="text-[9px] sm:text-[10px] text-cyan-200/90 font-bold truncate">
+                      <span className="text-[9px] sm:text-[10px] text-cyan-200 font-bold truncate">
                         {getDirectDurationLabel(k.duration, k.duration_ms)}
                       </span>
                     </div>
 
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold flex items-center gap-1 shrink-0 shadow-sm ${
+                      className={`px-2 py-0.5 rounded-full text-[8.5px] sm:text-[9.5px] font-black flex items-center gap-1 shrink-0 border-t border-b border-b-black/80 shadow-sm ${
                         !k.active
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/40'
+                          ? 'bg-red-500/25 text-red-300 border-t-red-400/50 border-x-red-500/40'
                           : remaining.isExpired
-                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                          ? 'bg-amber-500/25 text-amber-300 border-t-amber-400/50 border-x-amber-500/40'
+                          : 'bg-emerald-500/25 text-emerald-300 border-t-emerald-400/50 border-x-emerald-500/40'
                       }`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${!k.active ? 'bg-red-400' : remaining.isExpired ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'}`} />
@@ -818,51 +824,51 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                     </span>
                   </div>
 
-                  {/* 🔑 PROMINENT LICENSE KEY BOX - Always Fully Visible, 1-Tap Copy */}
+                  {/* 🔑 PROMINENT LICENSE KEY BOX - Unique Monospace Tech Card, 1-Tap Copy */}
                   <div
                     onClick={() => handleCopy(k.key)}
-                    className="bg-slate-950/95 hover:bg-slate-900 p-1.5 rounded-lg border border-cyan-500/40 hover:border-cyan-400 flex flex-col gap-1 mb-1.5 cursor-pointer transition active:scale-[0.98] group shadow-[inset_0_1px_4px_rgba(0,0,0,0.7)]"
+                    className="bg-gradient-to-b from-[#0a102c]/95 via-[#070b20]/98 to-[#040714] hover:from-[#0d163d] hover:to-[#070c24] p-2 rounded-xl border-t border-t-cyan-300/40 border-b-2 border-b-black/90 border-x border-cyan-500/30 hover:border-cyan-300 flex flex-col gap-1.5 mb-2 cursor-pointer transition active:scale-[0.98] group shadow-[inset_0_2px_6px_rgba(0,0,0,0.85),0_4px_12px_rgba(0,0,0,0.5)]"
                     title="ট্যাপ করে কপি করুন"
                   >
-                    <div className="flex items-center justify-between gap-1 text-[8px] sm:text-[9px] text-gray-400 font-semibold">
-                      <span className="flex items-center gap-1 text-cyan-400">
-                        <KeyRound className="w-2.5 h-2.5" />
-                        <span>লাইসেন্স কি</span>
+                    <div className="flex items-center justify-between gap-1 text-[8.5px] sm:text-[9.5px] text-cyan-300/70 font-semibold font-mono">
+                      <span className="flex items-center gap-1 text-cyan-300">
+                        <KeyRound className="w-3 h-3 text-cyan-400" />
+                        <span>[AUTH KEY]</span>
                       </span>
-                      <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold flex items-center gap-0.5 transition ${
+                      <span className={`px-2 py-0.5 rounded-lg text-[8.5px] font-black flex items-center gap-1 transition border-t border-b border-b-black/80 shadow-sm ${
                         copiedKey === k.key
-                          ? 'bg-emerald-500 text-[#070D1E]'
-                          : 'text-cyan-300 bg-cyan-500/20 border border-cyan-400/30'
+                          ? 'bg-emerald-500 text-[#070D1E] border-t-white/40'
+                          : 'text-cyan-200 bg-cyan-500/20 border-t-cyan-400/40 border-x-cyan-500/30'
                       }`}>
                         {copiedKey === k.key ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : <Copy className="w-2.5 h-2.5" />}
                         <span>{copiedKey === k.key ? 'কপি হয়েছে' : 'কপি'}</span>
                       </span>
                     </div>
-                    <div className="text-cyan-300 group-hover:text-cyan-200 font-mono font-black text-[10px] sm:text-[11px] tracking-tight break-all select-all leading-snug">
+                    <div className="text-emerald-400 group-hover:text-cyan-200 font-mono font-black text-[11px] sm:text-[12px] tracking-wider break-all select-all leading-snug">
                       {k.key}
                     </div>
                   </div>
 
                   {/* Compact Info Strip: Remaining Countdown & Device Counter */}
-                  <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-gray-300 px-1 mb-1.5 bg-slate-900/60 py-0.5 rounded border border-slate-800/80">
+                  <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-gray-200 px-1.5 mb-2 bg-[#090e28]/80 py-1 rounded-xl border-t border-t-white/10 border-b border-b-black/80 border-x border-cyan-500/20 shadow-inner">
                     <div className="flex items-center gap-1 min-w-0 truncate mr-1">
-                      <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-cyan-400 shrink-0" />
-                      <span className="text-gray-400 text-[8px] sm:text-[9px]">বাকি:</span>
+                      <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
+                      <span className="text-cyan-300/70 text-[8.5px] sm:text-[9.5px]">বাকি:</span>
                       <b className={`font-mono text-[9px] sm:text-[10px] font-bold truncate ${remaining.isExpired ? 'text-red-400' : remaining.notStarted ? 'text-cyan-300' : 'text-emerald-400'}`}>
                         {remaining.text}
                       </b>
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      <Smartphone className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-400 shrink-0" />
-                      <span className={isBound ? 'text-amber-300 font-mono font-bold text-[8px] sm:text-[9px]' : 'text-gray-400 font-mono text-[8px] sm:text-[9px]'}>
+                      <Smartphone className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span className={isBound ? 'text-amber-300 font-mono font-bold text-[8.5px] sm:text-[9.5px]' : 'text-cyan-200/60 font-mono text-[8.5px] sm:text-[9.5px]'}>
                         {isUnlimitedDev ? `${registeredDevices.length}/∞` : `${registeredDevices.length}/${devLimit}`}
                       </span>
                       {isBound && (
                         <button
                           onClick={() => handleResetDevice(k.key)}
                           title="ডিভাইস আনলক করুন"
-                          className="p-0.5 text-gray-400 hover:text-cyan-300 bg-slate-800 rounded transition"
+                          className="p-1 text-cyan-400 hover:text-white bg-slate-800/80 rounded-lg transition border border-cyan-500/30"
                         >
                           <RotateCcw className="w-2.5 h-2.5" />
                         </button>
@@ -871,28 +877,28 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                   </div>
 
                   {(k.trader_id || k.note) && (
-                    <div className="text-[8px] sm:text-[9px] text-gray-400 px-1 pb-1 flex items-center gap-2 truncate">
-                      {k.trader_id && <span className="text-amber-400/90 font-mono font-semibold truncate">ID: {k.trader_id}</span>}
-                      {k.note && <span className="text-gray-400 truncate italic">নোট: {k.note}</span>}
+                    <div className="text-[8.5px] sm:text-[9.5px] text-cyan-200/70 px-1 pb-1 flex items-center gap-2 truncate font-mono">
+                      {k.trader_id && <span className="text-amber-300 font-mono font-semibold truncate">ID: {k.trader_id}</span>}
+                      {k.note && <span className="text-cyan-300/70 truncate italic font-sans">নোট: {k.note}</span>}
                     </div>
                   )}
                 </div>
 
-                {/* 2x2 Action Buttons Grid - Every Button Is Wide & Easily Tapped */}
-                <div className="grid grid-cols-2 gap-1 pt-1.5 border-t border-slate-800/80">
+                {/* 2x2 Action Buttons Grid - Soft 3D Beveled Buttons */}
+                <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-cyan-500/25">
                   {/* Row 1, Col 1: Block/Unblock */}
                   <button
                     onClick={async () => {
                       await onToggleActive(k.key, k.active);
                       showActionToast(k.active ? 'কী ব্লক করা হয়েছে' : 'কী আনব্লক করা হয়েছে');
                     }}
-                    className={`h-6 sm:h-7 rounded-md font-bold text-[9px] sm:text-[10px] flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer shadow-sm ${
+                    className={`h-7 sm:h-8 rounded-xl font-black text-[9.5px] sm:text-[10.5px] flex items-center justify-center gap-1 transition active:translate-y-0.5 cursor-pointer border-t border-b-2 border-b-black/90 shadow-md ${
                       k.active
-                        ? 'bg-red-950/40 text-red-400 hover:bg-red-900/50 border border-red-500/40'
-                        : 'bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/50 border border-emerald-500/40'
+                        ? 'bg-gradient-to-b from-rose-500/40 via-red-950/80 to-rose-950 text-red-300 hover:brightness-110 border-t-red-400/50 border-x-red-500/40'
+                        : 'bg-gradient-to-b from-emerald-500/40 via-emerald-950/80 to-emerald-950 text-emerald-300 hover:brightness-110 border-t-emerald-400/50 border-x-emerald-500/40'
                     }`}
                   >
-                    <Ban className="w-2.5 h-2.5" />
+                    <Ban className="w-3 h-3" />
                     <span>{k.active ? 'ব্লক' : 'আনব্লক'}</span>
                   </button>
 
@@ -903,10 +909,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                       setExtendCustomVal(1);
                       setExtendCustomUnit('hours');
                     }}
-                    className="h-6 sm:h-7 rounded-md bg-cyan-950/50 hover:bg-cyan-900/60 text-cyan-300 font-bold text-[9px] sm:text-[10px] border border-cyan-400/40 flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer shadow-sm"
+                    className="h-7 sm:h-8 rounded-xl bg-gradient-to-b from-cyan-500/30 via-cyan-950/80 to-blue-950 text-cyan-200 hover:brightness-110 font-black text-[9.5px] sm:text-[10.5px] border-t border-t-cyan-300/50 border-b-2 border-b-black/90 border-x border-cyan-400/40 flex items-center justify-center gap-1 transition active:translate-y-0.5 cursor-pointer shadow-md"
                     title="কাস্টম মেয়াদ বৃদ্ধি করুন (মিনিট/ঘণ্টা/দিন)"
                   >
-                    <Clock className="w-2.5 h-2.5 text-cyan-400" />
+                    <Clock className="w-3 h-3 text-cyan-400" />
                     <span>+মেয়াদ</span>
                   </button>
 
@@ -916,10 +922,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                       setDeliveryLicense(k);
                       setShowDeliveryModal(true);
                     }}
-                    className="h-5.5 sm:h-6 rounded-md bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold text-[8px] sm:text-[9px] border border-slate-700 flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer shadow-sm"
+                    className="h-6 sm:h-7 rounded-xl bg-gradient-to-b from-[#1b2554]/80 to-[#0e163b]/90 hover:brightness-110 text-cyan-300 font-black text-[8.5px] sm:text-[9.5px] border-t border-t-white/20 border-b-2 border-b-black/90 border-x border-cyan-500/30 flex items-center justify-center gap-1 transition active:translate-y-0.5 cursor-pointer shadow-md"
                     title="কাস্টমার ডেলিভারি মেসেজ"
                   >
-                    <Send className="w-2.5 h-2.5 text-cyan-400" />
+                    <Send className="w-3 h-3 text-cyan-400" />
                     <span>মেসেজ</span>
                   </button>
 
@@ -929,10 +935,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                       await onDeleteKey(k.key);
                       showActionToast('কী ডিলিট করা হয়েছে');
                     }}
-                    className="h-5.5 sm:h-6 rounded-md bg-red-950/30 hover:bg-red-900/50 text-red-400 font-bold text-[8px] sm:text-[9px] border border-red-500/30 flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer shadow-sm"
+                    className="h-6 sm:h-7 rounded-xl bg-gradient-to-b from-rose-950/40 via-red-950/70 to-black hover:brightness-110 text-red-400 font-black text-[8.5px] sm:text-[9.5px] border-t border-t-red-400/30 border-b-2 border-b-black/90 border-x border-red-500/30 flex items-center justify-center gap-1 transition active:translate-y-0.5 cursor-pointer shadow-md"
                     title="লাইসেন্স ডিলিট করুন"
                   >
-                    <Trash2 className="w-2.5 h-2.5" />
+                    <Trash2 className="w-3 h-3" />
                     <span>ডিলিট</span>
                   </button>
                 </div>
@@ -941,35 +947,37 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
           })
         )}
       </div>
-
       {/* ⏱️ CUSTOM DURATION EXTENDER MODAL (User Requirement 2: মিনিট/ঘণ্টা/দিন কাস্টমভাবে মেয়াদ বৃদ্ধি) */}
+      {/* ⏱️ CUSTOM DURATION EXTENDER MODAL (Cosmic Glassmorphism + Soft 3D + Bevel/Depth) */}
       {extendModalKey && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999997] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0B132B] border-2 border-cyan-400 rounded-3xl p-5 shadow-2xl relative space-y-4">
+        <div className="fixed inset-0 bg-[#060a1e]/75 backdrop-blur-2xl z-[999997] flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-gradient-to-b from-[#182356]/95 via-[#0d163c]/98 to-[#070c26] border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 rounded-3xl p-5 sm:p-6 shadow-[0_25px_60px_rgba(2,6,23,0.9),inset_0_1px_1.5px_rgba(255,255,255,0.3)] relative space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-cyan-500/30">
               <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-sm font-black text-white">কাস্টম মেয়াদ বৃদ্ধি করুন</h3>
+                <div className="p-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/40 shadow-inner">
+                  <Clock className="w-5 h-5 text-cyan-300" />
+                </div>
+                <h3 className="text-sm font-black text-white font-['Orbitron',sans-serif]">কাস্টম মেয়াদ বৃদ্ধি করুন</h3>
               </div>
               <button
                 onClick={() => setExtendModalKey(null)}
-                className="w-7 h-7 rounded-full bg-slate-800 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition"
+                className="w-7 h-7 rounded-full bg-slate-800/80 hover:bg-slate-700 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition border border-white/10"
               >
                 ✕
               </button>
             </div>
 
             {/* Target License Key Display */}
-            <div className="bg-slate-950 p-2.5 rounded-xl border border-cyan-500/30">
-              <span className="text-[10px] text-gray-400 block mb-0.5">টার্গেট লাইসেন্স:</span>
-              <span className="font-mono font-bold text-xs text-cyan-300 break-all select-all">
+            <div className="bg-[#070b22]/95 p-3 rounded-2xl border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 shadow-[inset_0_2px_6px_rgba(0,0,0,0.85)]">
+              <span className="text-[10px] text-cyan-300/70 block mb-0.5 font-mono">[TARGET KEY]:</span>
+              <span className="font-mono font-black text-xs text-emerald-400 break-all select-all tracking-wider">
                 {extendModalKey.key}
               </span>
             </div>
 
             {/* Quick 1-Tap Presets */}
             <div>
-              <label className="text-gray-300 text-xs block mb-1.5 font-bold">⚡ কুইক প্রেসীট (Quick Presets):</label>
+              <label className="text-cyan-200/90 text-xs block mb-1.5 font-bold">⚡ কুইক প্রেসীট (Quick Presets):</label>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
                   { label: '১৫ মি.', val: 15, unit: 'minutes' as const },
@@ -988,10 +996,10 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                       setExtendCustomVal(preset.val);
                       setExtendCustomUnit(preset.unit);
                     }}
-                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold border transition ${
+                    className={`py-1.5 px-1 rounded-xl text-[10.5px] font-black border-t border-b-2 active:translate-y-0.5 transition ${
                       extendCustomVal === preset.val && extendCustomUnit === preset.unit
-                        ? 'bg-cyan-500 text-[#070D1E] border-cyan-400 font-black shadow-md'
-                        : 'bg-slate-900 text-gray-300 hover:text-white border-slate-800'
+                        ? 'bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 text-[#050b1e] border-t-white/60 border-b-black/80 shadow-[0_4px_12px_rgba(0,229,255,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)]'
+                        : 'bg-[#0f173d]/80 text-cyan-100/70 hover:text-white border-t-white/15 border-b-black/80 shadow-sm'
                     }`}
                   >
                     +{preset.label}
@@ -1001,25 +1009,25 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
             </div>
 
             {/* Custom Inputs: Number + Unit Selector */}
-            <div className="bg-slate-900/90 p-3 rounded-2xl border border-slate-800 space-y-2">
-              <label className="text-gray-300 text-xs block font-bold">🛠️ কাস্টম মেয়াদ নির্ধারণ:</label>
+            <div className="bg-[#090e28]/90 p-3 rounded-2xl border-t border-t-white/15 border-b-2 border-b-black/90 border-x border-cyan-500/25 space-y-2 shadow-inner">
+              <label className="text-cyan-200 text-xs block font-bold">🛠️ কাস্টম মেয়াদ নির্ধারণ:</label>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <span className="text-[10px] text-gray-400 block mb-1">পরিমাণ (Amount):</span>
+                  <span className="text-[10px] text-cyan-300/70 block mb-1 font-medium">পরিমাণ (Amount):</span>
                   <input
                     type="number"
                     min="1"
                     value={extendCustomVal}
                     onChange={(e) => setExtendCustomVal(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-cyan-300 font-mono font-bold text-sm outline-none focus:border-cyan-400"
+                    className="w-full px-3 py-2 rounded-xl bg-[#070b22] border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 text-cyan-300 font-mono font-black text-sm outline-none focus:border-cyan-300 shadow-inner"
                   />
                 </div>
                 <div>
-                  <span className="text-[10px] text-gray-400 block mb-1">একক (Unit):</span>
+                  <span className="text-[10px] text-cyan-300/70 block mb-1 font-medium">একক (Unit):</span>
                   <select
                     value={extendCustomUnit}
                     onChange={(e) => setExtendCustomUnit(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold text-xs outline-none focus:border-cyan-400"
+                    className="w-full px-3 py-2 rounded-xl bg-[#070b22] border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 text-white font-bold text-xs outline-none focus:border-cyan-300 shadow-inner"
                   >
                     <option value="minutes">মিনিট (Minutes)</option>
                     <option value="hours">ঘণ্টা (Hours)</option>
@@ -1034,7 +1042,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
               <button
                 type="button"
                 onClick={() => setExtendModalKey(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-xs font-bold transition"
+                className="flex-1 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-cyan-200 text-xs font-bold transition border border-white/10"
               >
                 বাতিল
               </button>
@@ -1054,12 +1062,12 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                     showActionToast('মেয়াদ বৃদ্ধি ব্যর্থ হয়েছে!', true);
                   }
                 }}
-                className="flex-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-[#070D1E] font-black text-xs shadow-lg shadow-cyan-500/25 transition active:scale-95 flex items-center justify-center gap-1.5"
+                className="flex-2 py-2.5 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 text-[#050b1e] font-black text-xs border-t border-t-white/60 border-b-2 border-b-black/80 shadow-[0_6px_20px_rgba(0,229,255,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)] transition active:translate-y-0.5 flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 {isExtendingNow ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
                 )}
                 <span>মেয়াদ বৃদ্ধি নিশ্চিত করুন</span>
               </button>
@@ -1068,21 +1076,23 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       )}
 
-      {/* CREATE NEW KEY MODAL WITH TIME LIMIT & DEVICE LIMIT OPTIONS - MOBILE SHEET */}
+      {/* CREATE NEW KEY MODAL (Cosmic Glassmorphism + Soft 3D + Bevel/Depth) */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999996] flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="w-full max-w-md bg-[#0B132B] border-t-2 sm:border-2 border-cyan-400 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-[#060a1e]/75 backdrop-blur-2xl z-[999996] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-gradient-to-b from-[#182356]/95 via-[#0d163c]/98 to-[#070c26] border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 shadow-[0_25px_60px_rgba(2,6,23,0.9),inset_0_1px_1.5px_rgba(255,255,255,0.3)] relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
             {/* Mobile Sheet Handle */}
-            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-3 sm:hidden shrink-0" />
+            <div className="w-12 h-1 bg-cyan-500/40 rounded-full mx-auto mb-3 sm:hidden shrink-0" />
 
             <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-cyan-500/30">
               <div className="flex items-center gap-2">
-                <KeyRound className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-sm font-black text-white">নতুন VIP লাইসেন্স তৈরি</h3>
+                <div className="p-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/40 shadow-inner">
+                  <KeyRound className="w-5 h-5 text-cyan-300" />
+                </div>
+                <h3 className="text-sm font-black text-white font-['Orbitron',sans-serif]">নতুন VIP লাইসেন্স তৈরি</h3>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-800 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition"
+                className="w-7 h-7 rounded-full bg-slate-800/80 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition border border-white/10"
               >
                 ✕
               </button>
@@ -1090,7 +1100,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
 
             <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="text-gray-300 block mb-1 font-medium">কাস্টম কী কোড (ঐচ্ছিক):</label>
+                <label className="text-cyan-200/90 block mb-1 font-bold">কাস্টম কী কোড (ঐচ্ছিক):</label>
                 <input
                   type="text"
                   placeholder="ফাঁকা রাখলে অটোমেটিক VIP কোড তৈরি হবে"
@@ -1348,30 +1358,30 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
         </div>
       )}
 
-      {/* 🗄️ SUPABASE CLOUD DATABASE CONNECTION MODAL & SQL VIEWER */}
+      {/* 🗄️ SUPABASE CLOUD DATABASE CONNECTION MODAL (Cosmic Glassmorphism + Soft 3D + Bevel/Depth) */}
       {showSupabaseModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-[#0B132B] border-t-2 sm:border border-cyan-500/40 rounded-t-3xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto space-y-4">
+        <div className="fixed inset-0 z-50 bg-[#060a1e]/75 backdrop-blur-2xl flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-gradient-to-b from-[#182356]/95 via-[#0d163c]/98 to-[#070c26] border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 rounded-t-3xl sm:rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-[0_25px_60px_rgba(2,6,23,0.9),inset_0_1px_1.5px_rgba(255,255,255,0.3)] relative max-h-[92vh] sm:max-h-[90vh] overflow-y-auto space-y-4">
             {/* Mobile Sheet Handle */}
-            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-2 sm:hidden shrink-0" />
+            <div className="w-12 h-1 bg-cyan-500/40 rounded-full mx-auto mb-2 sm:hidden shrink-0" />
 
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-cyan-500/30">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 shadow-inner">
                   <Database className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-white font-black text-sm sm:text-lg">
+                  <h3 className="text-white font-black text-sm sm:text-lg font-['Orbitron',sans-serif]">
                     Supabase ডাটাবেস সেটিংস
                   </h3>
-                  <p className="text-[11px] sm:text-xs text-gray-400">
+                  <p className="text-[11px] sm:text-xs text-cyan-200/70">
                     SQL কোড রান করুন ও প্রজেক্ট তথ্য দিয়ে পার্মানেন্টলি কানেক্ট করুন
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowSupabaseModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition"
+                className="w-7 h-7 rounded-full bg-slate-800/80 hover:bg-slate-700 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition border border-white/10"
               >
                 ✕
               </button>
@@ -1495,38 +1505,38 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
         </div>
       )}
 
-      {/* 📦 CUSTOMER DELIVERY MESSAGE MODAL - MOBILE SHEET */}
+      {/* 📦 CUSTOMER DELIVERY MESSAGE MODAL (Cosmic Glassmorphism + Soft 3D + Bevel/Depth) */}
       {showDeliveryModal && deliveryLicense && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[999998] flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="w-full max-w-lg bg-[#0B132B] border-t-2 sm:border-2 border-cyan-400 rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl relative max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-[#060a1e]/75 backdrop-blur-2xl z-[999998] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-lg bg-gradient-to-b from-[#182356]/95 via-[#0d163c]/98 to-[#070c26] border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 shadow-[0_25px_60px_rgba(2,6,23,0.9),inset_0_1px_1.5px_rgba(255,255,255,0.3)] relative max-h-[92vh] flex flex-col">
             {/* Mobile Sheet Handle */}
-            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-2.5 sm:hidden shrink-0" />
+            <div className="w-12 h-1 bg-cyan-500/40 rounded-full mx-auto mb-2.5 sm:hidden shrink-0" />
 
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/30">
               <div className="flex items-center gap-2">
                 <span className="text-xl">📦</span>
                 <div>
-                  <h3 className="text-xs sm:text-sm font-black text-white">কাস্টমার ডেলিভারি মেসেজ</h3>
-                  <p className="text-[10px] sm:text-[11px] text-cyan-400">কাস্টমারকে সরাসরি কপি বা শেয়ার করুন</p>
+                  <h3 className="text-xs sm:text-sm font-black text-white font-['Orbitron',sans-serif]">কাস্টমার ডেলিভারি মেসেজ</h3>
+                  <p className="text-[10px] sm:text-[11px] text-cyan-300">কাস্টমারকে সরাসরি কপি বা শেয়ার করুন</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowDeliveryModal(false)}
-                className="w-7 h-7 rounded-full bg-slate-800 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition"
+                className="w-7 h-7 rounded-full bg-slate-800/80 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition border border-white/10"
               >
                 ✕
               </button>
             </div>
 
             {/* Quick Key Banner */}
-            <div className="bg-slate-950 p-3 rounded-xl border border-cyan-500/40 mb-3 flex items-center justify-between">
+            <div className="bg-[#070b22]/95 p-3 rounded-2xl border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 mb-3 flex items-center justify-between shadow-[inset_0_2px_6px_rgba(0,0,0,0.85)]">
               <div>
-                <span className="text-[10px] text-gray-400 block font-semibold">ডেলিভারি লাইসেন্স কি:</span>
-                <span className="text-cyan-300 font-mono font-black text-sm select-all">{deliveryLicense.key}</span>
+                <span className="text-[10px] text-cyan-300/70 block font-semibold font-mono">[DELIVERY KEY]:</span>
+                <span className="text-emerald-400 font-mono font-black text-sm select-all tracking-wider">{deliveryLicense.key}</span>
               </div>
               <button
                 onClick={() => handleCopy(deliveryLicense.key)}
-                className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 font-bold text-xs flex items-center gap-1.5 transition"
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-b from-cyan-400/30 to-blue-900/60 hover:brightness-110 text-cyan-200 border-t border-t-cyan-300/40 border-b border-b-black/80 font-bold text-xs flex items-center gap-1.5 transition shadow-sm cursor-pointer"
               >
                 {copiedKey === deliveryLicense.key ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>শুধু কী কপি</span>
@@ -1540,13 +1550,13 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   readOnly
                   rows={13}
                   value={getDeliveryMessage(deliveryLicense)}
-                  className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-700 text-gray-200 text-xs font-mono leading-relaxed outline-none focus:border-cyan-400 select-all"
+                  className="w-full p-3.5 rounded-2xl bg-[#070b22] border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 text-cyan-100 text-xs font-mono leading-relaxed outline-none focus:border-cyan-300 select-all shadow-inner"
                 />
               </div>
             </div>
 
             {/* Action Bar */}
-            <div className="space-y-2 pt-2 border-t border-slate-800">
+            <div className="space-y-2 pt-2 border-t border-cyan-500/25">
               <button
                 onClick={() => {
                   const msg = getDeliveryMessage(deliveryLicense);
@@ -1555,7 +1565,7 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   showActionToast('📋 সম্পূর্ণ কাস্টমার মেসেজ কপি হয়েছে!');
                   setTimeout(() => setCopiedDeliveryStatus(false), 2500);
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-2 transition"
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 text-[#050b1e] font-black text-xs border-t border-t-white/60 border-b-2 border-b-black/80 shadow-[0_6px_20px_rgba(0,229,255,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)] hover:brightness-110 flex items-center justify-center gap-2 transition active:translate-y-0.5 cursor-pointer"
               >
                 {copiedDeliveryStatus ? <Check className="w-4 h-4 text-emerald-950" /> : <Copy className="w-4 h-4" />}
                 <span>{copiedDeliveryStatus ? 'মেসেজ কপি হয়েছে!' : '📋 এক ক্লিকে সম্পূর্ণ মেসেজ কপি করুন'}</span>
@@ -1567,7 +1577,7 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(getDeliveryMessage(deliveryLicense))}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+                  className="flex-1 py-2 px-3 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 border-t border-t-emerald-300/40 border-b border-b-black/80 text-[11px] font-bold flex items-center justify-center gap-1.5 transition shadow-sm"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>হোয়াটসঅ্যাপে পাঠান</span>
@@ -1575,7 +1585,7 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
 
                 <button
                   onClick={() => setShowDeliveryModal(false)}
-                  className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-300 text-[11px] font-semibold transition"
+                  className="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-gray-300 text-[11px] font-semibold transition border border-white/10"
                 >
                   বন্ধ করুন
                 </button>
@@ -1585,11 +1595,11 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
         </div>
       )}
 
-      {/* 📱 DIRECT APK 1-CLICK INSTALL GUIDE MODAL */}
+      {/* 📱 DIRECT APK 1-CLICK INSTALL GUIDE MODAL (Cosmic Glassmorphism + Soft 3D Bevel) */}
       {showInstallGuide && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="w-full max-w-md bg-[#0B132B] border-t-2 sm:border-2 border-cyan-400 rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 shadow-2xl relative max-h-[92vh] flex flex-col">
-            <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mb-2.5 sm:hidden shrink-0" />
+        <div className="fixed inset-0 bg-[#060a1e]/75 backdrop-blur-2xl z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="w-full max-w-md bg-gradient-to-b from-[#182356]/95 via-[#0d163c]/98 to-[#070c26] border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 shadow-[0_25px_60px_rgba(2,6,23,0.9),inset_0_1px_1.5px_rgba(255,255,255,0.3)] relative max-h-[92vh] flex flex-col">
+            <div className="w-12 h-1 bg-cyan-500/40 rounded-full mx-auto mb-2.5 sm:hidden shrink-0" />
 
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-cyan-500/30">
               <div className="flex items-center gap-2">
@@ -1597,7 +1607,7 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   📱
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-sm font-black text-white">ফোনের হোমস্ক্রিনে APK ইনস্টল</h3>
+                  <h3 className="text-xs sm:text-sm font-black text-white font-['Orbitron',sans-serif]">ফোনের হোমস্ক্রিনে APK ইনস্টল</h3>
                   <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     <span>লাইভ ডাটাবেজ কানেক্টেড (Live Supabase Sync)</span>
@@ -1606,32 +1616,32 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
               </div>
               <button
                 onClick={() => setShowInstallGuide(false)}
-                className="w-7 h-7 rounded-full bg-slate-800 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition cursor-pointer"
+                className="w-7 h-7 rounded-full bg-slate-800/80 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition cursor-pointer border border-white/10"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-3 overflow-y-auto mb-3 text-xs text-gray-200">
-              <div className="bg-slate-950/80 p-3 rounded-xl border border-cyan-500/20">
+              <div className="bg-[#070b22]/90 p-3 rounded-2xl border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 shadow-inner">
                 <p className="text-cyan-300 font-bold mb-1">⚡ অ্যাপের সুবিধা:</p>
-                <ul className="text-[11px] text-gray-300 space-y-1 list-disc list-inside">
+                <ul className="text-[11px] text-cyan-100/70 space-y-1 list-disc list-inside">
                   <li>ব্রাউজার অ্যাড্রেস বার বা ট্যাব ছাড়াই ফুলস্ক্রিন আসল APK হিসেবে চলে।</li>
                   <li>লাইভ ডাটাবেজের সাথে সবসময় যুক্ত—কী তৈরি, ব্লক বা এক্সটেন্ড সাথে সাথে কাজ করে।</li>
                   <li>এক ক্লিকে মোবাইল হোম স্ক্রিন থেকে দ্রুত চালু করা যায়।</li>
                 </ul>
               </div>
 
-              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-cyan-500/30 space-y-2">
-                <p className="text-white font-bold text-xs flex items-center gap-1.5">
+              <div className="bg-[#090e28]/90 p-3.5 rounded-2xl border-t border-t-white/15 border-b-2 border-b-black/90 border-x border-cyan-500/25 space-y-2 shadow-inner">
+                <p className="text-white font-bold text-xs flex items-center gap-1.5 font-['Orbitron',sans-serif]">
                   <span>📱 যেভাবে ফোনে সরাসরি নিবেন:</span>
                 </p>
-                <div className="text-[11px] text-gray-300 space-y-2">
-                  <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 flex items-start gap-2">
+                <div className="text-[11px] text-cyan-100/70 space-y-2">
+                  <div className="p-2 rounded-xl bg-[#070b22] border border-cyan-500/20 flex items-start gap-2 shadow-inner">
                     <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">১</span>
                     <span><b>Chrome / Kiwi (Android):</b> নিচের <b>"এখনই ইনস্টল করুন"</b> চাপুন। অথবা ব্রাউজারের উপরে ডানদিকের <b>৩ ডট (⋮)</b> থেকে <b>"Install app"</b> / <b>"Add to Home screen"</b> চাপলে ফোনে ডিরেক্ট APK তৈরি হয়ে যাবে।</span>
                   </div>
-                  <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 flex items-start gap-2">
+                  <div className="p-2 rounded-xl bg-[#070b22] border border-cyan-500/20 flex items-start gap-2 shadow-inner">
                     <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">২</span>
                     <span><b>Safari (iPhone):</b> ব্রাউজারের নিচে <b>Share (শেয়ার ↗)</b> চেপে <b>"Add to Home Screen"</b> চাপুন।</span>
                   </div>
@@ -1639,7 +1649,7 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-800 flex gap-2">
+            <div className="pt-2 border-t border-cyan-500/25 flex gap-2">
               <button
                 onClick={() => {
                   if (deferredPrompt) {
@@ -1649,14 +1659,14 @@ CREATE POLICY "Allow server service full access" ON public.ishak_licenses FOR AL
                   }
                   setShowInstallGuide(false);
                 }}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-500 to-blue-600 text-[#070D1E] font-black text-xs shadow-md shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 text-[#050b1e] font-black text-xs border-t border-t-white/60 border-b-2 border-b-black/80 shadow-[0_6px_20px_rgba(0,229,255,0.4),inset_0_1px_1px_rgba(255,255,255,0.5)] hover:brightness-110 flex items-center justify-center gap-1.5 transition active:translate-y-0.5 cursor-pointer"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4 stroke-[2.5]" />
                 <span>এখনই ফোনে APK ইনস্টল করুন</span>
               </button>
               <button
                 onClick={() => setShowInstallGuide(false)}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-gray-300 text-xs font-semibold transition cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-gray-300 text-xs font-semibold transition cursor-pointer border border-white/10"
               >
                 বন্ধ
               </button>

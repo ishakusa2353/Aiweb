@@ -900,31 +900,31 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 1. SETTINGS HUB MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
+      {/* 1. SETTINGS HUB MODAL (STYLISH COSMIC GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showHub && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-          <div className="w-full max-w-xs bg-gradient-to-b from-[#0b1328]/90 via-[#070d1e]/95 to-[#040816]/95 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/40 border-x border-x-cyan-500/25 border-b border-b-black/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,255,0.18),inset_0_1px_1px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.7)]">
+        <div className="fixed inset-0 bg-[#060a1e]/70 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-xs bg-gradient-to-b from-[#141c48]/95 via-[#0e163d]/95 to-[#090f2d]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/60 border-x border-x-indigo-500/35 border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_35px_rgba(99,102,241,0.25),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-2.5px_5px_rgba(0,0,0,0.7)]">
             {/* Top Specular Rim */}
-            <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent pointer-events-none" />
-            <div className="absolute -top-12 -left-12 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-12 -right-12 w-28 h-28 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent pointer-events-none" />
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/15 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
 
             {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-cyan-500/25 relative z-10">
+            <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-indigo-400/25 relative z-10">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-cyan-400/20 to-cyan-950/60 border-t border-t-cyan-300/60 border-b border-b-black/90 flex items-center justify-center text-cyan-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.3)]">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-cyan-400/25 via-indigo-600/30 to-indigo-950/80 border-t border-t-cyan-300/70 border-b border-b-black/90 flex items-center justify-center text-cyan-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.4)]">
                   <span className="text-sm filter drop-shadow-[0_0_6px_#00E5FF]">⚙️</span>
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-teal-200 to-amber-200 font-['Orbitron',sans-serif] tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-indigo-200 to-amber-200 font-['Orbitron',sans-serif] tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     SETTINGS HUB
                   </h3>
-                  <p className="text-[9px] text-cyan-300/70 font-semibold tracking-wide">3D Quantum Control Engine</p>
+                  <p className="text-[9px] text-cyan-300/80 font-semibold tracking-wide">Cosmic Quantum Engine</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowHub(false)}
-                className="w-7 h-7 rounded-xl bg-gradient-to-b from-red-500/30 to-red-950/80 border-t border-t-red-400/60 border-b border-b-black/90 text-red-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3)] active:translate-y-0.5 cursor-pointer"
+                className="w-7 h-7 rounded-xl bg-gradient-to-b from-rose-500/35 to-rose-950/90 border-t border-t-rose-400/70 border-b border-b-black/90 text-rose-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.4)] active:translate-y-0.5 cursor-pointer"
               >
                 ✕
               </button>
@@ -936,12 +936,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   setShowTimeModal(true);
                 }}
-                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-cyan-400/35 border-x border-x-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.18)] hover:border-t-cyan-300/60 hover:shadow-[0_6px_18px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] cursor-pointer group"
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-t border-t-cyan-300/40 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] hover:border-t-cyan-300/80 hover:shadow-[0_6px_20px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] active:translate-y-0.5 active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] cursor-pointer group"
               >
-                <span className="text-gray-200 font-semibold flex items-center gap-2">
+                <span className="text-gray-100 font-semibold flex items-center gap-2">
                   <span className="text-base group-hover:scale-110 transition-transform">⏱️</span> Trade Duration
                 </span>
-                <b className="text-amber-300 font-mono font-bold bg-gradient-to-b from-amber-400/20 to-amber-950/60 px-2.5 py-1 rounded-xl border-t border-t-amber-300/50 border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] text-[11px]">
+                <b className="text-amber-300 font-mono font-bold bg-gradient-to-b from-amber-400/25 to-amber-950/70 px-2.5 py-1 rounded-xl border-t border-t-amber-300/60 border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.4)] text-[11px]">
                   {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`) : '5 Sec ⚡'}
                 </b>
               </button>
@@ -955,19 +955,19 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     triggerScan();
                   }
                 }}
-                className={`w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-x border-x-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.18)] active:translate-y-0.5 cursor-pointer group ${
+                className={`w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${
                   autoPilotMode
-                    ? 'border-t border-t-emerald-400/80 shadow-[0_6px_20px_rgba(16,185,129,0.3),inset_0_1px_1px_rgba(255,255,255,0.25)]'
-                    : 'border-t border-t-cyan-400/35 hover:border-t-cyan-300/60'
+                    ? 'border-t border-t-emerald-400/90 shadow-[0_6px_22px_rgba(16,185,129,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                    : 'border-t border-t-cyan-300/40 hover:border-t-cyan-300/80'
                 }`}
               >
-                <span className="text-gray-200 font-semibold flex items-center gap-2">
+                <span className="text-gray-100 font-semibold flex items-center gap-2">
                   <span className="text-base group-hover:scale-110 transition-transform">🤖</span> Auto-Pilot Mode
                 </span>
                 <b className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
                   autoPilotMode
-                    ? 'text-emerald-300 bg-gradient-to-b from-emerald-400/25 to-emerald-950/60 border-t-emerald-300/60'
-                    : 'text-amber-400 bg-gradient-to-b from-amber-400/20 to-amber-950/60 border-t-amber-300/50'
+                    ? 'text-emerald-300 bg-gradient-to-b from-emerald-400/25 to-emerald-950/70 border-t-emerald-300/70'
+                    : 'text-amber-400 bg-gradient-to-b from-amber-400/20 to-amber-950/70 border-t-amber-300/60'
                 }`}>
                   {autoPilotMode ? '▶ ACTIVE' : '⏹ OFF'}
                 </b>
@@ -978,26 +978,26 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   setShowKeyModal(true);
                 }}
-                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-cyan-400/35 border-x border-x-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.18)] hover:border-t-cyan-300/60 hover:shadow-[0_6px_18px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group"
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-t border-t-cyan-300/40 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] hover:border-t-cyan-300/80 hover:shadow-[0_6px_20px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] active:translate-y-0.5 cursor-pointer group"
               >
-                <span className="text-gray-200 font-semibold flex items-center gap-2">
+                <span className="text-gray-100 font-semibold flex items-center gap-2">
                   <span className="text-base group-hover:scale-110 transition-transform">🔑</span> VIP License Key
                 </span>
-                <b className="text-cyan-300 font-mono font-bold text-[11px] bg-gradient-to-b from-cyan-400/20 to-cyan-950/60 px-2.5 py-1 rounded-xl border-t border-t-cyan-300/50 border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)]">
+                <b className="text-cyan-300 font-mono font-bold text-[11px] bg-gradient-to-b from-cyan-400/25 to-indigo-950/70 px-2.5 py-1 rounded-xl border-t border-t-cyan-300/60 border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.35)]">
                   {activeLicense && activeLicense.key ? `${activeLicense.key.substring(0, 10)}..` : 'Verify 🔓'}
                 </b>
               </button>
 
               {activeLicense && activeLicense.exp && (
-                <div className="p-3 rounded-2xl bg-gradient-to-b from-[#061022]/90 to-[#02050e]/95 border-t border-t-cyan-500/20 border-b border-b-black/90 flex items-center justify-between text-[10px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">
-                  <span className="text-gray-400 font-bold flex items-center gap-1.5">
+                <div className="p-3 rounded-2xl bg-gradient-to-b from-[#0f173b]/90 to-[#080d24]/95 border-t border-t-amber-400/30 border-b border-b-black/90 flex items-center justify-between text-[10px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">
+                  <span className="text-gray-300 font-bold flex items-center gap-1.5">
                     <span>⌛</span> Live Expiry:
                   </span>
                   <b className="text-amber-300 font-mono font-bold text-xs">{remainingTimeStr}</b>
                 </div>
               )}
 
-              <div className="text-center p-3 rounded-2xl border-t border-cyan-400/50 border-b border-black/90 bg-gradient-to-b from-cyan-500/15 via-teal-500/10 to-[#070e22]/90 text-cyan-200 text-[11px] font-black tracking-widest font-['Orbitron',sans-serif] shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] flex items-center justify-center gap-2">
+              <div className="text-center p-3 rounded-2xl border-t border-t-cyan-300/60 border-b border-b-black/90 bg-gradient-to-b from-cyan-500/20 via-indigo-600/25 to-[#0b1233]/95 text-cyan-200 text-[11px] font-black tracking-widest font-['Orbitron',sans-serif] shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.35)] flex items-center justify-center gap-2">
                 <span className="text-amber-400">⚡</span>
                 <span>ISHAK AI VIP QUANTUM BOT</span>
                 <span className="text-amber-400">⚡</span>
@@ -1007,32 +1007,32 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 2. TIME DURATION MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
+      {/* 2. TIME DURATION MODAL (STYLISH COSMIC GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showTimeModal && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-          <div className="w-full max-w-xs bg-gradient-to-b from-[#0b1328]/90 via-[#070d1e]/95 to-[#040816]/95 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/40 border-x border-x-cyan-500/25 border-b border-b-black/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,255,0.18),inset_0_1px_1px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.7)]">
-            <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-300/70 to-transparent pointer-events-none" />
-            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-cyan-500/25 relative z-10">
+        <div className="fixed inset-0 bg-[#060a1e]/70 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-xs bg-gradient-to-b from-[#141c48]/95 via-[#0e163d]/95 to-[#090f2d]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-amber-300/60 border-x border-x-indigo-500/35 border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_35px_rgba(245,158,11,0.2),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-2.5px_5px_rgba(0,0,0,0.7)]">
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-amber-300/90 to-transparent pointer-events-none" />
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-indigo-400/25 relative z-10">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-amber-400/20 to-amber-950/60 border-t border-t-amber-300/60 border-b border-b-black/90 flex items-center justify-center text-amber-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.3)]">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-amber-400/30 to-amber-950/80 border-t border-t-amber-300/70 border-b border-b-black/90 flex items-center justify-center text-amber-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.4)]">
                   <span className="text-sm filter drop-shadow-[0_0_6px_#FFD700]">⏱️</span>
                 </div>
                 <div>
                   <h3 className="text-xs font-black text-amber-300 font-['Orbitron',sans-serif] tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     SELECT TIMEFRAME
                   </h3>
-                  <p className="text-[9px] text-gray-400 font-medium">Predicts until timeframe expiry</p>
+                  <p className="text-[9px] text-gray-300 font-medium">Auto-aligns analysis & execution</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowTimeModal(false)}
-                className="w-7 h-7 rounded-xl bg-gradient-to-b from-red-500/30 to-red-950/80 border-t border-t-red-400/60 border-b border-b-black/90 text-red-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3)] active:translate-y-0.5 cursor-pointer"
+                className="w-7 h-7 rounded-xl bg-gradient-to-b from-rose-500/35 to-rose-950/90 border-t border-t-rose-400/70 border-b border-b-black/90 text-rose-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.4)] active:translate-y-0.5 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <p className="text-[10px] text-gray-400 mb-3 font-medium relative z-10">
+            <p className="text-[10px] text-gray-300 mb-3 font-medium relative z-10">
               Choose the exact trade duration for analysis & auto-execution:
             </p>
 
@@ -1055,8 +1055,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                       opt.sec === 60 ? 'col-span-2' : ''
                     } ${
                       isSelected
-                        ? 'bg-gradient-to-b from-cyan-500/30 via-teal-900/40 to-[#061126]/95 border-t border-t-cyan-300/80 border-x border-x-cyan-400/50 text-cyan-200 shadow-[0_6px_20px_rgba(0,229,255,0.35),inset_0_1px_2px_rgba(255,255,255,0.4)] scale-[1.02]'
-                        : 'bg-gradient-to-b from-[#0c152a]/80 to-[#040816]/90 border-t border-t-white/15 border-x border-x-white/5 text-gray-300 shadow-[0_4px_10px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] hover:border-t-cyan-400/50 hover:text-white'
+                        ? 'bg-gradient-to-b from-cyan-500/35 via-indigo-700/40 to-[#0e163d]/98 border-t border-t-cyan-300/90 border-x border-x-cyan-400/60 text-cyan-100 shadow-[0_8px_24px_rgba(0,229,255,0.4),inset_0_1.5px_2px_rgba(255,255,255,0.5)] scale-[1.02]'
+                        : 'bg-gradient-to-b from-[#182352]/80 to-[#0b112c]/95 border-t border-t-white/20 border-x border-x-indigo-400/15 text-gray-200 shadow-[0_4px_10px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)] hover:border-t-cyan-400/60 hover:text-white'
                     }`}
                   >
                     <div className="text-xs font-black font-['Orbitron',sans-serif] flex items-center justify-between">
@@ -1064,10 +1064,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                       {isSelected ? (
                         <span className="text-emerald-400 text-xs animate-pulse">●</span>
                       ) : (
-                        <span className="text-gray-500 text-[10px]">⚡</span>
+                        <span className="text-cyan-400/60 text-[10px]">⚡</span>
                       )}
                     </div>
-                    <div className="text-[9px] text-amber-300/90 font-medium mt-0.5">{opt.sub}</div>
+                    <div className="text-[9px] text-amber-300 font-semibold mt-0.5">{opt.sub}</div>
                   </button>
                 );
               })}
@@ -1076,28 +1076,39 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 3. VIP KEY MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
+      {/* 3. UNIQUE VIP LICENSE BOX (STYLISH COSMIC GLASS + MONOSPACE TECH FONT + CYBER VAULT 3D) */}
       {showKeyModal && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-gradient-to-b from-[#0b1328]/90 via-[#070d1e]/95 to-[#040816]/95 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/40 border-x border-x-cyan-500/25 border-b border-b-black/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(0,229,255,0.18),inset_0_1px_1px_rgba(255,255,255,0.25),inset_0_-2px_4px_rgba(0,0,0,0.7)]">
-            <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent pointer-events-none" />
+        <div className="fixed inset-0 bg-[#060a1e]/75 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-gradient-to-b from-[#181f4f]/95 via-[#101740]/95 to-[#0a0f2e]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/70 border-x border-x-indigo-500/40 border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_40px_rgba(99,102,241,0.3),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-3px_6px_rgba(0,0,0,0.8)]">
+            {/* Top Specular Rim & Glowing Ambient Orbs */}
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent pointer-events-none" />
+            <div className="absolute -top-10 -right-10 w-28 h-28 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
 
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-cyan-500/25 relative z-10">
+            {/* Unique Cyber Corner Tech Brackets */}
+            <div className="absolute top-2.5 left-2.5 text-[10px] text-cyan-400/40 font-mono pointer-events-none">⌜</div>
+            <div className="absolute top-2.5 right-2.5 text-[10px] text-cyan-400/40 font-mono pointer-events-none">⌝</div>
+            <div className="absolute bottom-2.5 left-2.5 text-[10px] text-cyan-400/40 font-mono pointer-events-none">⌞</div>
+            <div className="absolute bottom-2.5 right-2.5 text-[10px] text-cyan-400/40 font-mono pointer-events-none">⌟</div>
+
+            {/* Header with Holographic VIP Badge */}
+            <div className="flex items-center justify-between pb-3.5 mb-3 border-b border-indigo-400/30 relative z-10">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-cyan-400/20 to-cyan-950/60 border-t border-t-cyan-300/60 border-b border-b-black/90 flex items-center justify-center text-cyan-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.3)]">
-                  👑
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-b from-cyan-400/30 via-indigo-600/40 to-indigo-950/80 border-t border-t-cyan-300/80 border-b border-b-black/90 flex items-center justify-center text-cyan-300 shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.5)]">
+                  <span className="text-base filter drop-shadow-[0_0_8px_#00E5FF]">🛡️</span>
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-teal-200 to-amber-200 tracking-wider font-['Orbitron',sans-serif]">
-                    ISHAK AI VIP LICENSE
+                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-indigo-100 to-amber-200 tracking-widest font-['Orbitron',sans-serif]">
+                    VIP LICENSE VAULT
                   </h3>
-                  <p className="text-[9px] text-gray-400 font-medium">Single-Device Cloud Protection</p>
+                  <p className="text-[9px] text-cyan-300/80 font-mono tracking-wider font-semibold">
+                    1-DEVICE CRYPTO VERIFICATION
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowKeyModal(false)}
-                className="w-7 h-7 rounded-xl bg-gradient-to-b from-red-500/30 to-red-950/80 border-t border-t-red-400/60 border-b border-b-black/90 text-red-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.3)] active:translate-y-0.5 cursor-pointer"
+                className="w-7 h-7 rounded-xl bg-gradient-to-b from-rose-500/35 to-rose-950/90 border-t border-t-rose-400/70 border-b border-b-black/90 text-rose-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.4)] active:translate-y-0.5 cursor-pointer"
               >
                 ✕
               </button>
@@ -1117,10 +1128,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             )}
 
             <form onSubmit={handleVerifyKey} className="space-y-3.5 relative z-10">
-              <div>
-                <div className="flex items-center justify-between text-[11px] text-gray-300 mb-1.5 font-bold">
-                  <span className="flex items-center gap-1.5 text-cyan-300">
-                    <KeyRound className="w-3.5 h-3.5 text-cyan-400" /> VIP License Key:
+              {/* Unique Cryptographic Key Input Box */}
+              <div className="p-3 rounded-2xl bg-gradient-to-b from-[#11193d]/90 to-[#090e28]/95 border-t border-t-cyan-300/40 border-x border-x-indigo-400/25 border-b border-b-black/90 shadow-[inset_0_2px_6px_rgba(0,0,0,0.8),0_4px_12px_rgba(0,0,0,0.4)]">
+                <div className="flex items-center justify-between text-[11px] text-gray-200 mb-2 font-bold">
+                  <span className="flex items-center gap-1.5 text-cyan-300 font-mono tracking-wide text-[10px]">
+                    <KeyRound className="w-3.5 h-3.5 text-cyan-400" /> [AUTH KEY]:
                   </span>
                   <button
                     type="button"
@@ -1134,7 +1146,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                         }
                       } catch (e) {}
                     }}
-                    className="text-[9.5px] text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-lg border-t border-t-amber-300/40 border-b border-b-black/80 shadow-[0_2px_4px_rgba(0,0,0,0.4)] transition flex items-center gap-1 cursor-pointer active:translate-y-0.5"
+                    className="text-[9.5px] text-amber-300 bg-amber-500/20 px-2.5 py-0.5 rounded-lg border-t border-t-amber-300/60 border-b border-b-black/80 shadow-[0_2px_4px_rgba(0,0,0,0.4)] transition flex items-center gap-1 cursor-pointer active:translate-y-0.5 hover:bg-amber-500/30"
                   >
                     <span>📋</span> Paste Key
                   </button>
@@ -1160,10 +1172,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                         setKeyInputError(false);
                       }
                     }}
-                    className={`w-full px-3.5 py-2.5 rounded-xl bg-[#030712] border text-xs font-mono font-bold tracking-wider outline-none text-center transition shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)] ${
+                    className={`w-full px-3 py-2.5 rounded-xl border text-xs font-['JetBrains_Mono','Fira_Code','Courier_New',monospace] font-extrabold tracking-widest outline-none text-center transition shadow-[inset_0_3px_8px_rgba(0,0,0,0.9)] ${
                       keyInputError
-                        ? 'border-red-500 text-red-400 bg-red-950/40'
-                        : 'border-cyan-500/50 text-emerald-400 focus:border-cyan-300'
+                        ? 'border-red-500 text-red-300 bg-red-950/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                        : 'border-cyan-400/50 bg-[#070b22] text-cyan-300 focus:border-cyan-300 focus:shadow-[0_0_20px_rgba(0,229,255,0.4)] placeholder:text-gray-500 placeholder:tracking-normal placeholder:font-sans'
                     }`}
                   />
                 </div>
@@ -1171,17 +1183,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
               {/* Security & Lock Status Chips */}
               <div className="grid grid-cols-2 gap-2 text-[9.5px] font-bold">
-                <div className="p-2.5 rounded-xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-cyan-400/30 border-b border-b-black/90 text-cyan-300 flex items-center gap-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)]">
+                <div className="p-2.5 rounded-xl bg-gradient-to-b from-[#16214d]/90 to-[#0a102e]/95 border-t border-t-cyan-400/40 border-b border-b-black/90 text-cyan-200 flex items-center gap-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)]">
                   <span>🔒</span> 1-Device Lock
                 </div>
-                <div className="p-2.5 rounded-xl bg-gradient-to-b from-[#0c152a]/90 to-[#050917]/95 border-t border-t-emerald-400/30 border-b border-b-black/90 text-emerald-300 flex items-center gap-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)]">
+                <div className="p-2.5 rounded-xl bg-gradient-to-b from-[#16214d]/90 to-[#0a102e]/95 border-t border-t-emerald-400/40 border-b border-b-black/90 text-emerald-200 flex items-center gap-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.2)]">
                   <span>⚡</span> Cloud Verified
                 </div>
               </div>
 
               {activeLicense && activeLicense.exp && (
-                <div className="p-3 rounded-xl bg-gradient-to-b from-[#061022]/90 to-[#02050e]/95 border-t border-t-amber-500/30 border-b border-b-black/90 text-center flex items-center justify-between shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">
-                  <span className="text-[10px] text-gray-300 font-bold">⌛ Live Expiry:</span>
+                <div className="p-3 rounded-xl bg-gradient-to-b from-[#12193e]/90 to-[#070c24]/95 border-t border-t-amber-400/40 border-b border-b-black/90 text-center flex items-center justify-between shadow-[inset_0_2px_4px_rgba(0,0,0,0.7)]">
+                  <span className="text-[10px] text-gray-200 font-bold">⌛ Live Expiry:</span>
                   <b className="text-amber-300 font-mono font-bold text-xs">{remainingTimeStr}</b>
                 </div>
               )}
@@ -1190,7 +1202,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                 <button
                   type="submit"
                   disabled={verifying}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-blue-500 border-t border-t-white/50 border-b border-b-black/90 text-[#070D1E] font-black text-xs tracking-wider shadow-[0_6px_20px_rgba(0,229,255,0.35),inset_0_1px_1px_rgba(255,255,255,0.5)] active:translate-y-0.5 active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.6)] transition disabled:opacity-50 cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 border-t border-t-white/60 border-b border-b-black/90 text-[#050b1e] font-black text-xs tracking-wider shadow-[0_8px_25px_rgba(0,229,255,0.45),inset_0_1.5px_1.5px_rgba(255,255,255,0.6)] active:translate-y-0.5 active:shadow-[inset_0_2px_6px_rgba(0,0,0,0.7)] transition disabled:opacity-50 cursor-pointer font-['Orbitron',sans-serif]"
                 >
                   {verifying ? 'VERIFYING...' : 'VERIFY & UNLOCK ⚡'}
                 </button>
@@ -1199,20 +1211,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="px-3.5 py-3 rounded-xl bg-gradient-to-b from-red-500/20 to-red-950/80 border-t border-t-red-400/40 border-b border-b-black/90 text-red-200 hover:text-white font-bold text-xs transition active:translate-y-0.5 cursor-pointer"
+                    className="px-3.5 py-3 rounded-xl bg-gradient-to-b from-rose-500/25 to-rose-950/85 border-t border-t-rose-400/50 border-b border-b-black/90 text-rose-200 hover:text-white font-bold text-xs transition active:translate-y-0.5 cursor-pointer shadow-[0_4px_10px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)]"
                   >
                     Logout
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-[10px] pt-1 border-t border-cyan-500/20">
-                <span className="text-gray-400">VIP Support & Key:</span>
+              <div className="flex items-center justify-between text-[10px] pt-1 border-t border-indigo-400/25">
+                <span className="text-gray-300 font-medium">VIP Support & Key:</span>
                 <a
                   href="https://t.me/IshakVhai"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-cyan-400 font-bold hover:underline flex items-center gap-1"
+                  className="text-cyan-300 font-bold hover:underline flex items-center gap-1"
                 >
                   <span>⚡</span> @IshakVhai
                 </a>
@@ -1222,25 +1234,25 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 4. 🛠️ MAINTENANCE MODE MODAL (GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
+      {/* 4. 🛠️ MAINTENANCE MODE MODAL (STYLISH COSMIC GLASS + FAUX 3D + BEVEL/DEPTH) */}
       {showMaintenanceModal && (
-        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl select-none">
-          <div className="bg-gradient-to-b from-[#121c35]/95 via-[#0b1328]/95 to-[#060c1d]/98 border-t border-t-amber-300/50 border-x border-x-amber-500/30 border-b border-b-black/90 rounded-3xl w-full max-w-sm p-5 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_35px_rgba(245,158,11,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] text-white text-center animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-[#060a1e]/80 backdrop-blur-2xl select-none">
+          <div className="bg-gradient-to-b from-[#1a2254]/95 via-[#121942]/95 to-[#0b1030]/98 border-t border-t-amber-300/60 border-x border-x-amber-500/40 border-b border-b-black/95 rounded-3xl w-full max-w-sm p-5 shadow-[0_25px_60px_-10px_rgba(0,0,0,0.95),0_0_35px_rgba(245,158,11,0.3),inset_0_1.5px_1.5px_rgba(255,255,255,0.35)] text-white text-center animate-in fade-in zoom-in duration-200">
             <div className="text-4xl mb-2 animate-bounce">🛠️</div>
-            <h3 className="text-base font-black text-amber-400 tracking-wide mb-1 font-['Orbitron',sans-serif]">
+            <h3 className="text-base font-black text-amber-300 tracking-wide mb-1 font-['Orbitron',sans-serif]">
               Bot In Maintenance
             </h3>
-            <div className="my-3 p-3.5 rounded-2xl bg-[#030712]/90 border-t border-t-amber-400/30 border-b border-b-black/90 text-amber-200 text-xs leading-relaxed text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
+            <div className="my-3 p-3.5 rounded-2xl bg-[#090e29]/95 border-t border-t-amber-400/40 border-b border-b-black/90 text-amber-200 text-xs leading-relaxed text-left shadow-[inset_0_2px_5px_rgba(0,0,0,0.8)]">
               বটের সিস্টেম আপডেট ও সার্বিক অপ্টিমাইজেশন চলছে! মেইনটেনেন্স চলাকালীন সময়ে নতুন সিগন্যাল স্ক্যান ও ট্রেডিং সাময়িকভাবে স্থগিত রাখা হয়েছে।
             </div>
-            <p className="text-[11px] text-gray-400 mb-4 font-medium">
+            <p className="text-[11px] text-gray-300 mb-4 font-medium">
               সার্ভার মেইনটেনেন্স শেষ হওয়া মাত্রই বটটি স্বয়ংক্রিয়ভাবে পুনরায় চালু হয়ে যাবে।
             </p>
             <div className="flex justify-center">
               <button
                 type="button"
                 onClick={() => setShowMaintenanceModal(false)}
-                className="w-full py-3 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-blue-500 border-t border-t-white/40 border-b border-b-black/90 text-slate-950 font-black text-xs shadow-[0_4px_15px_rgba(0,229,255,0.3),inset_0_1px_0_rgba(255,255,255,0.4)] hover:brightness-110 transition active:translate-y-0.5 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-gradient-to-b from-cyan-400 via-teal-400 to-indigo-600 border-t border-t-white/50 border-b border-b-black/90 text-slate-950 font-black text-xs shadow-[0_6px_20px_rgba(0,229,255,0.4),inset_0_1px_0_rgba(255,255,255,0.5)] hover:brightness-110 transition active:translate-y-0.5 cursor-pointer font-['Orbitron',sans-serif]"
               >
                 ঠিক আছে
               </button>
