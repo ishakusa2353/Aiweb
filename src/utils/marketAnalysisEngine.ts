@@ -952,7 +952,7 @@ export function evaluateMarketData(
       const denom = n * sumX2 - sumX * sumX;
       tickSlope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
       const microDelta = livePrices[n - 1] - livePrices[0];
-      fallbackCall = tickSlope !== 0 ? tickSlope > 0 : microDelta >= 0;
+      fallbackCall = tickSlope !== 0 ? tickSlope > 0 : (microDelta > 0 ? true : (microDelta < 0 ? false : (Date.now() % 2 === 0)));
     } else {
       fallbackCall = Math.floor(Date.now() / 1000) % 2 === 0;
     }
@@ -1120,7 +1120,8 @@ export function evaluateMarketData(
   const upFactors: string[] = [];
   const downFactors: string[] = [];
   const neutralFactors: string[] = [];
-  let score = 0;
+  let buyScore = 0;
+  let sellScore = 0;
 
   if (timeframeSec <= 5) {
     // =========================================================
@@ -1132,78 +1133,81 @@ export function evaluateMarketData(
     const isMacroBull = ema9 > ema21 && ema21 > ema50;
     const isMacroBear = ema9 < ema21 && ema21 < ema50;
     if (isMacroBull) {
-      score += 24;
+      buyScore += 24;
       upFactors.push(`5S Macro Bullish Trend Shield (EMA 9>21>50) [+24]`);
     } else if (isMacroBear) {
-      score -= 24;
-      downFactors.push(`5S Macro Bearish Trend Shield (EMA 9<21<50) [-24]`);
+      sellScore += 24;
+      downFactors.push(`5S Macro Bearish Trend Shield (EMA 9<21<50) [+24]`);
     }
 
     // 1. Instant Tick Direction & Velocity
     if (tickSlope > 0.000002) {
-      score += 28;
+      buyScore += 28;
       upFactors.push(`5S Micro Tick Slope Bullish (+${tickSlope.toFixed(6)}) [+28]`);
     } else if (tickSlope < -0.000002) {
-      score -= 28;
-      downFactors.push(`5S Micro Tick Slope Bearish (${tickSlope.toFixed(6)}) [-28]`);
+      sellScore += 28;
+      downFactors.push(`5S Micro Tick Slope Bearish (${tickSlope.toFixed(6)}) [+28]`);
     }
 
     if (velocity > 0.000005) {
-      score += 14;
+      buyScore += 14;
       upFactors.push(`5S Instant Velocity Push Up (+${velocity.toFixed(5)}) [+14]`);
     } else if (velocity < -0.000005) {
-      score -= 14;
-      downFactors.push(`5S Instant Velocity Push Down (${velocity.toFixed(5)}) [-14]`);
+      sellScore += 14;
+      downFactors.push(`5S Instant Velocity Push Down (${velocity.toFixed(5)}) [+14]`);
     }
 
     // 2. Active Candle Anatomy & Color Delta with Trend Alignment
     if (isGreen) {
-      score += isMacroBull ? 25 : 12; // Extra strong in aligned bull market
-      upFactors.push(`5S Active Bar Bullish Close > Open [+${isMacroBull ? 25 : 12}]`);
+      const gPts = isMacroBull ? 25 : 14;
+      buyScore += gPts;
+      upFactors.push(`5S Active Bar Bullish Close > Open [+${gPts}]`);
     } else if (isRed) {
-      score -= isMacroBear ? 25 : 12; // Extra strong in aligned bear market
-      downFactors.push(`5S Active Bar Bearish Close < Open [-${isMacroBear ? 25 : 12}]`);
+      const rPts = isMacroBear ? 25 : 14;
+      sellScore += rPts;
+      downFactors.push(`5S Active Bar Bearish Close < Open [+${rPts}]`);
     }
 
     // 3. ANTI-TRAP & WICK REJECTION PHYSICS (Rejects fake traps)
     if (upperWick >= candleRange * 0.35 && upperWick > lowerWick * 1.3) {
-      score -= 36;
-      downFactors.push(`5S Upper Wick Rejection Physics (Sellers Rejecting High) [-36]`);
+      sellScore += 36;
+      downFactors.push(`5S Upper Wick Rejection Physics (Sellers Rejecting High) [+36]`);
     }
     if (lowerWick >= candleRange * 0.35 && lowerWick > upperWick * 1.3) {
-      score += 36;
+      buyScore += 36;
       upFactors.push(`5S Lower Wick Rejection Physics (Buyers Absorbing Low) [+36]`);
     }
 
     // 4. Dynamic Pullback Re-entry (Highest win-rate binary setup)
     if (isMacroBull && isRed && (currentCandle.low <= ema9 || currentCandle.low <= ema21)) {
-      score += 32;
+      buyScore += 32;
       upFactors.push(`5S Bullish Dynamic Support Pullback & Absorb [+32]`);
     } else if (isMacroBear && isGreen && (currentCandle.high >= ema9 || currentCandle.high >= ema21)) {
-      score -= 32;
-      downFactors.push(`5S Bearish Dynamic Resistance Pullback & Reject [-32]`);
+      sellScore += 32;
+      downFactors.push(`5S Bearish Dynamic Resistance Pullback & Reject [+32]`);
     }
 
     // 5. Overbought / Oversold Mean Reversion at Boundaries
     if (rsi14 >= 72 || isNearResistance) {
-      if (upperWick > 0 || isRed || tickSlope <= 0) {
-        score -= 38;
-        downFactors.push(`5S Anti-Trap: Overbought Peak Exhaustion Reversal [-38]`);
+      if (upperWick >= 0.00002 || isRed || tickSlope < -0.000001) {
+        sellScore += 38;
+        downFactors.push(`5S Anti-Trap: Overbought Peak Exhaustion Reversal [+38]`);
       }
-    } else if (rsi14 <= 28 || isNearSupport) {
-      if (lowerWick > 0 || isGreen || tickSlope >= 0) {
-        score += 38;
+    }
+    if (rsi14 <= 28 || isNearSupport) {
+      if (lowerWick >= 0.00002 || isGreen || tickSlope > 0.000001) {
+        buyScore += 38;
         upFactors.push(`5S Anti-Trap: Oversold Floor Exhaustion Bounce [+38]`);
       }
     }
 
     // 6. Short-term Micro EMA Vector
     if (ema5 > ema9) {
-      score += 12;
+      buyScore += 12;
       upFactors.push(`Micro EMA5 > EMA9 [+12]`);
     } else if (ema5 < ema9) {
-      score -= 12;
-      downFactors.push(`Micro EMA5 < EMA9 [-12]`);
+      sellScore += 12;
+      downFactors.push(`Micro EMA5 < EMA9 [+12]`);
     }
 
   } else if (timeframeSec <= 15) {
@@ -1214,66 +1218,79 @@ export function evaluateMarketData(
     const isMacroBull10 = ema9 > ema21 && ema21 > ema50;
     const isMacroBear10 = ema9 < ema21 && ema21 < ema50;
     if (isMacroBull10) {
-      score += 22;
+      buyScore += 22;
       upFactors.push(`10S Macro Bullish Trend Stack (EMA 9>21>50) [+22]`);
     } else if (isMacroBear10) {
-      score -= 22;
-      downFactors.push(`10S Macro Bearish Trend Stack (EMA 9<21<50) [-22]`);
+      sellScore += 22;
+      downFactors.push(`10S Macro Bearish Trend Stack (EMA 9<21<50) [+22]`);
     }
 
     // 1. Tick Slope & Velocity
     if (tickSlope > 0.000002) {
-      score += 24;
+      buyScore += 24;
       upFactors.push(`10S Tick Slope Bullish [+24]`);
     } else if (tickSlope < -0.000002) {
-      score -= 24;
-      downFactors.push(`10S Tick Slope Bearish [-24]`);
+      sellScore += 24;
+      downFactors.push(`10S Tick Slope Bearish [+24]`);
     }
 
     // 2. 2-Bar Sequence & Engulfing Formations
     if (pa.scoreImpact !== 0) {
-      score += pa.scoreImpact * 1.4;
-      if (pa.scoreImpact > 0) upFactors.push(`10S Price Action: ${pa.patternName} [+${Math.round(pa.scoreImpact * 1.4)}]`);
-      else downFactors.push(`10S Price Action: ${pa.patternName} [${Math.round(pa.scoreImpact * 1.4)}]`);
+      if (pa.scoreImpact > 0) {
+        const pts = Math.round(pa.scoreImpact * 1.4);
+        buyScore += pts;
+        upFactors.push(`10S Price Action: ${pa.patternName} [+${pts}]`);
+      } else {
+        const pts = Math.round(Math.abs(pa.scoreImpact) * 1.4);
+        sellScore += pts;
+        downFactors.push(`10S Price Action: ${pa.patternName} [+${pts}]`);
+      }
     } else {
-      if (isGreen) { score += isMacroBull10 ? 24 : 16; upFactors.push(`10S Green Impulse [+${isMacroBull10 ? 24 : 16}]`); }
-      else if (isRed) { score -= isMacroBear10 ? 24 : 16; downFactors.push(`10S Red Impulse [-${isMacroBear10 ? 24 : 16}]`); }
+      if (isGreen) {
+        const pts = isMacroBull10 ? 24 : 16;
+        buyScore += pts;
+        upFactors.push(`10S Green Impulse [+${pts}]`);
+      } else if (isRed) {
+        const pts = isMacroBear10 ? 24 : 16;
+        sellScore += pts;
+        downFactors.push(`10S Red Impulse [+${pts}]`);
+      }
     }
 
     // 3. Dynamic Pullbacks
     if (isMacroBull10 && prevCandle.close < prevCandle.open && isGreen) {
-      score += 28;
+      buyScore += 28;
       upFactors.push(`10S Dynamic Support Pullback & Continuation [+28]`);
     } else if (isMacroBear10 && prevCandle.close > prevCandle.open && isRed) {
-      score -= 28;
-      downFactors.push(`10S Dynamic Resistance Pullback & Continuation [-28]`);
+      sellScore += 28;
+      downFactors.push(`10S Dynamic Resistance Pullback & Continuation [+28]`);
     }
 
     // 4. Wick Rejections & S/R Touch
     if (upperWick >= candleRange * 0.40) {
-      score -= 26;
-      downFactors.push(`10S Upper Wick Resistance Rejection [-26]`);
+      sellScore += 26;
+      downFactors.push(`10S Upper Wick Resistance Rejection [+26]`);
     } else if (lowerWick >= candleRange * 0.40) {
-      score += 26;
+      buyScore += 26;
       upFactors.push(`10S Lower Wick Support Bounce [+26]`);
     }
 
     // 5. Overbought / Oversold Protection
     if (rsi14 >= 74 && (upperWick > 0 || isRed)) {
-      score -= 30;
-      downFactors.push(`10S RSI Overbought Turnaround [-30]`);
+      sellScore += 30;
+      downFactors.push(`10S RSI Overbought Turnaround [+30]`);
     } else if (rsi14 <= 26 && (lowerWick > 0 || isGreen)) {
-      score += 30;
+      buyScore += 30;
       upFactors.push(`10S RSI Oversold Turnaround [+30]`);
     }
 
     // 6. Short EMA Vectors
     if (ema5 > ema9 && ema9 > ema13) {
-      score += 15;
+      buyScore += 15;
       upFactors.push(`10S EMA Alignment 5>9>13 [+15]`);
     } else if (ema5 < ema9 && ema9 < ema13) {
-      score -= 15;
-      downFactors.push(`10S EMA Alignment 5<9<13 [-15]`);
+      sellScore += 15;
+      downFactors.push(`10S EMA Alignment 5<9<13 [+15]`);
     }
 
   } else if (timeframeSec <= 45) {
@@ -1284,50 +1301,57 @@ export function evaluateMarketData(
 
     // 1. Dynamic EMA 9 & 21 Alignment & Pullbacks
     if (ema9 > ema21) {
-      score += 16;
+      buyScore += 16;
       upFactors.push(`30S EMA9 > EMA21 [+16]`);
       // Pullback to EMA9/21
       if (prevCandle.close < prevCandle.open && currentCandle.close > currentCandle.open && currentCandle.low <= ema9 + 0.00003) {
-        score += 28;
+        buyScore += 28;
         upFactors.push(`30S Bullish Dynamic Support Pullback & Bounce [+28]`);
       }
     } else if (ema9 < ema21) {
-      score -= 16;
-      downFactors.push(`30S EMA9 < EMA21 [-16]`);
+      sellScore += 16;
+      downFactors.push(`30S EMA9 < EMA21 [+16]`);
       // Pullback to EMA9/21
       if (prevCandle.close > prevCandle.open && currentCandle.close < currentCandle.open && currentCandle.high >= ema9 - 0.00003) {
-        score -= 28;
-        downFactors.push(`30S Bearish Dynamic Resistance Pullback & Rejection [-28]`);
+        sellScore += 28;
+        downFactors.push(`30S Bearish Dynamic Resistance Pullback & Rejection [+28]`);
       }
     }
 
     // 2. Price Action & Rejections
     if (pa.scoreImpact > 0) {
-      score += pa.scoreImpact * 1.2;
-      upFactors.push(`30S Price Action: ${pa.patternName} [+${Math.round(pa.scoreImpact * 1.2)}]`);
+      const pts = Math.round(pa.scoreImpact * 1.2);
+      buyScore += pts;
+      upFactors.push(`30S Price Action: ${pa.patternName} [+${pts}]`);
     } else if (pa.scoreImpact < 0) {
-      score += pa.scoreImpact * 1.2;
-      downFactors.push(`30S Price Action: ${pa.patternName} [${Math.round(pa.scoreImpact * 1.2)}]`);
+      const pts = Math.round(Math.abs(pa.scoreImpact) * 1.2);
+      sellScore += pts;
+      downFactors.push(`30S Price Action: ${pa.patternName} [+${pts}]`);
     }
 
     // 3. Support & Resistance Bounds
     if (sr.isRetestBounce) {
-      score += 25;
+      buyScore += 25;
       upFactors.push(`30S Bullish S/R Retest Bounce [+25]`);
     } else if (sr.isRetestRejection) {
-      score -= 25;
-      downFactors.push(`30S Bearish S/R Retest Rejection [-25]`);
+      sellScore += 25;
+      downFactors.push(`30S Bearish S/R Retest Rejection [+25]`);
     } else if (sr.isNearResistance && (upperWick > 0 || isRed)) {
-      score -= 24;
-      downFactors.push(`30S Resistance Wall Encounter [-24]`);
+      sellScore += 24;
+      downFactors.push(`30S Resistance Wall Encounter [+24]`);
     } else if (sr.isNearSupport && (lowerWick > 0 || isGreen)) {
-      score += 24;
+      buyScore += 24;
       upFactors.push(`30S Support Wall Encounter [+24]`);
     }
 
     // 4. Tick momentum continuation
-    if (tickSlope > 0.000002) { score += 15; upFactors.push('30S Tick Slope Bullish [+15]'); }
-    else if (tickSlope < -0.000002) { score -= 15; downFactors.push('30S Tick Slope Bearish [-15]'); }
+    if (tickSlope > 0.000002) {
+      buyScore += 15;
+      upFactors.push('30S Tick Slope Bullish [+15]');
+    } else if (tickSlope < -0.000002) {
+      sellScore += 15;
+      downFactors.push('30S Tick Slope Bearish [+15]');
+    }
 
   } else {
     // =========================================================
@@ -1337,87 +1361,103 @@ export function evaluateMarketData(
 
     // 1. Market Structure & CHoCH / BOS
     if (structure.scoreImpact > 0) {
-      score += structure.scoreImpact * 1.2;
-      upFactors.push(`1M Structure: ${structure.description} [+${Math.round(structure.scoreImpact * 1.2)}]`);
+      const pts = Math.round(structure.scoreImpact * 1.2);
+      buyScore += pts;
+      upFactors.push(`1M Structure: ${structure.description} [+${pts}]`);
     } else if (structure.scoreImpact < 0) {
-      score += structure.scoreImpact * 1.2;
-      downFactors.push(`1M Structure: ${structure.description} [${Math.round(structure.scoreImpact * 1.2)}]`);
+      const pts = Math.round(Math.abs(structure.scoreImpact) * 1.2);
+      sellScore += pts;
+      downFactors.push(`1M Structure: ${structure.description} [+${pts}]`);
     }
 
     // 2. Full Candlestick Formations (Engulfing, Pin bar, Stars)
     if (pa.scoreImpact > 0) {
-      score += pa.scoreImpact * 1.3;
-      upFactors.push(`1M Candlestick Pattern: ${pa.patternName} [+${Math.round(pa.scoreImpact * 1.3)}]`);
+      const pts = Math.round(pa.scoreImpact * 1.3);
+      buyScore += pts;
+      upFactors.push(`1M Candlestick Pattern: ${pa.patternName} [+${pts}]`);
     } else if (pa.scoreImpact < 0) {
-      score += pa.scoreImpact * 1.3;
-      downFactors.push(`1M Candlestick Pattern: ${pa.patternName} [${Math.round(pa.scoreImpact * 1.3)}]`);
+      const pts = Math.round(Math.abs(pa.scoreImpact) * 1.3);
+      sellScore += pts;
+      downFactors.push(`1M Candlestick Pattern: ${pa.patternName} [+${pts}]`);
     }
 
     // 3. Multi-Period Moving Averages Alignment
     if (ema9 > ema21 && ema21 > ema50) {
-      score += 22;
+      buyScore += 22;
       upFactors.push(`1M Bullish Trend Stack EMA 9>21>50 [+22]`);
     } else if (ema9 < ema21 && ema21 < ema50) {
-      score -= 22;
-      downFactors.push(`1M Bearish Trend Stack EMA 9<21<50 [-22]`);
+      sellScore += 22;
+      downFactors.push(`1M Bearish Trend Stack EMA 9<21<50 [+22]`);
     }
 
     // 4. MACD & Momentum Divergence
     if (divergence.type !== 'NONE') {
-      score += divergence.scoreImpact * 1.4;
-      if (divergence.scoreImpact > 0) upFactors.push(`1M Divergence: ${divergence.description} [+${Math.round(divergence.scoreImpact * 1.4)}]`);
-      else downFactors.push(`1M Divergence: ${divergence.description} [${Math.round(divergence.scoreImpact * 1.4)}]`);
+      if (divergence.scoreImpact > 0) {
+        const pts = Math.round(divergence.scoreImpact * 1.4);
+        buyScore += pts;
+        upFactors.push(`1M Divergence: ${divergence.description} [+${pts}]`);
+      } else {
+        const pts = Math.round(Math.abs(divergence.scoreImpact) * 1.4);
+        sellScore += pts;
+        downFactors.push(`1M Divergence: ${divergence.description} [+${pts}]`);
+      }
     } else {
       if (macdData.histogram > 0.000001) {
-        score += 10;
+        buyScore += 10;
         upFactors.push(`1M MACD Histogram Positive [+10]`);
-        if (macdData.isBullishCross) { score += 10; upFactors.push('1M MACD Bullish Crossover [+10]'); }
+        if (macdData.isBullishCross) { buyScore += 10; upFactors.push('1M MACD Bullish Crossover [+10]'); }
       } else if (macdData.histogram < -0.000001) {
-        score -= 10;
-        downFactors.push(`1M MACD Histogram Negative [-10]`);
-        if (macdData.isBearishCross) { score -= 10; downFactors.push('1M MACD Bearish Crossover [-10]'); }
+        sellScore += 10;
+        downFactors.push(`1M MACD Histogram Negative [+10]`);
+        if (macdData.isBearishCross) { sellScore += 10; downFactors.push('1M MACD Bearish Crossover [+10]'); }
       }
 
       if (rsi14 >= 52 && rsi14 < 72) {
-        score += 10;
+        buyScore += 10;
         upFactors.push(`1M RSI Healthy Bullish Momentum (${rsi14}) [+10]`);
       } else if (rsi14 <= 48 && rsi14 > 28) {
-        score -= 10;
-        downFactors.push(`1M RSI Healthy Bearish Momentum (${rsi14}) [-10]`);
+        sellScore += 10;
+        downFactors.push(`1M RSI Healthy Bearish Momentum (${rsi14}) [+10]`);
       } else if (rsi14 >= 72) {
-        score -= 18;
-        downFactors.push(`1M RSI Overbought Exhaustion (${rsi14}) [-18]`);
+        sellScore += 18;
+        downFactors.push(`1M RSI Overbought Exhaustion (${rsi14}) [+18]`);
       } else if (rsi14 <= 28) {
-        score += 18;
+        buyScore += 18;
         upFactors.push(`1M RSI Oversold Floor (${rsi14}) [+18]`);
       }
     }
 
     // 5. Support & Resistance Bounds
     if (sr.isRetestBounce || sr.isBreakoutAbove) {
-      score += 22;
+      buyScore += 22;
       upFactors.push(`1M Bullish S/R Validation [+22]`);
     } else if (sr.isRetestRejection || sr.isBreakdownBelow) {
-      score -= 22;
-      downFactors.push(`1M Bearish S/R Validation [-22]`);
+      sellScore += 22;
+      downFactors.push(`1M Bearish S/R Validation [+22]`);
     }
   }
 
   // -------------------------------------------------------------
   // DIRECTIONAL CONVERGENCE & FINAL DECISION
+  // Symmetrically compare independent BUY evidence vs SELL evidence
   // -------------------------------------------------------------
-  const finalScore = Math.max(-100, Math.min(100, Math.round(score)));
+  const netScore = buyScore - sellScore;
+  const finalScore = Math.max(-100, Math.min(100, Math.round(netScore)));
 
-  // If score is neutral 0, strictly fallback to micro-tick delta or immediate running candle
+  // Completely symmetric decision: Stronger evidence direction wins!
   let isCall: boolean;
-  if (finalScore !== 0) {
-    isCall = finalScore > 0;
-  } else if (tickSlope !== 0) {
+  if (buyScore > sellScore) {
+    isCall = true;
+  } else if (sellScore > buyScore) {
+    isCall = false;
+  } else if (Math.abs(tickSlope) > 0.0000001) {
     isCall = tickSlope > 0;
+  } else if (velocity !== 0) {
+    isCall = velocity > 0;
   } else if (currentCandle.close !== currentCandle.open) {
     isCall = currentCandle.close > currentCandle.open;
   } else {
-    isCall = true;
+    isCall = Date.now() % 2 === 0;
   }
 
   // Regime detection

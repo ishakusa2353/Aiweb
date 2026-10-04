@@ -539,13 +539,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         isCall = analysis.isCall;
       } else if (samplePrices.length >= 2) {
         const pDelta = samplePrices[samplePrices.length - 1] - samplePrices[0];
-        isCall = pDelta !== 0 ? pDelta > 0 : (parsedCandles.length > 0 ? parsedCandles[parsedCandles.length - 1].close > parsedCandles[parsedCandles.length - 1].open : false);
+        isCall = pDelta !== 0 ? pDelta > 0 : (parsedCandles.length > 0 ? parsedCandles[parsedCandles.length - 1].close > parsedCandles[parsedCandles.length - 1].open : (Date.now() % 2 === 0));
       } else if (parsedCandles.length > 0) {
         const lastC = parsedCandles[parsedCandles.length - 1];
-        isCall = lastC.close !== lastC.open ? lastC.close > lastC.open : (Math.floor(Date.now() / 1000) % 2 === 0);
+        isCall = lastC.close !== lastC.open ? lastC.close > lastC.open : (Date.now() % 2 === 0);
       } else {
-        // Parity edge case
-        isCall = Math.floor(Date.now() / 1000) % 2 === 0;
+        isCall = Date.now() % 2 === 0;
       }
 
       computedIsCall = isCall;
@@ -1079,7 +1078,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       {/* 3. UNIQUE VIP LICENSE BOX (STYLISH COSMIC GLASS + MONOSPACE TECH FONT + CYBER VAULT 3D) */}
       {showKeyModal && (
         <div className="fixed inset-0 bg-[#060a1e]/75 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-gradient-to-b from-[#181f4f]/95 via-[#101740]/95 to-[#0a0f2e]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/70 border-x border-x-indigo-500/40 border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_40px_rgba(99,102,241,0.3),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-3px_6px_rgba(0,0,0,0.8)]">
+          <div className={`w-full max-w-sm bg-gradient-to-b from-[#181f4f]/95 via-[#101740]/95 to-[#0a0f2e]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/70 border-x border-x-indigo-500/40 border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_40px_rgba(99,102,241,0.3),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-3px_6px_rgba(0,0,0,0.8)] ${keyInputError ? 'animate-[ishakErrorShake_0.45s_ease]' : ''}`}>
             {/* Top Specular Rim & Glowing Ambient Orbs */}
             <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent pointer-events-none" />
             <div className="absolute -top-10 -right-10 w-28 h-28 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
@@ -1174,7 +1173,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     }}
                     className={`w-full px-3 py-2.5 rounded-xl border text-xs font-['JetBrains_Mono','Fira_Code','Courier_New',monospace] font-extrabold tracking-widest outline-none text-center transition shadow-[inset_0_3px_8px_rgba(0,0,0,0.9)] ${
                       keyInputError
-                        ? 'border-red-500 text-red-300 bg-red-950/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                        ? 'border-red-500 text-red-300 bg-red-950/60 shadow-[0_0_20px_rgba(239,68,68,0.5)] animate-[ishakErrorShake_0.45s_ease]'
                         : 'border-cyan-400/50 bg-[#070b22] text-cyan-300 focus:border-cyan-300 focus:shadow-[0_0_20px_rgba(0,229,255,0.4)] placeholder:text-gray-500 placeholder:tracking-normal placeholder:font-sans'
                     }`}
                   />

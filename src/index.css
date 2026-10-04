@@ -87,6 +87,18 @@
   }
 }
 
+@keyframes ishakErrorShake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15%, 45%, 75% {
+    transform: translateX(-8px);
+  }
+  30%, 60%, 90% {
+    transform: translateX(8px);
+  }
+}
+
 @keyframes ishakSignalAppear {
   0% {
     transform: translate(-50%, -50%) scale(0.4);
