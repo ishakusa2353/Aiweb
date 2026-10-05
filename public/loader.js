@@ -2255,32 +2255,103 @@ javascript:(function(){
     document.getElementById('hub-btn-license').onclick = function(e) { e.stopPropagation(); hub.remove(); showKeyModal(); };
   }
 
+  // ⚡ QQE (QUANTITATIVE QUALITATIVE ESTIMATION) ENGINE (RSI 1, Smoothing 1, Factor 4.238)
+  function calculateQQE(prices, rsiLen, sf, qqeFac) {
+    var rsiLength = rsiLen || 1;
+    var qFactor = qqeFac || 4.238;
+    if (!prices || prices.length < 2) {
+      return { rsi: 50, smoothedRsi: 50, fastAtrBand: 50, state: 'QQE_NEUTRAL', trend: 0 };
+    }
+    var rsiSeries = [];
+    if (rsiLength === 1) {
+      for (var i = 0; i < prices.length; i++) {
+        if (i === 0) rsiSeries.push(50);
+        else {
+          var delta = prices[i] - prices[i - 1];
+          if (delta > 0.000001) rsiSeries.push(100);
+          else if (delta < -0.000001) rsiSeries.push(0);
+          else rsiSeries.push(50);
+        }
+      }
+    } else {
+      var rPeriod = Math.min(rsiLength, prices.length - 1);
+      for (var ri = 0; ri < prices.length; ri++) {
+        if (ri < rPeriod) { rsiSeries.push(50); continue; }
+        var cG = 0, cL = 0;
+        for (var rk = ri - rPeriod + 1; rk <= ri; rk++) {
+          var d = prices[rk] - prices[rk - 1];
+          if (d > 0) cG += d; else cL += Math.abs(d);
+        }
+        var ag = cG / (rPeriod || 1); var al = cL / (rPeriod || 1);
+        var rs = al === 0 ? 100 : ag / al;
+        rsiSeries.push(al === 0 ? 100 : Math.round(100 - (100 / (1 + rs))));
+      }
+    }
+
+    var smoothedRsiSeries = rsiSeries;
+    var atrRsiSeries = [0];
+    for (var a = 1; a < smoothedRsiSeries.length; a++) {
+      atrRsiSeries.push(Math.abs(smoothedRsiSeries[a] - smoothedRsiSeries[a - 1]));
+    }
+
+    var emaPeriod = 27;
+    var k = 2 / (emaPeriod + 1);
+    var smoothedAtrRsi = [atrRsiSeries[0] || 0];
+    for (var s = 1; s < atrRsiSeries.length; s++) {
+      smoothedAtrRsi.push(atrRsiSeries[s] * k + smoothedAtrRsi[s - 1] * (1 - k));
+    }
+
+    var longBand = 0, shortBand = 100, trend = 0, prevTrend = 0;
+    var prevLongBand = 0, prevShortBand = 100;
+    for (var m = 0; m < smoothedRsiSeries.length; m++) {
+      var sRsi = smoothedRsiSeries[m];
+      var dar = (smoothedAtrRsi[m] || 0) * qFactor;
+      var newLongBand = sRsi - dar;
+      var newShortBand = sRsi + dar;
+      if (m > 0) {
+        var prevRsi = smoothedRsiSeries[m - 1];
+        longBand = (prevRsi > prevLongBand && sRsi > prevLongBand) ? Math.max(prevLongBand, newLongBand) : newLongBand;
+        shortBand = (prevRsi < prevShortBand && sRsi < prevShortBand) ? Math.min(prevShortBand, newShortBand) : newShortBand;
+        if (sRsi > prevShortBand) trend = 1;
+        else if (sRsi < prevLongBand) trend = -1;
+        else trend = prevTrend;
+      } else {
+        longBand = newLongBand;
+        shortBand = newShortBand;
+        trend = sRsi >= 50 ? 1 : -1;
+      }
+      prevTrend = trend;
+      prevLongBand = longBand;
+      prevShortBand = shortBand;
+    }
+    var currentSmoothedRsi = smoothedRsiSeries[smoothedRsiSeries.length - 1] || 50;
+    var fastAtrBand = trend === 1 ? longBand : shortBand;
+    var state = 'QQE_NEUTRAL';
+    if (trend === 1 && currentSmoothedRsi > fastAtrBand + 0.2) state = 'QQE_BULLISH';
+    else if (trend === -1 && currentSmoothedRsi < fastAtrBand - 0.2) state = 'QQE_BEARISH';
+
+    return {
+      rsi: rsiSeries[rsiSeries.length - 1] || 50,
+      smoothedRsi: currentSmoothedRsi,
+      fastAtrBand: fastAtrBand,
+      trend: trend,
+      state: state
+    };
+  }
+
   // 6. REAL CHART & RUNNING CANDLE ANALYSIS ENGINE
   // Analyzes Quotex live chart canvas, running candle anatomy (body vs wick ratio),
   // real-time price tick velocity during the scan, and selected timeframe duration.
   // ⚡ 6. DATA-DRIVEN MARKET ANALYSIS & MULTI-FACTOR CONFLUENCE ENGINE
-  // Real-Time Indicator Confluence:
-  // - Real OHLC & High-Frequency Price Action Clustering
-  // - Multi-Period Trend: EMA 5, 9, 13, 21, 50 & SMA 20
-  // - Standard 14-period RSI Momentum & Exhaustion
-  // - Standard MACD (12, 26, 9) Signal Cross & Histogram Acceleration
-  // - Linear Regression Tick Slope, Velocity & Acceleration
-  // - Dynamic Support & Resistance Zones (Rolling Pivots & Rejection Physics)
-  // - Price Action & Candlestick Anatomy (Wick-to-Body Ratios, Hammers, Stars, Engulfing)
-  // - Volatility & ATR (Average True Range)
-  // - Market Regime Detection (Trending Bullish, Trending Bearish, Ranging, Volatile)
-  // - Signal Quality Filter & Symmetrical Decision
-  // - ZERO Math.random(), ZERO hardcoded calls, ZERO 'market data not found' rejections
   function evaluateMarketConfluence(priceSamples, durationSec) {
     var dur = durationSec || tradeDuration || 5;
     var durLabel = (dur >= 60) ? (dur / 60) + 'M' : dur + 'S';
 
-    // 1. Live Price & High-Frequency Sampler Integration
+    // 1. Live Price & High-Frequency Sampler Integration (Zero Invented Data)
     var currentLivePrice = extractQuotexLivePrice();
     if (!currentLivePrice && priceSamples && priceSamples.length > 0) {
       currentLivePrice = priceSamples[priceSamples.length - 1];
     }
-    if (!currentLivePrice) currentLivePrice = 1.0845;
 
     // 2. Comprehensive Multi-Source Candle Aggregator (Genuine Market Data Only)
     var candleEls = Array.from(document.querySelectorAll('[data-candle="true"]'));
@@ -2294,32 +2365,33 @@ javascript:(function(){
         var low = parseFloat(el.getAttribute('data-low') || '0');
         var dir = el.getAttribute('data-direction');
         return { open: open, close: close, high: high, low: low, dir: dir };
-      }).filter(function(c) { return c.close > 0; });
+      }).filter(function(c) { return c.close > 0 && !isNaN(c.close); });
     }
 
     // Try SVG Candlestick Extraction
     if (candleData.length < 3) {
       var svgCandles = extractSvgCandles();
       if (svgCandles && svgCandles.length >= 3) {
-        candleData = svgCandles;
+        candleData = svgCandles.filter(function(c) { return c.close > 0 && !isNaN(c.close); });
       }
     }
 
     // Timeframe-Specialized Live Tick Micro-Bar Construction (Crucial for Quotex Canvas Charts)
     var allRawTicks = [];
     if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
-      allRawTicks = window.__ISHAK_LIVE_TICKS__.map(function(t) { return t.price; });
+      allRawTicks = window.__ISHAK_LIVE_TICKS__.map(function(t) { return t.price; }).filter(function(p) { return typeof p === 'number' && !isNaN(p) && p > 0; });
     }
     if (priceSamples && priceSamples.length > 0) {
-      allRawTicks = allRawTicks.concat(priceSamples);
+      var vSamples = priceSamples.filter(function(p) { return typeof p === 'number' && !isNaN(p) && p > 0; });
+      allRawTicks = allRawTicks.concat(vSamples);
     }
     if (currentLivePrice && (allRawTicks.length === 0 || allRawTicks[allRawTicks.length - 1] !== currentLivePrice)) {
       allRawTicks.push(currentLivePrice);
     }
 
-    // Pure Real Market Data OHLC Bar Construction (No synthetic positive bias!)
-    if (candleData.length < 3 && allRawTicks.length >= 2) {
-      var tickChunk = Math.max(1, Math.floor(allRawTicks.length / 8));
+    // Real Market Data OHLC Bar Construction from verified ticks
+    if (candleData.length < 3 && allRawTicks.length >= 4) {
+      var tickChunk = Math.max(1, Math.floor(allRawTicks.length / 6));
       for (var gi = 0; gi < allRawTicks.length; gi += tickChunk) {
         var chunk = allRawTicks.slice(gi, gi + tickChunk);
         if (chunk.length > 0) {
@@ -2338,12 +2410,24 @@ javascript:(function(){
       }
     }
 
-    // Safe baseline if ticks are limited (Symmetrical flat bars at actual current price)
+    // Strict Data Validation Filter: Never invent prices or synthetic candles
     if (candleData.length < 3) {
-      var baseP = currentLivePrice || 1.0845;
-      for (var fbI = 0; fbI < 5; fbI++) {
-        candleData.push({ open: baseP, close: baseP, high: baseP, low: baseP, dir: 'FLAT' });
-      }
+      return {
+        found: false,
+        isCall: null,
+        isTradeApproved: false,
+        confidence: 'Low Confluence',
+        accuracy: 'N/A',
+        rsi: 50,
+        pattern: 'Data Validation Filter (Preserve Capital)',
+        logic: 'পর্যাপ্ত রিয়েল মার্কেট ডাটা পাওয়া যায়নি (কমপক্ষে ৩টি ক্যান্ডেল বা ৪টি লাইভ টিক প্রয়োজন)। ক্যাপিটাল সুরক্ষায় কোনো ট্রেড নেওয়া হয়নি (NO SIGNAL)।',
+        marketTrend: 'UNCLEAR / INSUFFICIENT DATA ⏸️',
+        statusLabel: 'NO SIGNAL ⏸️',
+        audit: {
+          direction: 'NO_SIGNAL',
+          dominantReason: 'Insufficient real market data without synthetic bars'
+        }
+      };
     }
 
     var closes = candleData.map(function(c) { return c.close; });
@@ -2654,6 +2738,28 @@ javascript:(function(){
       }
     }
 
+    // --- ⚡ QQE (RSI 1, Smoothing 1, Factor 4.238) CONFIRMATION FACTOR ---
+    var qqePool = (mergedTicks && mergedTicks.length >= 4) ? mergedTicks : closes;
+    var qqeResult = calculateQQE(qqePool, 1, 1, 4.238);
+    var qqeState = qqeResult.state || 'QQE_NEUTRAL';
+
+    if (qqeState === 'QQE_BULLISH') {
+      buyScore += 14;
+      upFactorsList.push('QQE Dynamic Bullish Confirmation [+14]');
+    } else if (qqeState === 'QQE_BEARISH') {
+      sellScore += 14;
+      downFactorsList.push('QQE Dynamic Bearish Confirmation [+14]');
+    }
+
+    // Cross-correlation check: Deduct if QQE conflicts with immediate slope or macro trend
+    if (qqeState === 'QQE_BULLISH' && (slope < -0.000001 || (ema9 < ema21 && ema21 < ema50))) {
+      buyScore -= 8;
+      sellScore -= 8;
+    } else if (qqeState === 'QQE_BEARISH' && (slope > 0.000001 || (ema9 > ema21 && ema21 > ema50))) {
+      buyScore -= 8;
+      sellScore -= 8;
+    }
+
     // --- 8. TIMEFRAME-SPECIALIZED QUANTITATIVE SCORING ARCHITECTURE (HIGH WIN-RATE MOMENTUM) ---
     if (dur <= 5) {
       // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision & Macro Trend Alignment)
@@ -2847,43 +2953,51 @@ javascript:(function(){
       }
     }
 
-    // --- 9. DIRECTION & CONFLUENCE RESOLUTION ---
+    // --- 9. DIRECTION & CONFLUENCE RESOLUTION (Strictly Data-Driven, Anti-Random) ---
     var netConfluence = buyScore - sellScore;
-    var isCall;
-    if (buyScore > sellScore) {
-      isCall = true;
-    } else if (sellScore > buyScore) {
-      isCall = false;
-    } else if (Math.abs(slope) > 0.0000001) {
-      isCall = slope > 0;
-    } else if (tickDelta !== 0) {
-      isCall = tickDelta > 0;
-    } else if (lastCandle && lastCandle.close !== lastCandle.open) {
-      isCall = lastCandle.close > lastCandle.open;
+    var spread = Math.abs(netConfluence);
+    var winningScore = Math.max(buyScore, sellScore);
+    var isUltraShortMode = dur <= 15;
+    var minThreshold = isUltraShortMode ? 28 : 34;
+    var minSpread = isUltraShortMode ? 12 : 14;
+
+    var isCall = null;
+    var isTradeApproved = false;
+    var rejectionReason = '';
+
+    if (isDeadFlat) {
+      isCall = null;
+      isTradeApproved = false;
+      rejectionReason = 'ডেড ফ্ল্যাট মার্কেট কন্সোলিডেশন (Chop Filter) - ক্যাপিটাল সুরক্ষায় কোনো ট্রেড নেওয়া হয়নি (NO SIGNAL)।';
+    } else if (winningScore < minThreshold || spread < minSpread) {
+      isCall = null;
+      isTradeApproved = false;
+      rejectionReason = 'মার্কেট কনফ্লুয়েন্স অপর্যাপ্ত বা কনফ্লিক্টিং (Score: ' + winningScore + ', Spread: ' + spread + ', Min Required: ' + minThreshold + '/' + minSpread + ')। ট্রেড স্থগিত (NO SIGNAL)।';
     } else {
-      isCall = (Date.now() % 2 === 0);
+      isCall = buyScore > sellScore;
+      isTradeApproved = true;
     }
 
-    var isTradeApproved = true;
-    var confluenceSpread = Math.abs(buyScore - sellScore);
-    var authenticAccuracy = Math.min(99.4, Math.max(96.2, 95.8 + confluenceSpread * 0.045)).toFixed(1);
+    var factorRatio = winningScore / (winningScore + Math.min(buyScore, sellScore) || 1);
+    var signalQualityScore = Math.round(Math.min(100, Math.max(0, factorRatio * 60 + Math.min(40, spread * 0.8))));
+    var authenticAccuracy = isTradeApproved ? signalQualityScore + '%' : 'N/A';
 
-    var patternName = isTradeApproved
-      ? (srPattern || (isCall ? 'Bullish Market Confluence & Momentum' : 'Bearish Market Confluence & Momentum'))
-      : (isDeadFlat ? 'Dead Flat Market Consolidation (Chop Filter)' : 'Low Confluence Filter (Preserve Capital)');
+    var patternName = !isTradeApproved
+      ? (isDeadFlat ? 'Dead Flat Market Chop' : 'Inconclusive / Neutral Confluence')
+      : (srPattern || (isCall ? 'Bullish Market Confluence & Momentum' : 'Bearish Market Confluence & Momentum'));
 
-    // Clean, direct logic text with ZERO market name clutter per user command
-    var confluenceLogic = isCall
-      ? 'টাইমফ্রেম ' + durLabel + ': মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং ইএমএ কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% নির্ভুলতায় কল (UP ↑) ট্রেড সক্রিয়!'
-      : 'টাইমফ্রেম ' + durLabel + ': মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং ইএমএ কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% নির্ভুলতায় পুট (DOWN ↓) ট্রেড সক্রিয়!';
+    var confluenceLogic = !isTradeApproved
+      ? rejectionReason
+      : isCall
+      ? 'টাইমফ্রেম ' + durLabel + ' (' + (isUltraShortMode ? 'ULTRA_SHORT' : 'STANDARD') + '): মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং QQE কনফ্লুয়েন্স নিশ্চিত। কল (UP ↑) ট্রেড সক্রিয়!'
+      : 'টাইমফ্রেম ' + durLabel + ' (' + (isUltraShortMode ? 'ULTRA_SHORT' : 'STANDARD') + '): মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং QQE কনফ্লুয়েন্স নিশ্চিত। পুট (DOWN ↓) ট্রেড সক্রিয়!';
 
-    // Internal Factor Audit Logging
     var internalAudit = {
-      direction: isCall === true ? 'UP' : 'DOWN',
+      direction: isCall === true ? 'UP' : (isCall === false ? 'DOWN' : 'NO_SIGNAL'),
       buyScore: Math.round(buyScore),
       sellScore: Math.round(sellScore),
       netConfluence: Math.round(netConfluence),
-      confluenceSpread: Math.round(confluenceSpread),
+      confluenceSpread: Math.round(spread),
       isTradeApproved: isTradeApproved,
       upFactorsCount: upFactorsList.length,
       downFactorsCount: downFactorsList.length,
@@ -2891,25 +3005,27 @@ javascript:(function(){
       downFactors: downFactorsList,
       marketStructure: structDesc || 'Ranging/Equal',
       volatilityCondition: isDeadFlat ? 'DEAD_FLAT_CHOP' : (bbWidthPct < 0.05 ? 'SQUEEZE' : 'NORMAL'),
-      dominantReason: isCall
-        ? 'BUY Confluence (Buy: ' + Math.round(buyScore) + ' vs Sell: ' + Math.round(sellScore) + ')'
-        : 'SELL Confluence (Sell: ' + Math.round(sellScore) + ' vs Buy: ' + Math.round(buyScore) + ')'
+      dominantReason: !isTradeApproved
+        ? rejectionReason
+        : (isCall ? 'BUY Confluence (+ ' + Math.round(buyScore) + ' vs ' + Math.round(sellScore) + ')' : 'SELL Confluence (- ' + Math.round(sellScore) + ' vs ' + Math.round(buyScore) + ')'),
+      mode: isUltraShortMode ? 'ULTRA_SHORT' : 'STANDARD',
+      qqeState: qqeState
     };
     if (typeof console !== 'undefined' && console.log) {
       console.log('[ISHAK_AI_ANALYSIS_AUDIT]', JSON.stringify(internalAudit));
     }
 
     return {
-      found: true,
+      found: isTradeApproved,
       isCall: isCall,
       isTradeApproved: isTradeApproved,
-      confidence: authenticAccuracy + '% Confluence',
-      accuracy: authenticAccuracy + '%',
+      confidence: isTradeApproved ? signalQualityScore + '% Confluence' : 'Low Confluence',
+      accuracy: authenticAccuracy,
       rsi: calculatedRsi,
       pattern: patternName,
       logic: confluenceLogic,
-      marketTrend: isCall === true ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘',
-      statusLabel: isCall === true ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇',
+      marketTrend: isCall === true ? 'BULLISH MOMENTUM ↗' : (isCall === false ? 'BEARISH MOMENTUM ↘' : 'RANGING / NEUTRAL ⏸️'),
+      statusLabel: isCall === true ? 'CALL / UP ⬆' : (isCall === false ? 'PUT / DOWN ⬇' : 'NO SIGNAL ⏸️'),
       audit: internalAudit
     };
   }
@@ -2948,8 +3064,8 @@ javascript:(function(){
   }
 
   function executeQuotexTrade(isCall, signalId) {
-    if (!autoTradeEnabled) {
-      return { success: false, reason: 'AUTO_TRADE_DISABLED' };
+    if (!autoTradeEnabled || isCall === null || isCall === undefined) {
+      return { success: false, reason: isCall === null ? 'NO_SIGNAL' : 'AUTO_TRADE_DISABLED' };
     }
     try {
       var pair = findQuotexTradeButtons();
@@ -3080,51 +3196,27 @@ javascript:(function(){
         var liveExecutionTime = new Date().toLocaleTimeString('en-US', { hour12: true });
         var signalId = 'SIG_' + Date.now() + '_' + (Date.now().toString(36) + performance.now().toFixed(0)).substring(2, 8).toUpperCase();
         var signal = evaluateMarketConfluence(livePriceSamples, tradeDuration);
-        var finalDir;
-        if (signal && typeof signal.isCall === 'boolean') {
-          finalDir = signal.isCall;
-        } else if (livePriceSamples.length >= 2 && (livePriceSamples[livePriceSamples.length - 1] !== livePriceSamples[0])) {
-          finalDir = livePriceSamples[livePriceSamples.length - 1] > livePriceSamples[0];
-        } else if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length >= 2) {
-          var tLen = window.__ISHAK_LIVE_TICKS__.length;
-          finalDir = window.__ISHAK_LIVE_TICKS__[tLen - 1].price !== window.__ISHAK_LIVE_TICKS__[0].price
-            ? window.__ISHAK_LIVE_TICKS__[tLen - 1].price > window.__ISHAK_LIVE_TICKS__[0].price
-            : (Date.now() % 2 === 0);
-        } else {
-          finalDir = (Date.now() % 2 === 0);
-        }
+        var isApproved = signal && signal.isTradeApproved && typeof signal.isCall === 'boolean';
+        var finalDir = isApproved ? signal.isCall : null;
 
-        if (!signal) {
-          signal = {
-            found: true,
-            isCall: finalDir,
-            confidence: '98.2% Confluence',
-            accuracy: '98.2%',
-            rsi: finalDir ? 56 : 44,
-            pattern: 'Quantum Confluence Vector',
-            logic: 'মার্কেট বিশ্লেষণ: টাইমফ্রেম ' + (tradeDuration ? tradeDuration + 'S' : '5S') + ' মাইক্রো-ট্রেন্ড ও মোমেন্টাম ভেক্টর নিশ্চিত। ' + (finalDir ? 'কল (UP ↑)' : 'পুট (DOWN ↓)') + ' ট্রেড সক্রিয়!',
-            marketTrend: finalDir ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘',
-            statusLabel: finalDir ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
-          };
-        }
-
-        var isCall = finalDir;
         computedSignal = signal;
-        computedIsCall = isCall;
+        computedIsCall = finalDir;
 
-        // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 2600MS (Absorbs broker latency so trade is established right as scan ends)
-        var tradeRes = executeQuotexTrade(isCall, signalId);
+        // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 2600MS ONLY IF TRADE IS GENUINELY APPROVED
+        if (isApproved && finalDir !== null) {
+          var tradeRes = executeQuotexTrade(finalDir, signalId);
 
-        // Instant retry sequence to guarantee trade is clicked even if DOM updates dynamically
-        if (!tradeRes.success && tradeRes.reason === 'BUTTON_NOT_FOUND') {
-          setTimeout(function() {
-            var r1 = executeQuotexTrade(isCall, signalId);
-            if (!r1.success) {
-              setTimeout(function() {
-                executeQuotexTrade(isCall, signalId);
-              }, 120);
-            }
-          }, 60);
+          // Instant retry sequence to guarantee trade is clicked even if DOM updates dynamically
+          if (!tradeRes.success && tradeRes.reason === 'BUTTON_NOT_FOUND') {
+            setTimeout(function() {
+              var r1 = executeQuotexTrade(finalDir, signalId);
+              if (!r1.success) {
+                setTimeout(function() {
+                  executeQuotexTrade(finalDir, signalId);
+                }, 120);
+              }
+            }, 60);
+          }
         }
       }
 
@@ -3147,12 +3239,14 @@ javascript:(function(){
         isScanning = false;
         updateBadgeLabel();
 
-        // ⚡ SIMULTANEOUSLY SHOW FLY SIGNAL DIRECTION & HIGHLIGHT TARGET CANDLE
-        showFlySignalAnimation(finalIsCall ? 'UP' : 'DOWN');
-        highlightRunningCandleTarget(finalIsCall ? 'UP' : 'DOWN');
+        // ⚡ SIMULTANEOUSLY SHOW FLY SIGNAL DIRECTION & HIGHLIGHT TARGET CANDLE ONLY IF APPROVED
+        if (finalIsCall !== null) {
+          showFlySignalAnimation(finalIsCall ? 'UP' : 'DOWN');
+          highlightRunningCandleTarget(finalIsCall ? 'UP' : 'DOWN');
 
-        // ⚡ SIMULTANEOUSLY PLAY CONFIRMATION AUDIO
-        playResultSound(finalIsCall);
+          // ⚡ SIMULTANEOUSLY PLAY CONFIRMATION AUDIO
+          playResultSound(finalIsCall);
+        }
 
         if (hudPanel) hudPanel.style.display = 'none';
 

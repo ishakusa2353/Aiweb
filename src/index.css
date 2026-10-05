@@ -99,6 +99,21 @@
   }
 }
 
+@keyframes ishakSuccessPop {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.85), inset 0 0 15px rgba(16, 185, 129, 0.4);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.6), inset 0 0 10px rgba(16, 185, 129, 0.3);
+  }
+}
+
 @keyframes ishakSignalAppear {
   0% {
     transform: translate(-50%, -50%) scale(0.4);

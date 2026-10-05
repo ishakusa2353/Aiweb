@@ -32,7 +32,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="relative">
               <img
-                src="/ishak_logo.png"
+                src="/ishak_logo.png?v=20261004"
                 alt="Ishak AI"
                 className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl border-t border-t-cyan-300/80 border-b border-b-black/90 shadow-[0_6px_18px_rgba(0,229,255,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)] object-cover"
                 referrerPolicy="no-referrer"

@@ -107,6 +107,52 @@ export interface MultiTimeframeInfo {
   description: string;
 }
 
+export interface QQEInfo {
+  rsi: number;
+  smoothedRsi: number;
+  fastAtrBand: number;
+  longBand: number;
+  shortBand: number;
+  trend: 1 | -1 | 0; // 1 = Bullish, -1 = Bearish, 0 = Neutral
+  state: 'QQE_BULLISH' | 'QQE_BEARISH' | 'QQE_NEUTRAL';
+  isCrossUp: boolean;
+  isCrossDown: boolean;
+  description: string;
+}
+
+export interface DataValidationResult {
+  isValid: boolean;
+  reason?: string;
+  candleCount: number;
+  tickCount: number;
+  dataAgeMs: number;
+  isStale: boolean;
+  hasGaps: boolean;
+  hasOutliers: boolean;
+}
+
+export interface OutOfSampleValidationReport {
+  totalSamples: number;
+  inSampleSamples: number;
+  outOfSampleSamples: number;
+  totalSignals: number;
+  buySignals: number;
+  sellSignals: number;
+  noSignalCount: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  winRateExcludingTiesPct: number;
+  winRateIncludingTiesPct: number;
+  maxConsecutiveWins: number;
+  maxConsecutiveLosses: number;
+  performanceByDirection: {
+    buy: { signals: number; wins: number; losses: number; ties: number; winRatePct: number };
+    sell: { signals: number; wins: number; losses: number; ties: number; winRatePct: number };
+  };
+  performanceByRegime: Record<string, { signals: number; wins: number; losses: number; ties: number; winRatePct: number }>;
+}
+
 export interface IndicatorMetrics {
   ema5: number;
   ema9: number;
@@ -115,6 +161,7 @@ export interface IndicatorMetrics {
   ema50: number;
   sma20: number;
   rsi14: number;
+  qqe?: QQEInfo;
   macd: {
     macdLine: number;
     signalLine: number;
@@ -171,6 +218,9 @@ export interface FactorAuditLog {
   regime: string;
   volatilityCondition: string;
   dominantReason: string;
+  mode?: 'ULTRA_SHORT' | 'STANDARD';
+  qqeState?: string;
+  dataValidation?: DataValidationResult;
 }
 
 export interface ConfluenceDecision {
@@ -178,11 +228,259 @@ export interface ConfluenceDecision {
   signalQuality: 'HIGH_CONFLUENCE' | 'MODERATE' | 'LOW_FILTERED';
   isTradeApproved: boolean; // Passed signal quality & non-chop filter
   confluenceScore: number; // -100 to +100
-  accuracyEstimate: string; // e.g. "98.2%"
+  signalQualityScore: number; // Deterministic 0-100 score based strictly on evidence
+  accuracyEstimate: string; // e.g. "Signal Quality: 85%"
+  mode: 'ULTRA_SHORT' | 'STANDARD';
   pattern: string;
   reason: string;
   trendLabel: string;
   indicators: IndicatorMetrics;
+  dataValidation: DataValidationResult;
+}
+
+// -------------------------------------------------------------
+// REAL-TIME DATA VALIDATION (Zero Fake Data, Anti-Lookahead)
+// -------------------------------------------------------------
+
+export function validateMarketData(
+  candles: Candle[],
+  livePrices: number[] = [],
+  maxAllowedAgeMs: number = 90000,
+  isHistoricalReplay: boolean = false
+): DataValidationResult {
+  const validCandles = (candles || []).filter(
+    (c) => c && typeof c.close === 'number' && !isNaN(c.close) && c.close > 0
+  );
+  const validPrices = (livePrices || []).filter(
+    (p) => typeof p === 'number' && !isNaN(p) && p > 0
+  );
+
+  if (validCandles.length < 3 && validPrices.length < 4) {
+    return {
+      isValid: false,
+      reason: 'অপর্যাপ্ত মার্কেট ডাটা (কমপক্ষে ৩টি ক্যান্ডেল বা ৪টি লাইভ টিক প্রয়োজন)',
+      candleCount: validCandles.length,
+      tickCount: validPrices.length,
+      dataAgeMs: 0,
+      isStale: false,
+      hasGaps: false,
+      hasOutliers: false,
+    };
+  }
+
+  const now = Date.now();
+  const lastCandleTime = validCandles.length > 0 ? validCandles[validCandles.length - 1].time : now;
+  const dataAgeMs = Math.max(0, now - lastCandleTime);
+  const isStale = !isHistoricalReplay && dataAgeMs > maxAllowedAgeMs && validPrices.length === 0;
+
+  if (isStale) {
+    return {
+      isValid: false,
+      reason: `মার্কেট ডাটা মেয়াদোত্তীর্ণ বা নিশ্চল (সর্বশেষ ডাটা ${Math.round(dataAgeMs / 1000)}s আগের)`,
+      candleCount: validCandles.length,
+      tickCount: validPrices.length,
+      dataAgeMs,
+      isStale: true,
+      hasGaps: false,
+      hasOutliers: false,
+    };
+  }
+
+  let prevTime = 0;
+  for (let i = 0; i < validCandles.length; i++) {
+    const c = validCandles[i];
+    if (c.time < prevTime) {
+      return {
+        isValid: false,
+        reason: 'ক্যান্ডেল টাইমস্ট্যাম্প ক্রমানুসারে সাজানো নেই (Data sequence error)',
+        candleCount: validCandles.length,
+        tickCount: validPrices.length,
+        dataAgeMs,
+        isStale: false,
+        hasGaps: true,
+        hasOutliers: false,
+      };
+    }
+    prevTime = c.time;
+
+    // OHLC Geometry validation
+    const maxOC = Math.max(c.open, c.close);
+    const minOC = Math.min(c.open, c.close);
+    if (c.high < maxOC - 0.00002 || c.low > minOC + 0.00002) {
+      return {
+        isValid: false,
+        reason: 'ত্রুটিপূর্ণ ক্যান্ডেল OHLC জ্যামিতি শনাক্ত (Corrupted Candle Geometry)',
+        candleCount: validCandles.length,
+        tickCount: validPrices.length,
+        dataAgeMs,
+        isStale: false,
+        hasGaps: false,
+        hasOutliers: true,
+      };
+    }
+  }
+
+  return {
+    isValid: true,
+    candleCount: validCandles.length,
+    tickCount: validPrices.length,
+    dataAgeMs,
+    isStale: false,
+    hasGaps: false,
+    hasOutliers: false,
+  };
+}
+
+// -------------------------------------------------------------
+// QQE (QUANTITATIVE QUALITATIVE ESTIMATION) ENGINE
+// Parameters per specification:
+// - RSI Length = 1
+// - RSI Smoothing = 1
+// - QQE Factor = 4.238
+// - Wilders Period = 14
+// -------------------------------------------------------------
+
+export function calculateQQE(
+  prices: number[],
+  rsiLength: number = 1,
+  smoothingFactor: number = 1,
+  qqeFactor: number = 4.238
+): QQEInfo {
+  if (!prices || prices.length < 2) {
+    return {
+      rsi: 50,
+      smoothedRsi: 50,
+      fastAtrBand: 50,
+      longBand: 50,
+      shortBand: 50,
+      trend: 0,
+      state: 'QQE_NEUTRAL',
+      isCrossUp: false,
+      isCrossDown: false,
+      description: 'QQE: পর্যাপ্ত প্রাইজ ডাটা অনুপস্থিত',
+    };
+  }
+
+  // 1. Calculate RSI series (Length = 1 instant momentum pulse, or standard)
+  const rsiSeries: number[] = [];
+  if (rsiLength === 1) {
+    for (let i = 0; i < prices.length; i++) {
+      if (i === 0) {
+        rsiSeries.push(50);
+      } else {
+        const delta = prices[i] - prices[i - 1];
+        if (delta > 0.000001) rsiSeries.push(100);
+        else if (delta < -0.000001) rsiSeries.push(0);
+        else rsiSeries.push(50);
+      }
+    }
+  } else {
+    const rsiCalc = calculateRSI(prices, rsiLength);
+    rsiSeries.push(...rsiCalc.series);
+  }
+
+  // 2. Smoothed RSI (Smoothing Factor = 1 => identity)
+  let smoothedRsiSeries: number[];
+  if (smoothingFactor <= 1) {
+    smoothedRsiSeries = [...rsiSeries];
+  } else {
+    smoothedRsiSeries = calculateEMA(rsiSeries, smoothingFactor);
+  }
+
+  // 3. Absolute True Range of Smoothed RSI
+  const atrRsiSeries: number[] = [0];
+  for (let i = 1; i < smoothedRsiSeries.length; i++) {
+    atrRsiSeries.push(Math.abs(smoothedRsiSeries[i] - smoothedRsiSeries[i - 1]));
+  }
+
+  // 4. Wilders EMA Smoothing of AtrRsi (Period 14 => EMA 2 * 14 - 1 = 27)
+  const wildersPeriod = 14;
+  const emaPeriod = 2 * wildersPeriod - 1;
+  const smoothedAtrRsi = calculateEMA(atrRsiSeries, Math.min(emaPeriod, atrRsiSeries.length));
+
+  // 5. Dynamic Trailing Bands Calculation
+  let longBand = 0;
+  let shortBand = 100;
+  let trend: 1 | -1 | 0 = 0;
+  let prevTrend: 1 | -1 | 0 = 0;
+  let prevLongBand = 0;
+  let prevShortBand = 100;
+
+  for (let i = 0; i < smoothedRsiSeries.length; i++) {
+    const sRsi = smoothedRsiSeries[i];
+    const dar = (smoothedAtrRsi[i] || 0) * qqeFactor;
+
+    const newLongBand = sRsi - dar;
+    const newShortBand = sRsi + dar;
+
+    if (i > 0) {
+      const prevRsi = smoothedRsiSeries[i - 1];
+      if (prevRsi > prevLongBand && sRsi > prevLongBand) {
+        longBand = Math.max(prevLongBand, newLongBand);
+      } else {
+        longBand = newLongBand;
+      }
+
+      if (prevRsi < prevShortBand && sRsi < prevShortBand) {
+        shortBand = Math.min(prevShortBand, newShortBand);
+      } else {
+        shortBand = newShortBand;
+      }
+
+      // Trend determination & crossover detection
+      if (sRsi > prevShortBand) {
+        trend = 1;
+      } else if (sRsi < prevLongBand) {
+        trend = -1;
+      } else {
+        trend = prevTrend;
+      }
+    } else {
+      longBand = newLongBand;
+      shortBand = newShortBand;
+      trend = sRsi >= 50 ? 1 : -1;
+    }
+
+    prevTrend = trend;
+    prevLongBand = longBand;
+    prevShortBand = shortBand;
+  }
+
+  const currentRsi = rsiSeries[rsiSeries.length - 1] ?? 50;
+  const currentSmoothedRsi = smoothedRsiSeries[smoothedRsiSeries.length - 1] ?? 50;
+  const fastAtrBand = trend === 1 ? longBand : shortBand;
+
+  const isCrossUp = trend === 1 && prevTrend !== 1;
+  const isCrossDown = trend === -1 && prevTrend !== -1;
+
+  let state: 'QQE_BULLISH' | 'QQE_BEARISH' | 'QQE_NEUTRAL' = 'QQE_NEUTRAL';
+  if (trend === 1 && currentSmoothedRsi > fastAtrBand + 0.2) {
+    state = 'QQE_BULLISH';
+  } else if (trend === -1 && currentSmoothedRsi < fastAtrBand - 0.2) {
+    state = 'QQE_BEARISH';
+  } else {
+    state = 'QQE_NEUTRAL';
+  }
+
+  const description =
+    state === 'QQE_BULLISH'
+      ? `QQE বুলিশ ট্রেন্ড ভেরিফিকেশন (RSI ${currentSmoothedRsi.toFixed(1)} > ডাইনামিক ব্যান্ড ${fastAtrBand.toFixed(1)})`
+      : state === 'QQE_BEARISH'
+      ? `QQE বিয়ারিশ ট্রেন্ড ভেরিফিকেশন (RSI ${currentSmoothedRsi.toFixed(1)} < ডাইনামিক ব্যান্ড ${fastAtrBand.toFixed(1)})`
+      : 'QQE নিরপেক্ষ ট্রানজিশন অবস্থা (Neutral Transition)';
+
+  return {
+    rsi: parseFloat(currentRsi.toFixed(1)),
+    smoothedRsi: parseFloat(currentSmoothedRsi.toFixed(1)),
+    fastAtrBand: parseFloat(fastAtrBand.toFixed(2)),
+    longBand: parseFloat(longBand.toFixed(2)),
+    shortBand: parseFloat(shortBand.toFixed(2)),
+    trend,
+    state,
+    isCrossUp,
+    isCrossDown,
+    description,
+  };
 }
 
 // -------------------------------------------------------------
@@ -906,15 +1204,137 @@ export function detectMarketRegime(
 // 7. COMPREHENSIVE CONFLUENCE SCORING & QUALITY FILTER
 // -------------------------------------------------------------
 
+function createNeutralIndicators(): IndicatorMetrics {
+  return {
+    ema5: 1.0,
+    ema9: 1.0,
+    ema13: 1.0,
+    ema21: 1.0,
+    ema50: 1.0,
+    sma20: 1.0,
+    rsi14: 50,
+    qqe: {
+      rsi: 50,
+      smoothedRsi: 50,
+      fastAtrBand: 50,
+      longBand: 50,
+      shortBand: 50,
+      trend: 0,
+      state: 'QQE_NEUTRAL',
+      isCrossUp: false,
+      isCrossDown: false,
+      description: 'Neutral',
+    },
+    macd: { macdLine: 0, signalLine: 0, histogram: 0, isBullishCross: false, isBearishCross: false },
+    atr14: 0.0002,
+    isHighVolatility: false,
+    momentum: { velocity: 0, acceleration: 0, tickSlope: 0, roc: 0 },
+    supportResistance: {
+      resistance: 0,
+      support: 0,
+      distToResistancePct: 0.5,
+      distToSupportPct: 0.5,
+      isNearResistance: false,
+      isNearSupport: false,
+      isBreakoutAbove: false,
+      isBreakdownBelow: false,
+      isRetestBounce: false,
+      isRetestRejection: false,
+    },
+    priceAction: {
+      patternName: 'Neutral Market',
+      description: '',
+      bodySize: 0,
+      upperWick: 0,
+      lowerWick: 0,
+      wickRejection: 'NEUTRAL',
+      isPullback: false,
+      isFakeout: false,
+    },
+    marketStructure: {
+      structureType: 'UNDEFINED',
+      breakOfStructure: 'NONE',
+      changeOfCharacter: 'NONE',
+      lastSwingHigh: 0,
+      lastSwingLow: 0,
+      scoreImpact: 0,
+      description: '',
+    },
+    divergence: { type: 'NONE', scoreImpact: 0, description: '' },
+    volatility: {
+      atr14: 0,
+      bollingerUpper: 1,
+      bollingerLower: 1,
+      bollingerMiddle: 1,
+      bandWidthPct: 0,
+      isHighVolatility: false,
+      isSqueeze: false,
+      isDeadFlat: false,
+    },
+    multiTimeframe: {
+      htfTrend: 'NEUTRAL',
+      isAlignedWithMicro: true,
+      isConflicting: false,
+      scoreImpact: 0,
+      description: '',
+    },
+    regime: 'CONSOLIDATING_SQUEEZE',
+  };
+}
+
 export function evaluateMarketData(
   candles: Candle[],
   livePrices: number[] = [],
-  timeframeSec: number = 5
+  timeframeSec: number = 5,
+  isHistoricalReplay: boolean = false
 ): ConfluenceDecision & { auditLog: FactorAuditLog } {
-  // STRICT DATA PURITY: Use genuine candles only.
-  let workingCandles = [...candles].filter((c) => c && c.close > 0);
+  // Step 1: Active Timeframe Detection & Mode Selection
+  const isUltraShort = timeframeSec <= 15;
+  const mode: 'ULTRA_SHORT' | 'STANDARD' = isUltraShort ? 'ULTRA_SHORT' : 'STANDARD';
+  const durLabel = timeframeSec >= 60 ? `${timeframeSec / 60}M` : `${timeframeSec}S`;
 
-  // If candles are missing but live tick samples exist, group live ticks into genuine OHLC bars
+  // Step 2: Real-time Data Validation (Zero fake data, freshness & continuity)
+  const maxAge = isHistoricalReplay ? Infinity : Math.max(90000, timeframeSec * 2500);
+  const validation = validateMarketData(candles, livePrices, maxAge, isHistoricalReplay);
+  if (!validation.isValid) {
+    const dummyLog: FactorAuditLog = {
+      direction: 'NO_SIGNAL',
+      confluenceScore: 0,
+      upFactorsCount: 0,
+      downFactorsCount: 0,
+      upFactors: [],
+      downFactors: [],
+      neutralFactors: [validation.reason || 'Data validation failed'],
+      marketStructure: 'UNDEFINED',
+      regime: 'RANGING_CONSOLIDATION',
+      volatilityCondition: 'INVALID_DATA',
+      dominantReason: validation.reason || 'Invalid market data',
+      mode,
+      qqeState: 'QQE_NEUTRAL',
+      dataValidation: validation,
+    };
+
+    return {
+      isCall: null,
+      signalQuality: 'LOW_FILTERED',
+      isTradeApproved: false,
+      confluenceScore: 0,
+      signalQualityScore: 0,
+      accuracyEstimate: 'N/A',
+      mode,
+      pattern: 'Data Validation Filter (Preserve Capital)',
+      reason: `মার্কেট ডাটা অসম্পূর্ণ বা ইনভ্যালিড: ${validation.reason}। ক্যাপিটাল সুরক্ষায় কোনো ট্রেড নেওয়া হয়নি (NO SIGNAL)।`,
+      trendLabel: 'UNCLEAR / INVALID DATA',
+      auditLog: dummyLog,
+      dataValidation: validation,
+      indicators: createNeutralIndicators(),
+    };
+  }
+
+  // Filter genuine candles only
+  let workingCandles = [...candles].filter((c) => c && typeof c.close === 'number' && c.close > 0);
+
+  // If candles are limited but live ticks exist, group into genuine OHLC bars
   if (workingCandles.length < 5 && livePrices && livePrices.length >= 6) {
     workingCandles = [];
     const chunkSz = Math.max(2, Math.floor(livePrices.length / 6));
@@ -936,82 +1356,38 @@ export function evaluateMarketData(
     }
   }
 
-  // IF DATA IS LIMITED: Determine direction from high-frequency tick slope and micro-velocity
-  if (workingCandles.length < 5) {
-    let tickSlope = 0;
-    let fallbackCall = false;
-    if (livePrices.length >= 2) {
-      const n = livePrices.length;
-      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-      for (let i = 0; i < n; i++) {
-        sumX += i;
-        sumY += livePrices[i];
-        sumXY += i * livePrices[i];
-        sumX2 += i * i;
-      }
-      const denom = n * sumX2 - sumX * sumX;
-      tickSlope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
-      const microDelta = livePrices[n - 1] - livePrices[0];
-      fallbackCall = tickSlope !== 0 ? tickSlope > 0 : (microDelta > 0 ? true : (microDelta < 0 ? false : (Date.now() % 2 === 0)));
-    } else {
-      fallbackCall = Math.floor(Date.now() / 1000) % 2 === 0;
-    }
-
+  if (workingCandles.length < 3) {
     const dummyLog: FactorAuditLog = {
-      direction: fallbackCall ? 'UP' : 'DOWN',
-      confluenceScore: fallbackCall ? 42 : -42,
-      upFactorsCount: fallbackCall ? 3 : 0,
-      downFactorsCount: fallbackCall ? 0 : 3,
-      upFactors: fallbackCall ? ['Live Tick Linear Slope Bullish', 'Micro Order-Flow Delta Positive'] : [],
-      downFactors: fallbackCall ? [] : ['Live Tick Linear Slope Bearish', 'Micro Order-Flow Delta Negative'],
-      neutralFactors: [],
-      marketStructure: 'RANGING_EQUAL',
-      regime: fallbackCall ? 'TRENDING_BULLISH' : 'TRENDING_BEARISH',
-      volatilityCondition: 'NORMAL',
-      dominantReason: 'লাইভ টিক স্লোপ ও মাইক্রো অর্ডার-ফ্লো অ্যানালাইসিস নিশ্চিত',
+      direction: 'NO_SIGNAL',
+      confluenceScore: 0,
+      upFactorsCount: 0,
+      downFactorsCount: 0,
+      upFactors: [],
+      downFactors: [],
+      neutralFactors: ['Insufficient historical bars for statistical significance'],
+      marketStructure: 'UNDEFINED',
+      regime: 'RANGING_CONSOLIDATION',
+      volatilityCondition: 'INSUFFICIENT_BARS',
+      dominantReason: 'ন্যূনতম ৩টি ভ্যালিড ক্যান্ডেল প্রয়োজন',
+      mode,
+      qqeState: 'QQE_NEUTRAL',
+      dataValidation: validation,
     };
 
     return {
-      isCall: fallbackCall,
-      signalQuality: 'HIGH_CONFLUENCE',
-      isTradeApproved: true,
-      confluenceScore: fallbackCall ? 42 : -42,
-      accuracyEstimate: '97.2%',
-      pattern: fallbackCall ? 'Bullish Micro-Tick Influx' : 'Bearish Micro-Tick Dump',
-      reason: `টাইমফ্রেম ${timeframeSec}S: লাইভ টিক স্লোপ ও অর্ডার-ফ্লো ডিরেকশনে ${fallbackCall ? 'কল (UP ↑)' : 'পুট (DOWN ↓)'} ট্রেড নিশ্চিত।`,
-      trendLabel: fallbackCall ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘',
+      isCall: null,
+      signalQuality: 'LOW_FILTERED',
+      isTradeApproved: false,
+      confluenceScore: 0,
+      signalQualityScore: 0,
+      accuracyEstimate: 'N/A',
+      mode,
+      pattern: 'Insufficient Data Filter',
+      reason: 'পর্যাপ্ত হিস্টোরিক্যাল ক্যান্ডেল পাওয়া যায়নি। ক্যাপিটাল সুরক্ষায় ট্রেড বিরত রাখা হলো (NO SIGNAL)।',
+      trendLabel: 'UNCLEAR / INSUFFICIENT DATA',
       auditLog: dummyLog,
-      indicators: {
-        ema5: 1.0,
-        ema9: 1.0,
-        ema13: 1.0,
-        ema21: 1.0,
-        ema50: 1.0,
-        sma20: 1.0,
-        rsi14: fallbackCall ? 56 : 44,
-        macd: { macdLine: 0, signalLine: 0, histogram: 0, isBullishCross: false, isBearishCross: false },
-        atr14: 0.0002,
-        isHighVolatility: false,
-        momentum: { velocity: 0, acceleration: 0, tickSlope, roc: 0 },
-        supportResistance: {
-          resistance: 0,
-          support: 0,
-          distToResistancePct: 0.5,
-          distToSupportPct: 0.5,
-          isNearResistance: false,
-          isNearSupport: false,
-          isBreakoutAbove: false,
-          isBreakdownBelow: false,
-          isRetestBounce: false,
-          isRetestRejection: false,
-        },
-        priceAction: { patternName: 'Live Tick Micro-Wave', description: '', bodySize: 0, upperWick: 0, lowerWick: 0, wickRejection: 'NEUTRAL', isPullback: false, isFakeout: false },
-        marketStructure: { structureType: 'UNDEFINED', breakOfStructure: 'NONE', changeOfCharacter: 'NONE', lastSwingHigh: 0, lastSwingLow: 0, scoreImpact: 0, description: '' },
-        divergence: { type: 'NONE', scoreImpact: 0, description: '' },
-        volatility: { atr14: 0, bollingerUpper: 1, bollingerLower: 1, bollingerMiddle: 1, bandWidthPct: 0, isHighVolatility: false, isSqueeze: false, isDeadFlat: false },
-        multiTimeframe: { htfTrend: 'NEUTRAL', isAlignedWithMicro: true, isConflicting: false, scoreImpact: 0, description: '' },
-        regime: 'CONSOLIDATING_SQUEEZE',
-      },
+      dataValidation: validation,
+      indicators: createNeutralIndicators(),
     };
   }
 
@@ -1021,7 +1397,7 @@ export function evaluateMarketData(
   const prevCandle = workingCandles[lastIdx - 1] || currentCandle;
   const prev2Candle = workingCandles[lastIdx - 2] || prevCandle;
 
-  // 1. Moving Averages: EMA 5, 9, 13, 21, 50 & SMA 20
+  // Indicators: Moving Averages
   const ema5Series = calculateEMA(closes, 5);
   const ema9Series = calculateEMA(closes, 9);
   const ema13Series = calculateEMA(closes, 13);
@@ -1038,13 +1414,16 @@ export function evaluateMarketData(
 
   // Moving Average Slopes (Last 3 bars)
   const ema9Slope = ema9Series.length >= 3 ? ema9Series[ema9Series.length - 1] - ema9Series[ema9Series.length - 3] : 0;
-  const ema21Slope = ema21Series.length >= 3 ? ema21Series[ema21Series.length - 1] - ema21Series[ema21Series.length - 3] : 0;
 
-  // 2. Oscillators: RSI 14 & MACD
+  // Oscillators: RSI 14 & MACD
   const { rsi: rsi14, series: rsiSeries } = calculateRSI(closes, 14);
   const macdData = calculateMACD(closes, 12, 26, 9);
 
-  // 3. Volatility & Bollinger Bands (Squeeze & Dead Flat Detection)
+  // QQE CONFIRMATION ENGINE (RSI Length 1, Smoothing 1, Factor 4.238)
+  const qqePool = livePrices.length >= 4 ? livePrices : closes;
+  const qqe = calculateQQE(qqePool, 1, 1, 4.238);
+
+  // Volatility & Bollinger Bands (Squeeze & Dead Flat Detection)
   const { atr: atr14, isHighVolatility } = calculateATR(workingCandles, 14);
   const bb = calculateBollingerBands(closes, 20, 2);
 
@@ -1059,19 +1438,19 @@ export function evaluateMarketData(
     isDeadFlat: bb.isDeadFlat,
   };
 
-  // 4. Market Structure: HH/HL, LH/LL, BOS, CHoCH
+  // Market Structure & Micro-Structure
   const structure = analyzeMarketStructure(workingCandles);
 
-  // 5. Support & Resistance
-  const sr = calculateSupportResistance(workingCandles, 25);
+  // Support & Resistance
+  const sr = calculateSupportResistance(workingCandles, isUltraShort ? 12 : 25);
 
-  // 6. Price Action: Anatomy, Wick Rejection, Pullback, Fakeout
+  // Price Action & Candle Anatomy
   const pa = analyzePriceAction(currentCandle, prevCandle, ema9, ema21, { resistance: sr.resistance, support: sr.support });
 
-  // 7. Momentum Divergence (RSI & MACD)
+  // Momentum Divergence
   const divergence = detectMomentumDivergence(workingCandles, rsiSeries, macdData.series.hist);
 
-  // 8. High-Frequency Tick Velocity & Linear Regression Slope
+  // Tick Velocity & Linear Regression Slope
   let velocity = 0;
   let acceleration = 0;
   let tickSlope = 0;
@@ -1102,9 +1481,7 @@ export function evaluateMarketData(
     }
   }
 
-  // -------------------------------------------------------------
-  // CANDLE ANATOMY & WICK REJECTION PHYSICS (Crucial for 5s/10s)
-  // -------------------------------------------------------------
+  // Candle Anatomy Metrics
   const candleRange = Math.max(0.00002, currentCandle.high - currentCandle.low);
   const bodySize = Math.abs(currentCandle.close - currentCandle.open);
   const upperWick = currentCandle.high - Math.max(currentCandle.open, currentCandle.close);
@@ -1114,353 +1491,220 @@ export function evaluateMarketData(
   const isNearResistance = currentCandle.high >= sr.resistance - 0.00004 || currentCandle.close >= bb.upper - 0.00004;
   const isNearSupport = currentCandle.low <= sr.support + 0.00004 || currentCandle.close <= bb.lower + 0.00004;
 
-  // -------------------------------------------------------------
-  // TIMEFRAME-SPECIALIZED QUANTITATIVE SCORING ENGINE
-  // -------------------------------------------------------------
   const upFactors: string[] = [];
   const downFactors: string[] = [];
   const neutralFactors: string[] = [];
   let buyScore = 0;
   let sellScore = 0;
 
-  if (timeframeSec <= 5) {
-    // =========================================================
-    // ⚡ 5-SECOND ENGINE (Ultra-High Frequency Precision & Macro Trend Alignment)
-    // Anti-Trap Architecture: Prevents taking counter-trend spikes that cause loss streaks!
-    // =========================================================
-
-    // 0. Macro Trend Shield (EMA 9, 21, 50 Alignment)
-    const isMacroBull = ema9 > ema21 && ema21 > ema50;
-    const isMacroBear = ema9 < ema21 && ema21 < ema50;
-    if (isMacroBull) {
-      buyScore += 24;
-      upFactors.push(`5S Macro Bullish Trend Shield (EMA 9>21>50) [+24]`);
-    } else if (isMacroBear) {
-      sellScore += 24;
-      downFactors.push(`5S Macro Bearish Trend Shield (EMA 9<21<50) [+24]`);
-    }
-
-    // 1. Instant Tick Direction & Velocity
+  // =========================================================
+  // MODE A: ULTRA-SHORT MODE (5s, 10s, 15s)
+  // Prioritizes tick velocity, immediate price rejection, micro-wicks,
+  // last 3-5 candles micro-structure, ROC, acceleration, and QQE confirmation.
+  // =========================================================
+  if (isUltraShort) {
+    // 1. Tick Velocity & Linear Slope (Primary Ultra-Short Factor)
     if (tickSlope > 0.000002) {
-      buyScore += 28;
-      upFactors.push(`5S Micro Tick Slope Bullish (+${tickSlope.toFixed(6)}) [+28]`);
+      buyScore += 26;
+      upFactors.push(`Ultra-Short Tick Slope Bullish (+${tickSlope.toFixed(6)}) [+26]`);
     } else if (tickSlope < -0.000002) {
-      sellScore += 28;
-      downFactors.push(`5S Micro Tick Slope Bearish (${tickSlope.toFixed(6)}) [+28]`);
+      sellScore += 26;
+      downFactors.push(`Ultra-Short Tick Slope Bearish (${tickSlope.toFixed(6)}) [+26]`);
     }
 
     if (velocity > 0.000005) {
-      buyScore += 14;
-      upFactors.push(`5S Instant Velocity Push Up (+${velocity.toFixed(5)}) [+14]`);
-    } else if (velocity < -0.000005) {
-      sellScore += 14;
-      downFactors.push(`5S Instant Velocity Push Down (${velocity.toFixed(5)}) [+14]`);
-    }
-
-    // 2. Active Candle Anatomy & Color Delta with Trend Alignment
-    if (isGreen) {
-      const gPts = isMacroBull ? 25 : 14;
-      buyScore += gPts;
-      upFactors.push(`5S Active Bar Bullish Close > Open [+${gPts}]`);
-    } else if (isRed) {
-      const rPts = isMacroBear ? 25 : 14;
-      sellScore += rPts;
-      downFactors.push(`5S Active Bar Bearish Close < Open [+${rPts}]`);
-    }
-
-    // 3. ANTI-TRAP & WICK REJECTION PHYSICS (Rejects fake traps)
-    if (upperWick >= candleRange * 0.35 && upperWick > lowerWick * 1.3) {
-      sellScore += 36;
-      downFactors.push(`5S Upper Wick Rejection Physics (Sellers Rejecting High) [+36]`);
-    }
-    if (lowerWick >= candleRange * 0.35 && lowerWick > upperWick * 1.3) {
-      buyScore += 36;
-      upFactors.push(`5S Lower Wick Rejection Physics (Buyers Absorbing Low) [+36]`);
-    }
-
-    // 4. Dynamic Pullback Re-entry (Highest win-rate binary setup)
-    if (isMacroBull && isRed && (currentCandle.low <= ema9 || currentCandle.low <= ema21)) {
-      buyScore += 32;
-      upFactors.push(`5S Bullish Dynamic Support Pullback & Absorb [+32]`);
-    } else if (isMacroBear && isGreen && (currentCandle.high >= ema9 || currentCandle.high >= ema21)) {
-      sellScore += 32;
-      downFactors.push(`5S Bearish Dynamic Resistance Pullback & Reject [+32]`);
-    }
-
-    // 5. Overbought / Oversold Mean Reversion at Boundaries
-    if (rsi14 >= 72 || isNearResistance) {
-      if (upperWick >= 0.00002 || isRed || tickSlope < -0.000001) {
-        sellScore += 38;
-        downFactors.push(`5S Anti-Trap: Overbought Peak Exhaustion Reversal [+38]`);
-      }
-    }
-    if (rsi14 <= 28 || isNearSupport) {
-      if (lowerWick >= 0.00002 || isGreen || tickSlope > 0.000001) {
-        buyScore += 38;
-        upFactors.push(`5S Anti-Trap: Oversold Floor Exhaustion Bounce [+38]`);
-      }
-    }
-
-    // 6. Short-term Micro EMA Vector
-    if (ema5 > ema9) {
-      buyScore += 12;
-      upFactors.push(`Micro EMA5 > EMA9 [+12]`);
-    } else if (ema5 < ema9) {
-      sellScore += 12;
-      downFactors.push(`Micro EMA5 < EMA9 [+12]`);
-    }
-
-  } else if (timeframeSec <= 15) {
-    // =========================================================
-    // ⏱️ 10-SECOND ENGINE (Dual-Candle Momentum & Macro Alignment)
-    // =========================================================
-
-    const isMacroBull10 = ema9 > ema21 && ema21 > ema50;
-    const isMacroBear10 = ema9 < ema21 && ema21 < ema50;
-    if (isMacroBull10) {
-      buyScore += 22;
-      upFactors.push(`10S Macro Bullish Trend Stack (EMA 9>21>50) [+22]`);
-    } else if (isMacroBear10) {
-      sellScore += 22;
-      downFactors.push(`10S Macro Bearish Trend Stack (EMA 9<21<50) [+22]`);
-    }
-
-    // 1. Tick Slope & Velocity
-    if (tickSlope > 0.000002) {
-      buyScore += 24;
-      upFactors.push(`10S Tick Slope Bullish [+24]`);
-    } else if (tickSlope < -0.000002) {
-      sellScore += 24;
-      downFactors.push(`10S Tick Slope Bearish [+24]`);
-    }
-
-    // 2. 2-Bar Sequence & Engulfing Formations
-    if (pa.scoreImpact !== 0) {
-      if (pa.scoreImpact > 0) {
-        const pts = Math.round(pa.scoreImpact * 1.4);
-        buyScore += pts;
-        upFactors.push(`10S Price Action: ${pa.patternName} [+${pts}]`);
-      } else {
-        const pts = Math.round(Math.abs(pa.scoreImpact) * 1.4);
-        sellScore += pts;
-        downFactors.push(`10S Price Action: ${pa.patternName} [+${pts}]`);
-      }
-    } else {
-      if (isGreen) {
-        const pts = isMacroBull10 ? 24 : 16;
-        buyScore += pts;
-        upFactors.push(`10S Green Impulse [+${pts}]`);
-      } else if (isRed) {
-        const pts = isMacroBear10 ? 24 : 16;
-        sellScore += pts;
-        downFactors.push(`10S Red Impulse [+${pts}]`);
-      }
-    }
-
-    // 3. Dynamic Pullbacks
-    if (isMacroBull10 && prevCandle.close < prevCandle.open && isGreen) {
-      buyScore += 28;
-      upFactors.push(`10S Dynamic Support Pullback & Continuation [+28]`);
-    } else if (isMacroBear10 && prevCandle.close > prevCandle.open && isRed) {
-      sellScore += 28;
-      downFactors.push(`10S Dynamic Resistance Pullback & Continuation [+28]`);
-    }
-
-    // 4. Wick Rejections & S/R Touch
-    if (upperWick >= candleRange * 0.40) {
-      sellScore += 26;
-      downFactors.push(`10S Upper Wick Resistance Rejection [+26]`);
-    } else if (lowerWick >= candleRange * 0.40) {
-      buyScore += 26;
-      upFactors.push(`10S Lower Wick Support Bounce [+26]`);
-    }
-
-    // 5. Overbought / Oversold Protection
-    if (rsi14 >= 74 && (upperWick > 0 || isRed)) {
-      sellScore += 30;
-      downFactors.push(`10S RSI Overbought Turnaround [+30]`);
-    } else if (rsi14 <= 26 && (lowerWick > 0 || isGreen)) {
-      buyScore += 30;
-      upFactors.push(`10S RSI Oversold Turnaround [+30]`);
-    }
-
-    // 6. Short EMA Vectors
-    if (ema5 > ema9 && ema9 > ema13) {
-      buyScore += 15;
-      upFactors.push(`10S EMA Alignment 5>9>13 [+15]`);
-    } else if (ema5 < ema9 && ema9 < ema13) {
-      sellScore += 15;
-      downFactors.push(`10S EMA Alignment 5<9<13 [+15]`);
-    }
-
-  } else if (timeframeSec <= 45) {
-    // =========================================================
-    // ⏱️ 30-SECOND ENGINE (Dynamic Pullbacks & Swing Channels)
-    // Priority: EMA Pullbacks (35%) + Bollinger Band Dynamics (30%) + Structure/Pivots (25%) + RSI (10%)
-    // =========================================================
-
-    // 1. Dynamic EMA 9 & 21 Alignment & Pullbacks
-    if (ema9 > ema21) {
       buyScore += 16;
-      upFactors.push(`30S EMA9 > EMA21 [+16]`);
-      // Pullback to EMA9/21
-      if (prevCandle.close < prevCandle.open && currentCandle.close > currentCandle.open && currentCandle.low <= ema9 + 0.00003) {
-        buyScore += 28;
-        upFactors.push(`30S Bullish Dynamic Support Pullback & Bounce [+28]`);
-      }
-    } else if (ema9 < ema21) {
+      upFactors.push(`Instant Velocity Push Up (+${velocity.toFixed(5)}) [+16]`);
+    } else if (velocity < -0.000005) {
       sellScore += 16;
-      downFactors.push(`30S EMA9 < EMA21 [+16]`);
-      // Pullback to EMA9/21
-      if (prevCandle.close > prevCandle.open && currentCandle.close < currentCandle.open && currentCandle.high >= ema9 - 0.00003) {
-        sellScore += 28;
-        downFactors.push(`30S Bearish Dynamic Resistance Pullback & Rejection [+28]`);
-      }
+      downFactors.push(`Instant Velocity Push Down (${velocity.toFixed(5)}) [+16]`);
     }
 
-    // 2. Price Action & Rejections
-    if (pa.scoreImpact > 0) {
-      const pts = Math.round(pa.scoreImpact * 1.2);
-      buyScore += pts;
-      upFactors.push(`30S Price Action: ${pa.patternName} [+${pts}]`);
-    } else if (pa.scoreImpact < 0) {
-      const pts = Math.round(Math.abs(pa.scoreImpact) * 1.2);
-      sellScore += pts;
-      downFactors.push(`30S Price Action: ${pa.patternName} [+${pts}]`);
+    if (acceleration > 0.000002) {
+      buyScore += 10;
+      upFactors.push(`Price Velocity Accelerating Upward [+10]`);
+    } else if (acceleration < -0.000002) {
+      sellScore += 10;
+      downFactors.push(`Price Velocity Accelerating Downward [+10]`);
     }
 
-    // 3. Support & Resistance Bounds
-    if (sr.isRetestBounce) {
-      buyScore += 25;
-      upFactors.push(`30S Bullish S/R Retest Bounce [+25]`);
-    } else if (sr.isRetestRejection) {
-      sellScore += 25;
-      downFactors.push(`30S Bearish S/R Retest Rejection [+25]`);
-    } else if (sr.isNearResistance && (upperWick > 0 || isRed)) {
+    // 2. Micro-Wick Rejection & Body Strength (Anti-Trap Physics)
+    if (lowerWick >= candleRange * 0.35 && lowerWick > upperWick * 1.3) {
+      buyScore += 28;
+      upFactors.push(`Micro Lower Wick Absorption Bounce [+28]`);
+    } else if (upperWick >= candleRange * 0.35 && upperWick > lowerWick * 1.3) {
+      sellScore += 28;
+      downFactors.push(`Micro Upper Wick Selling Rejection [+28]`);
+    }
+
+    // 3. Consecutive Micro Bar Flow (Last 2-3 bars)
+    if (isGreen && prevCandle.close >= prevCandle.open) {
+      buyScore += 18;
+      upFactors.push(`Consecutive Bullish Micro-Bar Flow [+18]`);
+    } else if (isRed && prevCandle.close <= prevCandle.open) {
+      sellScore += 18;
+      downFactors.push(`Consecutive Bearish Micro-Bar Flow [+18]`);
+    }
+
+    // 4. QQE Confirmation Factor (RSI 1, Smoothing 1, Factor 4.238)
+    // Non-duplicate weighting: reinforces without double-counting
+    if (qqe.state === 'QQE_BULLISH') {
+      buyScore += 14;
+      upFactors.push(`QQE Bullish Trend Confirmation [+14]`);
+    } else if (qqe.state === 'QQE_BEARISH') {
+      sellScore += 14;
+      downFactors.push(`QQE Bearish Trend Confirmation [+14]`);
+    }
+
+    // Cross-Correlation Check: Deduct if QQE conflicts with immediate tick slope
+    if (qqe.state === 'QQE_BULLISH' && tickSlope < -0.000002) {
+      buyScore -= 8;
+      sellScore -= 8;
+      neutralFactors.push('QQE conflicts with Tick Slope (Confidence dampened)');
+    } else if (qqe.state === 'QQE_BEARISH' && tickSlope > 0.000002) {
+      buyScore -= 8;
+      sellScore -= 8;
+      neutralFactors.push('QQE conflicts with Tick Slope (Confidence dampened)');
+    }
+
+    // 5. Dynamic Support/Resistance & Boundary Protection
+    if (isNearResistance && (upperWick > 0 || isRed || tickSlope <= 0)) {
       sellScore += 24;
-      downFactors.push(`30S Resistance Wall Encounter [+24]`);
-    } else if (sr.isNearSupport && (lowerWick > 0 || isGreen)) {
+      downFactors.push(`Micro Resistance Wall Rejection [+24]`);
+    }
+    if (isNearSupport && (lowerWick > 0 || isGreen || tickSlope >= 0)) {
       buyScore += 24;
-      upFactors.push(`30S Support Wall Encounter [+24]`);
+      upFactors.push(`Micro Support Floor Bounce [+24]`);
     }
 
-    // 4. Tick momentum continuation
-    if (tickSlope > 0.000002) {
-      buyScore += 15;
-      upFactors.push('30S Tick Slope Bullish [+15]');
-    } else if (tickSlope < -0.000002) {
-      sellScore += 15;
-      downFactors.push('30S Tick Slope Bearish [+15]');
+    // 6. Micro Trend Slope Alignment
+    if (ema5 > ema9) {
+      buyScore += 10;
+      upFactors.push(`Micro EMA5 > EMA9 [+10]`);
+    } else if (ema5 < ema9) {
+      sellScore += 10;
+      downFactors.push(`Micro EMA5 < EMA9 [+10]`);
     }
 
   } else {
     // =========================================================
-    // ⏱️ 1-MINUTE ENGINE (Full Candlestick & Market Structure Analysis)
-    // Priority: Market Structure HH/HL & BOS (30%) + Full Candlestick Patterns (30%) + MACD / RSI (25%) + Multi-Period Trend (15%)
+    // MODE B: STANDARD MODE (30s, 1m, 2m, 5m+)
+    // Full multi-factor trend and structure:
+    // Moving average alignment, Market Structure (HH/HL, BOS, CHoCH),
+    // Full Price Action, RSI 14, MACD, QQE, Dynamic S/R zones, ATR & Volatility.
     // =========================================================
 
-    // 1. Market Structure & CHoCH / BOS
+    // 1. Market Structure (HH/HL, LH/LL, BOS, CHoCH)
     if (structure.scoreImpact > 0) {
       const pts = Math.round(structure.scoreImpact * 1.2);
       buyScore += pts;
-      upFactors.push(`1M Structure: ${structure.description} [+${pts}]`);
+      upFactors.push(`Structure: ${structure.description} [+${pts}]`);
     } else if (structure.scoreImpact < 0) {
       const pts = Math.round(Math.abs(structure.scoreImpact) * 1.2);
       sellScore += pts;
-      downFactors.push(`1M Structure: ${structure.description} [+${pts}]`);
+      downFactors.push(`Structure: ${structure.description} [+${pts}]`);
     }
 
-    // 2. Full Candlestick Formations (Engulfing, Pin bar, Stars)
+    // 2. Multi-Period Moving Average Stack (EMA 9, 21, 50 & SMA 20)
+    if (ema9 > ema21 && ema21 > ema50) {
+      buyScore += 22;
+      upFactors.push(`Macro Bullish Trend Stack EMA 9>21>50 [+22]`);
+    } else if (ema9 < ema21 && ema21 < ema50) {
+      sellScore += 22;
+      downFactors.push(`Macro Bearish Trend Stack EMA 9<21<50 [+22]`);
+    }
+
+    // 3. Price Action: Engulfing, Pin Bars, Hammers, Stars
     if (pa.scoreImpact > 0) {
       const pts = Math.round(pa.scoreImpact * 1.3);
       buyScore += pts;
-      upFactors.push(`1M Candlestick Pattern: ${pa.patternName} [+${pts}]`);
+      upFactors.push(`Price Action: ${pa.patternName} [+${pts}]`);
     } else if (pa.scoreImpact < 0) {
       const pts = Math.round(Math.abs(pa.scoreImpact) * 1.3);
       sellScore += pts;
-      downFactors.push(`1M Candlestick Pattern: ${pa.patternName} [+${pts}]`);
+      downFactors.push(`Price Action: ${pa.patternName} [+${pts}]`);
     }
 
-    // 3. Multi-Period Moving Averages Alignment
-    if (ema9 > ema21 && ema21 > ema50) {
-      buyScore += 22;
-      upFactors.push(`1M Bullish Trend Stack EMA 9>21>50 [+22]`);
-    } else if (ema9 < ema21 && ema21 < ema50) {
-      sellScore += 22;
-      downFactors.push(`1M Bearish Trend Stack EMA 9<21<50 [+22]`);
-    }
-
-    // 4. MACD & Momentum Divergence
+    // 4. Momentum Divergence (RSI & MACD)
     if (divergence.type !== 'NONE') {
       if (divergence.scoreImpact > 0) {
         const pts = Math.round(divergence.scoreImpact * 1.4);
         buyScore += pts;
-        upFactors.push(`1M Divergence: ${divergence.description} [+${pts}]`);
+        upFactors.push(`Divergence: ${divergence.description} [+${pts}]`);
       } else {
         const pts = Math.round(Math.abs(divergence.scoreImpact) * 1.4);
         sellScore += pts;
-        downFactors.push(`1M Divergence: ${divergence.description} [+${pts}]`);
+        downFactors.push(`Divergence: ${divergence.description} [+${pts}]`);
       }
     } else {
+      // MACD Histogram & Signal Line
       if (macdData.histogram > 0.000001) {
-        buyScore += 10;
-        upFactors.push(`1M MACD Histogram Positive [+10]`);
-        if (macdData.isBullishCross) { buyScore += 10; upFactors.push('1M MACD Bullish Crossover [+10]'); }
+        buyScore += 12;
+        upFactors.push(`MACD Histogram Positive [+12]`);
+        if (macdData.isBullishCross) {
+          buyScore += 10;
+          upFactors.push('MACD Bullish Crossover [+10]');
+        }
       } else if (macdData.histogram < -0.000001) {
-        sellScore += 10;
-        downFactors.push(`1M MACD Histogram Negative [+10]`);
-        if (macdData.isBearishCross) { sellScore += 10; downFactors.push('1M MACD Bearish Crossover [+10]'); }
+        sellScore += 12;
+        downFactors.push(`MACD Histogram Negative [+12]`);
+        if (macdData.isBearishCross) {
+          sellScore += 10;
+          downFactors.push('MACD Bearish Crossover [+10]');
+        }
       }
 
+      // RSI 14 Momentum
       if (rsi14 >= 52 && rsi14 < 72) {
         buyScore += 10;
-        upFactors.push(`1M RSI Healthy Bullish Momentum (${rsi14}) [+10]`);
+        upFactors.push(`RSI Healthy Bullish Momentum (${rsi14}) [+10]`);
       } else if (rsi14 <= 48 && rsi14 > 28) {
         sellScore += 10;
-        downFactors.push(`1M RSI Healthy Bearish Momentum (${rsi14}) [+10]`);
+        downFactors.push(`RSI Healthy Bearish Momentum (${rsi14}) [+10]`);
       } else if (rsi14 >= 72) {
         sellScore += 18;
-        downFactors.push(`1M RSI Overbought Exhaustion (${rsi14}) [+18]`);
+        downFactors.push(`RSI Overbought Boundary Turnaround (${rsi14}) [+18]`);
       } else if (rsi14 <= 28) {
         buyScore += 18;
-        upFactors.push(`1M RSI Oversold Floor (${rsi14}) [+18]`);
+        upFactors.push(`RSI Oversold Boundary Bounce (${rsi14}) [+18]`);
       }
     }
 
-    // 5. Support & Resistance Bounds
+    // 5. QQE Confirmation Factor (RSI 1, Smoothing 1, Factor 4.238)
+    if (qqe.state === 'QQE_BULLISH') {
+      buyScore += 14;
+      upFactors.push(`QQE Dynamic Bullish Confirmation [+14]`);
+    } else if (qqe.state === 'QQE_BEARISH') {
+      sellScore += 14;
+      downFactors.push(`QQE Dynamic Bearish Confirmation [+14]`);
+    }
+
+    // Correlation control: Dampen if QQE contradicts Macro EMA trend
+    if (qqe.state === 'QQE_BULLISH' && ema9 < ema21 && ema21 < ema50) {
+      buyScore -= 8;
+      neutralFactors.push('QQE Bullish counter to Bearish Macro Stack (Dampened)');
+    } else if (qqe.state === 'QQE_BEARISH' && ema9 > ema21 && ema21 > ema50) {
+      sellScore -= 8;
+      neutralFactors.push('QQE Bearish counter to Bullish Macro Stack (Dampened)');
+    }
+
+    // 6. Support & Resistance Zones
     if (sr.isRetestBounce || sr.isBreakoutAbove) {
       buyScore += 22;
-      upFactors.push(`1M Bullish S/R Validation [+22]`);
+      upFactors.push(`Bullish S/R Retest / Breakout [+22]`);
     } else if (sr.isRetestRejection || sr.isBreakdownBelow) {
       sellScore += 22;
-      downFactors.push(`1M Bearish S/R Validation [+22]`);
+      downFactors.push(`Bearish S/R Retest / Breakdown [+22]`);
+    } else if (sr.isNearResistance && (upperWick > 0 || isRed)) {
+      sellScore += 18;
+      downFactors.push(`Resistance Wall Encounter [+18]`);
+    } else if (sr.isNearSupport && (lowerWick > 0 || isGreen)) {
+      buyScore += 18;
+      upFactors.push(`Support Floor Encounter [+18]`);
     }
   }
 
-  // -------------------------------------------------------------
-  // DIRECTIONAL CONVERGENCE & FINAL DECISION
-  // Symmetrically compare independent BUY evidence vs SELL evidence
-  // -------------------------------------------------------------
-  const netScore = buyScore - sellScore;
-  const finalScore = Math.max(-100, Math.min(100, Math.round(netScore)));
-
-  // Completely symmetric decision: Stronger evidence direction wins!
-  let isCall: boolean;
-  if (buyScore > sellScore) {
-    isCall = true;
-  } else if (sellScore > buyScore) {
-    isCall = false;
-  } else if (Math.abs(tickSlope) > 0.0000001) {
-    isCall = tickSlope > 0;
-  } else if (velocity !== 0) {
-    isCall = velocity > 0;
-  } else if (currentCandle.close !== currentCandle.open) {
-    isCall = currentCandle.close > currentCandle.open;
-  } else {
-    isCall = Date.now() % 2 === 0;
-  }
-
-  // Regime detection
+  // Market Regime
   const regime = detectMarketRegime(
     ema9,
     ema21,
@@ -1473,29 +1717,78 @@ export function evaluateMarketData(
     divergence
   );
 
-  const isTradeApproved = true;
-  const signalQuality: 'HIGH_CONFLUENCE' | 'MODERATE' | 'LOW_FILTERED' = Math.abs(finalScore) >= 25 ? 'HIGH_CONFLUENCE' : 'MODERATE';
+  // -------------------------------------------------------------
+  // DETERMINISTIC DIRECTIONAL CONFLUENCE & NO-SIGNAL RESOLUTION
+  // Rule: A valid NO SIGNAL is always better than a false or forced BUY/SELL.
+  // -------------------------------------------------------------
+  const netScore = buyScore - sellScore;
+  const spread = Math.abs(netScore);
+  const winningScore = Math.max(buyScore, sellScore);
+  const minThreshold = isUltraShort ? 28 : 34;
+  const minSpread = isUltraShort ? 12 : 14;
 
-  // Authentic Win Rate / Accuracy Estimate (strictly reflecting high-confluence physics)
-  const absScore = Math.abs(finalScore);
-  const accuracyNum = Math.min(99.4, Math.max(96.2, 95.8 + absScore * 0.038)).toFixed(1);
+  let isCall: boolean | null = null;
+  let isTradeApproved = false;
+  let rejectionReason = '';
 
-  const patternStr = pa.patternName !== 'Neutral Doji Candle'
+  // 1. Dead Flat / Chop Filter: Capital Preservation First!
+  if (volInfo.isDeadFlat) {
+    isCall = null;
+    isTradeApproved = false;
+    rejectionReason = 'ডেড ফ্ল্যাট মার্কেট কন্সোলিডেশন (Chop Filter) - ক্যাপিটাল সুরক্ষায় কোনো ট্রেড নেওয়া হয়নি (NO SIGNAL)।';
+  }
+  // 2. Insufficient Confluence or Indecisive Conflict
+  else if (winningScore < minThreshold || spread < minSpread) {
+    isCall = null;
+    isTradeApproved = false;
+    rejectionReason = `মার্কেট কনফ্লুয়েন্স অপর্যাপ্ত বা কনফ্লিক্টিং (Score: ${winningScore}, Spread: ${spread}, Min Required: ${minThreshold}/${minSpread})। ট্রেড স্থগিত (NO SIGNAL)।`;
+  }
+  // 3. Clear Confluence Established
+  else {
+    isCall = buyScore > sellScore;
+    isTradeApproved = true;
+  }
+
+  // Deterministic Signal Quality Score (0 to 100) based strictly on evidence, NOT fabricated
+  const factorRatio = winningScore / (winningScore + Math.min(buyScore, sellScore) || 1);
+  const signalQualityScore = Math.round(
+    Math.min(100, Math.max(0, factorRatio * 60 + Math.min(40, spread * 0.8)))
+  );
+
+  const signalQuality: 'HIGH_CONFLUENCE' | 'MODERATE' | 'LOW_FILTERED' =
+    isTradeApproved && signalQualityScore >= 70
+      ? 'HIGH_CONFLUENCE'
+      : isTradeApproved
+      ? 'MODERATE'
+      : 'LOW_FILTERED';
+
+  const patternStr = !isTradeApproved
+    ? (volInfo.isDeadFlat ? 'Dead Flat Market Chop' : 'Inconclusive / Neutral Confluence')
+    : pa.patternName !== 'Neutral Doji Candle'
     ? pa.patternName
     : structure.breakOfStructure !== 'NONE'
     ? structure.description
-    : isCall ? 'Bullish Market Confluence & Momentum' : 'Bearish Market Confluence & Momentum';
+    : isCall
+    ? 'Bullish Market Confluence & Momentum'
+    : 'Bearish Market Confluence & Momentum';
 
-  const trendStr = isCall ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘';
+  const trendStr = isCall === true
+    ? 'BULLISH MOMENTUM ↗'
+    : isCall === false
+    ? 'BEARISH MOMENTUM ↘'
+    : 'RANGING / NEUTRAL ⏸️';
 
-  const durLabel = timeframeSec >= 60 ? `${timeframeSec / 60}M` : `${timeframeSec}S`;
-  const reasonStr = isCall
-    ? `টাইমফ্রেম ${durLabel}: মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং ইএমএ কনফ্লুয়েন্স নিশ্চিত। ${accuracyNum}% নির্ভুলতায় কল (UP ↑) ট্রেড সক্রিয়!`
-    : `টাইমফ্রেম ${durLabel}: মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং ইএমএ কনফ্লুয়েন্স নিশ্চিত। ${accuracyNum}% নির্ভুলতায় পুট (DOWN ↓) ট্রেড সক্রিয়!`;
+  const reasonStr = !isTradeApproved
+    ? rejectionReason
+    : isCall
+    ? `টাইমফ্রেম ${durLabel} (${mode}): মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং QQE কনফ্লুয়েন্স নিশ্চিত। কল (UP ↑) ট্রেড সক্রিয়!`
+    : `টাইমফ্রেম ${durLabel} (${mode}): মাইক্রো প্রাইজ অ্যাকশন, উইক রিজেকশন এবং QQE কনফ্লুয়েন্স নিশ্চিত। পুট (DOWN ↓) ট্রেড সক্রিয়!`;
+
+  const accuracyEstimateStr = isTradeApproved ? `${signalQualityScore}% Signal Quality` : 'N/A';
 
   const auditLog: FactorAuditLog = {
-    direction: isCall ? 'UP' : 'DOWN',
-    confluenceScore: finalScore,
+    direction: isCall === true ? 'UP' : isCall === false ? 'DOWN' : 'NO_SIGNAL',
+    confluenceScore: Math.round(netScore),
     upFactorsCount: upFactors.length,
     downFactorsCount: downFactors.length,
     upFactors,
@@ -1503,13 +1796,23 @@ export function evaluateMarketData(
     neutralFactors,
     marketStructure: structure.description,
     regime,
-    volatilityCondition: volInfo.isDeadFlat ? 'DEAD_FLAT_CHOP' : volInfo.isSqueeze ? 'SQUEEZE' : isHighVolatility ? 'EXPANSION' : 'NORMAL',
-    dominantReason: isCall
-      ? `UP Confluence (+${finalScore}): ${upFactors.slice(0, 3).join(', ')}`
-      : `DOWN Confluence (${finalScore}): ${downFactors.slice(0, 3).join(', ')}`,
+    volatilityCondition: volInfo.isDeadFlat
+      ? 'DEAD_FLAT_CHOP'
+      : volInfo.isSqueeze
+      ? 'SQUEEZE'
+      : isHighVolatility
+      ? 'EXPANSION'
+      : 'NORMAL',
+    dominantReason: !isTradeApproved
+      ? rejectionReason
+      : isCall
+      ? `UP Confluence (+${Math.round(netScore)}): ${upFactors.slice(0, 3).join(', ')}`
+      : `DOWN Confluence (${Math.round(netScore)}): ${downFactors.slice(0, 3).join(', ')}`,
+    mode,
+    qqeState: qqe.state,
+    dataValidation: validation,
   };
 
-  // Internal Factor Audit Logging
   if (typeof console !== 'undefined' && console.log) {
     console.log('[ISHAK_AI_ANALYSIS_AUDIT]', JSON.stringify(auditLog));
   }
@@ -1518,12 +1821,15 @@ export function evaluateMarketData(
     isCall,
     signalQuality,
     isTradeApproved,
-    confluenceScore: finalScore,
-    accuracyEstimate: `${accuracyNum}%`,
+    confluenceScore: Math.round(netScore),
+    signalQualityScore,
+    accuracyEstimate: accuracyEstimateStr,
+    mode,
     pattern: patternStr,
     reason: reasonStr,
     trendLabel: trendStr,
     auditLog,
+    dataValidation: validation,
     indicators: {
       ema5: parseFloat(ema5.toFixed(5)),
       ema9: parseFloat(ema9.toFixed(5)),
@@ -1532,6 +1838,7 @@ export function evaluateMarketData(
       ema50: parseFloat(ema50.toFixed(5)),
       sma20: parseFloat(sma20.toFixed(5)),
       rsi14: Math.round(rsi14),
+      qqe,
       macd: macdData,
       atr14,
       isHighVolatility,
@@ -1555,5 +1862,167 @@ export function evaluateMarketData(
       },
       regime,
     },
+  };
+}
+
+// -------------------------------------------------------------
+// 8. OUT-OF-SAMPLE HISTORICAL REPLAY VALIDATION HARNESS
+// Zero future-data leakage, honest statistical evaluation
+// -------------------------------------------------------------
+
+export function runOutOfSampleReplayValidation(
+  candles: Candle[],
+  timeframeSec: number = 60,
+  splitRatio: number = 0.6
+): OutOfSampleValidationReport {
+  if (!candles || candles.length < 20) {
+    return {
+      totalSamples: 0,
+      inSampleSamples: 0,
+      outOfSampleSamples: 0,
+      totalSignals: 0,
+      buySignals: 0,
+      sellSignals: 0,
+      noSignalCount: 0,
+      wins: 0,
+      losses: 0,
+      ties: 0,
+      winRateExcludingTiesPct: 0,
+      winRateIncludingTiesPct: 0,
+      maxConsecutiveWins: 0,
+      maxConsecutiveLosses: 0,
+      performanceByDirection: {
+        buy: { signals: 0, wins: 0, losses: 0, ties: 0, winRatePct: 0 },
+        sell: { signals: 0, wins: 0, losses: 0, ties: 0, winRatePct: 0 },
+      },
+      performanceByRegime: {},
+    };
+  }
+
+  const splitIdx = Math.floor(candles.length * splitRatio);
+  const outOfSample = candles.slice(splitIdx);
+
+  let totalSignals = 0;
+  let buySignals = 0;
+  let sellSignals = 0;
+  let noSignalCount = 0;
+  let wins = 0;
+  let losses = 0;
+  let ties = 0;
+
+  let currentConsecWins = 0;
+  let maxConsecWins = 0;
+  let currentConsecLosses = 0;
+  let maxConsecLosses = 0;
+
+  const buyStats = { signals: 0, wins: 0, losses: 0, ties: 0, winRatePct: 0 };
+  const sellStats = { signals: 0, wins: 0, losses: 0, ties: 0, winRatePct: 0 };
+  const regimeStats: Record<string, { signals: number; wins: number; losses: number; ties: number; winRatePct: number }> = {};
+
+  // Iterate strictly forward without future lookahead
+  for (let i = splitIdx; i < candles.length - 1; i++) {
+    // Current analysis uses ONLY data up to time T (index i)
+    const historySlice = candles.slice(0, i + 1);
+    const decision = evaluateMarketData(historySlice, [], timeframeSec, true);
+
+    const regime = decision.indicators.regime;
+    if (!regimeStats[regime]) {
+      regimeStats[regime] = { signals: 0, wins: 0, losses: 0, ties: 0, winRatePct: 0 };
+    }
+
+    if (decision.isCall === null || !decision.isTradeApproved) {
+      noSignalCount++;
+      continue;
+    }
+
+    totalSignals++;
+    regimeStats[regime].signals++;
+
+    // Outcome evaluated at T+1 bar exit
+    const entryPrice = candles[i].close;
+    const exitPrice = candles[i + 1].close;
+
+    let isWin = false;
+    let isTie = false;
+
+    if (decision.isCall === true) {
+      buySignals++;
+      buyStats.signals++;
+      if (exitPrice > entryPrice) {
+        isWin = true;
+      } else if (exitPrice === entryPrice) {
+        isTie = true;
+      }
+    } else {
+      sellSignals++;
+      sellStats.signals++;
+      if (exitPrice < entryPrice) {
+        isWin = true;
+      } else if (exitPrice === entryPrice) {
+        isTie = true;
+      }
+    }
+
+    if (isTie) {
+      ties++;
+      if (decision.isCall === true) buyStats.ties++;
+      else sellStats.ties++;
+      regimeStats[regime].ties++;
+    } else if (isWin) {
+      wins++;
+      currentConsecWins++;
+      currentConsecLosses = 0;
+      if (currentConsecWins > maxConsecWins) maxConsecWins = currentConsecWins;
+
+      if (decision.isCall === true) buyStats.wins++;
+      else sellStats.wins++;
+      regimeStats[regime].wins++;
+    } else {
+      losses++;
+      currentConsecLosses++;
+      currentConsecWins = 0;
+      if (currentConsecLosses > maxConsecLosses) maxConsecLosses = currentConsecLosses;
+
+      if (decision.isCall === true) buyStats.losses++;
+      else sellStats.losses++;
+      regimeStats[regime].losses++;
+    }
+  }
+
+  const decTotal = wins + losses;
+  const winRateExcludingTiesPct = decTotal > 0 ? parseFloat(((wins / decTotal) * 100).toFixed(1)) : 0;
+  const winRateIncludingTiesPct = totalSignals > 0 ? parseFloat(((wins / totalSignals) * 100).toFixed(1)) : 0;
+
+  const buyDec = buyStats.wins + buyStats.losses;
+  buyStats.winRatePct = buyDec > 0 ? parseFloat(((buyStats.wins / buyDec) * 100).toFixed(1)) : 0;
+
+  const sellDec = sellStats.wins + sellStats.losses;
+  sellStats.winRatePct = sellDec > 0 ? parseFloat(((sellStats.wins / sellDec) * 100).toFixed(1)) : 0;
+
+  for (const rKey of Object.keys(regimeStats)) {
+    const rTotal = regimeStats[rKey].wins + regimeStats[rKey].losses;
+    regimeStats[rKey].winRatePct = rTotal > 0 ? parseFloat(((regimeStats[rKey].wins / rTotal) * 100).toFixed(1)) : 0;
+  }
+
+  return {
+    totalSamples: candles.length,
+    inSampleSamples: splitIdx,
+    outOfSampleSamples: outOfSample.length,
+    totalSignals,
+    buySignals,
+    sellSignals,
+    noSignalCount,
+    wins,
+    losses,
+    ties,
+    winRateExcludingTiesPct,
+    winRateIncludingTiesPct,
+    maxConsecutiveWins: maxConsecWins,
+    maxConsecutiveLosses: maxConsecLosses,
+    performanceByDirection: {
+      buy: buyStats,
+      sell: sellStats,
+    },
+    performanceByRegime: regimeStats,
   };
 }
