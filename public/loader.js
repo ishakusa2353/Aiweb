@@ -2424,21 +2424,19 @@ javascript:(function(){
 
     // --- 3. QUANTITATIVE INDICATOR CALCULATIONS ---
     function calcEMA(data, period) {
-      if (!data || data.length === 0) return 1.084;
-      if (data.length < period) return data[data.length - 1];
-      var k = 2 / (period + 1);
-      var ema = 0;
-      for (var i = 0; i < period; i++) ema += data[i];
-      ema = ema / period;
-      for (var j = period; j < data.length; j++) {
+      if (!data || data.length === 0) return 0;
+      var effP = Math.max(2, Math.min(period, data.length));
+      var k = 2 / (effP + 1);
+      var ema = data[0];
+      for (var j = 1; j < data.length; j++) {
         ema = data[j] * k + ema * (1 - k);
       }
       return ema;
     }
 
     function calcSMA(data, period) {
-      if (!data || data.length === 0) return 1.084;
-      var p = Math.min(period, data.length);
+      if (!data || data.length === 0) return 0;
+      var p = Math.max(1, Math.min(period, data.length));
       var sum = 0;
       for (var s = data.length - p; s < data.length; s++) sum += data[s];
       return sum / p;
@@ -2958,8 +2956,14 @@ javascript:(function(){
       isCall = true;
     } else if (qqeState === 'QQE_BEARISH') {
       isCall = false;
+    } else if (calculatedRsi > 50) {
+      isCall = true;
+    } else if (calculatedRsi < 50) {
+      isCall = false;
+    } else if (mergedTicks && mergedTicks.length >= 2) {
+      isCall = mergedTicks[mergedTicks.length - 1] >= mergedTicks[0];
     } else {
-      isCall = calculatedRsi >= 50;
+      isCall = ema5 >= ema9;
     }
 
     var isTradeApproved = true;
@@ -3017,27 +3021,115 @@ javascript:(function(){
     var cBtn = null, pBtn = null;
 
     // 1. Direct O(1) Quotex / Broker Fast Query (Immediate DOM hit)
-    cBtn = document.querySelector('#platform-call-button, #platform-buy-button, [data-button="buy"], [data-button="call"], [data-action="buy"], [data-action="call"], .btn-call, .btn-buy, .button-call, .section-deal__button--buy, .section-deal__button--up, .deal-form__button--call, .deal-form__button--up, [data-test*="call"], [data-test*="buy"], button.deal-button-up');
-    pBtn = document.querySelector('#platform-sell-button, #platform-put-button, [data-button="sell"], [data-button="put"], [data-action="sell"], [data-action="put"], .btn-sell, .btn-put, .button-put, .section-deal__button--sell, .section-deal__button--down, .deal-form__button--put, .deal-form__button--down, [data-test*="put"], [data-test*="sell"], button.deal-button-down');
+    var upSelectors = [
+      '#platform-call-button', '#platform-buy-button',
+      '[data-button="buy"]', '[data-button="call"]',
+      '[data-action="buy"]', '[data-action="call"]',
+      'button.btn-call', 'button.btn-buy', 'button.button-call', 'button.call-button', 'button.call-btn',
+      '.section-deal__button--buy', '.section-deal__button--up', '.section-deal__button--call',
+      '.deal-form__button--call', '.deal-form__button--up', '.deal-form__button--buy',
+      'button[data-test="call-btn"]', 'button[data-test="button-call"]', 'button[data-test*="call"]', 'button[data-test*="buy"]',
+      'button.deal-button-up', '.deal-form .btn-green', '.deal-form button.btn-success',
+      '.section-deal .button-green', '.section-deal button[class*="green"]',
+      '[class*="button--call"]', '[class*="button--up"]', '[class*="button--buy"]'
+    ];
+
+    var downSelectors = [
+      '#platform-sell-button', '#platform-put-button',
+      '[data-button="sell"]', '[data-button="put"]',
+      '[data-action="sell"]', '[data-action="put"]',
+      'button.btn-put', 'button.btn-sell', 'button.button-put', 'button.put-button', 'button.put-btn',
+      '.section-deal__button--sell', '.section-deal__button--down', '.section-deal__button--put',
+      '.deal-form__button--put', '.deal-form__button--down', '.deal-form__button--sell',
+      'button[data-test="put-btn"]', 'button[data-test="button-put"]', 'button[data-test*="put"]', 'button[data-test*="sell"]',
+      'button.deal-button-down', '.deal-form .btn-red', '.deal-form button.btn-danger',
+      '.section-deal .button-red', '.section-deal button[class*="red"]',
+      '[class*="button--put"]', '[class*="button--down"]', '[class*="button--sell"]'
+    ];
+
+    for (var u = 0; u < upSelectors.length; u++) {
+      var elUp = document.querySelector(upSelectors[u]);
+      if (elUp && !elUp.closest('#ishak-trade-wrap') && !elUp.closest('.ishak-dialog-modal') && !elUp.closest('#ishak-hud-panel')) {
+        cBtn = elUp;
+        break;
+      }
+    }
+
+    for (var d = 0; d < downSelectors.length; d++) {
+      var elDown = document.querySelector(downSelectors[d]);
+      if (elDown && !elDown.closest('#ishak-trade-wrap') && !elDown.closest('.ishak-dialog-modal') && !elDown.closest('#ishak-hud-panel')) {
+        pBtn = elDown;
+        break;
+      }
+    }
 
     if (cBtn && pBtn) return { up: cBtn, down: pBtn };
 
-    // 2. Multilingual & Text Matcher fallback
-    var callWords = ['buy', 'call', 'up', 'higher', 'হায়ার', 'উপরে', 'বাই', 'вверх', 'arriba', 'naik', 'ऊपर'];
-    var putWords = ['sell', 'put', 'down', 'lower', 'লোয়ার', 'নিচে', 'সেল', 'вниз', 'abajo', 'turun', 'नीचे'];
+    // 2. Search inside Quotex Deal Form / Trading Panel Container
+    var containers = document.querySelectorAll('.section-deal, .deal-form, aside.sidebar, .trading-panel, .panel-deal, [class*="deal-form"], [class*="section-deal"], aside[class*="sidebar"]');
+    for (var ci = 0; ci < containers.length; ci++) {
+      var cBox = containers[ci];
+      if (cBox.closest('#ishak-trade-wrap')) continue;
+      var cButtons = Array.from(cBox.querySelectorAll('button, div[role="button"], a.btn'));
+      for (var bi = 0; bi < cButtons.length; bi++) {
+        var btn = cButtons[bi];
+        if (btn.closest('#ishak-trade-wrap') || btn.closest('.ishak-dialog-modal') || btn.closest('#ishak-hud-panel')) continue;
+        var bTxt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+        var bCls = (btn.className || '').toString().toLowerCase();
 
-    var allEls = document.querySelectorAll('button, div[role="button"], a.btn');
-    for (var i = 0; i < allEls.length; i++) {
-      var el = allEls[i];
-      if (el.closest('#ishak-trade-wrap') || el.closest('.ishak-dialog-modal') || el.closest('#ishak-hud-panel')) continue;
-      var txt = el.innerText ? el.innerText.trim().toLowerCase() : '';
-      if (!cBtn && callWords.some(function(w) { return txt === w || txt.indexOf(w) === 0 || txt.indexOf(w + ' ') >= 0; })) {
-        cBtn = el;
+        if (!cBtn && (
+          /\b(up|call|buy|higher|হায়ার|উপরে|বাই|вверх|arriba|naik|ऊपर)\b/i.test(bTxt) ||
+          bCls.includes('call') || bCls.includes('buy') || bCls.includes('btn-green') || bCls.includes('button-up')
+        )) {
+          cBtn = btn;
+        }
+
+        if (!pBtn && (
+          /\b(down|put|sell|lower|লোয়ার|নিচে|সেল|вниз|abajo|turun|नीचे)\b/i.test(bTxt) ||
+          bCls.includes('put') || bCls.includes('sell') || bCls.includes('btn-red') || bCls.includes('button-down')
+        )) {
+          pBtn = btn;
+        }
       }
-      if (!pBtn && putWords.some(function(w) { return txt === w || txt.indexOf(w) === 0 || txt.indexOf(w + ' ') >= 0; })) {
-        pBtn = el;
+      if (cBtn && pBtn) return { up: cBtn, down: pBtn };
+    }
+
+    // 3. Computed Style Color Analysis in Sidebar / Form
+    if ((!cBtn || !pBtn) && containers.length > 0) {
+      for (var cj = 0; cj < containers.length; cj++) {
+        var box = containers[cj];
+        var bList = Array.from(box.querySelectorAll('button, div[role="button"]'));
+        for (var bk = 0; bk < bList.length; bk++) {
+          var bEl = bList[bk];
+          if (bEl.closest('#ishak-trade-wrap') || bEl.closest('.ishak-dialog-modal') || bEl.closest('#ishak-hud-panel')) continue;
+          var cs = window.getComputedStyle(bEl);
+          var bg = cs.backgroundColor || '';
+          if (!cBtn && (bg.includes('rgb(0,') || bg.includes('rgb(34, 197') || bg.includes('rgb(16, 185') || bg.includes('rgb(38, 166') || bg.includes('rgb(0, 180') || bg.includes('rgb(0, 229') || bg.includes('rgb(46, 204'))) {
+            cBtn = bEl;
+          }
+          if (!pBtn && (bg.includes('rgb(255,') || bg.includes('rgb(239, 68') || bg.includes('rgb(244, 63') || bg.includes('rgb(225, 29') || bg.includes('rgb(255, 23') || bg.includes('rgb(231, 76') || bg.includes('rgb(219, 39'))) {
+            pBtn = bEl;
+          }
+        }
+        if (cBtn && pBtn) return { up: cBtn, down: pBtn };
       }
-      if (cBtn && pBtn) break;
+    }
+
+    // 4. Global Text & SVG Matcher fallback with word boundary regex
+    if (!cBtn || !pBtn) {
+      var allButtons = Array.from(document.querySelectorAll('button, div[role="button"], a.btn'));
+      for (var g = 0; g < allButtons.length; g++) {
+        var gBtn = allButtons[g];
+        if (gBtn.closest('#ishak-trade-wrap') || gBtn.closest('.ishak-dialog-modal') || gBtn.closest('#ishak-hud-panel') || gBtn.closest('#simulator-view')) continue;
+        var gTxt = (gBtn.innerText || gBtn.textContent || '').trim().toLowerCase();
+        if (!cBtn && /\b(up|call|buy|higher|হায়ার|উপরে|বাই|вверх|arriba|naik|ऊपर)\b/i.test(gTxt)) {
+          cBtn = gBtn;
+        }
+        if (!pBtn && /\b(down|put|sell|lower|লোয়ার|নিচে|সেল|вниз|abajo|turun|नीचे)\b/i.test(gTxt)) {
+          pBtn = gBtn;
+        }
+        if (cBtn && pBtn) break;
+      }
     }
 
     return { up: cBtn, down: pBtn };
@@ -3049,18 +3141,52 @@ javascript:(function(){
     }
     try {
       var pair = findQuotexTradeButtons();
-      var target = isCall ? pair.up : pair.down;
+      var rawTarget = isCall ? pair.up : pair.down;
 
-      if (!target) {
+      if (!rawTarget) {
         return { success: false, reason: 'BUTTON_NOT_FOUND' };
       }
 
-      var opts = { bubbles: true, cancelable: true, view: window };
-      target.dispatchEvent(new PointerEvent('pointerdown', opts));
-      target.dispatchEvent(new MouseEvent('mousedown', opts));
-      target.dispatchEvent(new PointerEvent('pointerup', opts));
-      target.dispatchEvent(new MouseEvent('mouseup', opts));
+      var target = rawTarget.querySelector('button') || rawTarget.closest('button') || rawTarget;
+
+      try { target.scrollIntoView({ behavior: 'instant', block: 'nearest' }); } catch(e){}
+      try { target.focus(); } catch(e){}
+
+      var rect = target.getBoundingClientRect();
+      var cx = rect.left + (rect.width ? rect.width / 2 : 10);
+      var cy = rect.top + (rect.height ? rect.height / 2 : 10);
+
+      var eventOpts = {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: cx,
+        clientY: cy,
+        screenX: cx,
+        screenY: cy,
+        button: 0,
+        buttons: 1,
+        pointerId: 1,
+        pointerType: 'mouse',
+        isPrimary: true
+      };
+
+      target.dispatchEvent(new PointerEvent('pointerover', eventOpts));
+      target.dispatchEvent(new MouseEvent('mouseover', eventOpts));
+      target.dispatchEvent(new PointerEvent('pointerdown', eventOpts));
+      target.dispatchEvent(new MouseEvent('mousedown', eventOpts));
+      target.dispatchEvent(new PointerEvent('pointerup', eventOpts));
+      target.dispatchEvent(new MouseEvent('mouseup', eventOpts));
+      target.dispatchEvent(new MouseEvent('click', eventOpts));
       target.click();
+
+      if (rawTarget !== target) {
+        try { rawTarget.click(); } catch(e){}
+      }
+
+      try {
+        window.dispatchEvent(new CustomEvent('ishak_trade_execute', { detail: { isCall: isCall, signalId: signalId } }));
+      } catch(e){}
 
       return { success: true, element: target, isCall: isCall };
     } catch(err) {
@@ -3187,7 +3313,7 @@ javascript:(function(){
             ? window.__ISHAK_LIVE_TICKS__[tLen - 1].price > window.__ISHAK_LIVE_TICKS__[0].price
             : (signal && signal.audit && signal.audit.buyScore >= signal.audit.sellScore);
         } else {
-          finalDir = (signal && typeof signal.isCall === 'boolean') ? signal.isCall : true;
+          finalDir = (signal && typeof signal.isCall === 'boolean') ? signal.isCall : (livePriceSamples.length > 0 && livePriceSamples[livePriceSamples.length - 1] >= livePriceSamples[0]);
         }
 
         var isCall = finalDir;
@@ -3198,7 +3324,7 @@ javascript:(function(){
         var tradeRes = executeQuotexTrade(isCall, signalId);
 
         // Instant retry sequence to guarantee trade is clicked even if DOM updates dynamically
-        if (!tradeRes.success && tradeRes.reason === 'BUTTON_NOT_FOUND') {
+        if (!tradeRes.success) {
           setTimeout(function() {
             var r1 = executeQuotexTrade(isCall, signalId);
             if (!r1.success) {
@@ -3221,6 +3347,9 @@ javascript:(function(){
         preDispatchQuotexTrade();
 
         var finalIsCall = computedIsCall !== null ? computedIsCall : true;
+
+        // ⚡ Confirm trade execution click at 100% completion
+        executeQuotexTrade(finalIsCall, signalId);
 
         laserEl.classList.remove('scanning-active');
         circleBtn.classList.remove('working-pulse');

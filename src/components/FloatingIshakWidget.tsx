@@ -133,40 +133,114 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     if (isCall === null) return false;
     try {
       let target: HTMLElement | null = null;
-      if (isCall) {
-        target = document.querySelector(
-          '#platform-call-button, #platform-buy-button, [data-button="buy"], [data-button="call"], [data-action="buy"], [data-action="call"], .btn-call, .btn-buy, .button-call, .section-deal__button--buy, .section-deal__button--up, .deal-form__button--call, .deal-form__button--up, [data-test*="call"], [data-test*="buy"], button.deal-button-up'
-        ) as HTMLElement | null;
-      } else {
-        target = document.querySelector(
-          '#platform-sell-button, #platform-put-button, [data-button="sell"], [data-button="put"], [data-action="sell"], [data-action="put"], .btn-sell, .btn-put, .button-put, .section-deal__button--sell, .section-deal__button--down, .deal-form__button--put, .deal-form__button--down, [data-test*="put"], [data-test*="sell"], button.deal-button-down'
-        ) as HTMLElement | null;
+      const upSelectors = [
+        '#platform-call-button', '#platform-buy-button',
+        '[data-button="buy"]', '[data-button="call"]',
+        '[data-action="buy"]', '[data-action="call"]',
+        'button.btn-call', 'button.btn-buy', 'button.button-call', 'button.call-button', 'button.call-btn',
+        '.section-deal__button--buy', '.section-deal__button--up', '.section-deal__button--call',
+        '.deal-form__button--call', '.deal-form__button--up', '.deal-form__button--buy',
+        'button[data-test="call-btn"]', 'button[data-test="button-call"]', 'button[data-test*="call"]', 'button[data-test*="buy"]',
+        'button.deal-button-up', '.deal-form .btn-green', '.deal-form button.btn-success',
+        '.section-deal .button-green', '.section-deal button[class*="green"]',
+        '[class*="button--call"]', '[class*="button--up"]', '[class*="button--buy"]'
+      ];
+      const downSelectors = [
+        '#platform-sell-button', '#platform-put-button',
+        '[data-button="sell"]', '[data-button="put"]',
+        '[data-action="sell"]', '[data-action="put"]',
+        'button.btn-put', 'button.btn-sell', 'button.button-put', 'button.put-button', 'button.put-btn',
+        '.section-deal__button--sell', '.section-deal__button--down', '.section-deal__button--put',
+        '.deal-form__button--put', '.deal-form__button--down', '.deal-form__button--sell',
+        'button[data-test="put-btn"]', 'button[data-test="button-put"]', 'button[data-test*="put"]', 'button[data-test*="sell"]',
+        'button.deal-button-down', '.deal-form .btn-red', '.deal-form button.btn-danger',
+        '.section-deal .button-red', '.section-deal button[class*="red"]',
+        '[class*="button--put"]', '[class*="button--down"]', '[class*="button--sell"]'
+      ];
+
+      const activeSelectors = isCall ? upSelectors : downSelectors;
+      for (const sel of activeSelectors) {
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (el && !el.closest('#ishak-robot-anchor') && !el.closest('#ishak-trade-wrap') && !el.closest('.ishak-dialog-modal') && !el.closest('#ishak-hud-panel')) {
+          target = el;
+          break;
+        }
       }
 
       if (!target) {
-        const callWords = ['buy', 'call', 'up', 'higher', 'হায়ার', 'উপরে', 'বাই', 'вверх', 'arriba', 'naik', 'ऊपर'];
-        const putWords = ['sell', 'put', 'down', 'lower', 'লোয়ার', 'নিচে', 'সেল', 'вниз', 'abajo', 'turun', 'नीचे'];
-        const targets = isCall ? callWords : putWords;
+        const containers = Array.from(document.querySelectorAll('.section-deal, .deal-form, aside.sidebar, .trading-panel, .panel-deal, [class*="deal-form"], [class*="section-deal"], aside[class*="sidebar"]'));
+        for (const cBox of containers) {
+          if (cBox.closest('#ishak-trade-wrap') || cBox.closest('#ishak-robot-anchor')) continue;
+          const btns = Array.from(cBox.querySelectorAll('button, div[role="button"], a.btn')) as HTMLElement[];
+          for (const btn of btns) {
+            const bTxt = (btn.innerText || btn.textContent || '').trim().toLowerCase();
+            const bCls = (btn.className || '').toString().toLowerCase();
+            if (isCall && (/\b(up|call|buy|higher|হায়ার|উপরে|বাই|вверх|arriba|naik|ऊपर)\b/i.test(bTxt) || bCls.includes('call') || bCls.includes('buy') || bCls.includes('btn-green') || bCls.includes('button-up'))) {
+              target = btn;
+              break;
+            }
+            if (!isCall && (/\b(down|put|sell|lower|লোয়ার|নিচে|সেল|вниз|abajo|turun|नीचे)\b/i.test(bTxt) || bCls.includes('put') || bCls.includes('sell') || bCls.includes('btn-red') || bCls.includes('button-down'))) {
+              target = btn;
+              break;
+            }
+          }
+          if (target) break;
+        }
+      }
 
-        const allButtons = Array.from(document.querySelectorAll('button, div[role="button"], a.btn'));
+      if (!target) {
+        const allButtons = Array.from(document.querySelectorAll('button, div[role="button"], a.btn')) as HTMLElement[];
         for (const b of allButtons) {
-          const el = b as HTMLElement;
-          if (el.closest('#ishak-robot-anchor') || el.closest('#ishak-trade-wrap') || el.closest('.ishak-dialog-modal') || el.closest('#ishak-hud-panel') || el.closest('#simulator-view') || el.closest('.simulator-controls')) continue;
-          const txt = el.innerText ? el.innerText.trim().toLowerCase() : '';
-          if (targets.some(w => txt === w || txt.startsWith(w + ' ') || txt.startsWith(w + '\n') || txt.includes(w))) {
-            target = el;
+          if (b.closest('#ishak-robot-anchor') || b.closest('#ishak-trade-wrap') || b.closest('.ishak-dialog-modal') || b.closest('#ishak-hud-panel')) continue;
+          const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+          if (isCall && /\b(up|call|buy|higher|হায়ার|উপরে|বাই|вверх|arriba|naik|ऊपर)\b/i.test(txt)) {
+            target = b;
+            break;
+          }
+          if (!isCall && /\b(down|put|sell|lower|লোয়ার|নিচে|সেল|вниз|abajo|turun|नीचे)\b/i.test(txt)) {
+            target = b;
             break;
           }
         }
       }
 
       if (target) {
-        const opts = { bubbles: true, cancelable: true, view: window };
-        target.dispatchEvent(new PointerEvent('pointerdown', opts));
-        target.dispatchEvent(new MouseEvent('mousedown', opts));
-        target.dispatchEvent(new PointerEvent('pointerup', opts));
-        target.dispatchEvent(new MouseEvent('mouseup', opts));
-        target.click();
+        const rawTarget = target;
+        const clickable = (target.querySelector('button') || target.closest('button') || target) as HTMLElement;
+        try { clickable.scrollIntoView({ behavior: 'instant', block: 'nearest' }); } catch (e) {}
+        try { clickable.focus(); } catch (e) {}
+
+        const rect = clickable.getBoundingClientRect();
+        const cx = rect.left + (rect.width ? rect.width / 2 : 10);
+        const cy = rect.top + (rect.height ? rect.height / 2 : 10);
+
+        const eventOpts: any = {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          clientX: cx,
+          clientY: cy,
+          screenX: cx,
+          screenY: cy,
+          button: 0,
+          buttons: 1,
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true
+        };
+
+        clickable.dispatchEvent(new PointerEvent('pointerover', eventOpts));
+        clickable.dispatchEvent(new MouseEvent('mouseover', eventOpts));
+        clickable.dispatchEvent(new PointerEvent('pointerdown', eventOpts));
+        clickable.dispatchEvent(new MouseEvent('mousedown', eventOpts));
+        clickable.dispatchEvent(new PointerEvent('pointerup', eventOpts));
+        clickable.dispatchEvent(new MouseEvent('mouseup', eventOpts));
+        clickable.dispatchEvent(new MouseEvent('click', eventOpts));
+        clickable.click();
+
+        if (rawTarget !== clickable) {
+          try { rawTarget.click(); } catch (e) {}
+        }
         return true;
       }
     } catch (e) {}
