@@ -50,15 +50,8 @@ export function generateBookmarkletCode(
   if (baseUrl) {
     script = script.replace(/var BACKEND_SERVER_URL = "[^"]*";/, `var BACKEND_SERVER_URL = "${baseUrl}";`);
   }
-  const logoDataUriPath = path.join(process.cwd(), 'public', 'logo_data_uri.txt');
-  if (fs.existsSync(logoDataUriPath)) {
-    const dataUri = fs.readFileSync(logoDataUriPath, 'utf8').trim();
-    if (dataUri) {
-      script = script.replace(/var LOGO_URL = "[^"]*";/, `var LOGO_URL = "${dataUri}";`);
-    }
-  } else if (baseUrl) {
-    script = script.replace(/var LOGO_URL = "[^"]*";/, `var LOGO_URL = "${baseUrl}/ishak_logo.png";`);
-  }
+  const directLogoUrl = "https://i.ibb.co/Mx90bFy4/file-421.jpg";
+  script = script.replace(/var LOGO_URL = "[^"]*";/, `var LOGO_URL = "${directLogoUrl}";`);
 
   if (!script.startsWith('javascript:')) {
     script = 'javascript:' + script;

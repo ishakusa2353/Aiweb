@@ -540,12 +540,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         isCall = analysis.isCall;
       } else if (samplePrices.length >= 2) {
         const pDelta = samplePrices[samplePrices.length - 1] - samplePrices[0];
-        isCall = pDelta !== 0 ? pDelta > 0 : (parsedCandles.length > 0 ? parsedCandles[parsedCandles.length - 1].close > parsedCandles[parsedCandles.length - 1].open : (Date.now() % 2 === 0));
+        isCall = pDelta >= 0;
       } else if (parsedCandles.length > 0) {
         const lastC = parsedCandles[parsedCandles.length - 1];
-        isCall = lastC.close !== lastC.open ? lastC.close > lastC.open : (Date.now() % 2 === 0);
+        isCall = lastC.close >= lastC.open;
       } else {
-        isCall = Date.now() % 2 === 0;
+        isCall = true;
       }
 
       computedIsCall = isCall;
@@ -791,7 +791,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             title="Single Click: Setup & Scan | Double Click: Control Panel"
           >
             <img
-              src="/ishak_logo.png"
+              src="https://i.ibb.co/Mx90bFy4/file-421.jpg"
               alt="Ishak AI"
               className="w-full h-full object-cover rounded-full pointer-events-none select-none"
               referrerPolicy="no-referrer"
@@ -1086,6 +1086,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       {/* 3. UNIQUE VIP LICENSE BOX (STYLISH COSMIC GLASS + MONOSPACE TECH FONT + CYBER VAULT 3D) */}
       {showKeyModal && (
+        <div className="fixed inset-0 z-[2147483647] flex items-center justify-center p-4 bg-[#060a1e]/80 backdrop-blur-2xl select-none">
           <div className={`w-full max-w-sm bg-gradient-to-b from-[#181f4f]/95 via-[#101740]/95 to-[#0a0f2e]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-x border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-3px_6px_rgba(0,0,0,0.8)] transition-all duration-300 ${
             keyInputError
               ? 'border-t-red-500 border-x-red-500/50 shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_45px_rgba(239,68,68,0.4)] animate-[ishakErrorShake_0.45s_ease]'
