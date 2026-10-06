@@ -220,7 +220,7 @@ export interface ConfluenceDecision {
   signalQuality: 'HIGH_CONFLUENCE' | 'MODERATE' | 'LOW_FILTERED';
   isTradeApproved: boolean;
   confluenceScore: number; // -100 to +100
-  accuracyEstimate: string; // e.g. "98.2%"
+  accuracyEstimate: string; // e.g. "High Confluence"
   pattern: string;
   reason: string;
   trendLabel: string;
@@ -1635,7 +1635,8 @@ export function evaluateMarketData(
 
   // Authentic Accuracy derived from Price Path Probability & Confluence Spread
   const pathProb = isCall === true ? pricePath.callPathProbability : isCall === false ? pricePath.putPathProbability : 0.5;
-  const accuracyNum = Math.min(99.4, Math.max(96.2, 95.5 + Math.abs(finalScore) * 0.035 + (pathProb - 0.5) * 5)).toFixed(1);
+  const confluenceSpread = Math.abs(finalScore);
+  const accuracyNum = confluenceSpread >= 40 ? 'High Confluence' : confluenceSpread >= 20 ? 'Strong Confluence' : 'Moderate Confluence';
 
   const patternStr = isTradeApproved
     ? pa.patternName !== 'Neutral Doji Candle'
@@ -1646,9 +1647,9 @@ export function evaluateMarketData(
   const trendStr = isCall === true ? 'BULLISH MOMENTUM ↗' : isCall === false ? 'BEARISH MOMENTUM ↘' : 'NEUTRAL ⏸';
   const durLabel = timeframeSec >= 60 ? `${timeframeSec / 60}M` : `${timeframeSec}S`;
   const reasonStr = isCall === true
-    ? `টাইমফ্রেম ${durLabel}: রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ${accuracyNum}% নির্ভুলতায় কল (UP ↑) ট্রেড সক্রিয়!`
+    ? `টাইমফ্রেম ${durLabel}: রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। কল (UP ↑) ট্রেড সক্রিয়!`
     : isCall === false
-    ? `টাইমফ্রেম ${durLabel}: রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ${accuracyNum}% নির্ভুলতায় পুট (DOWN ↓) ট্রেড সক্রিয়!`
+    ? `টাইমফ্রেম ${durLabel}: রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। পুট (DOWN ↓) ট্রেড সক্রিয়!`
     : `পর্যাপ্ত ডিরেকশনাল গ্রেডিয়েন্ট বা রিয়েল মার্কেট কনফ্লুয়েন্স না থাকায় সিগন্যাল স্থগিত (NO SIGNAL)।`;
 
   const auditLog: FactorAuditLog = {
@@ -1675,7 +1676,7 @@ export function evaluateMarketData(
     signalQuality,
     isTradeApproved,
     confluenceScore: finalScore,
-    accuracyEstimate: `${accuracyNum}%`,
+    accuracyEstimate: accuracyNum,
     pattern: patternStr,
     reason: reasonStr,
     trendLabel: trendStr,

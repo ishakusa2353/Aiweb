@@ -550,7 +550,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       computedIsCall = isCall;
 
-      const confScore = analysis.accuracyEstimate ? analysis.accuracyEstimate.replace('%', '') : '98.6';
+      const confScore = analysis.accuracyEstimate || 'High Confluence';
       const calculatedRsi = analysis.indicators.rsi14;
       const calculatedEma5 = analysis.indicators.ema5;
       const calculatedEma13 = analysis.indicators.ema13;
@@ -563,7 +563,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         isCall,
         isLowConfidence: false,
         isRiskDetected: false,
-        confidence: `${confScore}% Confluence`,
+        confidence: confScore,
         accuracy: confScore,
         rsi: calculatedRsi,
         pattern: patternName,
@@ -572,7 +572,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         ema5: calculatedEma5,
         ema13: calculatedEma13,
         ema30: calculatedEma30,
-        livePrice: isCall ? 1.0850 : 1.0830,
+        livePrice: parsedCandles.length > 0 ? parsedCandles[parsedCandles.length - 1].close : (samplePrices.length > 0 ? samplePrices[samplePrices.length - 1] : 0),
         signalId,
         finishTime: new Date().toLocaleTimeString(),
         durationLabel: tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`,

@@ -45,6 +45,71 @@ javascript:(function(){
 
   (function() {
     // 1. WebSocket Hook: Captures real-time Quotex/PocketOption depth & tick frames
+    function recordValidTick(p, timestamp) {
+      if (typeof p !== 'number' || isNaN(p) || !isFinite(p) || p <= 0.00001 || p >= 1000000) return;
+      if (timestamp) {
+        var tMs = timestamp > 1e11 ? timestamp : timestamp * 1000;
+        if (Date.now() - tMs > 30000) return; // Reject stale data
+      }
+      window.__ISHAK_LAST_WS_PRICE__ = p;
+      window.__ISHAK_LAST_WS_TIME__ = Date.now();
+      window.__ISHAK_LIVE_TICKS__.push({ price: p, time: Date.now() });
+      if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+    }
+
+    function parseAndRecordWebSocketTick(data) {
+      if (!data) return;
+      var str = '';
+      if (typeof data === 'string') {
+        str = data;
+      } else if (data instanceof ArrayBuffer && typeof TextDecoder !== 'undefined') {
+        try { str = new TextDecoder().decode(data); } catch(e){}
+      }
+
+      if (!str || str.length < 5) return;
+      if (str === '2' || str === '3' || str === '40') return; // Engine.io heartbeat ignore
+
+      var clean = str.replace(/^\d+/, '');
+      if (clean && (clean.charCodeAt(0) === 123 || clean.charCodeAt(0) === 91)) {
+        try {
+          var parsed = JSON.parse(clean);
+          if (Array.isArray(parsed)) {
+            var payload = parsed[1];
+            if (payload) {
+              if (typeof payload === 'object' && !Array.isArray(payload)) {
+                var rawP = payload.price || payload.rate || payload.quote || payload.close || payload.p || (payload.data && (payload.data.price || payload.data.rate));
+                if (rawP !== undefined) recordValidTick(parseFloat(rawP), payload.time || payload.timestamp || payload.t);
+              } else if (Array.isArray(payload)) {
+                for (var ai = 0; ai < payload.length; ai++) {
+                  var item = payload[ai];
+                  if (typeof item === 'number' && item > 0.00001 && item < 1000000) {
+                    recordValidTick(item, payload[ai + 1]);
+                    break;
+                  } else if (item && typeof item === 'object') {
+                    var ip = item.price || item.rate || item.quote || item.close || item.p;
+                    if (ip !== undefined) recordValidTick(parseFloat(ip), item.time || item.timestamp);
+                  }
+                }
+              }
+            }
+          } else if (typeof parsed === 'object' && parsed !== null) {
+            var rawP = parsed.price || parsed.rate || parsed.quote || parsed.close || parsed.p || (parsed.data && (parsed.data.price || parsed.data.rate));
+            if (rawP !== undefined) recordValidTick(parseFloat(rawP), parsed.time || parsed.timestamp);
+          }
+          return;
+        } catch(e){}
+      }
+
+      var m = str.match(/"price"\s*:\s*([\d\.]+)/) ||
+              str.match(/"rate"\s*:\s*([\d\.]+)/) ||
+              str.match(/"quote"\s*:\s*([\d\.]+)/) ||
+              str.match(/"close"\s*:\s*([\d\.]+)/) ||
+              str.match(/\["[a-zA-Z0-9_\/]+",\s*([\d\.]+)/);
+      if (m && m[1]) {
+        recordValidTick(parseFloat(m[1]));
+      }
+    }
+
     if (!window.__ISHAK_WS_HOOKED__) {
       window.__ISHAK_WS_HOOKED__ = true;
       try {
@@ -55,23 +120,7 @@ javascript:(function(){
             try {
               ws.addEventListener('message', function(ev) {
                 try {
-                  var data = ev.data;
-                  if (typeof data === 'string') {
-                    if (data.includes('price') || data.includes('rate') || data.includes('quote') || data.includes('tick')) {
-                      var m = data.match(/"price"\s*:\s*([\d\.]+)/) ||
-                              data.match(/"rate"\s*:\s*([\d\.]+)/) ||
-                              data.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
-                              data.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
-                      if (m && m[1]) {
-                        var p = parseFloat(m[1]);
-                        if (!isNaN(p) && p > 0.00001 && p < 1000000) {
-                          window.__ISHAK_LAST_WS_PRICE__ = p;
-                          window.__ISHAK_LIVE_TICKS__.push({ price: p, time: Date.now() });
-                          if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
-                        }
-                      }
-                    }
-                  }
+                  parseAndRecordWebSocketTick(ev.data);
                 } catch(err){}
               });
             } catch(e){}
@@ -283,9 +332,11 @@ javascript:(function(){
   // 📈 Quotex Live Price Extractor (Multi-Layer Resilient Precision)
   function extractQuotexLivePrice() {
     try {
-      // 0. High-Speed WebSocket Intercepted Price
+      // 0. High-Speed WebSocket Intercepted Price (Verified Fresh within 15 seconds)
       if (window.__ISHAK_LAST_WS_PRICE__ && window.__ISHAK_LAST_WS_PRICE__ > 0) {
-        return window.__ISHAK_LAST_WS_PRICE__;
+        if (!window.__ISHAK_LAST_WS_TIME__ || (Date.now() - window.__ISHAK_LAST_WS_TIME__ < 15000)) {
+          return window.__ISHAK_LAST_WS_PRICE__;
+        }
       }
 
       // 1. Direct High-Priority Live Price Elements
@@ -306,7 +357,7 @@ javascript:(function(){
           var m = txt.match(/\b\d{1,6}(?:,\d{3})*(?:\.\d{2,6})?\b/);
           if (m) {
             var num = parseFloat(m[0].replace(/,/g, ''));
-            if (!isNaN(num) && num > 0.00001 && num < 1000000) return num;
+            if (!isNaN(num) && isFinite(num) && num > 0.00001 && num < 1000000) return num;
           }
         }
       }
@@ -315,7 +366,7 @@ javascript:(function(){
       var runCandle = document.querySelector('#ishak-running-candle, [data-running-candle="true"], .ishak-active-candle');
       if (runCandle) {
         var cClose = parseFloat(runCandle.getAttribute('data-close') || '');
-        if (!isNaN(cClose) && cClose > 0) return cClose;
+        if (!isNaN(cClose) && isFinite(cClose) && cClose > 0.00001 && cClose < 1000000) return cClose;
       }
 
       // 3. Search Deal Form container
@@ -328,7 +379,7 @@ javascript:(function(){
           var mNum = t.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
           if (mNum) {
             var p = parseFloat(mNum[0].replace(/,/g, ''));
-            if (!isNaN(p) && p > 0.0001 && p < 1000000) return p;
+            if (!isNaN(p) && isFinite(p) && p > 0.0001 && p < 1000000) return p;
           }
         }
       }
@@ -340,16 +391,16 @@ javascript:(function(){
         var sm = st.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
         if (sm) {
           var sp = parseFloat(sm[0].replace(/,/g, ''));
-          if (!isNaN(sp) && sp > 0.0001 && sp < 1000000) return sp;
+          if (!isNaN(sp) && isFinite(sp) && sp > 0.0001 && sp < 1000000) return sp;
         }
       }
 
-      // 5. Document Title (e.g. "EUR/USD 1.08453 (OTC) | Quotex")
+      // 5. Document Title (e.g. "EUR/USD 1.08534 (OTC) | Quotex")
       if (document.title) {
         var mTitle = document.title.match(/\b(\d{1,6}(?:,\d{3})*\.\d{2,6})\b/);
         if (mTitle) {
           var tp = parseFloat(mTitle[1].replace(/,/g, ''));
-          if (!isNaN(tp) && tp > 0) return tp;
+          if (!isNaN(tp) && isFinite(tp) && tp > 0.0001 && tp < 1000000) return tp;
         }
       }
     } catch (e) {}
@@ -2359,7 +2410,7 @@ javascript:(function(){
       candleData.push({ open: currentLivePrice, close: currentLivePrice, high: currentLivePrice, low: currentLivePrice });
     }
 
-    var entryPrice = currentLivePrice || (candleData[candleData.length - 1] ? candleData[candleData.length - 1].close : 1.0845);
+    var entryPrice = currentLivePrice || (candleData.length > 0 ? candleData[candleData.length - 1].close : null);
     var entryTime = Date.now();
     var lastCandle = candleData[candleData.length - 1];
     var prevCandle = candleData[candleData.length - 2] || lastCandle;
@@ -2381,7 +2432,7 @@ javascript:(function(){
 
     // --- 3. QUANTITATIVE INDICATOR CALCULATIONS ---
     function calcEMA(data, period) {
-      if (!data || data.length === 0) return 1.084;
+      if (!data || data.length === 0) return 0;
       if (data.length < period) return data[data.length - 1];
       var k = 2 / (period + 1);
       var ema = 0;
@@ -2394,7 +2445,7 @@ javascript:(function(){
     }
 
     function calcSMA(data, period) {
-      if (!data || data.length === 0) return 1.084;
+      if (!data || data.length === 0) return 0;
       var p = Math.min(period, data.length);
       var sum = 0;
       for (var s = data.length - p; s < data.length; s++) sum += data[s];
@@ -2819,15 +2870,16 @@ javascript:(function(){
 
     var isTradeApproved = true;
     var confluenceSpread = Math.abs(buyScore - sellScore);
-    var authenticAccuracy = Math.min(99.4, Math.max(96.2, 95.6 + confluenceSpread * 0.038 + Math.abs(callPathProb - 0.5) * 6)).toFixed(1);
+    var confluenceSpread = Math.abs(buyScore - sellScore);
+    var confluenceGrade = confluenceSpread >= 40 ? 'High Confluence' : confluenceSpread >= 20 ? 'Strong Confluence' : 'Moderate Confluence';
 
     var patternName = isTradeApproved
       ? (srPattern || (isCall ? 'Bullish Real Market Confluence & Price Path' : 'Bearish Real Market Confluence & Price Path'))
       : (isDeadFlat ? 'Dead Flat Market Consolidation (Chop Filter)' : 'Low Confluence Filter');
 
     var confluenceLogic = isCall
-      ? 'টাইমফ্রেম ' + durLabel + ': রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% নির্ভুলতায় কল (UP ↑) ট্রেড সক্রিয়!'
-      : 'টাইমফ্রেম ' + durLabel + ': রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% নির্ভুলতায় পুট (DOWN ↓) ট্রেড সক্রিয়!';
+      ? 'টাইমফ্রেম ' + durLabel + ': রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। কল (UP ↑) ট্রেড সক্রিয়!'
+      : 'টাইমফ্রেম ' + durLabel + ': রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। পুট (DOWN ↓) ট্রেড সক্রিয়!';
 
     var internalAudit = {
       direction: isCall === true ? 'UP' : 'DOWN',
@@ -2857,8 +2909,8 @@ javascript:(function(){
       found: true,
       isCall: isCall,
       isTradeApproved: isTradeApproved,
-      confidence: authenticAccuracy + '% Confluence',
-      accuracy: authenticAccuracy + '%',
+      confidence: confluenceGrade,
+      accuracy: confluenceGrade,
       rsi: calculatedRsi,
       pattern: patternName,
       logic: confluenceLogic,
@@ -3032,32 +3084,32 @@ javascript:(function(){
         var liveExecutionTime = new Date().toLocaleTimeString('en-US', { hour12: true });
         var signalId = 'SIG_' + Date.now() + '_' + (Date.now().toString(36) + performance.now().toFixed(0)).substring(2, 8).toUpperCase();
         var signal = evaluateMarketConfluence(livePriceSamples, tradeDuration);
-        var finalDir;
-        if (signal && typeof signal.isCall === 'boolean') {
+        var finalDir = null;
+        if (signal && typeof signal.isCall === 'boolean' && signal.isTradeApproved) {
           finalDir = signal.isCall;
         } else if (livePriceSamples.length >= 2 && (livePriceSamples[livePriceSamples.length - 1] !== livePriceSamples[0])) {
           finalDir = livePriceSamples[livePriceSamples.length - 1] > livePriceSamples[0];
         } else if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length >= 2) {
           var tLen = window.__ISHAK_LIVE_TICKS__.length;
-          finalDir = window.__ISHAK_LIVE_TICKS__[tLen - 1].price !== window.__ISHAK_LIVE_TICKS__[0].price
-            ? window.__ISHAK_LIVE_TICKS__[tLen - 1].price > window.__ISHAK_LIVE_TICKS__[0].price
-            : (Date.now() % 2 === 0);
-        } else {
-          finalDir = (Date.now() % 2 === 0);
+          if (window.__ISHAK_LIVE_TICKS__[tLen - 1].price !== window.__ISHAK_LIVE_TICKS__[0].price) {
+            finalDir = window.__ISHAK_LIVE_TICKS__[tLen - 1].price > window.__ISHAK_LIVE_TICKS__[0].price;
+          }
         }
 
-        if (!signal) {
-          signal = {
-            found: true,
-            isCall: finalDir,
-            confidence: '98.2% Confluence',
-            accuracy: '98.2%',
-            rsi: finalDir ? 56 : 44,
-            pattern: 'Quantum Confluence Vector',
-            logic: 'মার্কেট বিশ্লেষণ: টাইমফ্রেম ' + (tradeDuration ? tradeDuration + 'S' : '5S') + ' মাইক্রো-ট্রেন্ড ও মোমেন্টাম ভেক্টর নিশ্চিত। ' + (finalDir ? 'কল (UP ↑)' : 'পুট (DOWN ↓)') + ' ট্রেড সক্রিয়!',
-            marketTrend: finalDir ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘',
-            statusLabel: finalDir ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
+        if (finalDir === null) {
+          computedSignal = signal || {
+            found: false,
+            isCall: null,
+            isTradeApproved: false,
+            confidence: 'Low Confluence Filter',
+            accuracy: 'Low Confluence Filter',
+            pattern: 'Preserve Capital',
+            logic: 'রিয়েল মার্কেট কনফ্লুয়েন্স না থাকায় সিগন্যাল স্থগিত (NO SIGNAL)।',
+            marketTrend: 'NEUTRAL ⏸',
+            statusLabel: 'NO SIGNAL ⏸'
           };
+          computedIsCall = null;
+          return;
         }
 
         var isCall = finalDir;
