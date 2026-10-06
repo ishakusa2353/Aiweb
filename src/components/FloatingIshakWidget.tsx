@@ -535,35 +535,27 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       // Full Quantitative Multi-Factor Confluence & Signal Quality Filter
       const analysis = evaluateMarketData(parsedCandles, samplePrices, dur);
-      let isCall: boolean;
-      if (analysis.isCall !== null) {
-        isCall = analysis.isCall;
-      } else if (samplePrices.length >= 2) {
-        const pDelta = samplePrices[samplePrices.length - 1] - samplePrices[0];
-        isCall = pDelta >= 0;
-      } else if (parsedCandles.length > 0) {
-        const lastC = parsedCandles[parsedCandles.length - 1];
-        isCall = lastC.close >= lastC.open;
-      } else {
-        isCall = true;
-      }
-
+      const isCall: boolean | null = analysis.isTradeApproved && typeof analysis.isCall === 'boolean' ? analysis.isCall : analysis.isCall;
       computedIsCall = isCall;
 
-      const confScore = analysis.accuracyEstimate ? analysis.accuracyEstimate.replace('%', '') : '98.6';
+      const isApproved = isCall !== null && analysis.isTradeApproved;
+      const confScore = isApproved && analysis.accuracyEstimate ? analysis.accuracyEstimate.replace('%', '') : '0.0';
       const calculatedRsi = analysis.indicators.rsi14;
       const calculatedEma5 = analysis.indicators.ema5;
       const calculatedEma13 = analysis.indicators.ema13;
       const calculatedEma30 = analysis.indicators.ema50;
       const patternName = analysis.pattern;
       const trendLabel = analysis.trendLabel;
-      const logicText = `টাইমফ্রেম ${durationStr}: ${analysis.reason}`;
+      const logicText = isApproved ? `টাইমফ্রেম ${durationStr}: ${analysis.reason}` : analysis.reason;
+      const actualLivePrice = analysis.indicators.pricePath && analysis.indicators.pricePath.entryPrice > 0
+        ? analysis.indicators.pricePath.entryPrice
+        : (samplePrices.length > 0 ? samplePrices[samplePrices.length - 1] : (parsedCandles.length > 0 ? parsedCandles[parsedCandles.length - 1].close : 0));
 
       computedSignal = {
         isCall,
-        isLowConfidence: false,
-        isRiskDetected: false,
-        confidence: `${confScore}% Confluence`,
+        isLowConfidence: !isApproved,
+        isRiskDetected: !isApproved,
+        confidence: isApproved ? `${confScore}% Confluence` : '0.0% Confluence',
         accuracy: confScore,
         rsi: calculatedRsi,
         pattern: patternName,
@@ -572,18 +564,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         ema5: calculatedEma5,
         ema13: calculatedEma13,
         ema30: calculatedEma30,
-        livePrice: isCall ? 1.0850 : 1.0830,
+        livePrice: actualLivePrice,
         signalId,
         finishTime: new Date().toLocaleTimeString(),
         durationLabel: tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`,
         payout: '+93%',
         investment: realInvestment,
         liveExecutionTime,
-        statusLabel: isCall ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇'
+        statusLabel: isCall === true ? 'CALL / UP ⬆' : isCall === false ? 'PUT / DOWN ⬇' : 'NO SIGNAL ⏸'
       };
 
-      // ⚡ PRE-DISPATCH LIVE BROKER / QUOTEX CLICK AT 2600MS (Absorbs broker latency so trade is established right as scan ends)
-      executeQuotexTrade(isCall);
+      // ⚡ PRE-DISPATCH LIVE BROKER / QUOTEX CLICK ONLY IF TRADE IS APPROVED AND VALID DIRECTION CONFIRMED
+      if (isApproved && typeof isCall === 'boolean') {
+        executeQuotexTrade(isCall);
+      }
     };
 
     // ⚡ 1. Pre-dispatch at 2600ms (~900ms before scan completion)
@@ -613,15 +607,19 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       setScanDots('.......');
       setIsScanning(false);
 
-      // ⚡ SIMULTANEOUSLY DISPLAY DIRECTION SIGNAL (BUY ⬆ / SELL ⬇)
-      setFlySignal(finalIsCall ? 'UP' : 'DOWN');
-      setTimeout(() => {
-        setFlySignal(null);
-      }, 1500);
+      // ⚡ SIMULTANEOUSLY DISPLAY DIRECTION SIGNAL (BUY ⬆ / SELL ⬇) ONLY IF VALID DIRECTION
+      if (typeof finalIsCall === 'boolean') {
+        setFlySignal(finalIsCall ? 'UP' : 'DOWN');
+        setTimeout(() => {
+          setFlySignal(null);
+        }, 1500);
 
-      // ⚡ PLAY CONFIRMATION AUDIO
-      if (soundEnabled) {
-        playResultSound(finalIsCall);
+        // ⚡ PLAY CONFIRMATION AUDIO
+        if (soundEnabled) {
+          playResultSound(finalIsCall);
+        }
+      } else {
+        setFlySignal(null);
       }
 
       if (autoPilotMode) {
