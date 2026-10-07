@@ -1,3 +1,5 @@
+import { getBackgroundMarketData } from './backgroundMarketStream';
+
 /**
  * ISHAK AI VIP - PROFESSIONAL-GRADE REAL MARKET ANALYSIS & CONFLUENCE ENGINE
  * 
@@ -1199,20 +1201,38 @@ export function evaluateMarketData(
 ): ConfluenceDecision & { auditLog: FactorAuditLog } {
   // STRICT DATA PURITY CHECK: Ensure real candles or real ticks exist
   let workingCandles = [...candles].filter((c) => c && c.close > 0);
+  let workingPrices = [...(livePrices || [])].filter((p) => typeof p === 'number' && !isNaN(p) && p > 0);
+
+  // Seamless Background Real-Time Market Stream Integration:
+  // Guarantees continuous, validated OHLC candle bars and live ticks even when chart views are not mounted or DOM selectors update
+  if (workingCandles.length < 15 || workingPrices.length < 10) {
+    try {
+      const bg = getBackgroundMarketData();
+      if (workingCandles.length < 15 && bg.candles && bg.candles.length > 0) {
+        workingCandles = [...bg.candles.slice(-(30 - workingCandles.length)), ...workingCandles];
+      }
+      if (workingPrices.length < 10 && bg.ticks && bg.ticks.length > 0) {
+        workingPrices = [...bg.ticks.slice(-(30 - workingPrices.length)), ...workingPrices];
+      }
+      if (workingPrices.length === 0 && bg.currentPrice > 0) {
+        workingPrices.push(bg.currentPrice);
+      }
+    } catch (e) {}
+  }
 
   // Group real ticks into genuine OHLC bars if candles are insufficient
-  if (workingCandles.length < 5 && livePrices && livePrices.length >= 4) {
+  if (workingCandles.length < 5 && workingPrices.length >= 4) {
     workingCandles = [];
-    const chunkSz = Math.max(1, Math.floor(livePrices.length / 6));
-    for (let gi = 0; gi < livePrices.length; gi += chunkSz) {
-      const chunk = livePrices.slice(gi, gi + chunkSz);
+    const chunkSz = Math.max(1, Math.floor(workingPrices.length / 6));
+    for (let gi = 0; gi < workingPrices.length; gi += chunkSz) {
+      const chunk = workingPrices.slice(gi, gi + chunkSz);
       if (chunk.length > 0) {
         const o = chunk[0];
         const c = chunk[chunk.length - 1];
         const h = Math.max(...chunk);
         const l = Math.min(...chunk);
         workingCandles.push({
-          time: Date.now() - (livePrices.length - gi) * 300,
+          time: Date.now() - (workingPrices.length - gi) * 300,
           open: o,
           high: h,
           low: l,
@@ -1220,6 +1240,11 @@ export function evaluateMarketData(
         });
       }
     }
+  }
+
+  // Ensure working prices has at least candle closes if tick array was empty
+  if (workingPrices.length === 0 && workingCandles.length > 0) {
+    workingPrices = workingCandles.slice(-15).map((c) => c.close);
   }
 
   const emptyMetrics: IndicatorMetrics = {
@@ -1255,7 +1280,7 @@ export function evaluateMarketData(
   };
 
   // IF ZERO GENUINE DATA AVAILABLE: Return STRICT NO SIGNAL per user instruction
-  if (workingCandles.length === 0 && (!livePrices || livePrices.length === 0)) {
+  if (workingCandles.length === 0 && workingPrices.length === 0) {
     return {
       isCall: null,
       signalQuality: 'LOW_FILTERED',
@@ -1271,8 +1296,8 @@ export function evaluateMarketData(
   }
 
   // 1. Running Candle Extraction
-  const currentPrice = livePrices && livePrices.length > 0
-    ? livePrices[livePrices.length - 1]
+  const currentPrice = workingPrices.length > 0
+    ? workingPrices[workingPrices.length - 1]
     : (workingCandles.length > 0 ? workingCandles[workingCandles.length - 1].close : 0);
 
   if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {

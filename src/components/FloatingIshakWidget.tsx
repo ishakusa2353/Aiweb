@@ -431,7 +431,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const scanDurationMs = 3500;
 
     // High-Frequency Real-Time Price Action Sampler during 3.6s Scan
-    const samplePrices: number[] = [];
+    let samplePrices: number[] = [];
     const readPrice = () => {
       const priceSelectors = [
         '#ishak-live-price-val', '[data-live-price="true"]', '.ishak-live-price',
@@ -541,11 +541,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       // Continuous Background Real-Time Market Stream Integration (Guarantees robust candles & ticks)
       const bgMarket = getBackgroundMarketData();
-      if (parsedCandles.length < 3 && bgMarket.candles.length >= 3) {
-        parsedCandles = [...bgMarket.candles];
+      if (parsedCandles.length < 20 && bgMarket.candles.length >= 20) {
+        parsedCandles = [...bgMarket.candles.slice(-(30 - parsedCandles.length)), ...parsedCandles];
       }
-      if (samplePrices.length < 2 && bgMarket.ticks.length >= 2) {
-        samplePrices.push(...bgMarket.ticks.slice(-30));
+      if (samplePrices.length < 15 && bgMarket.ticks.length >= 10) {
+        samplePrices = [...bgMarket.ticks.slice(-30), ...samplePrices];
       }
       if (samplePrices.length === 0 && bgMarket.currentPrice > 0) {
         samplePrices.push(bgMarket.currentPrice);
@@ -631,9 +631,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       // ⚡ SIMULTANEOUSLY DISPLAY DIRECTION SIGNAL (BUY ⬆ / SELL ⬇) ONLY IF VALID DIRECTION
       if (typeof finalIsCall === 'boolean') {
         setFlySignal(finalIsCall ? 'UP' : 'DOWN');
+        setBadgeText(finalIsCall ? 'CALL ⬆' : 'PUT ⬇');
         setTimeout(() => {
           setFlySignal(null);
-        }, 1500);
+          const dur = tradeDuration || 5;
+          setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
+        }, 2500);
 
         // ⚡ PLAY CONFIRMATION AUDIO
         if (soundEnabled) {
@@ -641,6 +644,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         }
       } else {
         setFlySignal(null);
+        setBadgeText('NO SIG ⏸');
+        setTimeout(() => {
+          const dur = tradeDuration || 5;
+          setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
+        }, 2500);
       }
 
       if (autoPilotMode) {

@@ -8,7 +8,7 @@
  * - Prevents "No Signal" starvation when chart views are not mounted or DOM selectors update
  */
 
-import { Candle } from './marketAnalysisEngine';
+import type { Candle } from './marketAnalysisEngine';
 
 interface MarketStreamState {
   currentPrice: number;
