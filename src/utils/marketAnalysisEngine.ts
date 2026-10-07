@@ -1271,11 +1271,10 @@ export function evaluateMarketData(
   }
 
   // 1. Running Candle Extraction
-  const lastIdx = workingCandles.length - 1;
-  const currentCandle = workingCandles[lastIdx];
-  const prevCandle = workingCandles[lastIdx - 1] || currentCandle;
+  const currentPrice = livePrices && livePrices.length > 0
+    ? livePrices[livePrices.length - 1]
+    : (workingCandles.length > 0 ? workingCandles[workingCandles.length - 1].close : 0);
 
-  const currentPrice = livePrices.length > 0 ? livePrices[livePrices.length - 1] : (currentCandle ? currentCandle.close : 0);
   if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
     return {
       isCall: null,
@@ -1290,6 +1289,21 @@ export function evaluateMarketData(
       auditLog: emptyLog,
     };
   }
+
+  if (workingCandles.length === 0) {
+    workingCandles.push({
+      time: Date.now(),
+      open: currentPrice,
+      high: currentPrice,
+      low: currentPrice,
+      close: currentPrice,
+    });
+  }
+
+  const lastIdx = workingCandles.length - 1;
+  const currentCandle: Candle = workingCandles[lastIdx] || { time: Date.now(), open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice };
+  const prevCandle: Candle = lastIdx >= 1 ? workingCandles[lastIdx - 1] : currentCandle;
+
   const entryPrice = currentPrice;
   const entryTime = Date.now();
 

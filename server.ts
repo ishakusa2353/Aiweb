@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import http from "http";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
@@ -664,10 +665,16 @@ ON CONFLICT (key) DO NOTHING;`
     });
   });
 
+  const httpServer = http.createServer(app);
+
   // Vite middleware in dev or static files in production
   if (process.env.NODE_ENV !== "production") {
+    const isHmrDisabled = process.env.DISABLE_HMR === "true";
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : { server: httpServer },
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -679,7 +686,7 @@ ON CONFLICT (key) DO NOTHING;`
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Ishak AI Supabase Server running at http://0.0.0.0:${PORT}`);
   });
 }

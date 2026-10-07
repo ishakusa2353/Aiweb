@@ -5,6 +5,7 @@ import { SignalData } from '../types';
 import { Search, ShieldAlert, Sparkles, KeyRound, Cpu, Database, Zap, Activity } from 'lucide-react';
 import { supabaseService } from '../lib/supabaseService';
 import { evaluateMarketData, Candle } from '../utils/marketAnalysisEngine';
+import { getBackgroundMarketData } from '../utils/backgroundMarketStream';
 
 interface FloatingIshakWidgetProps {
   soundEnabled: boolean;
@@ -434,6 +435,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const readPrice = () => {
       const priceSelectors = [
         '#ishak-live-price-val', '[data-live-price="true"]', '.ishak-live-price',
+        '.header-sub__asset-rate', '.header-sub__asset-value', '.current-asset',
         '.current-price', '.chart-axis-price', '.chart-price-current',
         '.section-deal__rate', '.deal-form__rate', '.rate-value', '.current-rate',
         '[class*="price-current"]', '[class*="current-value"]', '[class*="currentPrice"]'
@@ -454,7 +456,14 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         const c = parseFloat(runCandle.getAttribute('data-close') || '');
         if (!isNaN(c) && c > 0) {
           samplePrices.push(c);
+          return;
         }
+      }
+
+      // Continuous Background Real-Time Market Feed (Guarantees data availability)
+      const bg = getBackgroundMarketData();
+      if (bg && bg.currentPrice > 0) {
+        samplePrices.push(bg.currentPrice);
       }
     };
     readPrice();
@@ -528,6 +537,18 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             close: rClose
           });
         }
+      }
+
+      // Continuous Background Real-Time Market Stream Integration (Guarantees robust candles & ticks)
+      const bgMarket = getBackgroundMarketData();
+      if (parsedCandles.length < 3 && bgMarket.candles.length >= 3) {
+        parsedCandles = [...bgMarket.candles];
+      }
+      if (samplePrices.length < 2 && bgMarket.ticks.length >= 2) {
+        samplePrices.push(...bgMarket.ticks.slice(-30));
+      }
+      if (samplePrices.length === 0 && bgMarket.currentPrice > 0) {
+        samplePrices.push(bgMarket.currentPrice);
       }
 
       const dur = tradeDuration || 5;

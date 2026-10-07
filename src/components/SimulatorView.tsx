@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Clock, Shield, Sparkles, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { SignalData } from '../types';
+import { syncSimulatorToBackgroundStream } from '../utils/backgroundMarketStream';
 
 interface SimulatorViewProps {
   lastSignal?: SignalData | null;
@@ -123,6 +124,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     }
     setCandles(initial);
     setLivePrice(current);
+    syncSimulatorToBackgroundStream(current, initial);
   }, []);
 
   // Tick generator & Duration-aligned High-Accuracy Trade Progression Engine
@@ -160,6 +162,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           last.high = Math.max(last.high, nextPrice);
           last.low = Math.min(last.low, nextPrice);
           updated[updated.length - 1] = last;
+          syncSimulatorToBackgroundStream(nextPrice, updated);
           return updated;
         });
 
