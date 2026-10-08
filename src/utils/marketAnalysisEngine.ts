@@ -1394,7 +1394,9 @@ export function evaluateMarketData(
   let tickSlope = 0;
   let roc = 0;
 
-  const tickPool = livePrices.length >= 3 ? livePrices : closes.slice(-10);
+  const rawTickPool = livePrices.length >= 3 ? livePrices : closes.slice(-10);
+  const microWindow = Math.min(rawTickPool.length, timeframeSec <= 5 ? 8 : timeframeSec <= 15 ? 12 : 20);
+  const tickPool = rawTickPool.slice(-microWindow);
   const n = tickPool.length;
   if (n >= 2) {
     velocity = tickPool[n - 1] - tickPool[0];
@@ -1421,8 +1423,8 @@ export function evaluateMarketData(
   }
 
   // 4. Timeframe Price-Path Analysis (Entry Price -> Timeframe Forward Path)
-  const isMacroBull = ema9 > ema21 && ema21 > ema50;
-  const isMacroBear = ema9 < ema21 && ema21 < ema50;
+  const isMacroBull = timeframeSec <= 15 ? ema9 > ema21 : (ema9 > ema21 && ema21 > ema50);
+  const isMacroBear = timeframeSec <= 15 ? ema9 < ema21 : (ema9 < ema21 && ema21 < ema50);
 
   const pricePath = analyzeTimeframePricePath(
     entryPrice,
@@ -1520,13 +1522,16 @@ export function evaluateMarketData(
       downFactors.push(`5S Active Bar Bearish Close < Open [+${rPts}]`);
     }
 
-    // 4. Dynamic EMA Pullback Re-entry
-    if (isMacroBull && !runningCandleObj.isBullish && (currentPrice <= ema9 || currentPrice <= ema21)) {
-      buyScore += 28;
-      upFactors.push(`5S Bullish Dynamic Support Pullback & Absorb [+28]`);
-    } else if (isMacroBear && runningCandleObj.isBullish && (currentPrice >= ema9 || currentPrice >= ema21)) {
-      sellScore += 28;
-      downFactors.push(`5S Bearish Dynamic Resistance Pullback & Reject [+28]`);
+    // 4. Dynamic EMA Pullback Re-entry (Valid only if wick absorption or bounce confirmed)
+    const hasLowerWickAbsorption = runningCandleObj.lowerWick >= candleRange * 0.25 || velocity > 0;
+    const hasUpperWickRejection = runningCandleObj.upperWick >= candleRange * 0.25 || velocity < 0;
+
+    if (isMacroBull && !runningCandleObj.isBullish && (currentPrice <= ema9 || currentPrice <= ema21) && hasLowerWickAbsorption) {
+      buyScore += 24;
+      upFactors.push(`5S Bullish Dynamic Support Pullback & Absorb [+24]`);
+    } else if (isMacroBear && runningCandleObj.isBullish && (currentPrice >= ema9 || currentPrice >= ema21) && hasUpperWickRejection) {
+      sellScore += 24;
+      downFactors.push(`5S Bearish Dynamic Resistance Pullback & Reject [+24]`);
     }
 
     // 5. RSI Extreme Boundaries (Exhaustion & Mean Reversion only, not trend)

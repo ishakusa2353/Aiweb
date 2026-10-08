@@ -102,28 +102,43 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     }
   }, [lastSignal]);
 
-  // Generate initial candle history (Alternating Bull and Bear market cycles)
+  // Generate initial candle history with authentic alternating Bull and Bear market cycles
   useEffect(() => {
-    let current = 0.57250;
     const initial: Candle[] = [];
+    const basePrice = 0.57250;
     const now = Date.now();
+    const tf = 5000;
+
     for (let i = 24; i >= 0; i--) {
-      const open = current;
-      const wave = Math.sin(i * 0.35) * 0.00024 + Math.cos(i * 0.7) * 0.00014 + ((i % 3) - 1) * 0.00006;
-      const close = parseFloat((open + wave).toFixed(5));
-      const wickTop = 0.00008 + ((i % 4) * 0.00003);
-      const wickBottom = 0.00008 + ((i % 3) * 0.00003);
+      const tSec = (now - i * tf) / 1000;
+      // Macro cycle (50s: 25s bull / 25s bear)
+      const macro = Math.sin(tSec * (2 * Math.PI / 50)) * 0.00030;
+      // Intermediate cycle (20s)
+      const inter = Math.sin(tSec * (2 * Math.PI / 20)) * 0.00015;
+      // Micro momentum noise (7s)
+      const micro = Math.cos(tSec * (2 * Math.PI / 7)) * 0.00005;
+
+      const close = parseFloat((basePrice + macro + inter + micro).toFixed(5));
+      const prevClose = initial.length > 0
+        ? initial[initial.length - 1].close
+        : parseFloat((close - 0.00006).toFixed(5));
+      const open = prevClose;
+
+      const wickTop = 0.00004 + Math.abs(Math.sin(tSec * 1.5)) * 0.00004;
+      const wickBottom = 0.00004 + Math.abs(Math.cos(tSec * 1.3)) * 0.00004;
       const high = parseFloat((Math.max(open, close) + wickTop).toFixed(5));
       const low = parseFloat((Math.min(open, close) - wickBottom).toFixed(5));
+
       initial.push({
-        time: now - i * 5000,
+        time: now - i * tf,
         open,
         high,
         low,
         close,
       });
-      current = close;
     }
+
+    const current = initial[initial.length - 1].close;
     setCandles(initial);
     setLivePrice(current);
     syncSimulatorToBackgroundStream(current, initial);
@@ -150,14 +165,15 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           delta = (targetPrice - prev) * 0.35;
         } else {
           // Realistic dynamic market cycles with genuine Bull & Bear market phases
-          // Macro trend cycle (alternates between bull and bear trends ~45s cycle)
-          const macroWave = Math.sin(t * 0.035) * 0.000045;
-          // Intermediate momentum wave (~15s cycle)
-          const momentumWave = Math.cos(t * 0.11) * 0.000028;
-          // Micro tick noise & pullbacks (~3.5s cycle)
-          const microNoise = Math.sin(t * 0.42) * 0.000018;
+          const nowSec = now / 1000;
+          // Macro trend cycle (alternates between bull and bear trends ~50s cycle)
+          const macroWave = Math.sin(nowSec * (2 * Math.PI / 50)) * 0.000045;
+          // Intermediate momentum wave (~20s cycle)
+          const momentumWave = Math.cos(nowSec * (2 * Math.PI / 20)) * 0.000032;
+          // Micro tick noise & pullbacks (~7s cycle)
+          const microNoise = Math.sin(nowSec * (2 * Math.PI / 7)) * 0.000018;
           // Mean reversion to anchor center 0.57250 to keep price inside natural bounds
-          const meanRevert = (0.57250 - prev) * 0.008;
+          const meanRevert = (0.57250 - prev) * 0.025;
           delta = macroWave + momentumWave + microNoise + meanRevert;
         }
 
