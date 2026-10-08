@@ -435,7 +435,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const readPrice = () => {
       const priceSelectors = [
         '#ishak-live-price-val', '[data-live-price="true"]', '.ishak-live-price',
-        '.header-sub__asset-rate', '.header-sub__asset-value', '.current-asset',
+        '.header-sub__asset-rate', '.header-sub__asset-value', '.current-asset-price',
         '.current-price', '.chart-axis-price', '.chart-price-current',
         '.section-deal__rate', '.deal-form__rate', '.rate-value', '.current-rate',
         '[class*="price-current"]', '[class*="current-value"]', '[class*="currentPrice"]'
@@ -610,7 +610,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       clearInterval(priceSampleInterval);
       clearTimeout(anticipatoryTimer);
 
-      prepareAndDispatchBrokerTrade();
+      if (!brokerTradeDispatched || !computedSignal) {
+        prepareAndDispatchBrokerTrade();
+      }
 
       const finalIsCall = computedIsCall;
       const finalSignal = computedSignal;

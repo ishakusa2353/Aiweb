@@ -247,7 +247,25 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
   // ⚡ DIRECT NATIVE TRADE EXECUTION (0ms latency, duration synchronized)
   const executeDirectTrade = (type: 'CALL' | 'PUT', durOverride?: number) => {
-    if (activeTradeRef.current) return;
+    if (activeTradeRef.current) {
+      const prevTrade = activeTradeRef.current;
+      const profit = Math.round((prevTrade.amount * payout) / 100);
+      setBalance((prev) => prev + prevTrade.amount + profit);
+      setStats((prev) => {
+        const updated = { ...prev, wins: prev.wins + 1, totalProfit: prev.totalProfit + profit };
+        try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
+      setTradeLogs((prev) =>
+        prev.map((l) =>
+          l.id === prevTrade.id
+            ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
+            : l
+        )
+      );
+      activeTradeRef.current = null;
+      setActiveTrade(null);
+    }
 
     if (type === 'CALL') {
       setCallButtonFlash(true);
@@ -311,7 +329,6 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     const handleInstantTrade = (e: Event) => {
       const customEvent = e as CustomEvent<{ isCall: boolean; signal?: SignalData; duration?: number }>;
       if (!customEvent.detail) return;
-      if (activeTradeRef.current) return;
 
       const dur = customEvent.detail.duration || selectedDuration || 5;
       setSelectedDuration(dur);

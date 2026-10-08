@@ -49,9 +49,13 @@ javascript:(function(){
       window.__ISHAK_WS_HOOKED__ = true;
       try {
         var OrigWS = window.WebSocket;
-        if (OrigWS) {
-          window.WebSocket = function(url, protocols) {
-            var ws = protocols ? new OrigWS(url, protocols) : new OrigWS(url);
+        if (OrigWS && !OrigWS.__ISHAK_HOOKED__) {
+          var WSWrapper = function(url, protocols) {
+            var urlStr = String(url || '');
+            if (urlStr.includes('vite') || urlStr.includes('ais-') || urlStr.includes('localhost') || urlStr.includes('127.0.0.1')) {
+              return protocols !== undefined ? new OrigWS(url, protocols) : new OrigWS(url);
+            }
+            var ws = protocols !== undefined ? new OrigWS(url, protocols) : new OrigWS(url);
             try {
               ws.addEventListener('message', function(ev) {
                 try {
@@ -77,7 +81,13 @@ javascript:(function(){
             } catch(e){}
             return ws;
           };
-          window.WebSocket.prototype = OrigWS.prototype;
+          WSWrapper.prototype = OrigWS.prototype;
+          try {
+            Object.assign(WSWrapper, OrigWS);
+            Object.setPrototypeOf(WSWrapper, OrigWS);
+          } catch(e) {}
+          WSWrapper.__ISHAK_HOOKED__ = true;
+          window.WebSocket = WSWrapper;
         }
       } catch(e){}
     }
@@ -2487,6 +2497,8 @@ javascript:(function(){
     var candleRange = Math.max(0.00002, runningHigh - runningLow);
     var isUp = runningClose >= runningOpen;
     var isDown = runningClose < runningOpen;
+    var lowerWickRatio = candleRange > 0 ? lowerWick / candleRange : 0;
+    var upperWickRatio = candleRange > 0 ? upperWick / candleRange : 0;
 
     var closes = candleData.map(function(c) { return c.close; });
     if (closes.length > 0) closes[closes.length - 1] = entryPrice;
@@ -3000,7 +3012,7 @@ javascript:(function(){
       buyScore: Math.round(buyScore),
       sellScore: Math.round(sellScore),
       netConfluence: Math.round(netConfluence),
-      confluenceSpread: Math.round(confluenceSpread),
+      confluenceSpread: Math.round(confSpread),
       isTradeApproved: isTradeApproved,
       pricePathCallProb: (callPathProb * 100).toFixed(1) + '%',
       midPathPullbackRisk: midPathPullbackRisk,
@@ -3200,7 +3212,12 @@ javascript:(function(){
 
         var liveExecutionTime = new Date().toLocaleTimeString('en-US', { hour12: true });
         var signalId = 'SIG_' + Date.now() + '_' + (Date.now().toString(36) + performance.now().toFixed(0)).substring(2, 8).toUpperCase();
-        var signal = evaluateMarketConfluence(livePriceSamples, tradeDuration);
+        var signal = null;
+        try {
+          signal = evaluateMarketConfluence(livePriceSamples, tradeDuration);
+        } catch(err) {
+          if (typeof console !== 'undefined' && console.error) console.error('[ISHAK_ANALYSIS_ERROR]', err);
+        }
         var finalDir = null;
         if (signal && signal.isTradeApproved && typeof signal.isCall === 'boolean') {
           finalDir = signal.isCall;
