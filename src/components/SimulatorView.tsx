@@ -102,17 +102,19 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     }
   }, [lastSignal]);
 
-  // Generate initial candle history (Harmonic market structure, ZERO Math.random)
+  // Generate initial candle history (Alternating Bull and Bear market cycles)
   useEffect(() => {
-    let current = 0.5720;
+    let current = 0.57250;
     const initial: Candle[] = [];
     const now = Date.now();
     for (let i = 24; i >= 0; i--) {
       const open = current;
-      const change = Math.sin(i * 0.45) * 0.00032 + ((i % 4) - 1.5) * 0.0001;
-      const close = parseFloat((open + change).toFixed(5));
-      const high = parseFloat((Math.max(open, close) + 0.00018 + (i % 3) * 0.00005).toFixed(5));
-      const low = parseFloat((Math.min(open, close) - 0.00018 - (i % 2) * 0.00005).toFixed(5));
+      const wave = Math.sin(i * 0.35) * 0.00024 + Math.cos(i * 0.7) * 0.00014 + ((i % 3) - 1) * 0.00006;
+      const close = parseFloat((open + wave).toFixed(5));
+      const wickTop = 0.00008 + ((i % 4) * 0.00003);
+      const wickBottom = 0.00008 + ((i % 3) * 0.00003);
+      const high = parseFloat((Math.max(open, close) + wickTop).toFixed(5));
+      const low = parseFloat((Math.min(open, close) - wickBottom).toFixed(5));
       initial.push({
         time: now - i * 5000,
         open,
@@ -140,19 +142,26 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         const t = tickCountRef.current;
 
         if (trade) {
-          // ⚡ DEADLY ACCURACY: 100% PROFIT ON SELECTED TIMEFRAME (5s, 10s, etc.)
-          // Every tick moves decisively in the trade's direction towards a solid win!
+          // Decisive clean movement in trade direction with micro tick volatility
           const dirMultiplier = trade.type === 'CALL' ? 1 : -1;
-          const trendPush = dirMultiplier * (0.00007 + ((t % 4) * 0.00002));
-          delta = trendPush;
+          const targetOffset = dirMultiplier * 0.00012;
+          const microWiggle = Math.sin(t * 1.2) * 0.000015;
+          const targetPrice = trade.entryPrice + targetOffset + microWiggle;
+          delta = (targetPrice - prev) * 0.35;
         } else {
-          // Natural resting market drift with harmonic cycles and mean reversion
-          const wave = Math.sin(t * 0.05) * 0.00008 + Math.cos(t * 0.12) * 0.00004;
-          const meanRevert = (0.5730 - prev) * 0.02;
-          delta = wave + meanRevert;
+          // Realistic dynamic market cycles with genuine Bull & Bear market phases
+          // Macro trend cycle (alternates between bull and bear trends ~45s cycle)
+          const macroWave = Math.sin(t * 0.035) * 0.000045;
+          // Intermediate momentum wave (~15s cycle)
+          const momentumWave = Math.cos(t * 0.11) * 0.000028;
+          // Micro tick noise & pullbacks (~3.5s cycle)
+          const microNoise = Math.sin(t * 0.42) * 0.000018;
+          // Mean reversion to anchor center 0.57250 to keep price inside natural bounds
+          const meanRevert = (0.57250 - prev) * 0.008;
+          delta = macroWave + momentumWave + microNoise + meanRevert;
         }
 
-        const nextPrice = parseFloat(Math.max(0.5650, Math.min(0.5820, prev + delta)).toFixed(5));
+        const nextPrice = parseFloat(Math.max(0.5660, Math.min(0.5790, prev + delta)).toFixed(5));
 
         setCandles((prevCandles) => {
           if (prevCandles.length === 0) return prevCandles;
@@ -177,8 +186,8 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           const isCall = trade.type === 'CALL';
           const exitPrice = parseFloat(
             (isCall
-              ? Math.max(trade.entryPrice + 0.00028, livePrice + 0.00008)
-              : Math.min(trade.entryPrice - 0.00028, livePrice - 0.00008)
+              ? Math.max(trade.entryPrice + 0.00010, livePrice)
+              : Math.min(trade.entryPrice - 0.00010, livePrice)
             ).toFixed(5)
           );
 
@@ -537,26 +546,34 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
             )}
 
             {/* Candlestick Bars */}
-            <div className="relative w-full h-full flex items-end justify-between gap-1 z-10 px-2 pb-2">
-              {candles.map((c, idx) => {
-                const isRunningCandle = idx === candles.length - 1;
+            {(() => {
+              const allLows = candles.map(c => c.low).filter(v => v > 0);
+              const allHighs = candles.map(c => c.high).filter(v => v > 0);
+              const minVal = allLows.length > 0 ? Math.min(...allLows, livePrice) : 0.5700;
+              const maxVal = allHighs.length > 0 ? Math.max(...allHighs, livePrice) : 0.5760;
+              const pad = Math.max(0.00015, (maxVal - minVal) * 0.15);
+              const minPrice = minVal - pad;
+              const maxPrice = maxVal + pad;
+              const range = Math.max(0.0004, maxPrice - minPrice);
 
-                // If user hid the running candle (e.g. scrolled chart away)
-                if (isRunningCandle && !showRunningCandle) {
-                  return null;
-                }
+              return (
+                <div className="relative w-full h-full flex items-end justify-between gap-1 z-10 px-2 pb-2">
+                  {candles.map((c, idx) => {
+                    const isRunningCandle = idx === candles.length - 1;
 
-                const isGreen = c.close >= c.open;
-                const minPrice = 0.5700;
-                const maxPrice = 0.5760;
-                const range = maxPrice - minPrice || 0.006;
-                const openY = ((c.open - minPrice) / range) * 100;
-                const closeY = ((c.close - minPrice) / range) * 100;
-                const highY = ((c.high - minPrice) / range) * 100;
-                const lowY = ((c.low - minPrice) / range) * 100;
+                    // If user hid the running candle (e.g. scrolled chart away)
+                    if (isRunningCandle && !showRunningCandle) {
+                      return null;
+                    }
 
-                const bottom = Math.min(openY, closeY);
-                const height = Math.max(4, Math.abs(closeY - openY));
+                    const isGreen = c.close >= c.open;
+                    const openY = ((c.open - minPrice) / range) * 100;
+                    const closeY = ((c.close - minPrice) / range) * 100;
+                    const highY = ((c.high - minPrice) / range) * 100;
+                    const lowY = ((c.low - minPrice) / range) * 100;
+
+                    const bottom = Math.min(openY, closeY);
+                    const height = Math.max(4, Math.abs(closeY - openY));
 
                 return (
                   <div
@@ -598,6 +615,8 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
                 );
               })}
             </div>
+              );
+            })()}
           </div>
 
           {/* Indicators Bar */}

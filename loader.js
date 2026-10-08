@@ -2760,8 +2760,6 @@ javascript:(function(){
     }
 
     var midPathPullbackRisk = 'MEDIUM';
-    var lowerWickRatio = lowerWick / candleRange;
-    var upperWickRatio = upperWick / candleRange;
     if (isUp && (lowerWickRatio >= 0.35 || recentTicksPullbackTested) && tickVelocity >= 0) {
       midPathPullbackRisk = 'LOW';
     } else if (isDown && (upperWickRatio >= 0.35 || recentTicksPullbackTested) && tickVelocity <= 0) {
@@ -2800,12 +2798,12 @@ javascript:(function(){
     }
 
     var pricePathScore = Math.round((callPathProb - 0.5) * 60);
-    if (callPathProb > 0.5) {
+    if (callPathProb > 0.505) {
       if (recoveryCapacity === 'STRONG') pricePathScore += 8;
       if (midPathPullbackRisk === 'LOW') pricePathScore += 6;
       buyScore += pricePathScore;
       upFactorsList.push('Forward Price-Path Forecast Bullish (' + (callPathProb * 100).toFixed(1) + '%) [+' + pricePathScore + ']');
-    } else if (callPathProb < 0.5) {
+    } else if (callPathProb < 0.495) {
       var pScoreAbs = Math.abs(pricePathScore);
       if (recoveryCapacity === 'STRONG') pScoreAbs += 8;
       if (midPathPullbackRisk === 'LOW') pScoreAbs += 6;
@@ -2853,11 +2851,11 @@ javascript:(function(){
         downFactorsList.push('5S Upper Wick Rejection [+34]');
       }
 
-      if (isUp) {
+      if (runningClose > runningOpen) {
         var gPts5 = isMacroBull ? 24 : 14;
         buyScore += gPts5;
         upFactorsList.push('5S Running Bar Bullish [+' + gPts5 + ']');
-      } else {
+      } else if (runningClose < runningOpen) {
         var rPts5 = isMacroBear ? 24 : 14;
         sellScore += rPts5;
         downFactorsList.push('5S Running Bar Bearish [+' + rPts5 + ']');
@@ -2983,12 +2981,16 @@ javascript:(function(){
       isCall = true;
     } else if (sellScore > buyScore) {
       isCall = false;
-    } else if (callPathProb !== 0.5) {
-      isCall = callPathProb > 0.5;
+    } else if (callPathProb > 0.505) {
+      isCall = true;
+    } else if (callPathProb < 0.495) {
+      isCall = false;
     } else if (Math.abs(tickSlope) > 0.0000001) {
       isCall = tickSlope > 0;
     } else if (tickVelocity !== 0) {
       isCall = tickVelocity > 0;
+    } else if (runningClose !== runningOpen) {
+      isCall = runningClose > runningOpen;
     } else {
       isCall = null;
     }

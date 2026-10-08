@@ -493,7 +493,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     // is absorbed during scan, guaranteeing that the trade is fully placed & implemented the exact split-second scan reaches 100%!
     let brokerTradeDispatched = false;
     let computedSignal: SignalData | null = null;
-    let computedIsCall: boolean = true;
+    let computedIsCall: boolean | null = null;
 
     const prepareAndDispatchBrokerTrade = () => {
       if (brokerTradeDispatched) return;

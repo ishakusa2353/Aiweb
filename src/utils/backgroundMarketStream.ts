@@ -28,17 +28,19 @@ declare global {
 
 // Generate realistic initial 30 candle history (Deterministic Fourier harmonic structure)
 function createInitialCandles(): { candles: Candle[]; price: number } {
-  let cur = 0.57240;
+  let cur = 0.57250;
   const initial: Candle[] = [];
   const now = Date.now();
   const tf = 5000;
 
   for (let i = 30; i >= 0; i--) {
     const o = cur;
-    const wave = Math.sin(i * 0.42) * 0.00028 + Math.cos(i * 0.22) * 0.00018 + ((i % 3) - 1) * 0.00008;
+    const wave = Math.sin(i * 0.35) * 0.00024 + Math.cos(i * 0.7) * 0.00014 + ((i % 3) - 1) * 0.00006;
     const c = parseFloat((o + wave).toFixed(5));
-    const h = parseFloat((Math.max(o, c) + 0.00015 + ((i % 4) * 0.00003)).toFixed(5));
-    const l = parseFloat((Math.min(o, c) - 0.00015 - ((i % 2) * 0.00003)).toFixed(5));
+    const wickTop = 0.00008 + ((i % 4) * 0.00003);
+    const wickBottom = 0.00008 + ((i % 3) * 0.00003);
+    const h = parseFloat((Math.max(o, c) + wickTop).toFixed(5));
+    const l = parseFloat((Math.min(o, c) - wickBottom).toFixed(5));
     initial.push({
       time: now - i * tf,
       open: o,
@@ -91,11 +93,12 @@ export function startBackgroundMarketStream() {
     tickCount++;
     const t = tickCount;
 
-    // Harmonic price action drift
-    const wave1 = Math.sin(t * 0.06) * 0.00006;
-    const wave2 = Math.cos(t * 0.15) * 0.00003;
-    const meanRevert = (0.57320 - state.currentPrice) * 0.015;
-    const delta = wave1 + wave2 + meanRevert;
+    // Multi-cycle harmonic price action with alternating Bull and Bear market phases
+    const macroWave = Math.sin(t * 0.035) * 0.000045;
+    const momentumWave = Math.cos(t * 0.11) * 0.000028;
+    const microNoise = Math.sin(t * 0.42) * 0.000018;
+    const meanRevert = (0.57250 - state.currentPrice) * 0.008;
+    const delta = macroWave + momentumWave + microNoise + meanRevert;
 
     state.currentPrice = parseFloat(Math.max(0.5640, Math.min(0.5840, state.currentPrice + delta)).toFixed(5));
     const now = Date.now();

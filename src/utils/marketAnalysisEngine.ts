@@ -128,7 +128,7 @@ export interface PricePathAnalysis {
   entryTime: number;
   timeframeSec: number;
   expectedTerminalPrice: number;
-  pathDirection: 'UP' | 'DOWN';
+  pathDirection: 'UP' | 'DOWN' | 'NEUTRAL';
   callPathProbability: number;
   putPathProbability: number;
   midPathPullbackRisk: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -1054,7 +1054,10 @@ export function analyzeTimeframePricePath(
   const putPathProbability = parseFloat((1 - callPathProbability).toFixed(3));
   callPathProbability = parseFloat(callPathProbability.toFixed(3));
 
-  const pathDirection: 'UP' | 'DOWN' = callPathProbability >= putPathProbability ? 'UP' : 'DOWN';
+  const pathDirection: 'UP' | 'DOWN' | 'NEUTRAL' =
+    callPathProbability > putPathProbability + 0.01 ? 'UP' :
+    putPathProbability > callPathProbability + 0.01 ? 'DOWN' :
+    'NEUTRAL';
 
   // 8. Score impact for confluence
   let scoreImpact = 0;
@@ -1062,10 +1065,12 @@ export function analyzeTimeframePricePath(
     scoreImpact = Math.round((callPathProbability - 0.5) * 60);
     if (recoveryCapacity === 'STRONG') scoreImpact += 8;
     if (midPathPullbackRisk === 'LOW') scoreImpact += 6;
-  } else {
+  } else if (pathDirection === 'DOWN') {
     scoreImpact = -Math.round((putPathProbability - 0.5) * 60);
     if (recoveryCapacity === 'STRONG') scoreImpact -= 8;
     if (midPathPullbackRisk === 'LOW') scoreImpact -= 6;
+  } else {
+    scoreImpact = 0;
   }
 
   const tfLabel = timeframeSec >= 60 ? `${timeframeSec / 60}M` : `${timeframeSec}S`;
@@ -1259,7 +1264,7 @@ export function evaluateMarketData(
     divergence: { type: 'NONE', scoreImpact: 0, description: '' },
     volatility: { atr14: 0, bollingerUpper: 0, bollingerLower: 0, bollingerMiddle: 0, bandWidthPct: 0, isHighVolatility: false, isSqueeze: false, isDeadFlat: true },
     multiTimeframe: { htfTrend: 'NEUTRAL', isAlignedWithMicro: true, isConflicting: false, scoreImpact: 0, description: '' },
-    pricePath: { entryPrice: 0, entryTime: Date.now(), timeframeSec, expectedTerminalPrice: 0, pathDirection: 'UP', callPathProbability: 0.5, putPathProbability: 0.5, midPathPullbackRisk: 'HIGH', momentumPersistence: 'DECAYING', recoveryCapacity: 'WEAK', scoreImpact: 0, description: 'No Data' },
+    pricePath: { entryPrice: 0, entryTime: Date.now(), timeframeSec, expectedTerminalPrice: 0, pathDirection: 'NEUTRAL', callPathProbability: 0.5, putPathProbability: 0.5, midPathPullbackRisk: 'HIGH', momentumPersistence: 'DECAYING', recoveryCapacity: 'WEAK', scoreImpact: 0, description: 'No Data' },
     runningCandle: { open: 0, high: 0, low: 0, close: 0, bodySize: 0, upperWick: 0, lowerWick: 0, isBullish: false },
     regime: 'CONSOLIDATING_SQUEEZE',
   };
@@ -1505,11 +1510,11 @@ export function evaluateMarketData(
       downFactors.push(`5S Upper Wick Rejection (Sellers Rejected High) [+34]`);
     }
 
-    if (runningCandleObj.isBullish) {
+    if (currentPrice > currentCandle.open) {
       const gPts = isMacroBull ? 24 : 14;
       buyScore += gPts;
       upFactors.push(`5S Active Bar Bullish Close > Open [+${gPts}]`);
-    } else {
+    } else if (currentPrice < currentCandle.open) {
       const rPts = isMacroBear ? 24 : 14;
       sellScore += rPts;
       downFactors.push(`5S Active Bar Bearish Close < Open [+${rPts}]`);
@@ -1692,7 +1697,7 @@ export function evaluateMarketData(
     isCall = true;
   } else if (sellScore > buyScore) {
     isCall = false;
-  } else if (pricePath.pathDirection) {
+  } else if (pricePath.pathDirection && pricePath.pathDirection !== 'NEUTRAL') {
     isCall = pricePath.pathDirection === 'UP';
   } else if (Math.abs(tickSlope) > 0.0000001) {
     isCall = tickSlope > 0;
