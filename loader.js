@@ -2890,24 +2890,26 @@ javascript:(function(){
       }
 
       if (runningClose > runningOpen) {
-        var gPts5 = isMacroBull ? 24 : 14;
+        var gPts5 = isMacroBull ? 28 : 22;
         buyScore += gPts5;
-        upFactorsList.push('5S Running Bar Bullish [+' + gPts5 + ']');
+        upFactorsList.push('5S Active Running Bar Bullish [+' + gPts5 + ']');
       } else if (runningClose < runningOpen) {
-        var rPts5 = isMacroBear ? 24 : 14;
+        var rPts5 = isMacroBear ? 28 : 22;
         sellScore += rPts5;
-        downFactorsList.push('5S Running Bar Bearish [+' + rPts5 + ']');
+        downFactorsList.push('5S Active Running Bar Bearish [+' + rPts5 + ']');
       }
 
-      // Dynamic EMA Pullback
-      if (isMacroBull && isDown && (entryPrice <= ema9 || entryPrice <= ema21)) {
-        buyScore += 28;
+      // Dynamic EMA Pullback (Validated with wick absorption or bounce)
+      var hasLowerWickAbsorb = lowerWick >= candleRange * 0.25 || tickVelocity > 0;
+      var hasUpperWickReject = upperWick >= candleRange * 0.25 || tickVelocity < 0;
+      if (isMacroBull && isDown && (entryPrice <= ema9 || entryPrice <= ema21) && hasLowerWickAbsorb) {
+        buyScore += 24;
         srPattern = 'Bullish Dynamic Support Pullback & Absorb';
-        upFactorsList.push('5S Dynamic EMA Support Pullback [+28]');
-      } else if (isMacroBear && isUp && (entryPrice >= ema9 || entryPrice >= ema21)) {
-        sellScore += 28;
+        upFactorsList.push('5S Dynamic EMA Support Pullback [+24]');
+      } else if (isMacroBear && isUp && (entryPrice >= ema9 || entryPrice >= ema21) && hasUpperWickReject) {
+        sellScore += 24;
         srPattern = 'Bearish Dynamic Resistance Pullback & Reject';
-        downFactorsList.push('5S Dynamic EMA Resistance Pullback [+28]');
+        downFactorsList.push('5S Dynamic EMA Resistance Pullback [+24]');
       }
 
       // RSI Extreme Exhaustion only (Not trend)
@@ -3044,8 +3046,8 @@ javascript:(function(){
       : (isDeadFlat ? 'Dead Flat Market Consolidation (Chop Filter)' : 'Low Confluence Filter');
 
     var confluenceLogic = isCall
-      ? 'টাইমফ্রেম ' + durLabel + ': রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% ভ্যালিডেটেড এক্যুরেসিতে কল (UP ↑) ট্রেড সক্রিয়!'
-      : 'টাইমফ্রেম ' + durLabel + ': রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ' + authenticAccuracy + '% ভ্যালিডেটেড এক্যুরেসিতে পুট (DOWN ↓) ট্রেড সক্রিয়!';
+      ? 'টাইমফ্রেম ' + durLabel + ': রানিং ক্যান্ডেল বুলিশ মোমেন্টাম ও বায়ার প্রেশারে ঊর্ধ্বমুখী। ট্রেড শেষ হওয়া পর্যন্ত (' + durLabel + ') ক্যান্ডেল আপসাইডে (CALL / UP ↑) সমাপ্তির পূর্বাভাস নিশ্চিত!'
+      : 'টাইমফ্রেম ' + durLabel + ': রানিং ক্যান্ডেল বিয়ারিশ মোমেন্টাম ও সেলার প্রেশারে নিম্নমুখী। ট্রেড শেষ হওয়া পর্যন্ত (' + durLabel + ') ক্যান্ডেল ডাউনসাইডে (PUT / DOWN ↓) সমাপ্তির পূর্বাভাস নিশ্চিত!';
 
     var internalAudit = {
       direction: isCall === true ? 'UP' : 'DOWN',

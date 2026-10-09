@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Clock, Shield, Sparkles, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { SignalData } from '../types';
-import { syncSimulatorToBackgroundStream } from '../utils/backgroundMarketStream';
+import { syncSimulatorToBackgroundStream, getHarmonicPrice } from '../utils/backgroundMarketStream';
 
 interface SimulatorViewProps {
   lastSignal?: SignalData | null;
@@ -105,32 +105,20 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
   // Generate initial candle history with authentic alternating Bull and Bear market cycles
   useEffect(() => {
     const initial: Candle[] = [];
-    const basePrice = 0.57250;
     const now = Date.now();
     const tf = 5000;
 
     for (let i = 24; i >= 0; i--) {
-      const tSec = (now - i * tf) / 1000;
-      // Macro cycle (50s: 25s bull / 25s bear)
-      const macro = Math.sin(tSec * (2 * Math.PI / 50)) * 0.00030;
-      // Intermediate cycle (20s)
-      const inter = Math.sin(tSec * (2 * Math.PI / 20)) * 0.00015;
-      // Micro momentum noise (7s)
-      const micro = Math.cos(tSec * (2 * Math.PI / 7)) * 0.00005;
-
-      const close = parseFloat((basePrice + macro + inter + micro).toFixed(5));
-      const prevClose = initial.length > 0
-        ? initial[initial.length - 1].close
-        : parseFloat((close - 0.00006).toFixed(5));
-      const open = prevClose;
-
-      const wickTop = 0.00004 + Math.abs(Math.sin(tSec * 1.5)) * 0.00004;
-      const wickBottom = 0.00004 + Math.abs(Math.cos(tSec * 1.3)) * 0.00004;
-      const high = parseFloat((Math.max(open, close) + wickTop).toFixed(5));
-      const low = parseFloat((Math.min(open, close) - wickBottom).toFixed(5));
+      const candleTime = now - i * tf;
+      const open = getHarmonicPrice(candleTime - tf);
+      const close = getHarmonicPrice(candleTime);
+      const mid1 = getHarmonicPrice(candleTime - 3500);
+      const mid2 = getHarmonicPrice(candleTime - 1500);
+      const high = parseFloat((Math.max(open, close, mid1, mid2) + 0.00003).toFixed(5));
+      const low = parseFloat((Math.min(open, close, mid1, mid2) - 0.00003).toFixed(5));
 
       initial.push({
-        time: now - i * tf,
+        time: candleTime,
         open,
         high,
         low,
@@ -153,7 +141,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
       // Market price evolution
       setLivePrice((prev) => {
-        let delta = 0;
+        let nextPrice = prev;
         const t = tickCountRef.current;
 
         if (trade) {
@@ -162,22 +150,14 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           const targetOffset = dirMultiplier * 0.00012;
           const microWiggle = Math.sin(t * 1.2) * 0.000015;
           const targetPrice = trade.entryPrice + targetOffset + microWiggle;
-          delta = (targetPrice - prev) * 0.35;
+          const delta = (targetPrice - prev) * 0.35;
+          nextPrice = parseFloat((prev + delta).toFixed(5));
         } else {
-          // Realistic dynamic market cycles with genuine Bull & Bear market phases
-          const nowSec = now / 1000;
-          // Macro trend cycle (alternates between bull and bear trends ~50s cycle)
-          const macroWave = Math.sin(nowSec * (2 * Math.PI / 50)) * 0.000045;
-          // Intermediate momentum wave (~20s cycle)
-          const momentumWave = Math.cos(nowSec * (2 * Math.PI / 20)) * 0.000032;
-          // Micro tick noise & pullbacks (~7s cycle)
-          const microNoise = Math.sin(nowSec * (2 * Math.PI / 7)) * 0.000018;
-          // Mean reversion to anchor center 0.57250 to keep price inside natural bounds
-          const meanRevert = (0.57250 - prev) * 0.025;
-          delta = macroWave + momentumWave + microNoise + meanRevert;
+          // Authentic dynamic two-way harmonic market wave
+          const naturalPrice = getHarmonicPrice(now);
+          // Smooth transition from any completed trade to natural price, naturally driving realistic pullbacks and two-way flow
+          nextPrice = parseFloat((prev + (naturalPrice - prev) * 0.35).toFixed(5));
         }
-
-        const nextPrice = parseFloat(Math.max(0.5660, Math.min(0.5790, prev + delta)).toFixed(5));
 
         setCandles((prevCandles) => {
           if (prevCandles.length === 0) return prevCandles;

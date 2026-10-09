@@ -1746,9 +1746,9 @@ export function evaluateMarketData(
   const trendStr = isCall === true ? 'BULLISH MOMENTUM ↗' : isCall === false ? 'BEARISH MOMENTUM ↘' : 'NEUTRAL ⏸';
   const durLabel = timeframeSec >= 60 ? `${timeframeSec / 60}M` : `${timeframeSec}S`;
   const reasonStr = isCall === true
-    ? `টাইমফ্রেম ${durLabel}: রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ${accuracyNum}% ভ্যালিডেটেড এক্যুরেসিতে কল (UP ↑) ট্রেড সক্রিয়!`
+    ? `টাইমফ্রেম ${durLabel}: রানিং ক্যান্ডেল বুলিশ মোমেন্টাম ও বায়ার প্রেশারে ঊর্ধ্বমুখী। ট্রেড শেষ হওয়া পর্যন্ত (${durLabel}) ক্যান্ডেল আপসাইডে (CALL / UP ↑) সমাপ্তির পূর্বাভাস নিশ্চিত!`
     : isCall === false
-    ? `টাইমফ্রেম ${durLabel}: রিয়েল-টাইম প্রাইজ পাথ ও মাল্টি-ফ্যাক্টর কনফ্লুয়েন্স নিশ্চিত। ${accuracyNum}% ভ্যালিডেটেড এক্যুরেসিতে পুট (DOWN ↓) ট্রেড সক্রিয়!`
+    ? `টাইমফ্রেম ${durLabel}: রানিং ক্যান্ডেল বিয়ারিশ মোমেন্টাম ও সেলার প্রেশারে নিম্নমুখী। ট্রেড শেষ হওয়া পর্যন্ত (${durLabel}) ক্যান্ডেল ডাউনসাইডে (PUT / DOWN ↓) সমাপ্তির পূর্বাভাস নিশ্চিত!`
     : `পর্যাপ্ত ডিরেকশনাল গ্রেডিয়েন্ট বা রিয়েল মার্কেট কনফ্লুয়েন্স না থাকায় সিগন্যাল স্থগিত (NO SIGNAL)।`;
 
   const auditLog: FactorAuditLog = {

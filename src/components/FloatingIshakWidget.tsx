@@ -541,11 +541,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       // Continuous Background Real-Time Market Stream Integration (Guarantees robust candles & ticks)
       const bgMarket = getBackgroundMarketData();
-      if (parsedCandles.length < 20 && bgMarket.candles.length >= 20) {
+      if (parsedCandles.length < 15 && bgMarket.candles.length >= 15) {
         parsedCandles = [...bgMarket.candles.slice(-(30 - parsedCandles.length)), ...parsedCandles];
       }
-      if (samplePrices.length < 15 && bgMarket.ticks.length >= 10) {
-        samplePrices = [...bgMarket.ticks.slice(-30), ...samplePrices];
+      if (samplePrices.length < 5 && bgMarket.ticks.length >= 5) {
+        samplePrices = [...bgMarket.ticks.slice(-15), ...samplePrices];
       }
       if (samplePrices.length === 0 && bgMarket.currentPrice > 0) {
         samplePrices.push(bgMarket.currentPrice);

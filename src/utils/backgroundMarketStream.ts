@@ -26,35 +26,38 @@ declare global {
   }
 }
 
+// Pure harmonic price model generating realistic two-way market cycles
+export function getHarmonicPrice(timeMs: number): number {
+  const tSec = timeMs / 1000;
+  const basePrice = 0.57250;
+  // 40s Macro cycle (~20s bull / ~20s bear)
+  const macro = Math.sin(tSec * (2 * Math.PI / 40)) * 0.00022;
+  // 16s Intermediate momentum cycle (~8s bull / ~8s bear)
+  const inter = Math.sin(tSec * (2 * Math.PI / 16)) * 0.00012;
+  // 6s Micro tick volatility cycle (~3s bull / ~3s bear)
+  const micro = Math.cos(tSec * (2 * Math.PI / 6)) * 0.00005;
+  // Dynamic micro tick noise
+  const jitter = Math.sin(tSec * 13) * 0.000012;
+  return parseFloat((basePrice + macro + inter + micro + jitter).toFixed(5));
+}
+
 // Generate realistic initial 30 candle history with authentic alternating Bull and Bear market cycles
 function createInitialCandles(): { candles: Candle[]; price: number } {
   const candles: Candle[] = [];
-  const basePrice = 0.57250;
   const now = Date.now();
   const tf = 5000;
 
   for (let i = 30; i >= 0; i--) {
-    const tSec = (now - i * tf) / 1000;
-    // Macro cycle (50s: 25s bull / 25s bear)
-    const macro = Math.sin(tSec * (2 * Math.PI / 50)) * 0.00030;
-    // Intermediate cycle (20s)
-    const inter = Math.sin(tSec * (2 * Math.PI / 20)) * 0.00015;
-    // Micro momentum noise (7s)
-    const micro = Math.cos(tSec * (2 * Math.PI / 7)) * 0.00005;
-
-    const close = parseFloat((basePrice + macro + inter + micro).toFixed(5));
-    const prevClose = candles.length > 0
-      ? candles[candles.length - 1].close
-      : parseFloat((close - 0.00006).toFixed(5));
-    const open = prevClose;
-
-    const wickTop = 0.00004 + Math.abs(Math.sin(tSec * 1.5)) * 0.00004;
-    const wickBottom = 0.00004 + Math.abs(Math.cos(tSec * 1.3)) * 0.00004;
-    const high = parseFloat((Math.max(open, close) + wickTop).toFixed(5));
-    const low = parseFloat((Math.min(open, close) - wickBottom).toFixed(5));
+    const candleTime = now - i * tf;
+    const open = getHarmonicPrice(candleTime - tf);
+    const close = getHarmonicPrice(candleTime);
+    const mid1 = getHarmonicPrice(candleTime - 3500);
+    const mid2 = getHarmonicPrice(candleTime - 1500);
+    const high = parseFloat((Math.max(open, close, mid1, mid2) + 0.00003).toFixed(5));
+    const low = parseFloat((Math.min(open, close, mid1, mid2) - 0.00003).toFixed(5));
 
     candles.push({
-      time: now - i * tf,
+      time: candleTime,
       open,
       high,
       low,
@@ -105,16 +108,7 @@ export function startBackgroundMarketStream() {
   tickerTimer = setInterval(() => {
     tickCount++;
     const now = Date.now();
-    const tSec = now / 1000;
-
-    // Multi-cycle harmonic price action with alternating Bull and Bear market phases
-    const macroWave = Math.sin(tSec * (2 * Math.PI / 50)) * 0.000045;
-    const momentumWave = Math.cos(tSec * (2 * Math.PI / 20)) * 0.000032;
-    const microNoise = Math.sin(tSec * (2 * Math.PI / 7)) * 0.000018;
-    const meanRevert = (0.57250 - state.currentPrice) * 0.025;
-    const delta = macroWave + momentumWave + microNoise + meanRevert;
-
-    state.currentPrice = parseFloat(Math.max(0.5640, Math.min(0.5840, state.currentPrice + delta)).toFixed(5));
+    state.currentPrice = getHarmonicPrice(now);
 
     // Push tick
     state.liveTicks.push({ price: state.currentPrice, time: now });
@@ -131,9 +125,9 @@ export function startBackgroundMarketStream() {
         // Roll to next candle
         state.candles.push({
           time: now,
-          open: state.currentPrice,
-          high: state.currentPrice,
-          low: state.currentPrice,
+          open: lastCandle.close,
+          high: Math.max(lastCandle.close, state.currentPrice),
+          low: Math.min(lastCandle.close, state.currentPrice),
           close: state.currentPrice,
         });
         if (state.candles.length > 50) {
