@@ -2397,11 +2397,16 @@ javascript:(function(){
     }
 
     var allRawTicks = [];
-    if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
-      allRawTicks = window.__ISHAK_LIVE_TICKS__.map(function(t) { return t.price; });
-    }
-    if (priceSamples && priceSamples.length > 0) {
-      allRawTicks = allRawTicks.concat(priceSamples);
+    if (priceSamples && priceSamples.length >= 3) {
+      // Strictly use fresh ticks collected during this scan. Never reuse stale past ticks
+      allRawTicks = priceSamples.slice();
+    } else {
+      if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
+        allRawTicks = window.__ISHAK_LIVE_TICKS__.slice(-12).map(function(t) { return t.price; });
+      }
+      if (priceSamples && priceSamples.length > 0) {
+        allRawTicks = allRawTicks.concat(priceSamples);
+      }
     }
     if (currentLivePrice && (allRawTicks.length === 0 || allRawTicks[allRawTicks.length - 1] !== currentLivePrice)) {
       allRawTicks.push(currentLivePrice);
@@ -2879,44 +2884,29 @@ javascript:(function(){
         downFactorsList.push('5S Instant Velocity Push Down [+18]');
       }
 
-      if (lowerWick >= candleRange * 0.35 && lowerWick > upperWick * 1.3) {
-        buyScore += 34;
-        srPattern = 'Bullish Lower Wick Absorption Bounce';
-        upFactorsList.push('5S Lower Wick Absorption [+34]');
-      } else if (upperWick >= candleRange * 0.35 && upperWick > lowerWick * 1.3) {
-        sellScore += 34;
-        srPattern = 'Bearish Upper Wick Rejection';
-        downFactorsList.push('5S Upper Wick Rejection [+34]');
+      if (lowerWick >= candleRange * 0.32 && lowerWick > upperWick * 1.2) {
+        buyScore += 35;
+        srPattern = 'Bullish Lower Wick Floor Absorption';
+        upFactorsList.push('5S Lower Wick Absorption [+35]');
+      } else if (upperWick >= candleRange * 0.32 && upperWick > lowerWick * 1.2) {
+        sellScore += 35;
+        srPattern = 'Bearish Upper Wick Peak Rejection';
+        downFactorsList.push('5S Upper Wick Rejection [+35]');
       }
 
       if (runningClose > runningOpen) {
-        var gPts5 = isMacroBull ? 28 : 22;
-        buyScore += gPts5;
-        upFactorsList.push('5S Active Running Bar Bullish [+' + gPts5 + ']');
+        buyScore += 28;
+        upFactorsList.push('5S Active Running Bar Bullish [+28]');
       } else if (runningClose < runningOpen) {
-        var rPts5 = isMacroBear ? 28 : 22;
-        sellScore += rPts5;
-        downFactorsList.push('5S Active Running Bar Bearish [+' + rPts5 + ']');
+        sellScore += 28;
+        downFactorsList.push('5S Active Running Bar Bearish [+28]');
       }
 
-      // Dynamic EMA Pullback (Validated with wick absorption or bounce)
-      var hasLowerWickAbsorb = lowerWick >= candleRange * 0.25 || tickVelocity > 0;
-      var hasUpperWickReject = upperWick >= candleRange * 0.25 || tickVelocity < 0;
-      if (isMacroBull && isDown && (entryPrice <= ema9 || entryPrice <= ema21) && hasLowerWickAbsorb) {
-        buyScore += 24;
-        srPattern = 'Bullish Dynamic Support Pullback & Absorb';
-        upFactorsList.push('5S Dynamic EMA Support Pullback [+24]');
-      } else if (isMacroBear && isUp && (entryPrice >= ema9 || entryPrice >= ema21) && hasUpperWickReject) {
-        sellScore += 24;
-        srPattern = 'Bearish Dynamic Resistance Pullback & Reject';
-        downFactorsList.push('5S Dynamic EMA Resistance Pullback [+24]');
-      }
-
-      // RSI Extreme Exhaustion only (Not trend)
-      if (calculatedRsi >= 74) {
+      // RSI Extreme Exhaustion only (Mean reversion)
+      if (calculatedRsi >= 72) {
         sellScore += 24;
         downFactorsList.push('5S RSI Overbought Peak Exhaustion [+24]');
-      } else if (calculatedRsi <= 26) {
+      } else if (calculatedRsi <= 28) {
         buyScore += 24;
         upFactorsList.push('5S RSI Oversold Floor Exhaustion [+24]');
       }
@@ -2929,58 +2919,65 @@ javascript:(function(){
         downFactorsList.push('5S Micro EMA5 < EMA9 [+12]');
       }
 
+      // Light Macro Context (Context tailwind only; cannot override live candle momentum)
+      if (isMacroBull) {
+        buyScore += 6;
+        upFactorsList.push('5S Macro Bull Context [+6]');
+      } else if (isMacroBear) {
+        sellScore += 6;
+        downFactorsList.push('5S Macro Bear Context [+6]');
+      }
+
     } else if (dur <= 15) {
       // 10S & 15S ENGINE: Dual-Candle Momentum & Pullbacks
-      if (isMacroBull) {
-        buyScore += 22;
-        upFactorsList.push('Macro Trend Stack EMA 9>21>50 [+22]');
-      } else if (isMacroBear) {
-        sellScore += 22;
-        downFactorsList.push('Macro Trend Stack EMA 9<21<50 [+22]');
-      }
-      
-      if (runningClose > runningOpen) {
-        var gPts10 = isMacroBull ? 22 : 14;
-        buyScore += gPts10;
-        upFactorsList.push('10S/15S Active Running Bar Bullish [+' + gPts10 + ']');
-      } else if (runningClose < runningOpen) {
-        var rPts10 = isMacroBear ? 22 : 14;
-        sellScore += rPts10;
-        downFactorsList.push('10S/15S Active Running Bar Bearish [+' + rPts10 + ']');
+      if (tickSlope > 0.000002) {
+        buyScore += 28;
+        upFactorsList.push('Tick Slope Bullish [+28]');
+      } else if (tickSlope < -0.000002) {
+        sellScore += 28;
+        downFactorsList.push('Tick Slope Bearish [+28]');
       }
 
       if (tickVelocity > 0.000003) {
-        buyScore += 16;
-        upFactorsList.push('10S/15S Real-Time Velocity Up [+16]');
+        buyScore += 20;
+        upFactorsList.push('10S/15S Real-Time Velocity Up [+20]');
       } else if (tickVelocity < -0.000003) {
-        sellScore += 16;
-        downFactorsList.push('10S/15S Real-Time Velocity Down [+16]');
+        sellScore += 20;
+        downFactorsList.push('10S/15S Real-Time Velocity Down [+20]');
       }
-
-      if (tickSlope > 0.000002) {
-        buyScore += 24;
-        upFactorsList.push('Tick Slope Bullish [+24]');
-      } else if (tickSlope < -0.000002) {
-        sellScore += 24;
-        downFactorsList.push('Tick Slope Bearish [+24]');
-      }
-
-      if (lowerWick >= candleRange * 0.4) {
+      
+      if (runningClose > runningOpen) {
         buyScore += 26;
-        srPattern = 'Lower Wick Support Bounce';
-        upFactorsList.push('Lower Wick Support Bounce [+26]');
-      } else if (upperWick >= candleRange * 0.4) {
+        upFactorsList.push('10S/15S Active Running Bar Bullish [+26]');
+      } else if (runningClose < runningOpen) {
         sellScore += 26;
+        downFactorsList.push('10S/15S Active Running Bar Bearish [+26]');
+      }
+
+      if (lowerWick >= candleRange * 0.35) {
+        buyScore += 30;
+        srPattern = 'Lower Wick Support Bounce';
+        upFactorsList.push('Lower Wick Support Bounce [+30]');
+      } else if (upperWick >= candleRange * 0.35) {
+        sellScore += 30;
         srPattern = 'Upper Wick Resistance Rejection';
-        downFactorsList.push('Upper Wick Resistance Rejection [+26]');
+        downFactorsList.push('Upper Wick Resistance Rejection [+30]');
       }
 
       if (ema5 > ema9 && ema9 > ema13) {
-        buyScore += 15;
-        upFactorsList.push('EMA Stack 5>9>13 [+15]');
+        buyScore += 12;
+        upFactorsList.push('EMA Stack 5>9>13 [+12]');
       } else if (ema5 < ema9 && ema9 < ema13) {
-        sellScore += 15;
-        downFactorsList.push('EMA Stack 5<9<13 [+15]');
+        sellScore += 12;
+        downFactorsList.push('EMA Stack 5<9<13 [+12]');
+      }
+
+      if (isMacroBull) {
+        buyScore += 8;
+        upFactorsList.push('10S Macro Bull Context [+8]');
+      } else if (isMacroBear) {
+        sellScore += 8;
+        downFactorsList.push('10S Macro Bear Context [+8]');
       }
 
     } else if (dur <= 45) {

@@ -134,19 +134,21 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const executeQuotexTrade = (isCall: boolean): boolean => {
     try {
       let target: HTMLElement | null = null;
-      if (isCall) {
-        target = document.querySelector(
-          '#platform-call-button, #platform-buy-button, [data-button="buy"], [data-button="call"], [data-action="buy"], [data-action="call"], .btn-call, .btn-buy, .button-call, .section-deal__button--buy, .section-deal__button--up, .deal-form__button--call, .deal-form__button--up, [data-test*="call"], [data-test*="buy"], button.deal-button-up'
-        ) as HTMLElement | null;
-      } else {
-        target = document.querySelector(
-          '#platform-sell-button, #platform-put-button, [data-button="sell"], [data-button="put"], [data-action="sell"], [data-action="put"], .btn-sell, .btn-put, .button-put, .section-deal__button--sell, .section-deal__button--down, .deal-form__button--put, .deal-form__button--down, [data-test*="put"], [data-test*="sell"], button.deal-button-down'
-        ) as HTMLElement | null;
+      const selector = isCall
+        ? '#platform-call-button, #platform-buy-button, [data-button="buy"], [data-button="call"], [data-action="buy"], [data-action="call"], .btn-call, .btn-buy, .button-call, .section-deal__button--buy, .section-deal__button--up, .deal-form__button--call, .deal-form__button--up, [data-test*="call"], [data-test*="buy"], button.deal-button-up'
+        : '#platform-sell-button, #platform-put-button, [data-button="sell"], [data-button="put"], [data-action="sell"], [data-action="put"], .btn-sell, .btn-put, .button-put, .section-deal__button--sell, .section-deal__button--down, .deal-form__button--put, .deal-form__button--down, [data-test*="put"], [data-test*="sell"], button.deal-button-down';
+
+      const foundList = Array.from(document.querySelectorAll(selector)) as HTMLElement[];
+      for (const el of foundList) {
+        if (!el.closest('#simulator-view') && !el.closest('#ishak-robot-anchor') && !el.closest('#ishak-trade-wrap') && !el.closest('.ishak-dialog-modal') && !el.closest('#ishak-hud-panel')) {
+          target = el;
+          break;
+        }
       }
 
       if (!target) {
         const callWords = ['buy', 'call', 'up', 'higher', 'হায়ার', 'উপরে', 'বাই', 'вверх', 'arriba', 'naik', 'ऊपर'];
-        const putWords = ['sell', 'put', 'down', 'lower', 'লোয়ার', 'নিচে', 'সেল', 'вниз', 'abajo', 'turun', 'नीचे'];
+        const putWords = ['sell', 'put', 'down', 'lower', 'লোয়ার', 'নিচে', 'সেল', 'вниз', 'abajo', 'turun', 'नीচে'];
         const targets = isCall ? callWords : putWords;
 
         const allButtons = Array.from(document.querySelectorAll('button, div[role="button"], a.btn'));
@@ -544,10 +546,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       if (parsedCandles.length < 15 && bgMarket.candles.length >= 15) {
         parsedCandles = [...bgMarket.candles.slice(-(30 - parsedCandles.length)), ...parsedCandles];
       }
-      if (samplePrices.length < 5 && bgMarket.ticks.length >= 5) {
-        samplePrices = [...bgMarket.ticks.slice(-15), ...samplePrices];
-      }
-      if (samplePrices.length === 0 && bgMarket.currentPrice > 0) {
+      // Strictly use fresh ticks sampled during this scan. Never reuse old historical ticks
+      if (samplePrices.length < 3 && bgMarket.currentPrice > 0) {
         samplePrices.push(bgMarket.currentPrice);
       }
 
@@ -598,6 +598,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       // ⚡ PRE-DISPATCH LIVE BROKER / QUOTEX CLICK ONLY IF TRADE IS APPROVED AND VALID DIRECTION CONFIRMED
       if (isApproved && typeof isCall === 'boolean') {
         executeQuotexTrade(isCall);
+        try {
+          window.dispatchEvent(new CustomEvent('ishak_trade_execute', {
+            detail: {
+              isCall,
+              signal: computedSignal,
+              duration: tradeDuration || 5,
+              signalId
+            }
+          }));
+        } catch (e) {}
       }
     };
 
