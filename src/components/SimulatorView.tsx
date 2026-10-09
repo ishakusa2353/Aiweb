@@ -61,11 +61,18 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
 
   const activeTradeRef = useRef(activeTrade);
   activeTradeRef.current = activeTrade;
+  const livePriceRef = useRef(livePrice);
+  livePriceRef.current = livePrice;
+  const investmentRef = useRef(investment);
+  investmentRef.current = investment;
+  const selectedDurationRef = useRef(selectedDuration);
+  selectedDurationRef.current = selectedDuration;
+
   const tickCountRef = useRef(0);
   const executedSignalsRef = useRef<Set<string>>(new Set());
   const consecutiveLossRef = useRef(0);
 
-  // Strict Rule: ONE SIGNAL = ONE TRADE
+  // Strict Rule: ONE SIGNAL = ONE TRADE (Hold/Risk Logging only; trades execute via ishak_trade_execute)
   useEffect(() => {
     if (!lastSignal) return;
 
@@ -73,32 +80,19 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     if (executedSignalsRef.current.has(sigId)) {
       return;
     }
-    executedSignalsRef.current.add(sigId);
-
-    // If activeTrade already initiated (e.g. by auto-click dispatcher), avoid duplicate
-    if (activeTradeRef.current) {
-      return;
-    }
 
     // If low confidence or risk detected: capital preservation, NO TRADE
     if (lastSignal.isLowConfidence || lastSignal.isRiskDetected || lastSignal.isCall === null) {
+      executedSignalsRef.current.add(sigId);
       const log = {
         id: sigId.substring(0, 8),
         type: 'HOLD' as const,
         amount: 0,
-        price: livePrice,
+        price: livePriceRef.current,
         time: new Date().toLocaleTimeString(),
         status: 'LOW CONFIDENCE — TRADE WITHHELD',
       };
       setTradeLogs((prev) => [log, ...prev.slice(0, 7)]);
-      return;
-    }
-
-    // Execute single trade
-    if (lastSignal.isCall === true) {
-      handleCallTrade();
-    } else if (lastSignal.isCall === false) {
-      handlePutTrade();
     }
   }, [lastSignal]);
 
@@ -199,11 +193,12 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
           });
           setTradeLogs((prev) =>
             prev.map((l) =>
-              l.id === trade.id
+              l.id === trade.id || l.id === trade.id.substring(0, 8)
                 ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
                 : l
             )
           );
+          activeTradeRef.current = null;
           setActiveTrade(null);
 
           // ⚡ Open a fresh new candle from the resolved closing exit price
@@ -251,25 +246,19 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
   }, [payout]);
 
   // ⚡ DIRECT NATIVE TRADE EXECUTION (0ms latency, duration synchronized)
-  const executeDirectTrade = (type: 'CALL' | 'PUT', durOverride?: number) => {
+  // ⚡ DIRECT NATIVE TRADE EXECUTION (0ms latency, duration synchronized)
+  const executeDirectTrade = (type: 'CALL' | 'PUT', durOverride?: number, signalId?: string) => {
+    // 1. Idempotency: Do not execute same signal twice
+    if (signalId) {
+      if (executedSignalsRef.current.has(signalId)) {
+        return;
+      }
+      executedSignalsRef.current.add(signalId);
+    }
+
+    // 2. Strict Rule: ONE TRADE AT A TIME (Prevents taking multiple trades on rapid clicks)
     if (activeTradeRef.current) {
-      const prevTrade = activeTradeRef.current;
-      const profit = Math.round((prevTrade.amount * payout) / 100);
-      setBalance((prev) => prev + prevTrade.amount + profit);
-      setStats((prev) => {
-        const updated = { ...prev, wins: prev.wins + 1, totalProfit: prev.totalProfit + profit };
-        try { localStorage.setItem('ISHAK_SIM_STATS', JSON.stringify(updated)); } catch (e) {}
-        return updated;
-      });
-      setTradeLogs((prev) =>
-        prev.map((l) =>
-          l.id === prevTrade.id
-            ? { ...l, status: `WON (ITM) 🟢 +$${profit.toFixed(2)}` }
-            : l
-        )
-      );
-      activeTradeRef.current = null;
-      setActiveTrade(null);
+      return;
     }
 
     if (type === 'CALL') {
@@ -280,7 +269,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
       setTimeout(() => setPutButtonFlash(false), 500);
     }
 
-    const tradeId = 'T_' + Date.now().toString(36) + performance.now().toFixed(0);
+    const tradeId = signalId || ('T_' + Date.now().toString(36) + performance.now().toFixed(0));
     let dur = durOverride;
     if (!dur) {
       try {
@@ -288,31 +277,33 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         if (saved) dur = parseInt(saved, 10);
       } catch (e) {}
     }
-    if (!dur || isNaN(dur)) dur = selectedDuration || 5;
+    if (!dur || isNaN(dur)) dur = selectedDurationRef.current || 5;
 
-    const entry = livePrice;
+    const entry = livePriceRef.current;
 
-    setActiveTrade({
+    const newTrade = {
       id: tradeId,
       type,
       entryPrice: entry,
-      amount: investment,
+      amount: investmentRef.current,
       duration: dur,
       startTime: Date.now(),
       endTime: Date.now() + dur * 1000,
       timeLeft: dur,
-    });
+    };
+    activeTradeRef.current = newTrade;
+    setActiveTrade(newTrade);
 
     const log = {
-      id: tradeId,
+      id: tradeId.substring(0, 8),
       type,
-      amount: investment,
+      amount: investmentRef.current,
       price: entry,
       time: new Date().toLocaleTimeString(),
       status: `ACTIVE (${dur}S EXPIRY) ⏳`,
     };
     setTradeLogs((prev) => [log, ...prev.slice(0, 7)]);
-    setBalance((prev) => prev - investment);
+    setBalance((prev) => prev - investmentRef.current);
   };
 
   // Handle Call click
@@ -332,17 +323,19 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     window.addEventListener('ishak_duration_changed', handleDurationSync);
 
     const handleInstantTrade = (e: Event) => {
-      const customEvent = e as CustomEvent<{ isCall: boolean; signal?: SignalData; duration?: number }>;
+      const customEvent = e as CustomEvent<{ isCall: boolean; signal?: SignalData; duration?: number; signalId?: string }>;
       if (!customEvent.detail) return;
 
-      const dur = customEvent.detail.duration || selectedDuration || 5;
+      const dur = customEvent.detail.duration || selectedDurationRef.current || 5;
       setSelectedDuration(dur);
 
-      const { isCall } = customEvent.detail;
+      const { isCall, signal } = customEvent.detail;
+      const sigId = customEvent.detail.signalId || signal?.signalId;
+
       if (isCall === true) {
-        executeDirectTrade('CALL', dur);
+        executeDirectTrade('CALL', dur, sigId);
       } else if (isCall === false) {
-        executeDirectTrade('PUT', dur);
+        executeDirectTrade('PUT', dur, sigId);
       }
     };
 
@@ -351,10 +344,10 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
       window.removeEventListener('ishak_duration_changed', handleDurationSync);
       window.removeEventListener('ishak_trade_execute', handleInstantTrade);
     };
-  }, [livePrice, investment, selectedDuration]);
+  }, []);
 
   return (
-    <div className="space-y-4">
+    <div id="simulator-view" className="space-y-4">
       {/* Simulation Info Card */}
       <div className="bg-gradient-to-r from-slate-900/90 via-[#0B132B] to-slate-900/90 border border-cyan-500/30 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
         <div className="flex items-center gap-3">

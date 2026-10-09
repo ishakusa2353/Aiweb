@@ -617,9 +617,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const finalIsCall = computedIsCall;
       const finalSignal = computedSignal;
 
-      // Ensure simulator is triggered at 100% completion
+      // Ensure simulator is triggered at 100% completion with idempotent signalId
       try {
-        window.dispatchEvent(new CustomEvent('ishak_trade_execute', { detail: { isCall: finalIsCall, signal: finalSignal, duration: tradeDuration || 5 } }));
+        window.dispatchEvent(new CustomEvent('ishak_trade_execute', {
+          detail: {
+            isCall: finalIsCall,
+            signal: finalSignal,
+            duration: tradeDuration || 5,
+            signalId: finalSignal?.signalId
+          }
+        }));
       } catch (e) {}
 
       if (onTradeSignal && finalSignal) {

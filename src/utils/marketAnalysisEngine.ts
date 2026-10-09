@@ -1584,6 +1584,24 @@ export function evaluateMarketData(
       downFactors.push(`10S/15S Price Action: ${pa.patternName} [+${pts}]`);
     }
 
+    if (currentPrice > currentCandle.open) {
+      const gPts10 = isMacroBull ? 22 : 14;
+      buyScore += gPts10;
+      upFactors.push(`10S/15S Active Bar Bullish Close > Open [+${gPts10}]`);
+    } else if (currentPrice < currentCandle.open) {
+      const rPts10 = isMacroBear ? 22 : 14;
+      sellScore += rPts10;
+      downFactors.push(`10S/15S Active Bar Bearish Close < Open [+${rPts10}]`);
+    }
+
+    if (velocity > 0.000003) {
+      buyScore += 16;
+      upFactors.push('10S/15S Real-Time Tick Velocity Up [+16]');
+    } else if (velocity < -0.000003) {
+      sellScore += 16;
+      downFactors.push('10S/15S Real-Time Tick Velocity Down [+16]');
+    }
+
     if (runningCandleObj.lowerWick >= candleRange * 0.4) {
       buyScore += 26;
       upFactors.push('10S/15S Lower Wick Support Bounce [+26]');

@@ -2938,6 +2938,24 @@ javascript:(function(){
         sellScore += 22;
         downFactorsList.push('Macro Trend Stack EMA 9<21<50 [+22]');
       }
+      
+      if (runningClose > runningOpen) {
+        var gPts10 = isMacroBull ? 22 : 14;
+        buyScore += gPts10;
+        upFactorsList.push('10S/15S Active Running Bar Bullish [+' + gPts10 + ']');
+      } else if (runningClose < runningOpen) {
+        var rPts10 = isMacroBear ? 22 : 14;
+        sellScore += rPts10;
+        downFactorsList.push('10S/15S Active Running Bar Bearish [+' + rPts10 + ']');
+      }
+
+      if (tickVelocity > 0.000003) {
+        buyScore += 16;
+        upFactorsList.push('10S/15S Real-Time Velocity Up [+16]');
+      } else if (tickVelocity < -0.000003) {
+        sellScore += 16;
+        downFactorsList.push('10S/15S Real-Time Velocity Down [+16]');
+      }
 
       if (tickSlope > 0.000002) {
         buyScore += 24;
@@ -3119,7 +3137,11 @@ javascript:(function(){
     return { up: cBtn, down: pBtn };
   }
 
+  var lastExecutedQuotexSignalId = '';
   function executeQuotexTrade(isCall, signalId) {
+    if (signalId && lastExecutedQuotexSignalId === signalId) {
+      return { success: false, reason: 'ALREADY_EXECUTED' };
+    }
     if (!autoTradeEnabled) {
       return { success: false, reason: 'AUTO_TRADE_DISABLED' };
     }
@@ -3132,6 +3154,10 @@ javascript:(function(){
 
       if (!target) {
         return { success: false, reason: 'BUTTON_NOT_FOUND' };
+      }
+
+      if (signalId) {
+        lastExecutedQuotexSignalId = signalId;
       }
 
       var opts = { bubbles: true, cancelable: true, view: window };
@@ -3273,19 +3299,7 @@ javascript:(function(){
 
         // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 2600MS ONLY IF DIRECTION IS VALID & CONFIRMED
         if (isCall !== null && typeof isCall === 'boolean') {
-          var tradeRes = executeQuotexTrade(isCall, signalId);
-
-          // Instant retry sequence to guarantee trade is clicked even if DOM updates dynamically
-          if (!tradeRes.success && tradeRes.reason === 'BUTTON_NOT_FOUND') {
-            setTimeout(function() {
-              var r1 = executeQuotexTrade(isCall, signalId);
-              if (!r1.success) {
-                setTimeout(function() {
-                  executeQuotexTrade(isCall, signalId);
-                }, 120);
-              }
-            }, 60);
-          }
+          executeQuotexTrade(isCall, signalId);
         }
       }
 
