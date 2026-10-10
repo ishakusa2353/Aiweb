@@ -1,5 +1,8 @@
 import { getBackgroundMarketData } from './backgroundMarketStream';
 
+let lastEngineDirection: 'CALL' | 'PUT' | null = null;
+let consecutiveEngineCount = 0;
+
 /**
  * ISHAK AI VIP - PROFESSIONAL-GRADE REAL MARKET ANALYSIS & CONFLUENCE ENGINE
  * 
@@ -1771,13 +1774,29 @@ export function evaluateMarketData(
   const netScore = buyScore - sellScore;
   const finalScore = Math.max(-100, Math.min(100, Math.round(netScore)));
 
+  const scoreDiff = Math.abs(buyScore - sellScore);
   let isCall: boolean | null;
-  if (buyScore > sellScore) {
+
+  if (scoreDiff >= 14) {
+    isCall = buyScore > sellScore;
+  } else if (consecutiveEngineCount >= 2 && lastEngineDirection === 'PUT') {
+    if (buyScore >= sellScore || (livePrices && livePrices.length >= 2 && livePrices[livePrices.length - 1] >= livePrices[0]) || currentPrice >= currentCandle.open || rsi14 <= 52) {
+      isCall = true;
+    } else {
+      isCall = false;
+    }
+  } else if (consecutiveEngineCount >= 2 && lastEngineDirection === 'CALL') {
+    if (sellScore >= buyScore || (livePrices && livePrices.length >= 2 && livePrices[livePrices.length - 1] <= livePrices[0]) || currentPrice <= currentCandle.open || rsi14 >= 48) {
+      isCall = false;
+    } else {
+      isCall = true;
+    }
+  } else if (buyScore > sellScore) {
     isCall = true;
   } else if (sellScore > buyScore) {
     isCall = false;
-  } else if (pricePath.pathDirection && pricePath.pathDirection !== 'NEUTRAL') {
-    isCall = pricePath.pathDirection === 'UP';
+  } else if (livePrices && livePrices.length >= 2 && livePrices[livePrices.length - 1] !== livePrices[0]) {
+    isCall = livePrices[livePrices.length - 1] > livePrices[0];
   } else if (Math.abs(tickSlope) > 0.0000001) {
     isCall = tickSlope > 0;
   } else if (velocity !== 0) {
@@ -1785,8 +1804,23 @@ export function evaluateMarketData(
   } else if (currentPrice !== currentCandle.open) {
     isCall = currentPrice > currentCandle.open;
   } else {
-    // True tie with absolutely zero directional gradient
-    isCall = null;
+    isCall = lastEngineDirection === 'PUT' ? true : false;
+  }
+
+  if (isCall === true) {
+    if (lastEngineDirection === 'CALL') {
+      consecutiveEngineCount++;
+    } else {
+      lastEngineDirection = 'CALL';
+      consecutiveEngineCount = 1;
+    }
+  } else if (isCall === false) {
+    if (lastEngineDirection === 'PUT') {
+      consecutiveEngineCount++;
+    } else {
+      lastEngineDirection = 'PUT';
+      consecutiveEngineCount = 1;
+    }
   }
 
   const regime = detectMarketRegime(

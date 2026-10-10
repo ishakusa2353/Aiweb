@@ -90,6 +90,41 @@ javascript:(function(){
           window.WebSocket = WSWrapper;
         }
       } catch(e){}
+
+      // Hook existing WebSocket instances via prototype.send
+      try {
+        if (window.WebSocket && window.WebSocket.prototype && !window.WebSocket.prototype.__ISHAK_SEND_HOOKED__) {
+          window.WebSocket.prototype.__ISHAK_SEND_HOOKED__ = true;
+          var origSend = window.WebSocket.prototype.send;
+          window.WebSocket.prototype.send = function(data) {
+            if (!this.__ishak_listener_added) {
+              this.__ishak_listener_added = true;
+              try {
+                this.addEventListener('message', function(ev) {
+                  try {
+                    var d = ev.data;
+                    if (typeof d === 'string' && (d.includes('price') || d.includes('rate') || d.includes('quote') || d.includes('tick'))) {
+                      var m = d.match(/"price"\s*:\s*([\d\.]+)/) ||
+                              d.match(/"rate"\s*:\s*([\d\.]+)/) ||
+                              d.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
+                              d.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
+                      if (m && m[1]) {
+                        var p = parseFloat(m[1]);
+                        if (!isNaN(p) && p > 0.00001 && p < 1000000) {
+                          window.__ISHAK_LAST_WS_PRICE__ = p;
+                          window.__ISHAK_LIVE_TICKS__.push({ price: p, time: Date.now() });
+                          if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+                        }
+                      }
+                    }
+                  } catch(err){}
+                });
+              } catch(e){}
+            }
+            return origSend.apply(this, arguments);
+          };
+        }
+      } catch(e){}
     }
 
     // Helper: Safely ingest touch/telemetry data from qxtrxhost.com/api/v1/touch
@@ -198,6 +233,8 @@ javascript:(function(){
   var autoTradeEnabled = true; // Auto-click Quotex CALL/PUT button (Default: ON)
   var autoPilotMode = false; // Continuous auto-trading loop
   var autoPilotTimer = null;
+  window.__ISHAK_LAST_DIRECTION__ = window.__ISHAK_LAST_DIRECTION__ || null;
+  window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0;
 
   var MARKETS_DATABASE = [{"category":"QUOTEX OTC CURRENCIES (২৪/৭)","items":["AUD/CAD (OTC)","AUD/CHF (OTC)","AUD/JPY (OTC)","AUD/NZD (OTC)","AUD/USD (OTC)","CAD/CHF (OTC)","CAD/JPY (OTC)","CHF/JPY (OTC)","EUR/AUD (OTC)","EUR/CAD (OTC)","EUR/CHF (OTC)","EUR/GBP (OTC)","EUR/JPY (OTC)","EUR/NZD (OTC)","EUR/USD (OTC)","GBP/AUD (OTC)","GBP/CAD (OTC)","GBP/CHF (OTC)","GBP/JPY (OTC)","GBP/NZD (OTC)","GBP/USD (OTC)","NZD/CAD (OTC)","NZD/CHF (OTC)","NZD/JPY (OTC)","NZD/USD (OTC)","USD/BDT (OTC)","USD/BRL (OTC)","USD/CAD (OTC)","USD/CHF (OTC)","USD/DZD (OTC)","USD/EGP (OTC)","USD/IDR (OTC)","USD/INR (OTC)","USD/JPY (OTC)","USD/MXN (OTC)","USD/MYR (OTC)","USD/NGN (OTC)","USD/PHP (OTC)","USD/PKR (OTC)","USD/RUB (OTC)","USD/THB (OTC)","USD/TRY (OTC)","USD/VND (OTC)","USD/ZAR (OTC)"]},{"category":"QUOTEX REAL FOREX (লাইভ মার্কেট)","items":["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD","EUR/JPY","GBP/JPY","EUR/GBP","AUD/CAD","AUD/CHF","AUD/JPY","CAD/JPY","EUR/AUD","EUR/CAD","EUR/CHF","GBP/AUD","GBP/CAD","GBP/CHF","NZD/JPY","USD/NOK","USD/SEK","USD/TRY","USD/SGD"]},{"category":"COMMODITIES & METALS (OTC & REAL)","items":["Gold (OTC)","Silver (OTC)","Crude Oil (OTC)","UKBrent (OTC)","USCrude (OTC)","GOLD (XAU/USD)","SILVER (XAG/USD)","UKBrent","USCrude"]},{"category":"CRYPTO & STOCKS OTC (QUOTEX)","items":["Bitcoin (OTC)","Ethereum (OTC)","Litecoin (OTC)","Ripple (OTC)","BTC/USD","ETH/USD","Boeing Company (OTC)","Intel (OTC)","Microsoft (OTC)","Apple (OTC)","Johnson & Johnson (OTC)","McDonald's (OTC)","Meta (OTC)","Pfizer (OTC)","American Express (OTC)"]}];
 
@@ -369,13 +406,9 @@ javascript:(function(){
         return window.__ISHAK_LAST_WS_PRICE__;
       }
 
-      // 7. Active Background Real-Time Market Stream & Memory Cache
+      // 7. Active Background Real-Time Market Stream
       if (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice > 0) {
         return window.__ISHAK_MARKET_STREAM__.currentPrice;
-      }
-      if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
-        var lastTickObj = window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1];
-        if (lastTickObj && lastTickObj.price > 0) return lastTickObj.price;
       }
     } catch (e) {}
     return null;
@@ -2562,18 +2595,23 @@ javascript:(function(){
     var lastCandle = candleData[candleData.length - 1];
     var prevCandle = candleData[candleData.length - 2] || lastCandle;
 
-    // Running Candle Anatomy
-    var runningOpen = lastCandle.open;
-    var runningClose = entryPrice;
-
-    // Realistic clamp: A 5s/10s candle cannot exceed 0.25% in body size under normal OTC/broker conditions
-    if (Math.abs(runningClose - runningOpen) / entryPrice > 0.0025) {
-      var spreadDir = runningClose >= runningOpen ? 1 : -1;
-      runningOpen = parseFloat((runningClose - (spreadDir * entryPrice * 0.00010)).toFixed(5));
+    // Running Candle Anatomy (Strictly from fresh scan ticks if available)
+    var runningOpen, runningClose, runningHigh, runningLow;
+    if (priceSamples && priceSamples.length >= 2) {
+      runningOpen = priceSamples[0];
+      runningClose = priceSamples[priceSamples.length - 1];
+      runningHigh = Math.max.apply(null, priceSamples);
+      runningLow = Math.min.apply(null, priceSamples);
+    } else {
+      runningOpen = lastCandle.open;
+      runningClose = entryPrice;
+      if (Math.abs(runningClose - runningOpen) / (entryPrice || 1) > 0.0025) {
+        var spreadDir = runningClose >= runningOpen ? 1 : -1;
+        runningOpen = parseFloat((runningClose - (spreadDir * entryPrice * 0.00010)).toFixed(5));
+      }
+      runningHigh = Math.max(lastCandle.high, runningOpen, runningClose);
+      runningLow = Math.min(lastCandle.low, runningOpen, runningClose);
     }
-
-    var runningHigh = Math.max(lastCandle.high, runningOpen, runningClose);
-    var runningLow = Math.min(lastCandle.low, runningOpen, runningClose);
     var bodySize = Math.abs(runningClose - runningOpen);
     var upperWick = runningHigh - Math.max(runningOpen, runningClose);
     var lowerWick = Math.min(runningOpen, runningClose) - runningLow;
@@ -2889,7 +2927,7 @@ javascript:(function(){
         if (midPathPullbackRisk === 'LOW') pricePathScore += 6;
         buyScore += pricePathScore;
         upFactorsList.push('Forward Price-Path Forecast Bullish (' + (callPathProb * 100).toFixed(1) + '%) [+' + pricePathScore + ']');
-      } else if (callPathProb < 495) {
+      } else if (callPathProb < 0.495) {
         var pScoreAbs = Math.abs(pricePathScore);
         if (recoveryCapacity === 'STRONG') pScoreAbs += 8;
         if (midPathPullbackRisk === 'LOW') pScoreAbs += 6;
@@ -2915,15 +2953,15 @@ javascript:(function(){
       // 100% Dynamic - Zero Memorization - Evaluates THIS Specific Scan's Fresh Ticks
       // =========================================================
 
-      // A. Fresh Scan Ticks Analysis (Ticks captured during this 3.5s scan)
+      // A. Fresh Scan Ticks Analysis (Ticks captured during this scan)
       if (priceSamples && priceSamples.length >= 2) {
         var pStart = priceSamples[0];
         var pEnd = priceSamples[priceSamples.length - 1];
         var pDelta = pEnd - pStart;
-        if (pDelta > 0.000001) {
+        if (pDelta > 0.0000003) {
           buyScore += 45;
           upFactorsList.push('5S Fresh Scan Ticks Net Gain (+' + pDelta.toFixed(5) + ') [+45]');
-        } else if (pDelta < -0.000001) {
+        } else if (pDelta < -0.0000003) {
           sellScore += 45;
           downFactorsList.push('5S Fresh Scan Ticks Net Loss (' + pDelta.toFixed(5) + ') [+45]');
         }
@@ -2934,36 +2972,39 @@ javascript:(function(){
           else if (priceSamples[spi] < priceSamples[spi - 1]) scanDown++;
         }
         if (scanUp > scanDown) {
-          buyScore += 25;
-          upFactorsList.push('5S Scan Tick Steps Bullish (' + scanUp + ' Up vs ' + scanDown + ' Down) [+25]');
+          var uStepBonus = Math.min(30, 16 + (scanUp - scanDown) * 3);
+          buyScore += uStepBonus;
+          upFactorsList.push('5S Scan Tick Steps Bullish (' + scanUp + ' Up vs ' + scanDown + ' Down) [+' + uStepBonus + ']');
         } else if (scanDown > scanUp) {
-          sellScore += 25;
-          downFactorsList.push('5S Scan Tick Steps Bearish (' + scanDown + ' Down vs ' + scanUp + ' Up) [+25]');
+          var dStepBonus = Math.min(30, 16 + (scanDown - scanUp) * 3);
+          sellScore += dStepBonus;
+          downFactorsList.push('5S Scan Tick Steps Bearish (' + scanDown + ' Down vs ' + scanUp + ' Up) [+' + dStepBonus + ']');
         }
 
-        var lateStart = priceSamples[Math.max(0, priceSamples.length - 3)];
-        if (pEnd > lateStart) {
-          buyScore += 20;
-          upFactorsList.push('5S Late-Scan Impulse Push Up [+20]');
-        } else if (pEnd < lateStart) {
-          sellScore += 20;
-          downFactorsList.push('5S Late-Scan Impulse Push Down [+20]');
+        var lateSlice = priceSamples.slice(-Math.max(3, Math.floor(priceSamples.length * 0.35)));
+        var lateDelta = lateSlice[lateSlice.length - 1] - lateSlice[0];
+        if (lateDelta > 0.0000002) {
+          buyScore += 24;
+          upFactorsList.push('5S Late-Scan Impulse Push Up [+24]');
+        } else if (lateDelta < -0.0000002) {
+          sellScore += 24;
+          downFactorsList.push('5S Late-Scan Impulse Push Down [+24]');
         }
       }
 
       // B. Real-Time Micro Tick Slope & Velocity
-      if (tickSlope > 0.000002) {
-        buyScore += 28;
-        upFactorsList.push('5S Micro Tick Slope Bullish [+' + 28 + ']');
-      } else if (tickSlope < -0.000002) {
-        sellScore += 28;
-        downFactorsList.push('5S Micro Tick Slope Bearish [+' + 28 + ']');
+      if (tickSlope > 0.0000003) {
+        buyScore += 26;
+        upFactorsList.push('5S Micro Tick Slope Bullish [+26]');
+      } else if (tickSlope < -0.0000003) {
+        sellScore += 26;
+        downFactorsList.push('5S Micro Tick Slope Bearish [+26]');
       }
 
-      if (tickVelocity > 0.000004) {
+      if (tickVelocity > 0.0000004) {
         buyScore += 18;
         upFactorsList.push('5S Instant Velocity Push Up [+18]');
-      } else if (tickVelocity < -0.000004) {
+      } else if (tickVelocity < -0.0000004) {
         sellScore += 18;
         downFactorsList.push('5S Instant Velocity Push Down [+18]');
       }
@@ -2977,32 +3018,34 @@ javascript:(function(){
         downFactorsList.push('5S Active Running Bar Bearish [+30]');
       }
 
-      if (lowerWick >= candleRange * 0.30 && lowerWick > upperWick * 1.1) {
-        buyScore += 35;
-        srPattern = 'Bullish Lower Wick Floor Absorption';
-        upFactorsList.push('5S Lower Wick Absorption Bounce [+35]');
-      } else if (upperWick >= candleRange * 0.30 && upperWick > lowerWick * 1.1) {
-        sellScore += 35;
-        srPattern = 'Bearish Upper Wick Peak Rejection';
-        downFactorsList.push('5S Upper Wick Peak Rejection [+35]');
+      if (candleRange > 0.00001) {
+        if (lowerWick >= candleRange * 0.28 && lowerWick > upperWick * 1.1) {
+          buyScore += 32;
+          srPattern = 'Bullish Lower Wick Floor Absorption';
+          upFactorsList.push('5S Lower Wick Absorption Bounce [+32]');
+        } else if (upperWick >= candleRange * 0.28 && upperWick > lowerWick * 1.1) {
+          sellScore += 32;
+          srPattern = 'Bearish Upper Wick Peak Rejection';
+          downFactorsList.push('5S Upper Wick Peak Rejection [+32]');
+        }
       }
 
       // D. RSI Extreme Exhaustion only (Reversal Trigger)
-      if (calculatedRsi >= 74) {
+      if (calculatedRsi >= 72) {
         sellScore += 24;
         downFactorsList.push('5S RSI Overbought Peak Exhaustion [+24]');
-      } else if (calculatedRsi <= 26) {
+      } else if (calculatedRsi <= 28) {
         buyScore += 24;
         upFactorsList.push('5S RSI Oversold Floor Exhaustion [+24]');
       }
 
-      // E. Micro Context (Light tie-breaker, max 5-6 pts)
+      // E. Micro Context (Fast EMA5 vs EMA9)
       if (ema5 > ema9) {
-        buyScore += 6;
-        upFactorsList.push('5S Micro EMA5 > EMA9 [+6]');
+        buyScore += 8;
+        upFactorsList.push('5S Micro EMA5 > EMA9 [+8]');
       } else if (ema5 < ema9) {
-        sellScore += 6;
-        downFactorsList.push('5S Micro EMA5 < EMA9 [+6]');
+        sellScore += 8;
+        downFactorsList.push('5S Micro EMA5 < EMA9 [+8]');
       }
 
     } else if (dur <= 15) {
@@ -3015,10 +3058,10 @@ javascript:(function(){
         var pStart10 = priceSamples[0];
         var pEnd10 = priceSamples[priceSamples.length - 1];
         var pDelta10 = pEnd10 - pStart10;
-        if (pDelta10 > 0.000001) {
+        if (pDelta10 > 0.0000004) {
           buyScore += 40;
           upFactorsList.push('10S/15S Fresh Scan Ticks Net Gain (+' + pDelta10.toFixed(5) + ') [+40]');
-        } else if (pDelta10 < -0.000001) {
+        } else if (pDelta10 < -0.0000004) {
           sellScore += 40;
           downFactorsList.push('10S/15S Fresh Scan Ticks Net Loss (' + pDelta10.toFixed(5) + ') [+40]');
         }
@@ -3029,26 +3072,38 @@ javascript:(function(){
           else if (priceSamples[spi10] < priceSamples[spi10 - 1]) scanDown10++;
         }
         if (scanUp10 > scanDown10) {
-          buyScore += 22;
-          upFactorsList.push('10S/15S Scan Tick Steps Bullish (' + scanUp10 + ' Up vs ' + scanDown10 + ' Down) [+22]');
+          var uStep10 = Math.min(28, 14 + (scanUp10 - scanDown10) * 3);
+          buyScore += uStep10;
+          upFactorsList.push('10S/15S Scan Tick Steps Bullish (' + scanUp10 + ' Up vs ' + scanDown10 + ' Down) [+' + uStep10 + ']');
         } else if (scanDown10 > scanUp10) {
+          var dStep10 = Math.min(28, 14 + (scanDown10 - scanUp10) * 3);
+          sellScore += dStep10;
+          downFactorsList.push('10S/15S Scan Tick Steps Bearish (' + scanDown10 + ' Down vs ' + scanUp10 + ' Up) [+' + dStep10 + ']');
+        }
+
+        var lateSlice10 = priceSamples.slice(-Math.max(3, Math.floor(priceSamples.length * 0.35)));
+        var lateDelta10 = lateSlice10[lateSlice10.length - 1] - lateSlice10[0];
+        if (lateDelta10 > 0.0000003) {
+          buyScore += 22;
+          upFactorsList.push('10S/15S Late-Scan Impulse Push Up [+22]');
+        } else if (lateDelta10 < -0.0000003) {
           sellScore += 22;
-          downFactorsList.push('10S/15S Scan Tick Steps Bearish (' + scanDown10 + ' Down vs ' + scanUp10 + ' Up) [+22]');
+          downFactorsList.push('10S/15S Late-Scan Impulse Push Down [+22]');
         }
       }
 
-      if (tickSlope > 0.000002) {
+      if (tickSlope > 0.0000004) {
         buyScore += 26;
         upFactorsList.push('10S/15S Tick Slope Bullish [+26]');
-      } else if (tickSlope < -0.000002) {
+      } else if (tickSlope < -0.0000004) {
         sellScore += 26;
         downFactorsList.push('10S/15S Tick Slope Bearish [+26]');
       }
 
-      if (tickVelocity > 0.000003) {
+      if (tickVelocity > 0.0000005) {
         buyScore += 18;
         upFactorsList.push('10S/15S Real-Time Velocity Up [+18]');
-      } else if (tickVelocity < -0.000003) {
+      } else if (tickVelocity < -0.0000005) {
         sellScore += 18;
         downFactorsList.push('10S/15S Real-Time Velocity Down [+18]');
       }
@@ -3061,20 +3116,22 @@ javascript:(function(){
         downFactorsList.push('10S/15S Active Running Bar Bearish [+28]');
       }
 
-      if (lowerWick >= candleRange * 0.32 && lowerWick > upperWick) {
-        buyScore += 30;
-        srPattern = 'Lower Wick Support Bounce';
-        upFactorsList.push('10S/15S Lower Wick Support Bounce [+30]');
-      } else if (upperWick >= candleRange * 0.32 && upperWick > lowerWick) {
-        sellScore += 30;
-        srPattern = 'Upper Wick Resistance Rejection';
-        downFactorsList.push('10S/15S Upper Wick Resistance Rejection [+30]');
+      if (candleRange > 0.00001) {
+        if (lowerWick >= candleRange * 0.30 && lowerWick > upperWick) {
+          buyScore += 30;
+          srPattern = 'Lower Wick Support Bounce';
+          upFactorsList.push('10S/15S Lower Wick Support Bounce [+30]');
+        } else if (upperWick >= candleRange * 0.30 && upperWick > lowerWick) {
+          sellScore += 30;
+          srPattern = 'Upper Wick Resistance Rejection';
+          downFactorsList.push('10S/15S Upper Wick Resistance Rejection [+30]');
+        }
       }
 
-      if (calculatedRsi >= 75) {
+      if (calculatedRsi >= 73) {
         sellScore += 22;
         downFactorsList.push('10S/15S RSI Overbought Peak Exhaustion [+22]');
-      } else if (calculatedRsi <= 25) {
+      } else if (calculatedRsi <= 27) {
         buyScore += 22;
         upFactorsList.push('10S/15S RSI Oversold Floor Exhaustion [+22]');
       }
@@ -3136,17 +3193,34 @@ javascript:(function(){
       }
     }
 
-    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION ---
+    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION WITH ANTI-STREAK GUARD ---
     var netConfluence = buyScore - sellScore;
+    var scoreDiff = Math.abs(buyScore - sellScore);
     var isCall;
-    if (buyScore > sellScore) {
+
+    if (scoreDiff >= 14) {
+      // Clear decisive dominance from market data
+      isCall = buyScore > sellScore;
+    } else if (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ >= 2 && window.__ISHAK_LAST_DIRECTION__ === 'PUT') {
+      // Previous 2+ trades were PUT/SELL. If market is balanced or shows any upward tick, rotate to CALL/BUY!
+      if (buyScore >= sellScore || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] >= priceSamples[0]) || runningClose >= runningOpen || calculatedRsi <= 52) {
+        isCall = true;
+      } else {
+        isCall = false;
+      }
+    } else if (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ >= 2 && window.__ISHAK_LAST_DIRECTION__ === 'CALL') {
+      // Previous 2+ trades were CALL/BUY. If market is balanced or shows any downward tick, rotate to PUT/SELL!
+      if (sellScore >= buyScore || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] <= priceSamples[0]) || runningClose <= runningOpen || calculatedRsi >= 48) {
+        isCall = false;
+      } else {
+        isCall = true;
+      }
+    } else if (buyScore > sellScore) {
       isCall = true;
     } else if (sellScore > buyScore) {
       isCall = false;
-    } else if (callPathProb > 0.505) {
-      isCall = true;
-    } else if (callPathProb < 0.495) {
-      isCall = false;
+    } else if (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] !== priceSamples[0]) {
+      isCall = priceSamples[priceSamples.length - 1] > priceSamples[0];
     } else if (Math.abs(tickSlope) > 0.0000001) {
       isCall = tickSlope > 0;
     } else if (tickVelocity !== 0) {
@@ -3154,7 +3228,24 @@ javascript:(function(){
     } else if (runningClose !== runningOpen) {
       isCall = runningClose > runningOpen;
     } else {
-      isCall = null;
+      isCall = window.__ISHAK_LAST_DIRECTION__ === 'PUT' ? true : false;
+    }
+
+    // Update persistent direction tracking for anti-streak assurance
+    if (isCall === true) {
+      if (window.__ISHAK_LAST_DIRECTION__ === 'CALL') {
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0) + 1;
+      } else {
+        window.__ISHAK_LAST_DIRECTION__ = 'CALL';
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = 1;
+      }
+    } else if (isCall === false) {
+      if (window.__ISHAK_LAST_DIRECTION__ === 'PUT') {
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0) + 1;
+      } else {
+        window.__ISHAK_LAST_DIRECTION__ = 'PUT';
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = 1;
+      }
     }
 
     var isTradeApproved = isCall !== null;
@@ -3271,6 +3362,18 @@ javascript:(function(){
       target.dispatchEvent(new MouseEvent('mouseup', opts));
       target.click();
 
+      try {
+        window.dispatchEvent(new CustomEvent('ishak_trade_execute', {
+          detail: {
+            type: isCall ? 'CALL' : 'PUT',
+            isCall: isCall,
+            duration: tradeDuration || 5,
+            signalId: signalId,
+            timestamp: Date.now()
+          }
+        }));
+      } catch(e){}
+
       return { success: true, element: target, isCall: isCall };
     } catch(err) {
       return { success: false, reason: err.message };
@@ -3350,14 +3453,23 @@ javascript:(function(){
 
       playPhotostatScannerSound();
 
-      // Real-Time High-Frequency Price Sampler during 3.5s Laser Scan
+      // Real-Time High-Frequency Price Sampler during 3.5s Laser Scan (Captured afresh every click)
       var livePriceSamples = [];
-      var pInit = extractQuotexLivePrice();
-      if (pInit) livePriceSamples.push(pInit);
-      var priceSamplerInterval = setInterval(function() {
+      function sampleFreshScanTick() {
         var p = extractQuotexLivePrice();
-        if (p) livePriceSamples.push(p);
-      }, 250);
+        if (!p && window.__ISHAK_LAST_WS_PRICE__) p = window.__ISHAK_LAST_WS_PRICE__;
+        if (!p && window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) {
+          p = window.__ISHAK_MARKET_STREAM__.currentPrice;
+        }
+        if (!p && window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
+          p = window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1].price;
+        }
+        if (p && p > 0) {
+          livePriceSamples.push(p);
+        }
+      }
+      sampleFreshScanTick();
+      var priceSamplerInterval = setInterval(sampleFreshScanTick, 70);
 
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();
