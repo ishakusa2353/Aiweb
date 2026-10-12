@@ -415,9 +415,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
         {/* MAIN ACTION BUTTON */}
         <button
+          data-rn-scan="true"
           onClick={handleScanAndExecute}
-          disabled={isScanning}
-          className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#00E5FF] via-[#00B4D8] to-[#0077B6] hover:brightness-110 active:scale-[0.98] text-[#050C1D] text-xs font-black tracking-widest font-['Orbitron',sans-serif] uppercase shadow-[0_6px_25px_rgba(0,229,255,0.45),inset_0_1.5px_1px_rgba(255,255,255,0.6)] cursor-pointer transition-all flex items-center justify-center gap-2"
+          disabled={isScanning || !isLicenseVerified}
+          className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#00E5FF] via-[#00B4D8] to-[#0077B6] hover:brightness-110 active:scale-[0.98] text-[#050C1D] text-xs font-black tracking-widest font-['Orbitron',sans-serif] uppercase shadow-[0_6px_25px_rgba(0,229,255,0.45),inset_0_1.5px_1px_rgba(255,255,255,0.6)] cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <span>⚡</span>
           <span>{isScanning ? 'RADAR ANALYZING...' : `SCAN & EXECUTE (${selectedDuration}s)`}</span>
@@ -426,8 +427,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
         {/* FOOTER BADGE */}
         <div className="text-center pt-1 border-t border-indigo-500/20 flex items-center justify-between text-[9px] text-gray-400">
-          <span className="text-emerald-400 font-bold flex items-center gap-1">
-            <span>✓</span> VIP License Verified
+          <span className={`font-bold flex items-center gap-1 ${isLicenseVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
+            <span>{isLicenseVerified ? '✓' : '⚠️'}</span> {isLicenseVerified ? 'VIP License Active' : 'License Required'}
           </span>
           <span className="font-semibold text-gray-500">Official MD Ishak Algo Engine</span>
         </div>

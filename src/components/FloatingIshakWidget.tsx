@@ -191,6 +191,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.key) {
+          parsed.verified = true;
           setActiveLicense(parsed);
           setLicenseInput(parsed.key);
           return;
@@ -203,6 +204,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         duration: '30d',
         traderId: 'VIP_SIMULATOR',
         tier: 'VIP',
+        verified: true,
       };
       localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(simLic));
       setActiveLicense(simLic);
@@ -384,6 +386,14 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       setShowKeyModal(true);
       showToast('⚠️ অনুগ্রহ করে প্রথমে আপনার VIP লাইসেন্স কি ভেরিফাই করুন!', true);
       return;
+    }
+
+    if (botMode === 'ROUND_NUMBER') {
+      const rnBtn = document.querySelector('button[data-rn-scan="true"]') as HTMLButtonElement | null;
+      if (rnBtn) {
+        rnBtn.click();
+        return;
+      }
     }
 
     // Check 2: LIVE CLOUD LICENSE VERIFICATION WITH SUPABASE
@@ -715,6 +725,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           duration: data.duration || '30d',
           traderId: '',
           tier: data.tier || 'VIP',
+          verified: true,
         };
         localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(lic));
         setActiveLicense(lic);
@@ -1037,9 +1048,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
               <button
                 onClick={() => {
-                  const isVerified = activeLicense && activeLicense.verified === true && (!activeLicense.exp || activeLicense.exp > Date.now());
-                  if (!isVerified) {
-                    showToast('❌ LICENSE VERIFICATION REQUIRED! লাইসেন্স ভেরিফাইড ছাড়া Round Number Mode আনলক হবে না।', true);
+                  const isLicenseActive = Boolean(
+                    activeLicense &&
+                    activeLicense.key &&
+                    (!activeLicense.exp || activeLicense.exp > Date.now())
+                  );
+                  if (!isLicenseActive) {
+                    showToast('❌ লাইসেন্স আবশ্যক! বট একটিভ বা লগইন থাকলে তবেই SWITCH MODE কাজ করবে।', true);
                     return;
                   }
                   const next = botMode === 'ROUND_NUMBER' ? 'CONFLUENCE' : 'ROUND_NUMBER';
@@ -1381,7 +1396,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       {/* 5. ⚡ ISHAK VIP ROUND NUMBER SNR TERMINAL (MODE 2) */}
       {botMode === 'ROUND_NUMBER' && (
         <IshakRoundNumberTerminal
-          isLicenseVerified={!!(activeLicense && activeLicense.verified === true && (!activeLicense.exp || activeLicense.exp > Date.now()))}
+          isLicenseVerified={Boolean(activeLicense && activeLicense.key && (!activeLicense.exp || activeLicense.exp > Date.now()))}
           onClose={() => {
             setBotMode('CONFLUENCE');
             try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}

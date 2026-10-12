@@ -1204,7 +1204,11 @@ javascript:(function(){
     try {
       var raw = localStorage.getItem('ISHAK_AI_LICENSE');
       if (!raw) return null;
-      return JSON.parse(raw);
+      var obj = JSON.parse(raw);
+      if (obj && obj.key && (!obj.exp || obj.exp > Date.now())) {
+        obj.verified = true;
+      }
+      return obj;
     } catch(e) { return null; }
   }
 
@@ -1215,7 +1219,8 @@ javascript:(function(){
         exp: exp,
         duration: duration || '30d',
         traderId: traderId || '',
-        tier: tier || 'VIP'
+        tier: tier || 'VIP',
+        verified: true
       }));
     } catch(e){}
   }
@@ -2403,9 +2408,13 @@ javascript:(function(){
     document.getElementById('hub-btn-switch-mode').onclick = function(e) {
       e.stopPropagation();
       var localLic = getLocalLicense();
-      var isVerified = localLic && localLic.verified === true && localLic.key && (!localLic.exp || localLic.exp > Date.now());
+      var isVerified = Boolean(
+        localLic &&
+        localLic.key &&
+        (!localLic.exp || localLic.exp > Date.now())
+      );
       if (!isVerified) {
-        showModalToast(hub, '❌ LICENSE VERIFICATION REQUIRED! লাইসেন্স ভেরিফাইড ছাড়া Round Number Mode কাজ করবে না।', true);
+        showModalToast(hub, '❌ লাইসেন্স আবশ্যক! বট একটিভ বা লগইন থাকলে তবেই SWITCH MODE কাজ করবে।', true);
         return;
       }
       activeBotMode = (activeBotMode === 'ROUND_NUMBER') ? 'CONFLUENCE' : 'ROUND_NUMBER';
@@ -4014,6 +4023,16 @@ javascript:(function(){
         showMaintenanceModal();
         return;
       }
+      if (activeBotMode === 'ROUND_NUMBER') {
+        var term = document.getElementById('ishak-rn-terminal-root');
+        if (!term || term.style.display === 'none') {
+          showRoundNumberTerminal();
+        } else {
+          var btnExec = document.getElementById('rn-btn-scan-exec');
+          if (btnExec) btnExec.click();
+        }
+        return;
+      }
       if (singleClickTimer) {
         clearTimeout(singleClickTimer);
         singleClickTimer = null;
@@ -4038,4 +4057,13 @@ javascript:(function(){
   try {
     playWaterWaveIntroSound();
   } catch(e){}
+
+  if (activeBotMode === 'ROUND_NUMBER') {
+    var initLic = getLocalLicense();
+    if (initLic && initLic.key && (!initLic.exp || initLic.exp > Date.now())) {
+      setTimeout(function() {
+        showRoundNumberTerminal();
+      }, 700);
+    }
+  }
 })();
