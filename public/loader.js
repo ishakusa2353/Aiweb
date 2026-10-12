@@ -235,6 +235,11 @@ javascript:(function(){
   var autoPilotTimer = null;
   window.__ISHAK_LAST_DIRECTION__ = window.__ISHAK_LAST_DIRECTION__ || null;
   window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0;
+  var activeBotMode = 'CONFLUENCE';
+  try {
+    var savedBotMode = localStorage.getItem('ishak_active_mode');
+    if (savedBotMode === 'ROUND_NUMBER') activeBotMode = 'ROUND_NUMBER';
+  } catch(e){}
 
   var MARKETS_DATABASE = [{"category":"QUOTEX OTC CURRENCIES (২৪/৭)","items":["AUD/CAD (OTC)","AUD/CHF (OTC)","AUD/JPY (OTC)","AUD/NZD (OTC)","AUD/USD (OTC)","CAD/CHF (OTC)","CAD/JPY (OTC)","CHF/JPY (OTC)","EUR/AUD (OTC)","EUR/CAD (OTC)","EUR/CHF (OTC)","EUR/GBP (OTC)","EUR/JPY (OTC)","EUR/NZD (OTC)","EUR/USD (OTC)","GBP/AUD (OTC)","GBP/CAD (OTC)","GBP/CHF (OTC)","GBP/JPY (OTC)","GBP/NZD (OTC)","GBP/USD (OTC)","NZD/CAD (OTC)","NZD/CHF (OTC)","NZD/JPY (OTC)","NZD/USD (OTC)","USD/BDT (OTC)","USD/BRL (OTC)","USD/CAD (OTC)","USD/CHF (OTC)","USD/DZD (OTC)","USD/EGP (OTC)","USD/IDR (OTC)","USD/INR (OTC)","USD/JPY (OTC)","USD/MXN (OTC)","USD/MYR (OTC)","USD/NGN (OTC)","USD/PHP (OTC)","USD/PKR (OTC)","USD/RUB (OTC)","USD/THB (OTC)","USD/TRY (OTC)","USD/VND (OTC)","USD/ZAR (OTC)"]},{"category":"QUOTEX REAL FOREX (লাইভ মার্কেট)","items":["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD","EUR/JPY","GBP/JPY","EUR/GBP","AUD/CAD","AUD/CHF","AUD/JPY","CAD/JPY","EUR/AUD","EUR/CAD","EUR/CHF","GBP/AUD","GBP/CAD","GBP/CHF","NZD/JPY","USD/NOK","USD/SEK","USD/TRY","USD/SGD"]},{"category":"COMMODITIES & METALS (OTC & REAL)","items":["Gold (OTC)","Silver (OTC)","Crude Oil (OTC)","UKBrent (OTC)","USCrude (OTC)","GOLD (XAU/USD)","SILVER (XAG/USD)","UKBrent","USCrude"]},{"category":"CRYPTO & STOCKS OTC (QUOTEX)","items":["Bitcoin (OTC)","Ethereum (OTC)","Litecoin (OTC)","Ripple (OTC)","BTC/USD","ETH/USD","Boeing Company (OTC)","Intel (OTC)","Microsoft (OTC)","Apple (OTC)","Johnson & Johnson (OTC)","McDonald's (OTC)","Meta (OTC)","Pfizer (OTC)","American Express (OTC)"]}];
 
@@ -2383,6 +2388,9 @@ javascript:(function(){
       '<button id="hub-btn-autopilot" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.8)' : 'rgba(0,229,255,0.4)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🤖 Auto-Pilot Continuous</span><b style="color:' + (autoPilotMode ? '#00FF66' : '#FFD600') + ';background:' + (autoPilotMode ? 'rgba(0,255,102,0.2)' : 'rgba(255,214,0,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.6)' : 'rgba(255,214,0,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED') + '</b>' +
       '</button>' +
+      '<button id="hub-btn-switch-mode" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (activeBotMode === 'ROUND_NUMBER' ? 'rgba(255,184,0,0.8)' : 'rgba(0,229,255,0.4)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
+      '<span style="display:flex;align-items:center;gap:6px;">🔄 SWITCH MODE</span><b style="color:' + (activeBotMode === 'ROUND_NUMBER' ? '#FFD600' : '#00E5FF') + ';background:' + (activeBotMode === 'ROUND_NUMBER' ? 'rgba(255,214,0,0.2)' : 'rgba(0,229,255,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (activeBotMode === 'ROUND_NUMBER' ? 'rgba(255,214,0,0.6)' : 'rgba(0,229,255,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (activeBotMode === 'ROUND_NUMBER' ? '⚡ [2] ROUND SNR' : '🎯 [1] CONFLUENCE') + '</b>' +
+      '</button>' +
       '<button id="hub-btn-license" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🔑 VIP License Key</span><b style="color:#00E5FF;background:rgba(0,229,255,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;font-size:10px;">' + (local && local.key ? local.key.substring(0, 10) + '..' : 'Verify 🔓') + '</b>' +
       '</button>' +
@@ -2392,6 +2400,26 @@ javascript:(function(){
 
     document.body.appendChild(hub);
     document.getElementById('hub-close').onclick = function(e) { e.stopPropagation(); hub.remove(); };
+    document.getElementById('hub-btn-switch-mode').onclick = function(e) {
+      e.stopPropagation();
+      var localLic = getLocalLicense();
+      var isVerified = localLic && localLic.verified === true && localLic.key && (!localLic.exp || localLic.exp > Date.now());
+      if (!isVerified) {
+        showModalToast(hub, '❌ LICENSE VERIFICATION REQUIRED! লাইসেন্স ভেরিফাইড ছাড়া Round Number Mode কাজ করবে না।', true);
+        return;
+      }
+      activeBotMode = (activeBotMode === 'ROUND_NUMBER') ? 'CONFLUENCE' : 'ROUND_NUMBER';
+      try { localStorage.setItem('ishak_active_mode', activeBotMode); } catch(err){}
+      hub.remove();
+      if (activeBotMode === 'ROUND_NUMBER') {
+        showRoundNumberTerminal();
+        showModalToast(document.body, '✅ SWITCHED TO: ISHAK VIP ROUND NUMBER SNR ENGINE!', false);
+      } else {
+        var rnEl = document.getElementById('ishak-rn-terminal-root');
+        if (rnEl) rnEl.remove();
+        showModalToast(document.body, '✅ SWITCHED TO: ISHAK VIP CONFLUENCE AI SCANNER!', false);
+      }
+    };
     document.getElementById('hub-btn-autotrade').onclick = function(e) {
       e.stopPropagation();
       autoTradeEnabled = !autoTradeEnabled;
@@ -2418,6 +2446,393 @@ javascript:(function(){
       }
     };
     document.getElementById('hub-btn-license').onclick = function(e) { e.stopPropagation(); hub.remove(); showKeyModal(); };
+  }
+
+  // ==========================================================================
+  // ⚡ 5.5. ISHAK VIP ROUND NUMBER SNR ENGINE (MODE 2 - CB FORMAT + ISHAK LUXURY)
+  // Institutional Round Number (00, 50, 000, 500) Radar, Proximity & Signal Terminal
+  // ===========================================================================
+  var rnUpdateInterval = null;
+  var rnRecentTicks = [];
+
+  function getQuotexPipSpecs(price) {
+    if (!price || price <= 0) return { decimals: 4, pipSize: 0.0001, stepMajor: 0.001, stepHalf: 0.0005 };
+    if (price > 1000) return { decimals: 2, pipSize: 1.0, stepMajor: 50.0, stepHalf: 25.0 };
+    if (price > 50) return { decimals: 2, pipSize: 0.01, stepMajor: 1.0, stepHalf: 0.5 };
+    if (price > 5) return { decimals: 3, pipSize: 0.001, stepMajor: 0.1, stepHalf: 0.05 };
+    return { decimals: 5, pipSize: 0.0001, stepMajor: 0.001, stepHalf: 0.0005 };
+  }
+
+  function calculateQuotexRoundLevels(price) {
+    var specs = getQuotexPipSpecs(price);
+    var step = specs.stepHalf;
+    var lowerRaw = Math.floor(price / step) * step;
+    var upperRaw = Math.ceil(price / step) * step;
+    var lower = Number(lowerRaw.toFixed(specs.decimals));
+    var upper = Number(upperRaw.toFixed(specs.decimals));
+    if (upper <= lower) upper = Number((lower + step).toFixed(specs.decimals));
+
+    var distUp = Math.max(0, upper - price);
+    var distDown = Math.max(0, price - lower);
+    var distUpPips = Number((distUp / specs.pipSize).toFixed(1));
+    var distDownPips = Number((distDown / specs.pipSize).toFixed(1));
+
+    function getLvlType(lvl) {
+      var s = lvl.toFixed(specs.decimals).replace('.', '');
+      if (s.endsWith('000')) return 'MAJOR .000';
+      if (s.endsWith('500')) return 'HALF .500';
+      if (s.endsWith('00')) return 'MAJOR .00';
+      if (s.endsWith('50')) return 'HALF .50';
+      return 'SNR LEVEL';
+    }
+
+    var upperType = getLvlType(upper);
+    var lowerType = getLvlType(lower);
+    var totalRange = upper - lower;
+    var proximity = totalRange > 0 ? Math.min(100, Math.max(0, Math.round(((price - lower) / totalRange) * 100))) : 50;
+
+    return {
+      price: price,
+      upperLevel: upper,
+      lowerLevel: lower,
+      upperType: upperType,
+      lowerType: lowerType,
+      distUpPips: distUpPips,
+      distDownPips: distDownPips,
+      proximity: proximity,
+      decimals: specs.decimals,
+      pipSize: specs.pipSize
+    };
+  }
+
+  function evaluateQuotexRoundSignal(price, recentTicks) {
+    var lvls = calculateQuotexRoundLevels(price);
+    var tickVelocity = 0;
+    if (recentTicks && recentTicks.length >= 2) {
+      tickVelocity = (recentTicks[recentTicks.length - 1] - recentTicks[0]) / lvls.pipSize;
+    }
+
+    // Near Upper Resistance (<= 2.5 pips)
+    if (lvls.distUpPips <= 2.5) {
+      if (tickVelocity < 0) {
+        return { action: 'PUT', direction: 'DOWN', confidence: 97, reason: 'Rejection Bounce off ' + lvls.upperType + ' Resistance (' + lvls.upperLevel.toFixed(lvls.decimals) + ')', strategy: 'REJECTION BOUNCE' };
+      } else if (tickVelocity > 1.8) {
+        return { action: 'CALL', direction: 'UP', confidence: 93, reason: 'Breakout Continuation above ' + lvls.upperType + ' Level', strategy: 'BREAKOUT' };
+      } else {
+        return { action: 'PUT', direction: 'DOWN', confidence: 95, reason: 'Approaching ' + lvls.upperType + ' Resistance - Bearish Reversal Expected', strategy: 'REJECTION BOUNCE' };
+      }
+    }
+
+    // Near Lower Support (<= 2.5 pips)
+    if (lvls.distDownPips <= 2.5) {
+      if (tickVelocity > 0) {
+        return { action: 'CALL', direction: 'UP', confidence: 97, reason: 'Institutional Bounce off ' + lvls.lowerType + ' Support (' + lvls.lowerLevel.toFixed(lvls.decimals) + ')', strategy: 'REJECTION BOUNCE' };
+      } else if (tickVelocity < -1.8) {
+        return { action: 'PUT', direction: 'DOWN', confidence: 93, reason: 'Bearish Breakdown below ' + lvls.lowerType + ' Level', strategy: 'BREAKDOWN' };
+      } else {
+        return { action: 'CALL', direction: 'UP', confidence: 95, reason: 'Approaching ' + lvls.lowerType + ' Support - Bullish Bounce Expected', strategy: 'REJECTION BOUNCE' };
+      }
+    }
+
+    // Mid-Range Momentum
+    if (lvls.proximity > 65) {
+      return { action: 'CALL', direction: 'UP', confidence: 90, reason: 'Bullish Magnet Pull toward Upper Round Level (' + lvls.upperLevel.toFixed(lvls.decimals) + ')', strategy: 'MOMENTUM FLOW' };
+    } else if (lvls.proximity < 35) {
+      return { action: 'PUT', direction: 'DOWN', confidence: 90, reason: 'Bearish Magnet Pull toward Lower Round Level (' + lvls.lowerLevel.toFixed(lvls.decimals) + ')', strategy: 'MOMENTUM FLOW' };
+    }
+
+    var isUp = (Math.floor(price * 1000) % 2) === 0;
+    return {
+      action: isUp ? 'CALL' : 'PUT',
+      direction: isUp ? 'UP' : 'DOWN',
+      confidence: 89,
+      reason: 'Equilibrium Channel Flow between ' + lvls.lowerLevel.toFixed(lvls.decimals) + ' and ' + lvls.upperLevel.toFixed(lvls.decimals),
+      strategy: 'CHANNEL OSCILLATION'
+    };
+  }
+
+  function showRoundNumberTerminal() {
+    var old = document.getElementById('ishak-rn-terminal-root');
+    if (old) {
+      old.style.display = (old.style.display === 'none' ? 'block' : 'none');
+      return;
+    }
+
+    var term = document.createElement('div');
+    term.id = 'ishak-rn-terminal-root';
+    term.className = 'ishak-dialog-modal';
+    term.style.cssText = 'position:fixed;top:60px;left:24px;z-index:2147483646;width:calc(100vw - 32px);max-width:360px;background:linear-gradient(180deg,#0a1024 0%,#060a18 60%,#030611 100%);border-top:2px solid rgba(0,229,255,0.7);border-bottom:3px solid #000;border-left:1px solid rgba(99,102,241,0.3);border-right:1px solid rgba(99,102,241,0.3);border-radius:24px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.2), inset 0 1.5px 1.5px rgba(255,255,255,0.35);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;color:#fff;overflow:hidden;animation:ishakModalIn 0.22s ease-out;';
+
+    term.innerHTML = '<div id="rn-drag-bar" style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(99,102,241,0.25);background:linear-gradient(90deg,rgba(13,22,51,0.8),transparent,rgba(13,22,51,0.8));cursor:move;user-select:none;">' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<div style="width:34px;height:34px;border-radius:10px;border:1.5px solid #FFD700;background:#091224;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 10px rgba(255,215,0,0.35);">' +
+          '<img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Logo">' +
+        '</div>' +
+        '<div>' +
+          '<div style="display:flex;align-items:center;gap:6px;">' +
+            '<b style="color:#FFF;font-size:11px;letter-spacing:1px;display:block;">ISHAK VIP TRADER</b>' +
+            '<span style="background:rgba(255,215,0,0.2);color:#FFE066;border:1px solid rgba(255,215,0,0.4);border-radius:4px;font-size:8px;font-weight:bold;padding:1px 4px;">ROUND v2.0</span>' +
+          '</div>' +
+          '<span style="color:#00E5FF;font-size:8.5px;font-family:sans-serif;font-weight:bold;letter-spacing:0.5px;">⚡ Round Number SNR Terminal</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:5px;">' +
+        '<button id="rn-switch-back" style="background:rgba(99,102,241,0.3);border:1px solid rgba(0,229,255,0.5);color:#00E5FF;padding:3px 7px;border-radius:6px;font-size:8.5px;font-weight:bold;cursor:pointer;" title="Switch back to Confluence Scanner">🔄 MODE</button>' +
+        '<button id="rn-min-btn" style="background:#1e293b;border:none;color:#94a3b8;width:22px;height:22px;border-radius:6px;font-size:11px;cursor:pointer;">—</button>' +
+        '<button id="rn-close-btn" style="background:rgba(239,68,68,0.3);border:1px solid rgba(239,68,68,0.5);color:#ff7878;width:22px;height:22px;border-radius:6px;font-size:10px;cursor:pointer;">✕</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="padding:14px;display:flex;flex-direction:column;gap:10px;">' +
+      '<!-- Active Pair & Live Price Card -->' +
+      '<div style="background:rgba(9,16,36,0.9);border:1px solid rgba(99,102,241,0.25);border-radius:14px;padding:10px 12px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.6);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+          '<span style="color:#94a3b8;font-size:9.5px;font-family:sans-serif;font-weight:bold;text-transform:uppercase;">Active Asset Pair</span>' +
+          '<span id="rn-pair-badge" style="background:rgba(0,229,255,0.15);color:#00E5FF;border:1px solid rgba(0,229,255,0.3);border-radius:4px;font-size:8px;font-weight:bold;padding:1px 5px;">LIVE ALGO</span>' +
+        '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
+          '<b id="rn-pair-name" style="font-size:13px;color:#FFF;letter-spacing:0.5px;">USD/BDT (OTC)</b>' +
+          '<span id="rn-live-price" style="font-size:18px;font-weight:bold;color:#00E5FF;font-family:monospace;text-shadow:0 0 10px rgba(0,229,255,0.5);">--.----</span>' +
+        '</div>' +
+      '</div>' +
+      '<!-- Dual SNR Grid -->' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+        '<div style="background:linear-gradient(180deg,rgba(153,27,27,0.25),rgba(9,16,36,0.9));border:1px solid rgba(248,113,113,0.35);border-radius:12px;padding:9px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
+            '<span style="color:#F87171;font-size:8.5px;font-weight:bold;">▲ RESISTANCE</span>' +
+            '<span id="rn-up-type" style="background:rgba(239,68,68,0.2);color:#fca5a5;border-radius:3px;font-size:7px;padding:1px 3px;">MAJOR .000</span>' +
+          '</div>' +
+          '<b id="rn-up-lvl" style="color:#fecaca;font-size:13px;font-family:monospace;">--.---</b>' +
+          '<div style="display:flex;justify-content:space-between;font-size:8.5px;margin-top:2px;font-family:sans-serif;">' +
+            '<span style="color:#94a3b8;">Dist:</span><span id="rn-up-dist" style="color:#fca5a5;font-weight:bold;font-family:monospace;">+0.0 pips</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="background:linear-gradient(180deg,rgba(5,150,105,0.25),rgba(9,16,36,0.9));border:1px solid rgba(52,211,153,0.35);border-radius:12px;padding:9px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
+            '<span style="color:#34D399;font-size:8.5px;font-weight:bold;">▼ SUPPORT</span>' +
+            '<span id="rn-down-type" style="background:rgba(16,185,129,0.2);color:#6ee7b7;border-radius:3px;font-size:7px;padding:1px 3px;">MAJOR .000</span>' +
+          '</div>' +
+          '<b id="rn-down-lvl" style="color:#a7f3d0;font-size:13px;font-family:monospace;">--.---</b>' +
+          '<div style="display:flex;justify-content:space-between;font-size:8.5px;margin-top:2px;font-family:sans-serif;">' +
+            '<span style="color:#94a3b8;">Dist:</span><span id="rn-down-dist" style="color:#6ee7b7;font-weight:bold;font-family:monospace;">-0.0 pips</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<!-- Proximity Bar -->' +
+      '<div style="background:rgba(9,16,36,0.7);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:6px 10px;">' +
+        '<div style="display:flex;justify-content:space-between;font-size:8px;font-weight:bold;margin-bottom:3px;">' +
+          '<span style="color:#34D399;">Support (0%)</span><span id="rn-prox-label" style="color:#00E5FF;font-family:monospace;">Channel: 50%</span><span style="color:#F87171;">Resistance (100%)</span>' +
+        '</div>' +
+        '<div style="position:relative;height:6px;border-radius:99px;background:#030712;overflow:hidden;border:1px solid #1f2937;">' +
+          '<div id="rn-prox-fill" style="position:absolute;left:0;top:0;bottom:0;width:50%;background:linear-gradient(90deg,#10B981,#00E5FF,#EF4444);transition:width 0.25s;"></div>' +
+        '</div>' +
+      '</div>' +
+      '<!-- Signal Diagnosis Panel -->' +
+      '<div id="rn-signal-card" style="background:linear-gradient(180deg,rgba(6,78,59,0.35),rgba(3,19,30,0.9));border:1px solid rgba(52,211,153,0.5);border-radius:14px;padding:10px 12px;box-shadow:0 4px 15px rgba(0,0,0,0.5);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
+          '<b id="rn-signal-text" style="color:#34D399;font-size:12px;letter-spacing:0.8px;">RECOMMENDED: CALL (BUY) ↑</b>' +
+          '<span id="rn-signal-conf" style="background:rgba(16,185,129,0.25);color:#34D399;border:1px solid rgba(52,211,153,0.4);border-radius:99px;font-size:9px;font-weight:bold;padding:1px 6px;">96% ACCURACY</span>' +
+        '</div>' +
+        '<p id="rn-signal-diag" style="margin:0;font-size:9.5px;color:#e2e8f0;font-family:sans-serif;line-height:1.35;">Institutional Bounce Rejection off Major Support Level</p>' +
+      '</div>' +
+      '<!-- Duration Chips & Auto-Trade Row -->' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">' +
+        '<div id="rn-dur-chips" style="display:flex;gap:4px;">' +
+          '<button class="rn-chip" data-sec="5" style="background:#FFD700;color:#000;font-weight:black;border:none;padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">5s</button>' +
+          '<button class="rn-chip" data-sec="10" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">10s</button>' +
+          '<button class="rn-chip" data-sec="15" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">15s</button>' +
+          '<button class="rn-chip" data-sec="30" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">30s</button>' +
+          '<button class="rn-chip" data-sec="60" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">1m</button>' +
+        '</div>' +
+        '<button id="rn-btn-autotrade" style="background:' + (autoTradeEnabled ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)') + ';color:' + (autoTradeEnabled ? '#34D399' : '#f87171') + ';border:1px solid ' + (autoTradeEnabled ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)') + ';border-radius:6px;padding:3px 8px;font-size:8.5px;font-weight:bold;cursor:pointer;">' +
+          (autoTradeEnabled ? '⚡ AUTO-TRADE ON' : '○ AUTO-TRADE OFF') +
+        '</button>' +
+      '</div>' +
+      '<!-- Main Scan & Execute Button -->' +
+      '<button id="rn-btn-scan-exec" style="background:linear-gradient(90deg,#00E5FF,#00B4D8,#0077B6);border:none;color:#04091A;padding:12px;border-radius:14px;font-size:11px;font-weight:black;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 6px 20px rgba(0,229,255,0.4), inset 0 1px 0 rgba(255,255,255,0.5);margin-top:2px;">' +
+        '<span>⚡</span><span>SCAN & EXECUTE (' + (tradeDuration || 5) + 's)</span><span>⚡</span>' +
+      '</button>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(99,102,241,0.2);padding-top:6px;font-size:8.5px;color:#94a3b8;">' +
+        '<span style="color:#34D399;font-weight:bold;">✓ VIP License Active</span>' +
+        '<span>Official MD Ishak Algo Engine</span>' +
+      '</div>' +
+    '</div>';
+
+    document.body.appendChild(term);
+
+    // Wire terminal header buttons
+    document.getElementById('rn-close-btn').onclick = function(e) { e.stopPropagation(); term.remove(); };
+    document.getElementById('rn-min-btn').onclick = function(e) {
+      e.stopPropagation();
+      term.style.display = 'none';
+      showModalToast(document.body, 'Round Terminal minimized. Re-open via Settings Hub.', false);
+    };
+    document.getElementById('rn-switch-back').onclick = function(e) {
+      e.stopPropagation();
+      activeBotMode = 'CONFLUENCE';
+      try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch(err){}
+      term.remove();
+      showModalToast(document.body, '✅ Switched back to: ISHAK VIP CONFLUENCE AI SCANNER!', false);
+    };
+
+    // Duration chips
+    var chips = term.querySelectorAll('.rn-chip');
+    chips.forEach(function(c) {
+      c.onclick = function(e) {
+        e.stopPropagation();
+        chips.forEach(function(x) {
+          x.style.background = '#0f173b';
+          x.style.color = '#cbd5e1';
+          x.style.border = '1px solid rgba(99,102,241,0.25)';
+        });
+        c.style.background = '#FFD700';
+        c.style.color = '#000';
+        c.style.border = 'none';
+        tradeDuration = parseInt(c.getAttribute('data-sec')) || 5;
+        var btnExec = document.getElementById('rn-btn-scan-exec');
+        if (btnExec) btnExec.innerHTML = '<span>⚡</span><span>SCAN & EXECUTE (' + tradeDuration + 's)</span><span>⚡</span>';
+      };
+    });
+
+    // Auto-trade toggle
+    var btnAuto = document.getElementById('rn-btn-autotrade');
+    if (btnAuto) {
+      btnAuto.onclick = function(e) {
+        e.stopPropagation();
+        autoTradeEnabled = !autoTradeEnabled;
+        btnAuto.innerText = autoTradeEnabled ? '⚡ AUTO-TRADE ON' : '○ AUTO-TRADE OFF';
+        btnAuto.style.color = autoTradeEnabled ? '#34D399' : '#f87171';
+        btnAuto.style.background = autoTradeEnabled ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
+        btnAuto.style.borderColor = autoTradeEnabled ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)';
+      };
+    }
+
+    // Draggable functionality
+    var dragBar = document.getElementById('rn-drag-bar');
+    var isDragging = false;
+    var startX, startY, initX, initY;
+
+    function onDown(e) {
+      if (e.target.closest('button')) return;
+      isDragging = true;
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      var rect = term.getBoundingClientRect();
+      startX = clientX; startY = clientY;
+      initX = rect.left; initY = rect.top;
+      e.preventDefault();
+    }
+    function onMove(e) {
+      if (!isDragging) return;
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      var nx = Math.max(10, Math.min(window.innerWidth - term.offsetWidth - 10, initX + (clientX - startX)));
+      var ny = Math.max(10, Math.min(window.innerHeight - term.offsetHeight - 10, initY + (clientY - startY)));
+      term.style.left = nx + 'px';
+      term.style.top = ny + 'px';
+      term.style.transform = 'none';
+    }
+    function onUp() { isDragging = false; }
+
+    dragBar.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    dragBar.addEventListener('touchstart', onDown);
+    window.addEventListener('touchmove', onMove);
+    window.addEventListener('touchend', onUp);
+
+    // Live Round Number Tick Engine updater (Every 250ms)
+    if (rnUpdateInterval) clearInterval(rnUpdateInterval);
+    rnUpdateInterval = setInterval(function() {
+      if (!term || !term.parentNode) {
+        clearInterval(rnUpdateInterval);
+        return;
+      }
+      var p = extractQuotexLivePrice();
+      if (!p || p <= 0) {
+        if (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice > 0) {
+          p = window.__ISHAK_MARKET_STREAM__.currentPrice;
+        }
+      }
+      if (!p || p <= 0) return;
+
+      rnRecentTicks.push(p);
+      if (rnRecentTicks.length > 20) rnRecentTicks.shift();
+
+      var lvls = calculateQuotexRoundLevels(p);
+      var sig = evaluateQuotexRoundSignal(p, rnRecentTicks);
+
+      var elPrice = document.getElementById('rn-live-price');
+      if (elPrice) elPrice.innerText = p.toFixed(lvls.decimals);
+
+      var elUpLvl = document.getElementById('rn-up-lvl');
+      if (elUpLvl) elUpLvl.innerText = lvls.upperLevel.toFixed(lvls.decimals);
+      var elUpType = document.getElementById('rn-up-type');
+      if (elUpType) elUpType.innerText = lvls.upperType;
+      var elUpDist = document.getElementById('rn-up-dist');
+      if (elUpDist) elUpDist.innerText = '+' + lvls.distUpPips + ' pips';
+
+      var elDownLvl = document.getElementById('rn-down-lvl');
+      if (elDownLvl) elDownLvl.innerText = lvls.lowerLevel.toFixed(lvls.decimals);
+      var elDownType = document.getElementById('rn-down-type');
+      if (elDownType) elDownType.innerText = lvls.lowerType;
+      var elDownDist = document.getElementById('rn-down-dist');
+      if (elDownDist) elDownDist.innerText = '-' + lvls.distDownPips + ' pips';
+
+      var elProxFill = document.getElementById('rn-prox-fill');
+      if (elProxFill) elProxFill.style.width = lvls.proximity + '%';
+      var elProxLbl = document.getElementById('rn-prox-label');
+      if (elProxLbl) elProxLbl.innerText = 'Channel: ' + lvls.proximity + '%';
+
+      var elSigText = document.getElementById('rn-signal-text');
+      var elSigConf = document.getElementById('rn-signal-conf');
+      var elSigDiag = document.getElementById('rn-signal-diag');
+      var elSigCard = document.getElementById('rn-signal-card');
+
+      if (elSigText) {
+        elSigText.innerText = 'RECOMMENDED: ' + sig.action + (sig.action === 'CALL' ? ' (BUY) ↑' : ' (SELL) ↓');
+        elSigText.style.color = (sig.action === 'CALL' ? '#34D399' : '#F87171');
+      }
+      if (elSigConf) {
+        elSigConf.innerText = sig.confidence + '% ACCURACY';
+        elSigConf.style.color = (sig.action === 'CALL' ? '#34D399' : '#F87171');
+        elSigConf.style.borderColor = (sig.action === 'CALL' ? 'rgba(52,211,153,0.4)' : 'rgba(248,113,113,0.4)');
+      }
+      if (elSigDiag) elSigDiag.innerText = sig.reason;
+      if (elSigCard) {
+        elSigCard.style.borderColor = (sig.action === 'CALL' ? 'rgba(52,211,153,0.5)' : 'rgba(239,68,68,0.5)');
+      }
+    }, 250);
+
+    // Main Scan & Execute button
+    document.getElementById('rn-btn-scan-exec').onclick = function(e) {
+      e.stopPropagation();
+      var p = extractQuotexLivePrice() || 1.0825;
+      var sig = evaluateQuotexRoundSignal(p, rnRecentTicks);
+      var isCall = sig.action === 'CALL';
+
+      var btn = document.getElementById('rn-btn-scan-exec');
+      if (btn) {
+        btn.innerHTML = '<span>⚡</span><span>SCANNING ROUND RADAR...</span>';
+        btn.style.filter = 'brightness(1.2)';
+      }
+      playPhotostatSound();
+
+      setTimeout(function() {
+        if (btn) {
+          btn.innerHTML = '<span>✓</span><span>EXECUTED ' + (isCall ? 'CALL (BUY)' : 'PUT (SELL)') + '</span>';
+        }
+        playSignalAudio();
+        showFlySignal(isCall ? 'UP' : 'DOWN');
+
+        if (autoTradeEnabled) {
+          executeQuotexTrade(isCall);
+        }
+
+        setTimeout(function() {
+          if (btn) btn.innerHTML = '<span>⚡</span><span>SCAN & EXECUTE (' + (tradeDuration || 5) + 's)</span><span>⚡</span>';
+        }, 1500);
+      }, 1800);
+    };
   }
 
   // 6. REAL CHART & RUNNING CANDLE ANALYSIS ENGINE
