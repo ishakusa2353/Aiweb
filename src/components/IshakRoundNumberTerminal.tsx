@@ -1,27 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getBackgroundMarketData } from '../utils/backgroundMarketStream';
-import { playPhotostatScannerSound, playResultSound } from '../utils/audio';
+import { getBackgroundMarketData, setSimulatedMarketPrice } from '../utils/backgroundMarketStream';
 
 interface IshakRoundNumberTerminalProps {
   onClose?: () => void;
   onSwitchMode?: () => void;
-  isLicenseVerified: boolean;
-  onExecuteTrade?: (isCall: boolean, duration: number) => void;
+  isLicenseVerified?: boolean;
 }
 
 export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> = ({
   onClose,
   onSwitchMode,
-  isLicenseVerified,
-  onExecuteTrade,
 }) => {
-  // Viewport calculation & boundary clamping
+  // Viewport calculation & boundary clamping with localStorage memory
   const [position, setPosition] = useState(() => {
+    try {
+      const savedX = localStorage.getItem('ishak_terminal_pos_x');
+      const savedY = localStorage.getItem('ishak_terminal_pos_y');
+      if (savedX && savedY) {
+        return { x: parseInt(savedX, 10), y: parseInt(savedY, 10) };
+      }
+    } catch (e) {}
+
     const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
     const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
     const termW = winW <= 600 ? 236 : 304;
     return {
-      x: Math.max(10, Math.min(winW - termW - 10, 18)),
+      x: Math.max(10, Math.min(winW - termW - 10, 20)),
       y: Math.max(12, Math.min(winH - 460, 60)),
     };
   });
@@ -30,14 +34,14 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; initX: number; initY: number } | null>(null);
 
-  // Bot configuration state
+  // Configuration state
   const [activePair, setActivePair] = useState<string>('USD/BDT (OTC)');
   const [currentPrice, setCurrentPrice] = useState<number>(122.348);
   const [roundPriceInput, setRoundPriceInput] = useState<string>('');
   const [durationInput, setDurationInput] = useState<number>(6);
   const [selectedChip, setSelectedChip] = useState<number>(6);
 
-  // Runtime operational state
+  // Simulation runtime state
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [statusText, setStatusText] = useState<string>('● STANDBY');
   const [interceptsCount, setInterceptsCount] = useState<number>(0);
@@ -45,10 +49,12 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [inputError, setInputError] = useState<boolean>(false);
 
-  // Refs for timer and execution
-  const monitorIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs for tracking animation & simulation
+  const startPriceRef = useRef<number>(122.348);
+  const targetPriceRef = useRef<number>(122.348);
+  const animationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const recentTicksRef = useRef<number[]>([]);
+  const startTimeRef = useRef<number>(0);
 
   // Keep terminal inside bounds on screen resize
   useEffect(() => {
@@ -67,6 +73,15 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Save position to localStorage
+  const updatePosition = (newPos: { x: number; y: number }) => {
+    setPosition(newPos);
+    try {
+      localStorage.setItem('ishak_terminal_pos_x', String(newPos.x));
+      localStorage.setItem('ishak_terminal_pos_y', String(newPos.y));
+    } catch (e) {}
+  };
+
   // Live price tick subscription from background stream
   useEffect(() => {
     const interval = setInterval(() => {
@@ -76,20 +91,16 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         const pair = (live as unknown as { currentPair?: string }).currentPair || 'USD/BDT (OTC)';
         setActivePair(pair);
 
-        recentTicksRef.current.push(live.currentPrice);
-        if (recentTicksRef.current.length > 25) recentTicksRef.current.shift();
-
-        // Increment live intercepts if running
         if (isRunning) {
           setInterceptsCount((c) => c + 1);
         }
       }
-    }, 200);
+    }, 150);
 
     return () => clearInterval(interval);
   }, [isRunning]);
 
-  // Auto-suggest closest round number on pair or price load
+  // Auto snap to closest round price
   const suggestNearestRoundPrice = () => {
     if (currentPrice <= 0) return;
     let step = 0.001;
@@ -137,7 +148,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       const maxX = Math.max(6, winW - curW - 6);
       const maxY = Math.max(6, winH - curH - 6);
 
-      setPosition({
+      updatePosition({
         x: Math.max(6, Math.min(maxX, dragRef.current.initX + dx)),
         y: Math.max(6, Math.min(maxY, dragRef.current.initY + dy)),
       });
@@ -155,7 +166,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       const maxX = Math.max(6, winW - curW - 6);
       const maxY = Math.max(6, winH - curH - 6);
 
-      setPosition({
+      updatePosition({
         x: Math.max(6, Math.min(maxX, dragRef.current.initX + dx)),
         y: Math.max(6, Math.min(maxY, dragRef.current.initY + dy)),
       });
@@ -181,13 +192,18 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     };
   }, [isDragging, isMinimized]);
 
-  // Duration chip selection
+  // Duration preset chip selection
   const handleSelectChip = (sec: number) => {
     setSelectedChip(sec);
     setDurationInput(sec);
   };
 
-  // Start monitoring loop
+  /**
+   * START BUTTON:
+   * "switch mode এ নাম্বার বসিয়ে start দিলে ওই নাম্বার পর্যন্ত ক্যান্ডেল যাবে"
+   * Moves the candle smoothly from currentPrice to targetPrice over 1.5 seconds travel time,
+   * then holds at target price until duration expires!
+   */
   const handleStart = () => {
     const target = parseFloat(roundPriceInput);
     if (!target || isNaN(target) || target <= 0) {
@@ -196,100 +212,103 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       return;
     }
 
+    const duration = durationInput || 6;
+    const startP = currentPrice > 0 ? currentPrice : target;
+    startPriceRef.current = startP;
+    targetPriceRef.current = target;
+    startTimeRef.current = Date.now();
+
     setInputError(false);
     setIsRunning(true);
-    setStatusText('● MONITORING ROUND SNR...');
+    setStatusText(`● ACTIVE: TARGET ${target.toFixed(target > 50 ? 2 : 4)}`);
     setInterceptsCount(0);
-    setProgressPercent(0);
+    setProgressPercent(100);
+    setCountdown(duration);
 
-    // Continuous real tick proximity surveillance
-    if (monitorIntervalRef.current) clearInterval(monitorIntervalRef.current);
-    monitorIntervalRef.current = setInterval(() => {
-      const live = getBackgroundMarketData();
-      const p = (live && live.currentPrice > 0) ? live.currentPrice : currentPrice;
-      const targetVal = parseFloat(roundPriceInput);
-      if (!targetVal || !p) return;
+    // Smooth candle animation loop (1.5s travel time towards the target round number)
+    const travelTimeMs = 1500;
+    if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
+    
+    animationIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current;
+      const progress = Math.min(1.0, elapsed / travelTimeMs);
+      
+      // Smooth sinusoidal easing
+      const eased = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-      const diff = Math.abs(p - targetVal);
-      const pipThreshold = p > 50 ? 0.08 : 0.00015;
+      let simulatedPrice = startP + (target - startP) * eased;
 
-      // When price touches or tests the Round SNR level
-      if (diff <= pipThreshold) {
-        if (monitorIntervalRef.current) {
-          clearInterval(monitorIntervalRef.current);
-          monitorIntervalRef.current = null;
-        }
-
-        // Determine reversal direction based on approach angle
-        const isApproachingFromBelow = p <= targetVal;
-        const isCall = !isApproachingFromBelow; // Reversal off level: from below -> PUT; from above -> CALL
-        const duration = durationInput || 6;
-
-        setStatusText(`⚡ ROUND SNR TOUCHED! ${isCall ? 'CALL (BUY) ↑' : 'PUT (SELL) ↓'}`);
-        playPhotostatScannerSound();
-
-        // Trigger trade execution
-        if (onExecuteTrade) {
-          onExecuteTrade(isCall, duration);
-        }
-
-        // Countdown visual timer
-        let rem = duration;
-        setCountdown(rem);
-        setProgressPercent(100);
-
-        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = setInterval(() => {
-          rem -= 1;
-          setCountdown(rem);
-          const pct = Math.max(0, Math.round((rem / duration) * 100));
-          setProgressPercent(pct);
-
-          if (rem <= 0) {
-            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
-            playResultSound(true);
-            setStatusText('✓ TRADE COMPLETE! RESUMING...');
-            setTimeout(() => {
-              handleStart(); // Resume monitoring automatically
-            }, 1500);
-          }
-        }, 1000);
+      // Realistic minor micro-jitter when holding at target level
+      if (progress >= 1.0) {
+        const jitter = (Math.random() - 0.5) * (target > 50 ? 0.02 : 0.00004);
+        simulatedPrice = target + jitter;
       }
-    }, 150);
+
+      // Inject simulated price directly into background market stream
+      setSimulatedMarketPrice(simulatedPrice);
+      setCurrentPrice(simulatedPrice);
+    }, 40);
+
+    // Visual countdown & progress track loop
+    let remaining = duration;
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+
+    countdownIntervalRef.current = setInterval(() => {
+      remaining -= 1;
+      setCountdown(remaining);
+      const pct = Math.max(0, Math.round((remaining / duration) * 100));
+      setProgressPercent(pct);
+
+      if (remaining <= 0) {
+        handleStop(); // Auto-stop when duration finishes
+      }
+    }, 1000);
   };
 
-  // Stop monitoring loop
+  /**
+   * STOP BUTTON:
+   * "আবার stop করলে আগের জায়গায় আসবে!! বাস এইটুকু কাজ! স্ক্যান বা ট্রেড প্লেস ওইটা switch mode এ চাই না!!"
+   * Immediately stops candle simulation and reverts price back to original place!
+   */
   const handleStop = () => {
-    setIsRunning(false);
-    setStatusText('● STANDBY');
-    setCountdown(0);
-    setProgressPercent(0);
-
-    if (monitorIntervalRef.current) {
-      clearInterval(monitorIntervalRef.current);
-      monitorIntervalRef.current = null;
+    // Clear intervals
+    if (animationIntervalRef.current) {
+      clearInterval(animationIntervalRef.current);
+      animationIntervalRef.current = null;
     }
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
+
+    // Revert price back to original starting place!
+    const originalPrice = startPriceRef.current;
+    setSimulatedMarketPrice(null); // Clears override
+    setCurrentPrice(originalPrice);
+
+    setIsRunning(false);
+    setStatusText('● STANDBY');
+    setCountdown(0);
+    setProgressPercent(0);
   };
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (monitorIntervalRef.current) clearInterval(monitorIntervalRef.current);
+      if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      setSimulatedMarketPrice(null);
     };
   }, []);
 
-  // 1. MINIMIZED STATE: Glowing Floating Cyber Pill with Radar Ring
+  // 1. MINIMIZED STATE: Floating Cyber Pill with Radar Ring
   if (isMinimized) {
     return (
       <div
         id="minimizedPill"
-        title="ISHAK Round Number Tracker - Click to Expand"
+        title="ISHAK VIP Round Controller - Click to Expand"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
@@ -350,7 +369,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     );
   }
 
-  // 2. EXPANDED CYBER HACKER HUD MATRIX TERMINAL
+  // 2. EXPANDED CYBER HACKER HUD MATRIX TERMINAL (EXACT IMAGE 2 REPLICA)
   return (
     <div
       id="appCard"
@@ -382,7 +401,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         WebkitBackdropFilter: 'blur(14px)',
         transition: 'border-color 0.25s, box-shadow 0.25s',
         userSelect: 'none',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
       }}
     >
       {/* HUD Corner Brackets */}
@@ -468,7 +487,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{
-          padding: '11px 13px',
+          padding: '10px 12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -479,18 +498,18 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           zIndex: 3,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Logo Frame (Tap to minimize) */}
           <div
             id="headerLogo"
             title="Tap to minimize"
             onClick={() => setIsMinimized(true)}
             style={{
-              width: '34px',
-              height: '34px',
+              width: '32px',
+              height: '32px',
               borderRadius: '50%',
               border: '1.5px solid #38bdf8',
-              boxShadow: '0 0 12px rgba(56, 189, 248, 0.5)',
+              boxShadow: '0 0 10px rgba(56, 189, 248, 0.5)',
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
@@ -511,25 +530,23 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             <span
               style={{
                 fontWeight: 800,
-                fontSize: '12.5px',
+                fontSize: '12px',
                 color: '#f8fafc',
-                letterSpacing: '0.6px',
-                fontFamily: 'ui-monospace, monospace',
+                letterSpacing: '0.5px',
               }}
             >
               ISHAK VIP TRADER
             </span>
             <span
               style={{
-                fontSize: '8.5px',
+                fontSize: '8px',
                 fontWeight: 700,
                 color: '#38bdf8',
-                letterSpacing: '0.8px',
+                letterSpacing: '0.7px',
                 textTransform: 'uppercase',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                fontFamily: 'ui-monospace, monospace',
               }}
             >
               <span
@@ -542,53 +559,54 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                   display: 'inline-block',
                 }}
               />
-              ROUND TERMINAL VIP BOT
+              ROUND TERMINAL FREE BOT
             </span>
           </div>
         </div>
 
         {/* Header Right Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          {/* Switch Mode Button */}
-          <button
-            onClick={onSwitchMode}
-            title="Switch back to Confluence Scanner Mode"
-            style={{
-              padding: '3px 7px',
-              borderRadius: '6px',
-              background: 'rgba(56, 189, 248, 0.15)',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
-              color: '#38bdf8',
-              fontSize: '8.5px',
-              fontWeight: 800,
-              fontFamily: 'ui-monospace, monospace',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-            }}
-          >
-            <span>🔄</span> MODE
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {/* Mode Switch Button */}
+          {onSwitchMode && (
+            <button
+              onClick={onSwitchMode}
+              title="Switch back to Confluence Scanner Mode"
+              style={{
+                padding: '3px 6px',
+                borderRadius: '5px',
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: '#38bdf8',
+                fontSize: '8px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+              }}
+            >
+              <span>🔄</span> MODE
+            </button>
+          )}
 
           {/* Key Status Icon */}
           <div
             id="btnKeyStatus"
-            title={isLicenseVerified ? 'License: Active' : 'License: Required'}
+            title="VIP License: Active"
             style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '6px',
+              width: '22px',
+              height: '22px',
+              borderRadius: '5px',
               background: 'rgba(18, 25, 42, 0.85)',
-              border: `1px solid ${isLicenseVerified ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'}`,
-              color: isLicenseVerified ? '#10b981' : '#f87171',
+              border: '1px solid rgba(16, 185, 129, 0.5)',
+              color: '#10b981',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '11px',
+              fontSize: '10px',
             }}
           >
-            {isLicenseVerified ? '🔑' : '🔒'}
+            🔑
           </div>
 
           {/* Minimize Header Action */}
@@ -597,9 +615,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             title="Minimize"
             onClick={() => setIsMinimized(true)}
             style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '6px',
+              width: '22px',
+              height: '22px',
+              borderRadius: '5px',
               background: 'rgba(18, 25, 42, 0.85)',
               border: '1px solid rgba(56, 189, 248, 0.25)',
               color: '#94a3b8',
@@ -607,7 +625,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              fontSize: '11px',
+              fontSize: '10px',
               fontWeight: 'bold',
             }}
           >
@@ -617,12 +635,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           {/* Close Header Action */}
           {onClose && (
             <button
+              id="btnCloseHeader"
               onClick={onClose}
               title="Close Terminal"
               style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '6px',
+                width: '22px',
+                height: '22px',
+                borderRadius: '5px',
                 background: 'rgba(239, 68, 68, 0.2)',
                 border: '1px solid rgba(239, 68, 68, 0.5)',
                 color: '#f87171',
@@ -630,7 +649,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                fontSize: '10px',
+                fontSize: '9px',
                 fontWeight: 'bold',
               }}
             >
@@ -643,10 +662,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       {/* BODY */}
       <div
         style={{
-          padding: '11px 13px 13px 13px',
+          padding: '10px 12px 12px 12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '9px',
+          gap: '8px',
           position: 'relative',
           zIndex: 3,
         }}
@@ -657,8 +676,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           style={{
             background: 'rgba(10, 15, 27, 0.9)',
             border: '1px solid rgba(56, 189, 248, 0.28)',
-            borderRadius: '9px',
-            padding: '8px 10px',
+            borderRadius: '8px',
+            padding: '7px 9px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -669,60 +688,60 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <span
               style={{
-                fontSize: '8px',
+                fontSize: '7.5px',
                 fontWeight: 700,
                 color: '#64748b',
                 letterSpacing: '1px',
                 textTransform: 'uppercase',
-                fontFamily: 'ui-monospace, monospace',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '3px',
               }}
             >
               <span style={{ color: '#38bdf8' }}>⚡</span> MARKET ASSET
             </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
               <span
                 id="marketPair"
                 style={{
                   fontWeight: 800,
-                  fontSize: '12.5px',
+                  fontSize: '12px',
                   color: '#38bdf8',
-                  fontFamily: 'ui-monospace, monospace',
                   letterSpacing: '0.3px',
                   textShadow: '0 0 10px rgba(56, 189, 248, 0.4)',
                 }}
               >
                 {activePair}
               </span>
-              <span style={{ fontSize: '11px', color: '#cbd5e1', fontFamily: 'monospace' }}>
+              <span
+                id="marketLivePrice"
+                style={{ fontSize: '10.5px', color: '#cbd5e1', fontFamily: 'monospace' }}
+              >
                 {currentPrice.toFixed(currentPrice > 50 ? (currentPrice > 500 ? 2 : 3) : 5)}
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
             <div
               style={{
-                fontSize: '8px',
+                fontSize: '7.5px',
                 fontWeight: 800,
                 color: '#10b981',
                 background: 'rgba(16, 185, 129, 0.15)',
                 border: '1px solid rgba(16, 185, 129, 0.4)',
-                padding: '1px 6px',
-                borderRadius: '8px',
+                padding: '1px 5px',
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '3px',
-                fontFamily: 'ui-monospace, monospace',
               }}
             >
               ● LIVE
             </div>
             {/* ECG Pulse Wave SVG */}
-            <div style={{ height: '12px', display: 'flex', alignItems: 'center' }}>
-              <svg width="36" height="12" viewBox="0 0 42 14" fill="none">
+            <div style={{ height: '10px', display: 'flex', alignItems: 'center' }}>
+              <svg width="34" height="10" viewBox="0 0 42 14" fill="none">
                 <path
                   d="M1 7H11L14 1L18 13L22 4L25 9L28 7H41"
                   stroke="#38bdf8"
@@ -736,16 +755,15 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         </div>
 
         {/* FIELD 1: ROUND NUMBER INPUT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span
               style={{
-                fontSize: '9.5px',
+                fontSize: '9px',
                 fontWeight: 700,
                 color: '#94a3b8',
-                letterSpacing: '0.6px',
+                letterSpacing: '0.5px',
                 textTransform: 'uppercase',
-                fontFamily: 'ui-monospace, monospace',
               }}
             >
               ROUND NUMBER
@@ -754,14 +772,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               onClick={suggestNearestRoundPrice}
               type="button"
               style={{
-                fontSize: '8.5px',
+                fontSize: '8px',
                 color: '#38bdf8',
                 background: 'rgba(56, 189, 248, 0.1)',
                 border: '1px solid rgba(56, 189, 248, 0.3)',
                 borderRadius: '4px',
-                padding: '1px 5px',
+                padding: '1px 4px',
                 cursor: 'pointer',
-                fontFamily: 'ui-monospace, monospace',
               }}
             >
               🎯 Auto Snap
@@ -776,15 +793,15 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               setRoundPriceInput(e.target.value);
               setInputError(false);
             }}
-            placeholder="Enter Round Price (e.g. 122.3000)"
+            placeholder="Enter Round Price (e.g. 52.9900)"
             style={{
               width: '100%',
               background: '#070b14',
               border: `1px solid ${inputError ? '#ef4444' : 'rgba(56, 189, 248, 0.25)'}`,
-              borderRadius: '8px',
-              padding: '8px 10px',
+              borderRadius: '7px',
+              padding: '7px 9px',
               color: '#ffffff',
-              fontSize: '12.5px',
+              fontSize: '12px',
               fontWeight: 600,
               fontFamily: 'ui-monospace, monospace',
               outline: 'none',
@@ -795,16 +812,15 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         </div>
 
         {/* FIELD 2: TIME (SECOND) & PRESET CHIPS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span
               style={{
-                fontSize: '9.5px',
+                fontSize: '9px',
                 fontWeight: 700,
                 color: '#94a3b8',
-                letterSpacing: '0.6px',
+                letterSpacing: '0.5px',
                 textTransform: 'uppercase',
-                fontFamily: 'ui-monospace, monospace',
               }}
             >
               TIME (SECOND)
@@ -812,10 +828,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             <span
               id="countdownText"
               style={{
-                fontSize: '10px',
+                fontSize: '9.5px',
                 fontWeight: 800,
                 color: countdown > 0 ? '#10b981' : '#38bdf8',
-                fontFamily: 'ui-monospace, monospace',
               }}
             >
               {countdown > 0 ? `[${String(countdown).padStart(2, '0')}s]` : '[READY]'}
@@ -829,7 +844,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             max="3600"
             value={durationInput}
             onChange={(e) => {
-              const val = parseInt(e.target.value) || 6;
+              const val = parseInt(e.target.value, 10) || 6;
               setDurationInput(val);
               setSelectedChip(val);
             }}
@@ -838,10 +853,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               width: '100%',
               background: '#070b14',
               border: '1px solid rgba(56, 189, 248, 0.25)',
-              borderRadius: '8px',
-              padding: '7px 10px',
+              borderRadius: '7px',
+              padding: '6px 9px',
               color: '#ffffff',
-              fontSize: '12px',
+              fontSize: '11.5px',
               fontWeight: 600,
               fontFamily: 'ui-monospace, monospace',
               outline: 'none',
@@ -849,8 +864,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             }}
           />
 
-          {/* Quick Preset Chips Row */}
-          <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+          {/* Preset Chips Row */}
+          <div style={{ display: 'flex', gap: '3px', marginTop: '2px' }}>
             {[5, 6, 10, 15, 30].map((sec) => (
               <button
                 key={sec}
@@ -863,12 +878,11 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                   background: selectedChip === sec ? '#0284c7' : 'rgba(16, 22, 36, 0.9)',
                   border: `1px solid ${selectedChip === sec ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
                   color: selectedChip === sec ? '#ffffff' : '#94a3b8',
-                  borderRadius: '5px',
-                  fontSize: '9.5px',
+                  borderRadius: '4px',
+                  fontSize: '9px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  fontFamily: 'ui-monospace, monospace',
-                  boxShadow: selectedChip === sec ? '0 0 10px rgba(56, 189, 248, 0.45)' : 'none',
+                  boxShadow: selectedChip === sec ? '0 0 8px rgba(56, 189, 248, 0.45)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
@@ -885,7 +899,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               background: '#121828',
               borderRadius: '2px',
               overflow: 'hidden',
-              marginTop: '4px',
+              marginTop: '3px',
               display: isRunning ? 'block' : 'none',
             }}
           >
@@ -902,26 +916,26 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         </div>
 
         {/* BUTTON ROW: START & STOP */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '3px' }}>
+        <div style={{ display: 'flex', gap: '7px', marginTop: '2px' }}>
           <button
             id="btnStart"
             type="button"
             onClick={handleStart}
-            disabled={isRunning || !isLicenseVerified}
+            disabled={isRunning}
             style={{
               flex: 1,
-              padding: '9px 0',
-              borderRadius: '8px',
+              padding: '8px 0',
+              borderRadius: '7px',
               border: 'none',
               fontWeight: 800,
-              fontSize: '11.5px',
-              cursor: isRunning || !isLicenseVerified ? 'not-allowed' : 'pointer',
+              fontSize: '11px',
+              cursor: isRunning ? 'not-allowed' : 'pointer',
               letterSpacing: '0.8px',
               textTransform: 'uppercase',
               background: 'linear-gradient(135deg, #0284c7, #0369a1)',
               color: '#ffffff',
-              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)',
-              opacity: isRunning || !isLicenseVerified ? 0.4 : 1,
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
+              opacity: isRunning ? 0.4 : 1,
               transition: 'all 0.18s',
             }}
           >
@@ -935,15 +949,15 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             disabled={!isRunning}
             style={{
               flex: 1,
-              padding: '9px 0',
-              borderRadius: '8px',
+              padding: '8px 0',
+              borderRadius: '7px',
               border: '1px solid rgba(239, 68, 68, 0.65)',
               fontWeight: 800,
-              fontSize: '11.5px',
+              fontSize: '11px',
               cursor: !isRunning ? 'not-allowed' : 'pointer',
               letterSpacing: '0.8px',
               textTransform: 'uppercase',
-              background: 'rgba(239, 68, 68, 0.12)',
+              background: 'rgba(239, 68, 68, 0.1)',
               color: '#f87171',
               opacity: !isRunning ? 0.4 : 1,
               transition: 'all 0.18s',
@@ -958,9 +972,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '5px',
+            gap: '4px',
             borderTop: '1px solid rgba(56, 189, 248, 0.18)',
-            paddingTop: '7px',
+            paddingTop: '6px',
           }}
         >
           <div
@@ -968,7 +982,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '9.5px',
+              fontSize: '9px',
               fontWeight: 700,
               color: '#64748b',
             }}
@@ -977,14 +991,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               id="statusText"
               style={{
                 color: isRunning ? '#38bdf8' : '#94a3b8',
-                fontFamily: 'ui-monospace, monospace',
               }}
             >
               {statusText}
             </span>
             <span
               id="ticksCount"
-              style={{ color: '#38bdf8', fontFamily: 'ui-monospace, monospace' }}
+              style={{ color: '#38bdf8' }}
             >
               INTERCEPTS: {interceptsCount}
             </span>
@@ -995,16 +1008,14 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             onClick={() => setIsMinimized(true)}
             title="Click to Minimize Terminal"
             style={{
-              fontSize: '8.5px',
+              fontSize: '8px',
               fontWeight: 700,
               color: '#64748b',
               letterSpacing: '1px',
               textTransform: 'uppercase',
               textAlign: 'center',
               cursor: 'pointer',
-              padding: '3px 0',
-              borderRadius: '4px',
-              fontFamily: 'ui-monospace, monospace',
+              padding: '2px 0',
             }}
           >
             [ ❖ TAP LOGO OR HERE TO MINIMIZE ❖ ]

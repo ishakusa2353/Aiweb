@@ -44,7 +44,27 @@ javascript:(function(){
   window.__ISHAK_LATENCY_MS__ = window.__ISHAK_LATENCY_MS__ || 45;
 
   (function() {
-    // 1. WebSocket Hook: Captures real-time Quotex/PocketOption depth & tick frames
+    function modifySimulatedPacket(data, simPrice) {
+      if (!simPrice) return data;
+      if (typeof data === 'string') {
+        var candleMatch = data.match(/(\[\s*"[A-Za-z0-9_\-\/]{4,16}"\s*,\s*\d{9,13}\s*,\s*[0-9\.]+\s*,\s*)([0-9\.]+)(\s*,\s*)([0-9\.]+)(\s*,\s*)([0-9\.]+)(\s*\])/);
+        if (candleMatch) {
+          var pStr = simPrice.toFixed(5);
+          var highVal = Math.max(parseFloat(candleMatch[2]), simPrice).toFixed(5);
+          var lowVal = Math.min(parseFloat(candleMatch[4]), simPrice).toFixed(5);
+          return data.replace(candleMatch[0], candleMatch[1] + highVal + candleMatch[3] + lowVal + candleMatch[5] + pStr + candleMatch[7]);
+        }
+        if (data.includes('price')) {
+          return data.replace(/"price"\s*:\s*[\d\.]+/g, '"price":' + simPrice);
+        }
+        if (data.includes('rate')) {
+          return data.replace(/"rate"\s*:\s*[\d\.]+/g, '"rate":' + simPrice);
+        }
+      }
+      return data;
+    }
+
+    // 1. WebSocket Hook: Captures real-time Quotex/PocketOption depth & tick frames & candle simulator
     if (!window.__ISHAK_WS_HOOKED__) {
       window.__ISHAK_WS_HOOKED__ = true;
       try {
@@ -59,6 +79,12 @@ javascript:(function(){
             try {
               ws.addEventListener('message', function(ev) {
                 try {
+                  if (window.__ISHAK_SIMULATION__ && window.__ISHAK_SIMULATION__.active && window.__ISHAK_SIMULATION__.currentSimulatedPrice) {
+                    var mod = modifySimulatedPacket(ev.data, window.__ISHAK_SIMULATION__.currentSimulatedPrice);
+                    if (mod !== ev.data) {
+                      try { Object.defineProperty(ev, 'data', { value: mod, configurable: true, writable: true }); } catch(err){}
+                    }
+                  }
                   var data = ev.data;
                   if (typeof data === 'string') {
                     if (data.includes('price') || data.includes('rate') || data.includes('quote') || data.includes('tick')) {
@@ -91,6 +117,28 @@ javascript:(function(){
         }
       } catch(e){}
 
+      // Hook WebSocket prototype addEventListener to modify incoming frames for the broker chart
+      try {
+        if (window.WebSocket && window.WebSocket.prototype) {
+          var origAddEv = window.WebSocket.prototype.addEventListener;
+          window.WebSocket.prototype.addEventListener = function(type, listener, options) {
+            if (type === 'message' && typeof listener === 'function') {
+              var wrapped = function(ev) {
+                if (window.__ISHAK_SIMULATION__ && window.__ISHAK_SIMULATION__.active && window.__ISHAK_SIMULATION__.currentSimulatedPrice) {
+                  var modData = modifySimulatedPacket(ev.data, window.__ISHAK_SIMULATION__.currentSimulatedPrice);
+                  if (modData !== ev.data) {
+                    try { Object.defineProperty(ev, 'data', { value: modData, configurable: true, writable: true }); } catch(err){}
+                  }
+                }
+                return listener.apply(this, arguments);
+              };
+              return origAddEv.call(this, type, wrapped, options);
+            }
+            return origAddEv.apply(this, arguments);
+          };
+        }
+      } catch(e){}
+
       // Hook existing WebSocket instances via prototype.send
       try {
         if (window.WebSocket && window.WebSocket.prototype && !window.WebSocket.prototype.__ISHAK_SEND_HOOKED__) {
@@ -102,6 +150,12 @@ javascript:(function(){
               try {
                 this.addEventListener('message', function(ev) {
                   try {
+                    if (window.__ISHAK_SIMULATION__ && window.__ISHAK_SIMULATION__.active && window.__ISHAK_SIMULATION__.currentSimulatedPrice) {
+                      var mod = modifySimulatedPacket(ev.data, window.__ISHAK_SIMULATION__.currentSimulatedPrice);
+                      if (mod !== ev.data) {
+                        try { Object.defineProperty(ev, 'data', { value: mod, configurable: true, writable: true }); } catch(err){}
+                      }
+                    }
                     var d = ev.data;
                     if (typeof d === 'string' && (d.includes('price') || d.includes('rate') || d.includes('quote') || d.includes('tick'))) {
                       var m = d.match(/"price"\s*:\s*([\d\.]+)/) ||
@@ -1977,6 +2031,17 @@ javascript:(function(){
     showSettingsHub();
   };
 
+  // Direct Quick Switch Mode Button on Floating Widget
+  var quickModeBtn = document.createElement('div');
+  quickModeBtn.id = 'ishak-quick-mode-btn';
+  quickModeBtn.style.cssText = 'margin-top:4px;padding:2px 8px;border-radius:12px;background:rgba(6,9,19,0.95);border:1px solid rgba(56,189,248,0.7);color:#38bdf8;font-size:8px;font-weight:800;letter-spacing:0.5px;cursor:pointer;display:flex;align-items:center;gap:3px;box-shadow:0 4px 10px rgba(0,0,0,0.8);font-family:ui-monospace,monospace;';
+  quickModeBtn.innerHTML = '<span>🔄</span><span>SWITCH MODE</span>';
+  quickModeBtn.onclick = function(e) {
+    e.stopPropagation();
+    showRoundNumberTerminal();
+  };
+  mainWrap.appendChild(quickModeBtn);
+
   function updateInjectBadge() {
     // Hidden from normal screen as requested by user; accessible in Settings Hub & on bot click
   }
@@ -2407,25 +2472,17 @@ javascript:(function(){
     document.getElementById('hub-close').onclick = function(e) { e.stopPropagation(); hub.remove(); };
     document.getElementById('hub-btn-switch-mode').onclick = function(e) {
       e.stopPropagation();
-      var localLic = getLocalLicense();
-      var isVerified = Boolean(
-        localLic &&
-        localLic.key &&
-        (!localLic.exp || localLic.exp > Date.now())
-      );
-      if (!isVerified) {
-        showModalToast(hub, '❌ লাইসেন্স আবশ্যক! বট একটিভ বা লগইন থাকলে তবেই SWITCH MODE কাজ করবে।', true);
-        return;
-      }
       activeBotMode = (activeBotMode === 'ROUND_NUMBER') ? 'CONFLUENCE' : 'ROUND_NUMBER';
       try { localStorage.setItem('ishak_active_mode', activeBotMode); } catch(err){}
       hub.remove();
       if (activeBotMode === 'ROUND_NUMBER') {
         showRoundNumberTerminal();
-        showModalToast(document.body, '✅ SWITCHED TO: ISHAK VIP ROUND NUMBER SNR ENGINE!', false);
+        showModalToast(document.body, '✅ SWITCHED TO: ISHAK VIP ROUND CONTROLLER!', false);
       } else {
-        var rnEl = document.getElementById('ishak-rn-terminal-root');
-        if (rnEl) rnEl.remove();
+        var rnEl = document.getElementById('appCard');
+        if (rnEl) rnEl.style.display = 'none';
+        var pillEl = document.getElementById('minimizedPill');
+        if (pillEl) pillEl.style.display = 'none';
         showModalToast(document.body, '✅ SWITCHED TO: ISHAK VIP CONFLUENCE AI SCANNER!', false);
       }
     };
@@ -2576,13 +2633,8 @@ javascript:(function(){
     var existingCard = document.getElementById('appCard');
     var existingPill = document.getElementById('minimizedPill');
     if (existingCard) {
-      if (existingCard.style.display === 'none') {
-        if (existingPill) existingPill.style.display = 'none';
-        existingCard.style.display = 'block';
-      } else {
-        existingCard.style.display = 'none';
-        if (existingPill) existingPill.style.display = 'flex';
-      }
+      if (existingPill) existingPill.style.display = 'none';
+      existingCard.style.display = 'block';
       return;
     }
 
@@ -2669,7 +2721,7 @@ javascript:(function(){
       '    <div style="display:flex;flex-direction:column;gap:1px;">' +
       '      <span style="font-weight:800;font-size:12px;color:#f8fafc;letter-spacing:0.5px;">ISHAK VIP TRADER</span>' +
       '      <span style="font-size:8px;font-weight:700;color:#38bdf8;letter-spacing:0.7px;text-transform:uppercase;display:flex;align-items:center;gap:4px;">' +
-      '        <span class="status-dot-green"></span>ROUND TERMINAL VIP BOT' +
+      '        <span class="status-dot-green"></span>ROUND TERMINAL FREE BOT' +
       '      </span>' +
       '    </div>' +
       '  </div>' +
@@ -2914,9 +2966,20 @@ javascript:(function(){
       }
     }, 200);
 
-    // START Button Handler
+    // START & STOP Handlers for Switch Mode Candle Simulation
     var btnStart = document.getElementById('btnStart');
     var btnStop = document.getElementById('btnStop');
+
+    var roundSim = {
+      active: false,
+      startPrice: 0,
+      targetPrice: 0,
+      currentSimulatedPrice: 0,
+      startTime: 0,
+      duration: 6,
+      animInterval: null,
+      countdownInterval: null
+    };
 
     function startHudMonitoring() {
       var inP = document.getElementById('inputPrice');
@@ -2931,6 +2994,16 @@ javascript:(function(){
         }
       }
 
+      var durSec = hudSelectedDuration || 6;
+      var liveP = extractQuotexLivePrice() || (window.__ISHAK_LAST_WS_PRICE__) || (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) || targetVal;
+
+      roundSim.active = true;
+      roundSim.startPrice = liveP;
+      roundSim.targetPrice = targetVal;
+      roundSim.duration = durSec;
+      roundSim.startTime = Date.now();
+      window.__ISHAK_SIMULATION__ = roundSim;
+
       hudRunning = true;
       hudIntercepts = 0;
       btnStart.disabled = true;
@@ -2942,95 +3015,67 @@ javascript:(function(){
 
       var stat = document.getElementById('statusText');
       if (stat) {
-        stat.innerText = '● MONITORING ROUND SNR...';
+        stat.innerText = '● ACTIVE: TARGET ' + targetVal.toFixed(targetVal > 50 ? 2 : 4);
         stat.style.color = '#38bdf8';
       }
 
-      var progTrack = document.getElementById('progressTrack');
-      if (progTrack) progTrack.style.display = 'none';
+      var cText = document.getElementById('countdownText');
+      var pTrack = document.getElementById('progressTrack');
+      var pFill = document.getElementById('progressFill');
+      if (pTrack) pTrack.style.display = 'block';
+      if (pFill) pFill.style.width = '100%';
 
-      // Surveillance Interval
-      if (hudMonitorTimer) clearInterval(hudMonitorTimer);
-      hudMonitorTimer = setInterval(function() {
-        if (!hudRunning) {
-          clearInterval(hudMonitorTimer);
-          return;
+      var rem = durSec;
+      if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
+
+      // 1. Smooth candle travel towards target over 1.5s
+      if (roundSim.animInterval) clearInterval(roundSim.animInterval);
+      roundSim.animInterval = setInterval(function() {
+        var elapsed = Date.now() - roundSim.startTime;
+        var progress = Math.min(1.0, elapsed / 1500);
+        var eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        var curSim = roundSim.startPrice + (roundSim.targetPrice - roundSim.startPrice) * eased;
+        if (progress >= 1.0) {
+          curSim = roundSim.targetPrice + (Math.random() - 0.5) * (targetVal > 50 ? 0.02 : 0.00004);
+        }
+        roundSim.currentSimulatedPrice = curSim;
+        window.__ISHAK_LAST_WS_PRICE__ = curSim;
+
+        var pEl = document.getElementById('marketLivePrice');
+        if (pEl) pEl.innerText = curSim.toFixed(curSim > 50 ? (curSim > 500 ? 2 : 3) : 5);
+      }, 40);
+
+      // 2. Countdown and Progress Bar
+      if (roundSim.countdownInterval) clearInterval(roundSim.countdownInterval);
+      roundSim.countdownInterval = setInterval(function() {
+        rem -= 1;
+        if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
+        if (pFill) {
+          var pct = Math.max(0, Math.round((rem / durSec) * 100));
+          pFill.style.width = pct + '%';
         }
 
-        var liveP = extractQuotexLivePrice();
-        if (!liveP && window.__ISHAK_LAST_WS_PRICE__) liveP = window.__ISHAK_LAST_WS_PRICE__;
-        if (!liveP && window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) {
-          liveP = window.__ISHAK_MARKET_STREAM__.currentPrice;
+        if (rem <= 0) {
+          stopHudMonitoring(); // Auto stop and return to real price
         }
-        if (!liveP && rnRecentTicks.length > 0) liveP = rnRecentTicks[rnRecentTicks.length - 1];
-        if (!liveP) return;
-
-        var inPriceEl = document.getElementById('inputPrice');
-        var curTarget = parseFloat(inPriceEl ? inPriceEl.value : targetVal);
-        if (!curTarget) return;
-
-        var diff = Math.abs(liveP - curTarget);
-        var pipThreshold = liveP > 50 ? 0.08 : 0.00015;
-
-        // When Price Touches or Tests the Round Level
-        if (diff <= pipThreshold) {
-          clearInterval(hudMonitorTimer);
-          hudMonitorTimer = null;
-
-          var isCall = liveP > curTarget; // Reversal bounce off level
-          var durSec = hudSelectedDuration || 6;
-
-          var statEl = document.getElementById('statusText');
-          if (statEl) {
-            statEl.innerText = '⚡ ROUND SNR REACHED! ' + (isCall ? 'CALL (BUY) ↑' : 'PUT (SELL) ↓');
-            statEl.style.color = isCall ? '#10b981' : '#f87171';
-          }
-
-          playPhotostatSound();
-          playSignalAudio();
-          showFlySignal(isCall ? 'UP' : 'DOWN');
-
-          // Real Quotex Trade Execution
-          executeQuotexTrade(isCall);
-
-          // Visual Countdown & Progress
-          var cText = document.getElementById('countdownText');
-          var pTrack = document.getElementById('progressTrack');
-          var pFill = document.getElementById('progressFill');
-          if (pTrack) pTrack.style.display = 'block';
-
-          var rem = durSec;
-          if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
-          if (pFill) pFill.style.width = '100%';
-
-          if (hudCountdownTimer) clearInterval(hudCountdownTimer);
-          hudCountdownTimer = setInterval(function() {
-            rem -= 1;
-            if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
-            if (pFill) {
-              var pct = Math.max(0, Math.round((rem / durSec) * 100));
-              pFill.style.width = pct + '%';
-            }
-
-            if (rem <= 0) {
-              clearInterval(hudCountdownTimer);
-              hudCountdownTimer = null;
-              if (cText) cText.innerText = '[READY]';
-              if (pTrack) pTrack.style.display = 'none';
-              if (statEl) {
-                statEl.innerText = '✓ TRADE COMPLETE! RESUMING...';
-                statEl.style.color = '#10b981';
-              }
-              setTimeout(function() {
-                if (hudRunning) startHudMonitoring();
-              }, 1500);
-            }
-          }, 1000);
-        }
-      }, 150);
+      }, 1000);
     }
 
     function stopHudMonitoring() {
+      if (roundSim.animInterval) {
+        clearInterval(roundSim.animInterval);
+        roundSim.animInterval = null;
+      }
+      if (roundSim.countdownInterval) {
+        clearInterval(roundSim.countdownInterval);
+        roundSim.countdownInterval = null;
+      }
+
+      // Immediately return back to real market price!
+      roundSim.active = false;
+      roundSim.currentSimulatedPrice = null;
+      window.__ISHAK_SIMULATION__ = null;
+
       hudRunning = false;
       btnStart.disabled = false;
       btnStart.style.opacity = '1';
@@ -3039,24 +3084,22 @@ javascript:(function(){
       btnStop.style.opacity = '0.4';
       btnStop.style.cursor = 'not-allowed';
 
-      if (hudMonitorTimer) {
-        clearInterval(hudMonitorTimer);
-        hudMonitorTimer = null;
-      }
-      if (hudCountdownTimer) {
-        clearInterval(hudCountdownTimer);
-        hudCountdownTimer = null;
-      }
-
       var stat = document.getElementById('statusText');
       if (stat) {
         stat.innerText = '● STANDBY';
         stat.style.color = '#94a3b8';
       }
+
       var cText = document.getElementById('countdownText');
       if (cText) cText.innerText = '[READY]';
       var pTrack = document.getElementById('progressTrack');
       if (pTrack) pTrack.style.display = 'none';
+      var pFill = document.getElementById('progressFill');
+      if (pFill) pFill.style.width = '0%';
+
+      var realP = extractQuotexLivePrice() || roundSim.startPrice;
+      var pEl = document.getElementById('marketLivePrice');
+      if (pEl && realP) pEl.innerText = realP.toFixed(realP > 50 ? (realP > 500 ? 2 : 3) : 5);
     }
 
     btnStart.onclick = startHudMonitoring;

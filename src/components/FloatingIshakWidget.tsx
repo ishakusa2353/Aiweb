@@ -1053,15 +1053,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
               <button
                 onClick={() => {
-                  const isLicenseActive = Boolean(
-                    activeLicense &&
-                    activeLicense.key &&
-                    (!activeLicense.exp || activeLicense.exp > Date.now())
-                  );
-                  if (!isLicenseActive) {
-                    showToast('❌ লাইসেন্স আবশ্যক! বট একটিভ বা লগইন থাকলে তবেই SWITCH MODE কাজ করবে।', true);
-                    return;
-                  }
                   const next = botMode === 'ROUND_NUMBER' ? 'CONFLUENCE' : 'ROUND_NUMBER';
                   setBotMode(next);
                   try {
@@ -1070,7 +1061,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   showToast(
                     next === 'ROUND_NUMBER'
-                      ? '✅ SWITCHED TO: ISHAK VIP ROUND NUMBER SNR ENGINE!'
+                      ? '✅ SWITCHED TO: ISHAK VIP ROUND CONTROLLER!'
                       : '✅ SWITCHED TO: ISHAK VIP CONFLUENCE AI SCANNER!',
                     false
                   );
@@ -1398,7 +1389,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 5. ⚡ ISHAK VIP ROUND NUMBER SNR TERMINAL (MODE 2) */}
+      {/* 5. ⚡ ISHAK VIP ROUND CONTROLLER TERMINAL (SWITCH MODE) */}
       {botMode === 'ROUND_NUMBER' && (
         <IshakRoundNumberTerminal
           isLicenseVerified={Boolean(activeLicense && activeLicense.key && (!activeLicense.exp || activeLicense.exp > Date.now()))}
@@ -1411,9 +1402,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             setBotMode('CONFLUENCE');
             try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}
             showToast('✅ SWITCHED TO: CONFLUENCE AI SCANNER MODE!', false);
-          }}
-          onExecuteTrade={(isCall, duration) => {
-            executeQuotexTrade(isCall);
           }}
         />
       )}

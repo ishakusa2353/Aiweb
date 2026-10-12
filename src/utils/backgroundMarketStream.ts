@@ -100,6 +100,29 @@ function ensureStreamInitialized(): MarketStreamState {
   return state;
 }
 
+let simulatedOverridePrice: number | null = null;
+
+// Set simulated override price for Switch Mode candle simulation
+export function setSimulatedMarketPrice(price: number | null) {
+  simulatedOverridePrice = price;
+  const state = ensureStreamInitialized();
+  if (price !== null && price > 0) {
+    state.currentPrice = price;
+    state.liveTicks.push({ price, time: Date.now() });
+    if (state.liveTicks.length > 200) state.liveTicks.shift();
+    if (state.candles.length > 0) {
+      const last = state.candles[state.candles.length - 1];
+      last.close = price;
+      last.high = Math.max(last.high, price);
+      last.low = Math.min(last.low, price);
+    }
+    if (typeof window !== 'undefined') {
+      window.__ISHAK_LAST_WS_PRICE__ = price;
+      window.__ISHAK_LIVE_TICKS__ = state.liveTicks;
+    }
+  }
+}
+
 // Start continuous 100ms background ticker
 export function startBackgroundMarketStream() {
   if (tickerTimer) return;
@@ -108,7 +131,11 @@ export function startBackgroundMarketStream() {
   tickerTimer = setInterval(() => {
     tickCount++;
     const now = Date.now();
-    state.currentPrice = getHarmonicPrice(now);
+    if (simulatedOverridePrice !== null) {
+      state.currentPrice = simulatedOverridePrice;
+    } else {
+      state.currentPrice = getHarmonicPrice(now);
+    }
 
     // Push tick
     state.liveTicks.push({ price: state.currentPrice, time: now });
