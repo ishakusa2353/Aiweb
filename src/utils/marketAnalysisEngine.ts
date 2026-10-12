@@ -1,5 +1,4 @@
 import { getBackgroundMarketData } from './backgroundMarketStream';
-import { calculateRoundLevels } from './roundNumberEngine';
 
 let lastEngineDirection: 'CALL' | 'PUT' | null = null;
 let consecutiveEngineCount = 0;
@@ -1768,26 +1767,6 @@ export function evaluateMarketData(
     } else if (sr.isRetestRejection || sr.isBreakdownBelow) {
       sellScore += 22;
       downFactors.push('1M Bearish S/R Validation [+22]');
-    }
-  }
-
-  // 5.5 Institutional Round Number SNR Confluence Factor
-  if (currentPrice > 0) {
-    const roundLevels = calculateRoundLevels(currentPrice);
-    if (roundLevels) {
-      if (roundLevels.proximityPercent >= 85 && roundLevels.distanceToUpperPips <= 2.5) {
-        // Testing Upper Round Resistance (.000 / .500)
-        if (pa.wickRejection === 'BEARISH_UPPER_WICK' || velocity <= 0 || tickSlope <= 0) {
-          sellScore += 35;
-          downFactors.push(`⚡ Round Number SNR Resistance Rejection (${roundLevels.upperLevel.toFixed(roundLevels.decimals)}) [+35]`);
-        }
-      } else if (roundLevels.proximityPercent <= 15 && roundLevels.distanceToLowerPips <= 2.5) {
-        // Testing Lower Round Support (.000 / .500)
-        if (pa.wickRejection === 'BULLISH_LOWER_WICK' || velocity >= 0 || tickSlope >= 0) {
-          buyScore += 35;
-          upFactors.push(`⚡ Round Number SNR Support Bounce (${roundLevels.lowerLevel.toFixed(roundLevels.decimals)}) [+35]`);
-        }
-      }
     }
   }
 

@@ -3,7 +3,7 @@ javascript:(function(){
   try {
     document.addEventListener('contextmenu', function(e) {
       var t = e.target;
-      if (t && t.closest && (t.closest('#ishak-trade-wrap') || t.closest('.ishak-dialog-modal') || t.closest('#ishak-rn-terminal-root') || t.closest('.ishak-rn-terminal-modal') || t.closest('#ishak-hud-panel') || t.closest('#ishak-screen-scan-box'))) {
+      if (t && t.closest && (t.closest('#ishak-trade-wrap') || t.closest('.ishak-dialog-modal') || t.closest('#ishak-hud-panel') || t.closest('#ishak-screen-scan-box'))) {
         e.preventDefault();
         return false;
       }
@@ -27,7 +27,7 @@ javascript:(function(){
     if (oldWrap) oldWrap.remove();
     var oldHud = document.getElementById('ishak-hud-panel');
     if (oldHud) oldHud.remove();
-    var toRemove = ['ishak-opt-modal', 'ishak-rn-terminal-root', 'm-modal', 't-modal', 'k-modal', 'ishak-custom-css', 'scan-laser', 'scan-grid', 'ishak-screen-scan-box', 'ishak-water-wave-overlay'];
+    var toRemove = ['ishak-opt-modal', 'm-modal', 't-modal', 'k-modal', 'ishak-custom-css', 'scan-laser', 'scan-grid', 'ishak-screen-scan-box', 'ishak-water-wave-overlay'];
     for (var i = 0; i < toRemove.length; i++) {
       var el = document.getElementById(toRemove[i]);
       if (el) el.remove();
@@ -44,27 +44,7 @@ javascript:(function(){
   window.__ISHAK_LATENCY_MS__ = window.__ISHAK_LATENCY_MS__ || 45;
 
   (function() {
-    function modifySimulatedPacket(data, simPrice) {
-      if (!simPrice) return data;
-      if (typeof data === 'string') {
-        var candleMatch = data.match(/(\[\s*"[A-Za-z0-9_\-\/]{4,16}"\s*,\s*\d{9,13}\s*,\s*[0-9\.]+\s*,\s*)([0-9\.]+)(\s*,\s*)([0-9\.]+)(\s*,\s*)([0-9\.]+)(\s*\])/);
-        if (candleMatch) {
-          var pStr = simPrice.toFixed(5);
-          var highVal = Math.max(parseFloat(candleMatch[2]), simPrice).toFixed(5);
-          var lowVal = Math.min(parseFloat(candleMatch[4]), simPrice).toFixed(5);
-          return data.replace(candleMatch[0], candleMatch[1] + highVal + candleMatch[3] + lowVal + candleMatch[5] + pStr + candleMatch[7]);
-        }
-        if (data.includes('price')) {
-          return data.replace(/"price"\s*:\s*[\d\.]+/g, '"price":' + simPrice);
-        }
-        if (data.includes('rate')) {
-          return data.replace(/"rate"\s*:\s*[\d\.]+/g, '"rate":' + simPrice);
-        }
-      }
-      return data;
-    }
-
-    // 1. WebSocket Hook: Captures real-time Quotex/PocketOption depth & tick frames & candle simulator
+    // 1. WebSocket Hook: Captures real-time Quotex/PocketOption depth & tick frames
     if (!window.__ISHAK_WS_HOOKED__) {
       window.__ISHAK_WS_HOOKED__ = true;
       try {
@@ -79,12 +59,6 @@ javascript:(function(){
             try {
               ws.addEventListener('message', function(ev) {
                 try {
-                  if (window.__ISHAK_SIMULATION__ && window.__ISHAK_SIMULATION__.active && window.__ISHAK_SIMULATION__.currentSimulatedPrice) {
-                    var mod = modifySimulatedPacket(ev.data, window.__ISHAK_SIMULATION__.currentSimulatedPrice);
-                    if (mod !== ev.data) {
-                      try { Object.defineProperty(ev, 'data', { value: mod, configurable: true, writable: true }); } catch(err){}
-                    }
-                  }
                   var data = ev.data;
                   if (typeof data === 'string') {
                     if (data.includes('price') || data.includes('rate') || data.includes('quote') || data.includes('tick')) {
@@ -117,28 +91,6 @@ javascript:(function(){
         }
       } catch(e){}
 
-      // Hook WebSocket prototype addEventListener to modify incoming frames for the broker chart
-      try {
-        if (window.WebSocket && window.WebSocket.prototype) {
-          var origAddEv = window.WebSocket.prototype.addEventListener;
-          window.WebSocket.prototype.addEventListener = function(type, listener, options) {
-            if (type === 'message' && typeof listener === 'function') {
-              var wrapped = function(ev) {
-                if (window.__ISHAK_SIMULATION__ && window.__ISHAK_SIMULATION__.active && window.__ISHAK_SIMULATION__.currentSimulatedPrice) {
-                  var modData = modifySimulatedPacket(ev.data, window.__ISHAK_SIMULATION__.currentSimulatedPrice);
-                  if (modData !== ev.data) {
-                    try { Object.defineProperty(ev, 'data', { value: modData, configurable: true, writable: true }); } catch(err){}
-                  }
-                }
-                return listener.apply(this, arguments);
-              };
-              return origAddEv.call(this, type, wrapped, options);
-            }
-            return origAddEv.apply(this, arguments);
-          };
-        }
-      } catch(e){}
-
       // Hook existing WebSocket instances via prototype.send
       try {
         if (window.WebSocket && window.WebSocket.prototype && !window.WebSocket.prototype.__ISHAK_SEND_HOOKED__) {
@@ -150,12 +102,6 @@ javascript:(function(){
               try {
                 this.addEventListener('message', function(ev) {
                   try {
-                    if (window.__ISHAK_SIMULATION__ && window.__ISHAK_SIMULATION__.active && window.__ISHAK_SIMULATION__.currentSimulatedPrice) {
-                      var mod = modifySimulatedPacket(ev.data, window.__ISHAK_SIMULATION__.currentSimulatedPrice);
-                      if (mod !== ev.data) {
-                        try { Object.defineProperty(ev, 'data', { value: mod, configurable: true, writable: true }); } catch(err){}
-                      }
-                    }
                     var d = ev.data;
                     if (typeof d === 'string' && (d.includes('price') || d.includes('rate') || d.includes('quote') || d.includes('tick'))) {
                       var m = d.match(/"price"\s*:\s*([\d\.]+)/) ||
@@ -289,11 +235,6 @@ javascript:(function(){
   var autoPilotTimer = null;
   window.__ISHAK_LAST_DIRECTION__ = window.__ISHAK_LAST_DIRECTION__ || null;
   window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0;
-  var activeBotMode = 'CONFLUENCE';
-  try {
-    var savedBotMode = localStorage.getItem('ishak_active_mode');
-    if (savedBotMode === 'ROUND_NUMBER') activeBotMode = 'ROUND_NUMBER';
-  } catch(e){}
 
   var MARKETS_DATABASE = [{"category":"QUOTEX OTC CURRENCIES (২৪/৭)","items":["AUD/CAD (OTC)","AUD/CHF (OTC)","AUD/JPY (OTC)","AUD/NZD (OTC)","AUD/USD (OTC)","CAD/CHF (OTC)","CAD/JPY (OTC)","CHF/JPY (OTC)","EUR/AUD (OTC)","EUR/CAD (OTC)","EUR/CHF (OTC)","EUR/GBP (OTC)","EUR/JPY (OTC)","EUR/NZD (OTC)","EUR/USD (OTC)","GBP/AUD (OTC)","GBP/CAD (OTC)","GBP/CHF (OTC)","GBP/JPY (OTC)","GBP/NZD (OTC)","GBP/USD (OTC)","NZD/CAD (OTC)","NZD/CHF (OTC)","NZD/JPY (OTC)","NZD/USD (OTC)","USD/BDT (OTC)","USD/BRL (OTC)","USD/CAD (OTC)","USD/CHF (OTC)","USD/DZD (OTC)","USD/EGP (OTC)","USD/IDR (OTC)","USD/INR (OTC)","USD/JPY (OTC)","USD/MXN (OTC)","USD/MYR (OTC)","USD/NGN (OTC)","USD/PHP (OTC)","USD/PKR (OTC)","USD/RUB (OTC)","USD/THB (OTC)","USD/TRY (OTC)","USD/VND (OTC)","USD/ZAR (OTC)"]},{"category":"QUOTEX REAL FOREX (লাইভ মার্কেট)","items":["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD","EUR/JPY","GBP/JPY","EUR/GBP","AUD/CAD","AUD/CHF","AUD/JPY","CAD/JPY","EUR/AUD","EUR/CAD","EUR/CHF","GBP/AUD","GBP/CAD","GBP/CHF","NZD/JPY","USD/NOK","USD/SEK","USD/TRY","USD/SGD"]},{"category":"COMMODITIES & METALS (OTC & REAL)","items":["Gold (OTC)","Silver (OTC)","Crude Oil (OTC)","UKBrent (OTC)","USCrude (OTC)","GOLD (XAU/USD)","SILVER (XAG/USD)","UKBrent","USCrude"]},{"category":"CRYPTO & STOCKS OTC (QUOTEX)","items":["Bitcoin (OTC)","Ethereum (OTC)","Litecoin (OTC)","Ripple (OTC)","BTC/USD","ETH/USD","Boeing Company (OTC)","Intel (OTC)","Microsoft (OTC)","Apple (OTC)","Johnson & Johnson (OTC)","McDonald's (OTC)","Meta (OTC)","Pfizer (OTC)","American Express (OTC)"]}];
 
@@ -1258,11 +1199,7 @@ javascript:(function(){
     try {
       var raw = localStorage.getItem('ISHAK_AI_LICENSE');
       if (!raw) return null;
-      var obj = JSON.parse(raw);
-      if (obj && obj.key && (!obj.exp || obj.exp > Date.now())) {
-        obj.verified = true;
-      }
-      return obj;
+      return JSON.parse(raw);
     } catch(e) { return null; }
   }
 
@@ -1273,8 +1210,7 @@ javascript:(function(){
         exp: exp,
         duration: duration || '30d',
         traderId: traderId || '',
-        tier: tier || 'VIP',
-        verified: true
+        tier: tier || 'VIP'
       }));
     } catch(e){}
   }
@@ -2031,17 +1967,6 @@ javascript:(function(){
     showSettingsHub();
   };
 
-  // Direct Quick Switch Mode Button on Floating Widget
-  var quickModeBtn = document.createElement('div');
-  quickModeBtn.id = 'ishak-quick-mode-btn';
-  quickModeBtn.style.cssText = 'margin-top:4px;padding:2px 8px;border-radius:12px;background:rgba(6,9,19,0.95);border:1px solid rgba(56,189,248,0.7);color:#38bdf8;font-size:8px;font-weight:800;letter-spacing:0.5px;cursor:pointer;display:flex;align-items:center;gap:3px;box-shadow:0 4px 10px rgba(0,0,0,0.8);font-family:ui-monospace,monospace;';
-  quickModeBtn.innerHTML = '<span>🔄</span><span>SWITCH MODE</span>';
-  quickModeBtn.onclick = function(e) {
-    e.stopPropagation();
-    showRoundNumberTerminal();
-  };
-  mainWrap.appendChild(quickModeBtn);
-
   function updateInjectBadge() {
     // Hidden from normal screen as requested by user; accessible in Settings Hub & on bot click
   }
@@ -2458,9 +2383,6 @@ javascript:(function(){
       '<button id="hub-btn-autopilot" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.8)' : 'rgba(0,229,255,0.4)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🤖 Auto-Pilot Continuous</span><b style="color:' + (autoPilotMode ? '#00FF66' : '#FFD600') + ';background:' + (autoPilotMode ? 'rgba(0,255,102,0.2)' : 'rgba(255,214,0,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.6)' : 'rgba(255,214,0,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-switch-mode" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (activeBotMode === 'ROUND_NUMBER' ? 'rgba(255,184,0,0.8)' : 'rgba(0,229,255,0.4)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
-      '<span style="display:flex;align-items:center;gap:6px;">🔄 SWITCH MODE</span><b style="color:' + (activeBotMode === 'ROUND_NUMBER' ? '#FFD600' : '#00E5FF') + ';background:' + (activeBotMode === 'ROUND_NUMBER' ? 'rgba(255,214,0,0.2)' : 'rgba(0,229,255,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (activeBotMode === 'ROUND_NUMBER' ? 'rgba(255,214,0,0.6)' : 'rgba(0,229,255,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (activeBotMode === 'ROUND_NUMBER' ? '⚡ [2] ROUND SNR' : '🎯 [1] CONFLUENCE') + '</b>' +
-      '</button>' +
       '<button id="hub-btn-license" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🔑 VIP License Key</span><b style="color:#00E5FF;background:rgba(0,229,255,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;font-size:10px;">' + (local && local.key ? local.key.substring(0, 10) + '..' : 'Verify 🔓') + '</b>' +
       '</button>' +
@@ -2470,22 +2392,6 @@ javascript:(function(){
 
     document.body.appendChild(hub);
     document.getElementById('hub-close').onclick = function(e) { e.stopPropagation(); hub.remove(); };
-    document.getElementById('hub-btn-switch-mode').onclick = function(e) {
-      e.stopPropagation();
-      activeBotMode = (activeBotMode === 'ROUND_NUMBER') ? 'CONFLUENCE' : 'ROUND_NUMBER';
-      try { localStorage.setItem('ishak_active_mode', activeBotMode); } catch(err){}
-      hub.remove();
-      if (activeBotMode === 'ROUND_NUMBER') {
-        showRoundNumberTerminal();
-        showModalToast(document.body, '✅ SWITCHED TO: ISHAK VIP ROUND CONTROLLER!', false);
-      } else {
-        var rnEl = document.getElementById('appCard');
-        if (rnEl) rnEl.style.display = 'none';
-        var pillEl = document.getElementById('minimizedPill');
-        if (pillEl) pillEl.style.display = 'none';
-        showModalToast(document.body, '✅ SWITCHED TO: ISHAK VIP CONFLUENCE AI SCANNER!', false);
-      }
-    };
     document.getElementById('hub-btn-autotrade').onclick = function(e) {
       e.stopPropagation();
       autoTradeEnabled = !autoTradeEnabled;
@@ -2513,599 +2419,6 @@ javascript:(function(){
     };
     document.getElementById('hub-btn-license').onclick = function(e) { e.stopPropagation(); hub.remove(); showKeyModal(); };
   }
-
-  // ==========================================================================
-  // ⚡ 5.5. ISHAK VIP ROUND NUMBER SNR ENGINE (MODE 2 - CB FORMAT + ISHAK LUXURY)
-  // Institutional Round Number (00, 50, 000, 500) Radar, Proximity & Signal Terminal
-  // ===========================================================================
-  var rnUpdateInterval = null;
-  var rnRecentTicks = [];
-
-  function getQuotexPipSpecs(price) {
-    if (!price || price <= 0) return { decimals: 4, pipSize: 0.0001, stepMajor: 0.001, stepHalf: 0.0005 };
-    if (price > 1000) return { decimals: 2, pipSize: 1.0, stepMajor: 50.0, stepHalf: 25.0 };
-    if (price > 50) return { decimals: 2, pipSize: 0.01, stepMajor: 1.0, stepHalf: 0.5 };
-    if (price > 5) return { decimals: 3, pipSize: 0.001, stepMajor: 0.1, stepHalf: 0.05 };
-    return { decimals: 5, pipSize: 0.0001, stepMajor: 0.001, stepHalf: 0.0005 };
-  }
-
-  function calculateQuotexRoundLevels(price) {
-    var specs = getQuotexPipSpecs(price);
-    var step = specs.stepHalf;
-    var lowerRaw = Math.floor(price / step) * step;
-    var upperRaw = Math.ceil(price / step) * step;
-    var lower = Number(lowerRaw.toFixed(specs.decimals));
-    var upper = Number(upperRaw.toFixed(specs.decimals));
-    if (upper <= lower) upper = Number((lower + step).toFixed(specs.decimals));
-
-    var distUp = Math.max(0, upper - price);
-    var distDown = Math.max(0, price - lower);
-    var distUpPips = Number((distUp / specs.pipSize).toFixed(1));
-    var distDownPips = Number((distDown / specs.pipSize).toFixed(1));
-
-    function getLvlType(lvl) {
-      var s = lvl.toFixed(specs.decimals).replace('.', '');
-      if (s.endsWith('000')) return 'MAJOR .000';
-      if (s.endsWith('500')) return 'HALF .500';
-      if (s.endsWith('00')) return 'MAJOR .00';
-      if (s.endsWith('50')) return 'HALF .50';
-      return 'SNR LEVEL';
-    }
-
-    var upperType = getLvlType(upper);
-    var lowerType = getLvlType(lower);
-    var totalRange = upper - lower;
-    var proximity = totalRange > 0 ? Math.min(100, Math.max(0, Math.round(((price - lower) / totalRange) * 100))) : 50;
-
-    return {
-      price: price,
-      upperLevel: upper,
-      lowerLevel: lower,
-      upperType: upperType,
-      lowerType: lowerType,
-      distUpPips: distUpPips,
-      distDownPips: distDownPips,
-      proximity: proximity,
-      decimals: specs.decimals,
-      pipSize: specs.pipSize
-    };
-  }
-
-  function evaluateQuotexRoundSignal(price, recentTicks) {
-    var lvls = calculateQuotexRoundLevels(price);
-    var tickVelocity = 0;
-    if (recentTicks && recentTicks.length >= 2) {
-      tickVelocity = (recentTicks[recentTicks.length - 1] - recentTicks[0]) / lvls.pipSize;
-    }
-
-    // Near Upper Resistance (<= 2.5 pips)
-    if (lvls.distUpPips <= 2.5) {
-      if (tickVelocity < 0) {
-        return { action: 'PUT', direction: 'DOWN', confidence: 97, reason: 'Rejection Bounce off ' + lvls.upperType + ' Resistance (' + lvls.upperLevel.toFixed(lvls.decimals) + ')', strategy: 'REJECTION BOUNCE' };
-      } else if (tickVelocity > 1.8) {
-        return { action: 'CALL', direction: 'UP', confidence: 93, reason: 'Breakout Continuation above ' + lvls.upperType + ' Level', strategy: 'BREAKOUT' };
-      } else {
-        return { action: 'PUT', direction: 'DOWN', confidence: 95, reason: 'Approaching ' + lvls.upperType + ' Resistance - Bearish Reversal Expected', strategy: 'REJECTION BOUNCE' };
-      }
-    }
-
-    // Near Lower Support (<= 2.5 pips)
-    if (lvls.distDownPips <= 2.5) {
-      if (tickVelocity > 0) {
-        return { action: 'CALL', direction: 'UP', confidence: 97, reason: 'Institutional Bounce off ' + lvls.lowerType + ' Support (' + lvls.lowerLevel.toFixed(lvls.decimals) + ')', strategy: 'REJECTION BOUNCE' };
-      } else if (tickVelocity < -1.8) {
-        return { action: 'PUT', direction: 'DOWN', confidence: 93, reason: 'Bearish Breakdown below ' + lvls.lowerType + ' Level', strategy: 'BREAKDOWN' };
-      } else {
-        return { action: 'CALL', direction: 'UP', confidence: 95, reason: 'Approaching ' + lvls.lowerType + ' Support - Bullish Bounce Expected', strategy: 'REJECTION BOUNCE' };
-      }
-    }
-
-    // Mid-Range Momentum
-    if (lvls.proximity > 65) {
-      return { action: 'CALL', direction: 'UP', confidence: 90, reason: 'Bullish Magnet Pull toward Upper Round Level (' + lvls.upperLevel.toFixed(lvls.decimals) + ')', strategy: 'MOMENTUM FLOW' };
-    } else if (lvls.proximity < 35) {
-      return { action: 'PUT', direction: 'DOWN', confidence: 90, reason: 'Bearish Magnet Pull toward Lower Round Level (' + lvls.lowerLevel.toFixed(lvls.decimals) + ')', strategy: 'MOMENTUM FLOW' };
-    }
-
-    var isUp = (Math.floor(price * 1000) % 2) === 0;
-    return {
-      action: isUp ? 'CALL' : 'PUT',
-      direction: isUp ? 'UP' : 'DOWN',
-      confidence: 89,
-      reason: 'Equilibrium Channel Flow between ' + lvls.lowerLevel.toFixed(lvls.decimals) + ' and ' + lvls.upperLevel.toFixed(lvls.decimals),
-      strategy: 'CHANNEL OSCILLATION'
-    };
-  }
-
-  // ==========================================================================
-  // ⚡ ISHAK VIP TRADER - CYBER HACKER HUD MATRIX TERMINAL (MODE 2)
-  // Re-engineered with Cyberpunk Matrix Hologram HUD, Live Intercepts,
-  // Round Number Snapping, Real Quotex Websocket / DOM Price Surveillance,
-  // and Strict Viewport Clamping (Never leaves screen).
-  // ==========================================================================
-  var hudRunning = false;
-  var hudIntercepts = 0;
-  var hudMonitorTimer = null;
-  var hudCountdownTimer = null;
-  var hudSelectedDuration = 6;
-
-  function showRoundNumberTerminal() {
-    var existingCard = document.getElementById('appCard');
-    var existingPill = document.getElementById('minimizedPill');
-    if (existingCard) {
-      if (existingPill) existingPill.style.display = 'none';
-      existingCard.style.display = 'block';
-      return;
-    }
-
-    // Inject HUD Matrix Styles once
-    if (!document.getElementById('ishak-hud-styles')) {
-      var styleEl = document.createElement('style');
-      styleEl.id = 'ishak-hud-styles';
-      styleEl.textContent = '' +
-        '#appCard {' +
-        '  position: fixed; z-index: 2147483647; width: 304px; max-width: calc(100vw - 16px);' +
-        '  background-color: #060913;' +
-        '  background-image: radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.22) 0%, transparent 75%),' +
-        '    linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),' +
-        '    linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px);' +
-        '  background-size: 100% 100%, 18px 18px, 18px 18px;' +
-        '  border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 14px;' +
-        '  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(14, 165, 233, 0.2);' +
-        '  color: #e2e8f0; font-size: 13px; overflow: hidden; touch-action: none;' +
-        '  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);' +
-        '  user-select: none; -webkit-user-select: none; font-family: ui-monospace, Menlo, Consolas, monospace;' +
-        '}' +
-        '@media (max-width: 600px) {' +
-        '  #appCard { width: 236px !important; border-radius: 11px !important; }' +
-        '}' +
-        '.hud-corner {' +
-        '  position: absolute; width: 14px; height: 14px; pointer-events: none; z-index: 10;' +
-        '  border: 2px solid #38bdf8; filter: drop-shadow(0 0 6px #38bdf8);' +
-        '}' +
-        '.hud-tl { top: -1px; left: -1px; border-right: none; border-bottom: none; border-top-left-radius: 12px; }' +
-        '.hud-tr { top: -1px; right: -1px; border-left: none; border-bottom: none; border-top-right-radius: 12px; }' +
-        '.hud-bl { bottom: -1px; left: -1px; border-right: none; border-top: none; border-bottom-left-radius: 12px; }' +
-        '.hud-br { bottom: -1px; right: -1px; border-left: none; border-top: none; border-bottom-right-radius: 12px; }' +
-        '.radar-scanline {' +
-        '  position: absolute; left: 0; right: 0; height: 2px;' +
-        '  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent);' +
-        '  box-shadow: 0 0 12px rgba(56, 189, 248, 0.8); opacity: 0.35; pointer-events: none; z-index: 2;' +
-        '}' +
-        '.status-dot-green {' +
-        '  width: 6px; height: 6px; border-radius: 50%; background: #10b981;' +
-        '  box-shadow: 0 0 8px #10b981; display: inline-block;' +
-        '}' +
-        '#minimizedPill {' +
-        '  position: fixed; z-index: 2147483647; width: 46px; height: 46px; border-radius: 50%;' +
-        '  background: #060913; box-shadow: 0 10px 28px rgba(0,0,0,0.9), 0 0 20px rgba(14,165,233,0.5);' +
-        '  cursor: pointer; display: none; align-items: center; justify-content: center;' +
-        '  border: 1.5px solid #38bdf8; touch-action: none;' +
-        '}' +
-        '.minimized-pill-radar-ring {' +
-        '  position: absolute; inset: -4px; border-radius: 50%; border: 1.5px dashed rgba(56, 189, 248, 0.45);' +
-        '  animation: ishakRadarSpin 8s linear infinite; pointer-events: none;' +
-        '}' +
-        '@keyframes ishakRadarSpin { 100% { transform: rotate(360deg); } }';
-      document.head.appendChild(styleEl);
-    }
-
-    var winW = window.innerWidth || 360;
-    var winH = window.innerHeight || 640;
-    var termW = winW <= 600 ? 236 : 304;
-    var initLeft = Math.max(10, Math.min(winW - termW - 10, 20));
-    var initTop = Math.max(12, Math.min(winH - 440, 60));
-
-    // Create App Card
-    var card = document.createElement('div');
-    card.id = 'appCard';
-    card.style.left = initLeft + 'px';
-    card.style.top = initTop + 'px';
-
-    var detectedPair = extractQuotexPair() || 'USD/BDT (OTC)';
-    var initLivePrice = extractQuotexLivePrice() || (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) || 122.348;
-    var initPriceDecimals = initLivePrice > 50 ? (initLivePrice > 500 ? 2 : 3) : 5;
-
-    card.innerHTML = '' +
-      '<span class="hud-corner hud-tl"></span>' +
-      '<span class="hud-corner hud-tr"></span>' +
-      '<span class="hud-corner hud-bl"></span>' +
-      '<span class="hud-corner hud-br"></span>' +
-      '<div class="radar-scanline"></div>' +
-      '<!-- HEADER -->' +
-      '<div id="panelHeader" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;cursor:grab;background:rgba(11,17,30,0.92);border-bottom:1px solid rgba(56,189,248,0.22);position:relative;z-index:3;">' +
-      '  <div style="display:flex;align-items:center;gap:8px;">' +
-      '    <div id="headerLogo" title="Tap to minimize" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #38bdf8;box-shadow:0 0 10px rgba(56,189,248,0.5);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#050811;cursor:pointer;flex-shrink:0;">' +
-      '      <img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" alt="Logo" style="width:100%;height:100%;object-fit:cover;">' +
-      '    </div>' +
-      '    <div style="display:flex;flex-direction:column;gap:1px;">' +
-      '      <span style="font-weight:800;font-size:12px;color:#f8fafc;letter-spacing:0.5px;">ISHAK VIP TRADER</span>' +
-      '      <span style="font-size:8px;font-weight:700;color:#38bdf8;letter-spacing:0.7px;text-transform:uppercase;display:flex;align-items:center;gap:4px;">' +
-      '        <span class="status-dot-green"></span>ROUND TERMINAL FREE BOT' +
-      '      </span>' +
-      '    </div>' +
-      '  </div>' +
-      '  <div style="display:flex;align-items:center;gap:4px;">' +
-      '    <button id="btnSwitchModeHeader" title="Switch back to Confluence Scanner" style="padding:3px 6px;border-radius:5px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);color:#38bdf8;font-size:8px;font-weight:800;cursor:pointer;">🔄 MODE</button>' +
-      '    <div id="btnKeyStatus" title="VIP License: Active" style="width:22px;height:22px;border-radius:5px;background:rgba(18,25,42,0.85);border:1px solid rgba(16,185,129,0.5);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:10px;">🔑</div>' +
-      '    <button id="btnMinimizeHeader" title="Minimize" style="width:22px;height:22px;border-radius:5px;background:rgba(18,25,42,0.85);border:1px solid rgba(56,189,248,0.25);color:#94a3b8;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;font-weight:bold;">—</button>' +
-      '    <button id="btnCloseHeader" title="Close" style="width:22px;height:22px;border-radius:5px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#f87171;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;font-weight:bold;">✕</button>' +
-      '  </div>' +
-      '</div>' +
-      '<!-- BODY -->' +
-      '<div style="padding:10px 12px 12px 12px;display:flex;flex-direction:column;gap:8px;position:relative;z-index:3;">' +
-      '  <!-- Market Asset Strip -->' +
-      '  <div id="marketStrip" style="background:rgba(10,15,27,0.9);border:1px solid rgba(56,189,248,0.28);border-radius:8px;padding:7px 9px;display:flex;align-items:center;justify-content:space-between;overflow:hidden;">' +
-      '    <div style="display:flex;flex-direction:column;gap:2px;">' +
-      '      <span style="font-size:7.5px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:3px;">' +
-      '        <span style="color:#38bdf8;">⚡</span> MARKET ASSET' +
-      '      </span>' +
-      '      <div style="display:flex;align-items:baseline;gap:5px;">' +
-      '        <span id="marketPair" style="font-weight:800;font-size:12px;color:#38bdf8;letter-spacing:0.3px;text-shadow:0 0 10px rgba(56,189,248,0.4);">' + detectedPair + '</span>' +
-      '        <span id="marketLivePrice" style="font-size:10.5px;color:#cbd5e1;font-family:monospace;">' + initLivePrice.toFixed(initPriceDecimals) + '</span>' +
-      '      </div>' +
-      '    </div>' +
-      '    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' +
-      '      <div style="font-size:7.5px;font-weight:800;color:#10b981;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);padding:1px 5px;border-radius:6px;">● LIVE</div>' +
-      '      <div style="height:10px;display:flex;align-items:center;">' +
-      '        <svg width="34" height="10" viewBox="0 0 42 14" fill="none"><path d="M1 7H11L14 1L18 13L22 4L25 9L28 7H41" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-      '      </div>' +
-      '    </div>' +
-      '  </div>' +
-      '  <!-- Field: Round Number -->' +
-      '  <div style="display:flex;flex-direction:column;gap:2px;">' +
-      '    <div style="display:flex;justify-content:space-between;align-items:center;">' +
-      '      <span style="font-size:9px;font-weight:700;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">ROUND NUMBER</span>' +
-      '      <button id="btnAutoSnap" type="button" style="font-size:8px;color:#38bdf8;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.3);border-radius:4px;padding:1px 4px;cursor:pointer;">🎯 Auto Snap</button>' +
-      '    </div>' +
-      '    <input id="inputPrice" type="number" step="any" placeholder="Enter Round Price (e.g. 122.3000)" style="width:100%;background:#070b14;border:1px solid rgba(56,189,248,0.25);border-radius:7px;padding:7px 9px;color:#fff;font-size:12px;font-weight:600;font-family:ui-monospace,monospace;outline:none;box-sizing:border-box;">' +
-      '  </div>' +
-      '  <!-- Field: Time (Second) -->' +
-      '  <div style="display:flex;flex-direction:column;gap:2px;">' +
-      '    <div style="display:flex;justify-content:space-between;align-items:center;">' +
-      '      <span style="font-size:9px;font-weight:700;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">TIME (SECOND)</span>' +
-      '      <span id="countdownText" style="font-size:9.5px;font-weight:800;color:#38bdf8;">[READY]</span>' +
-      '    </div>' +
-      '    <input id="inputDuration" type="number" min="1" max="3600" value="6" placeholder="Enter Seconds (default: 6)" style="width:100%;background:#070b14;border:1px solid rgba(56,189,248,0.25);border-radius:7px;padding:6px 9px;color:#fff;font-size:11.5px;font-weight:600;font-family:ui-monospace,monospace;outline:none;box-sizing:border-box;">' +
-      '    <!-- Chips Row -->' +
-      '    <div style="display:flex;gap:3px;margin-top:2px;">' +
-      '      <div class="hud-chip" data-time="5" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">5s</div>' +
-      '      <div class="hud-chip" data-time="6" style="flex:1;padding:3px 0;text-align:center;background:#0284c7;border:1px solid #38bdf8;border-radius:4px;font-size:9px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 8px rgba(56,189,248,0.45);">6s</div>' +
-      '      <div class="hud-chip" data-time="10" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">10s</div>' +
-      '      <div class="hud-chip" data-time="15" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">15s</div>' +
-      '      <div class="hud-chip" data-time="30" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">30s</div>' +
-      '    </div>' +
-      '    <!-- Progress Track -->' +
-      '    <div id="progressTrack" style="height:3px;background:#121828;border-radius:2px;overflow:hidden;margin-top:3px;display:none;">' +
-      '      <div id="progressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#0284c7,#38bdf8);transition:width 1s linear;"></div>' +
-      '    </div>' +
-      '  </div>' +
-      '  <!-- Button Row -->' +
-      '  <div style="display:flex;gap:7px;margin-top:2px;">' +
-      '    <button id="btnStart" type="button" style="flex:1;padding:8px 0;border-radius:7px;border:none;font-weight:800;font-size:11px;cursor:pointer;letter-spacing:0.8px;text-transform:uppercase;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;box-shadow:0 4px 12px rgba(2,132,199,0.4);transition:all 0.18s;">START</button>' +
-      '    <button id="btnStop" type="button" disabled style="flex:1;padding:8px 0;border-radius:7px;border:1px solid rgba(239,68,68,0.65);font-weight:800;font-size:11px;cursor:not-allowed;letter-spacing:0.8px;text-transform:uppercase;background:rgba(239,68,68,0.1);color:#f87171;opacity:0.4;transition:all 0.18s;">STOP</button>' +
-      '  </div>' +
-      '  <!-- Footer -->' +
-      '  <div style="display:flex;flex-direction:column;gap:4px;border-top:1px solid rgba(56,189,248,0.18);padding-top:6px;">' +
-      '    <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:700;color:#64748b;">' +
-      '      <span id="statusText" style="color:#94a3b8;">● STANDBY</span>' +
-      '      <span id="ticksCount" style="color:#38bdf8;">INTERCEPTS: 0</span>' +
-      '    </div>' +
-      '    <div id="footerMinimizePrompt" title="Click to Minimize Terminal" style="font-size:8px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;text-align:center;cursor:pointer;padding:2px 0;">[ ❖ TAP LOGO OR HERE TO MINIMIZE ❖ ]</div>' +
-      '  </div>' +
-      '</div>';
-
-    document.body.appendChild(card);
-
-    // Create Minimized Pill Widget
-    var pill = document.createElement('div');
-    pill.id = 'minimizedPill';
-    pill.style.left = initLeft + 'px';
-    pill.style.top = initTop + 'px';
-    pill.innerHTML = '' +
-      '<div class="minimized-pill-radar-ring"></div>' +
-      '<div id="pillBeacon" style="position:absolute;top:1px;right:1px;width:9px;height:9px;border-radius:50%;background:#10b981;border:2px solid #060913;box-shadow:0 0 6px #10b981;"></div>' +
-      '<img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" alt="Logo" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
-    document.body.appendChild(pill);
-
-    // Toggle minimize/expand
-    function minimizeTerminal() {
-      card.style.display = 'none';
-      pill.style.left = card.style.left;
-      pill.style.top = card.style.top;
-      pill.style.display = 'flex';
-    }
-
-    function expandTerminal() {
-      pill.style.display = 'none';
-      card.style.left = pill.style.left;
-      card.style.top = pill.style.top;
-      card.style.display = 'block';
-    }
-
-    document.getElementById('headerLogo').onclick = minimizeTerminal;
-    document.getElementById('btnMinimizeHeader').onclick = minimizeTerminal;
-    document.getElementById('footerMinimizePrompt').onclick = minimizeTerminal;
-    pill.onclick = expandTerminal;
-
-    document.getElementById('btnCloseHeader').onclick = function(e) {
-      e.stopPropagation();
-      card.remove();
-      pill.remove();
-    };
-
-    // Mode Switch Button (Back to Confluence AI Scanner)
-    document.getElementById('btnSwitchModeHeader').onclick = function(e) {
-      e.stopPropagation();
-      activeBotMode = 'CONFLUENCE';
-      try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch(err){}
-      card.remove();
-      pill.remove();
-      showModalToast(document.body, '✅ Switched back to: ISHAK VIP CONFLUENCE AI SCANNER!', false);
-    };
-
-    // Auto Snap Round Number
-    document.getElementById('btnAutoSnap').onclick = function(e) {
-      e.stopPropagation();
-      var cur = extractQuotexLivePrice() || (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) || 122.348;
-      var step = cur > 50 ? (cur > 500 ? 1 : 0.1) : 0.001;
-      var snap = Math.round(cur / step) * step;
-      var dec = cur > 50 ? (cur > 500 ? 2 : 3) : 5;
-      var inp = document.getElementById('inputPrice');
-      if (inp) inp.value = snap.toFixed(dec);
-    };
-
-    // Preset Chips Selection
-    var chips = card.querySelectorAll('.hud-chip');
-    chips.forEach(function(c) {
-      c.onclick = function(e) {
-        e.stopPropagation();
-        chips.forEach(function(x) {
-          x.style.background = 'rgba(16,22,36,0.9)';
-          x.style.borderColor = 'rgba(56,189,248,0.2)';
-          x.style.color = '#94a3b8';
-          x.style.boxShadow = 'none';
-        });
-        c.style.background = '#0284c7';
-        c.style.borderColor = '#38bdf8';
-        c.style.color = '#fff';
-        c.style.boxShadow = '0 0 8px rgba(56,189,248,0.45)';
-        var s = parseInt(c.getAttribute('data-time'), 10) || 6;
-        hudSelectedDuration = s;
-        var inDur = document.getElementById('inputDuration');
-        if (inDur) inDur.value = s;
-      };
-    });
-
-    // Duration input change
-    var inDurEl = document.getElementById('inputDuration');
-    if (inDurEl) {
-      inDurEl.onchange = function() {
-        hudSelectedDuration = parseInt(inDurEl.value, 10) || 6;
-      };
-    }
-
-    // Draggable Functionality with Strict Viewport Clamping (For both Card and Pill)
-    function attachDrag(el, handle) {
-      var isDrag = false;
-      var sX, sY, iX, iY;
-
-      function down(e) {
-        if (e.target.closest('button') || e.target.closest('input')) return;
-        isDrag = true;
-        var cx = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
-        var cy = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
-        var rect = el.getBoundingClientRect();
-        sX = cx; sY = cy;
-        iX = rect.left; iY = rect.top;
-        if (e.cancelable) e.preventDefault();
-      }
-
-      function move(e) {
-        if (!isDrag) return;
-        if (e.cancelable) e.preventDefault();
-        var cx = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
-        var cy = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
-        var wW = window.innerWidth || 360;
-        var wH = window.innerHeight || 640;
-        var curW = el.offsetWidth || 300;
-        var curH = el.offsetHeight || 380;
-        var maxL = Math.max(6, wW - curW - 6);
-        var maxT = Math.max(6, wH - curH - 6);
-        el.style.left = Math.max(6, Math.min(maxL, iX + (cx - sX))) + 'px';
-        el.style.top = Math.max(6, Math.min(maxT, iY + (cy - sY))) + 'px';
-      }
-
-      function up() { isDrag = false; }
-
-      handle.addEventListener('mousedown', down);
-      window.addEventListener('mousemove', move);
-      window.addEventListener('mouseup', up);
-      handle.addEventListener('touchstart', down, { passive: false });
-      window.addEventListener('touchmove', move, { passive: false });
-      window.addEventListener('touchend', up);
-    }
-
-    attachDrag(card, document.getElementById('panelHeader'));
-    attachDrag(pill, pill);
-
-    // Live Quotex Price & Intercepts Tracker
-    if (rnUpdateInterval) clearInterval(rnUpdateInterval);
-    rnUpdateInterval = setInterval(function() {
-      if (!document.getElementById('appCard')) {
-        clearInterval(rnUpdateInterval);
-        return;
-      }
-
-      var pair = extractQuotexPair() || 'USD/BDT (OTC)';
-      var pairEl = document.getElementById('marketPair');
-      if (pairEl && pairEl.innerText !== pair) pairEl.innerText = pair;
-
-      var p = extractQuotexLivePrice();
-      if (!p && window.__ISHAK_LAST_WS_PRICE__) p = window.__ISHAK_LAST_WS_PRICE__;
-      if (!p && window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) {
-        p = window.__ISHAK_MARKET_STREAM__.currentPrice;
-      }
-      if (!p && window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
-        p = window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1].price;
-      }
-
-      if (p && p > 0) {
-        var dec = p > 50 ? (p > 500 ? 2 : 3) : 5;
-        var pEl = document.getElementById('marketLivePrice');
-        if (pEl) pEl.innerText = p.toFixed(dec);
-
-        rnRecentTicks.push(p);
-        if (rnRecentTicks.length > 25) rnRecentTicks.shift();
-
-        if (hudRunning) {
-          hudIntercepts++;
-          var cntEl = document.getElementById('ticksCount');
-          if (cntEl) cntEl.innerText = 'INTERCEPTS: ' + hudIntercepts;
-        }
-      }
-    }, 200);
-
-    // START & STOP Handlers for Switch Mode Candle Simulation
-    var btnStart = document.getElementById('btnStart');
-    var btnStop = document.getElementById('btnStop');
-
-    var roundSim = {
-      active: false,
-      startPrice: 0,
-      targetPrice: 0,
-      currentSimulatedPrice: 0,
-      startTime: 0,
-      duration: 6,
-      animInterval: null,
-      countdownInterval: null
-    };
-
-    function startHudMonitoring() {
-      var inP = document.getElementById('inputPrice');
-      var targetVal = parseFloat(inP ? inP.value : '');
-      if (!targetVal || isNaN(targetVal) || targetVal <= 0) {
-        var autoBtn = document.getElementById('btnAutoSnap');
-        if (autoBtn) autoBtn.click();
-        targetVal = parseFloat(inP ? inP.value : '');
-        if (!targetVal) {
-          showModalToast(card, '⚠️ অনুগ্রহ করে একটি সঠিক রাউন্ড প্রাইস ইনপুট দিন!', true);
-          return;
-        }
-      }
-
-      var durSec = hudSelectedDuration || 6;
-      var liveP = extractQuotexLivePrice() || (window.__ISHAK_LAST_WS_PRICE__) || (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) || targetVal;
-
-      roundSim.active = true;
-      roundSim.startPrice = liveP;
-      roundSim.targetPrice = targetVal;
-      roundSim.duration = durSec;
-      roundSim.startTime = Date.now();
-      window.__ISHAK_SIMULATION__ = roundSim;
-
-      hudRunning = true;
-      hudIntercepts = 0;
-      btnStart.disabled = true;
-      btnStart.style.opacity = '0.4';
-      btnStart.style.cursor = 'not-allowed';
-      btnStop.disabled = false;
-      btnStop.style.opacity = '1';
-      btnStop.style.cursor = 'pointer';
-
-      var stat = document.getElementById('statusText');
-      if (stat) {
-        stat.innerText = '● ACTIVE: TARGET ' + targetVal.toFixed(targetVal > 50 ? 2 : 4);
-        stat.style.color = '#38bdf8';
-      }
-
-      var cText = document.getElementById('countdownText');
-      var pTrack = document.getElementById('progressTrack');
-      var pFill = document.getElementById('progressFill');
-      if (pTrack) pTrack.style.display = 'block';
-      if (pFill) pFill.style.width = '100%';
-
-      var rem = durSec;
-      if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
-
-      // 1. Smooth candle travel towards target over 1.5s
-      if (roundSim.animInterval) clearInterval(roundSim.animInterval);
-      roundSim.animInterval = setInterval(function() {
-        var elapsed = Date.now() - roundSim.startTime;
-        var progress = Math.min(1.0, elapsed / 1500);
-        var eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-        var curSim = roundSim.startPrice + (roundSim.targetPrice - roundSim.startPrice) * eased;
-        if (progress >= 1.0) {
-          curSim = roundSim.targetPrice + (Math.random() - 0.5) * (targetVal > 50 ? 0.02 : 0.00004);
-        }
-        roundSim.currentSimulatedPrice = curSim;
-        window.__ISHAK_LAST_WS_PRICE__ = curSim;
-
-        var pEl = document.getElementById('marketLivePrice');
-        if (pEl) pEl.innerText = curSim.toFixed(curSim > 50 ? (curSim > 500 ? 2 : 3) : 5);
-      }, 40);
-
-      // 2. Countdown and Progress Bar
-      if (roundSim.countdownInterval) clearInterval(roundSim.countdownInterval);
-      roundSim.countdownInterval = setInterval(function() {
-        rem -= 1;
-        if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
-        if (pFill) {
-          var pct = Math.max(0, Math.round((rem / durSec) * 100));
-          pFill.style.width = pct + '%';
-        }
-
-        if (rem <= 0) {
-          stopHudMonitoring(); // Auto stop and return to real price
-        }
-      }, 1000);
-    }
-
-    function stopHudMonitoring() {
-      if (roundSim.animInterval) {
-        clearInterval(roundSim.animInterval);
-        roundSim.animInterval = null;
-      }
-      if (roundSim.countdownInterval) {
-        clearInterval(roundSim.countdownInterval);
-        roundSim.countdownInterval = null;
-      }
-
-      // Immediately return back to real market price!
-      roundSim.active = false;
-      roundSim.currentSimulatedPrice = null;
-      window.__ISHAK_SIMULATION__ = null;
-
-      hudRunning = false;
-      btnStart.disabled = false;
-      btnStart.style.opacity = '1';
-      btnStart.style.cursor = 'pointer';
-      btnStop.disabled = true;
-      btnStop.style.opacity = '0.4';
-      btnStop.style.cursor = 'not-allowed';
-
-      var stat = document.getElementById('statusText');
-      if (stat) {
-        stat.innerText = '● STANDBY';
-        stat.style.color = '#94a3b8';
-      }
-
-      var cText = document.getElementById('countdownText');
-      if (cText) cText.innerText = '[READY]';
-      var pTrack = document.getElementById('progressTrack');
-      if (pTrack) pTrack.style.display = 'none';
-      var pFill = document.getElementById('progressFill');
-      if (pFill) pFill.style.width = '0%';
-
-      var realP = extractQuotexLivePrice() || roundSim.startPrice;
-      var pEl = document.getElementById('marketLivePrice');
-      if (pEl && realP) pEl.innerText = realP.toFixed(realP > 50 ? (realP > 500 ? 2 : 3) : 5);
-    }
-
-    btnStart.onclick = startHudMonitoring;
-    btnStop.onclick = stopHudMonitoring;
-  }
-
 
   // 6. REAL CHART & RUNNING CANDLE ANALYSIS ENGINE
   // Analyzes Quotex live chart canvas, running candle anatomy (body vs wick ratio),
@@ -3880,27 +3193,6 @@ javascript:(function(){
       }
     }
 
-    // --- ⚡ 8.5 INSTITUTIONAL ROUND NUMBER SNR CONFLUENCE BOOST ---
-    // Institutional round numbers (.000, .500, .100) act as massive psychological barriers
-    if (entryPrice && entryPrice > 0) {
-      var rnLvls = calculateQuotexRoundLevels(entryPrice);
-      if (rnLvls) {
-        if (rnLvls.proximity >= 85 && (rnLvls.distUpPips <= 3.0 || distToResistance < 0.20)) {
-          // Testing Major Round Resistance (.000 / .500)
-          if (upperWickRatio >= 0.18 || tickVelocity <= 0.0000001 || tickSlope <= 0.0000001) {
-            sellScore += 35;
-            downFactorsList.push('⚡ Round Number SNR Resistance Rejection (' + rnLvls.upperLevel.toFixed(rnLvls.decimals) + ') [+35]');
-          }
-        } else if (rnLvls.proximity <= 15 && (rnLvls.distDownPips <= 3.0 || distToSupport < 0.20)) {
-          // Testing Major Round Support (.000 / .500)
-          if (lowerWickRatio >= 0.18 || tickVelocity >= -0.0000001 || tickSlope >= -0.0000001) {
-            buyScore += 35;
-            upFactorsList.push('⚡ Round Number SNR Support Bounce (' + rnLvls.lowerLevel.toFixed(rnLvls.decimals) + ') [+35]');
-          }
-        }
-      }
-    }
-
     // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION WITH ANTI-STREAK GUARD ---
     var netConfluence = buyScore - sellScore;
     var scoreDiff = Math.abs(buyScore - sellScore);
@@ -4307,21 +3599,6 @@ javascript:(function(){
         showMaintenanceModal();
         return;
       }
-      if (activeBotMode === 'ROUND_NUMBER') {
-        var card = document.getElementById('appCard');
-        var pill = document.getElementById('minimizedPill');
-        if (!card && !pill) {
-          showRoundNumberTerminal();
-        } else if (pill && pill.style.display !== 'none') {
-          pill.click();
-        } else if (card && card.style.display !== 'none') {
-          var btnStart = document.getElementById('btnStart');
-          if (btnStart && !btnStart.disabled) btnStart.click();
-        } else {
-          showRoundNumberTerminal();
-        }
-        return;
-      }
       if (singleClickTimer) {
         clearTimeout(singleClickTimer);
         singleClickTimer = null;
@@ -4346,13 +3623,4 @@ javascript:(function(){
   try {
     playWaterWaveIntroSound();
   } catch(e){}
-
-  if (activeBotMode === 'ROUND_NUMBER') {
-    var initLic = getLocalLicense();
-    if (initLic && initLic.key && (!initLic.exp || initLic.exp > Date.now())) {
-      setTimeout(function() {
-        showRoundNumberTerminal();
-      }, 700);
-    }
-  }
 })();
