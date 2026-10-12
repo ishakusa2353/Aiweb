@@ -3,7 +3,7 @@ javascript:(function(){
   try {
     document.addEventListener('contextmenu', function(e) {
       var t = e.target;
-      if (t && t.closest && (t.closest('#ishak-trade-wrap') || t.closest('.ishak-dialog-modal') || t.closest('#ishak-hud-panel') || t.closest('#ishak-screen-scan-box'))) {
+      if (t && t.closest && (t.closest('#ishak-trade-wrap') || t.closest('.ishak-dialog-modal') || t.closest('#ishak-rn-terminal-root') || t.closest('.ishak-rn-terminal-modal') || t.closest('#ishak-hud-panel') || t.closest('#ishak-screen-scan-box'))) {
         e.preventDefault();
         return false;
       }
@@ -27,7 +27,7 @@ javascript:(function(){
     if (oldWrap) oldWrap.remove();
     var oldHud = document.getElementById('ishak-hud-panel');
     if (oldHud) oldHud.remove();
-    var toRemove = ['ishak-opt-modal', 'm-modal', 't-modal', 'k-modal', 'ishak-custom-css', 'scan-laser', 'scan-grid', 'ishak-screen-scan-box', 'ishak-water-wave-overlay'];
+    var toRemove = ['ishak-opt-modal', 'ishak-rn-terminal-root', 'm-modal', 't-modal', 'k-modal', 'ishak-custom-css', 'scan-laser', 'scan-grid', 'ishak-screen-scan-box', 'ishak-water-wave-overlay'];
     for (var i = 0; i < toRemove.length; i++) {
       var el = document.getElementById(toRemove[i]);
       if (el) el.remove();
@@ -2567,100 +2567,106 @@ javascript:(function(){
       return;
     }
 
+    var winW = window.innerWidth || 360;
+    var winH = window.innerHeight || 640;
+    var termW = Math.min(345, Math.max(280, winW - 16));
+    var initLeft = Math.max(8, Math.round((winW - termW) / 2));
+    var initTop = Math.max(16, Math.min(60, Math.round((winH - 460) / 4)));
+
     var term = document.createElement('div');
     term.id = 'ishak-rn-terminal-root';
-    term.className = 'ishak-dialog-modal';
-    term.style.cssText = 'position:fixed;top:60px;left:24px;z-index:2147483646;width:calc(100vw - 32px);max-width:360px;background:linear-gradient(180deg,#0a1024 0%,#060a18 60%,#030611 100%);border-top:2px solid rgba(0,229,255,0.7);border-bottom:3px solid #000;border-left:1px solid rgba(99,102,241,0.3);border-right:1px solid rgba(99,102,241,0.3);border-radius:24px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.2), inset 0 1.5px 1.5px rgba(255,255,255,0.35);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;color:#fff;overflow:hidden;animation:ishakModalIn 0.22s ease-out;';
+    term.className = 'ishak-rn-terminal-modal';
+    term.style.cssText = 'position:fixed;top:' + initTop + 'px;left:' + initLeft + 'px;transform:none !important;-webkit-transform:none !important;z-index:2147483646;width:' + termW + 'px;max-width:calc(100vw - 16px);max-height:calc(100vh - 25px);overflow-y:auto;overflow-x:hidden;background:linear-gradient(180deg,#0a1024 0%,#060a18 60%,#030611 100%);border-top:2px solid rgba(0,229,255,0.7);border-bottom:3px solid #000;border-left:1px solid rgba(99,102,241,0.3);border-right:1px solid rgba(99,102,241,0.3);border-radius:22px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.2), inset 0 1.5px 1.5px rgba(255,255,255,0.35);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;color:#fff;animation:ishakToastIn 0.22s ease-out;';
 
-    term.innerHTML = '<div id="rn-drag-bar" style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(99,102,241,0.25);background:linear-gradient(90deg,rgba(13,22,51,0.8),transparent,rgba(13,22,51,0.8));cursor:move;user-select:none;">' +
+    term.innerHTML = '<div id="rn-drag-bar" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(99,102,241,0.25);background:linear-gradient(90deg,rgba(13,22,51,0.8),transparent,rgba(13,22,51,0.8));cursor:move;user-select:none;touch-action:none;">' +
       '<div style="display:flex;align-items:center;gap:8px;">' +
-        '<div style="width:34px;height:34px;border-radius:10px;border:1.5px solid #FFD700;background:#091224;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 10px rgba(255,215,0,0.35);">' +
+        '<div style="width:32px;height:32px;border-radius:10px;border:1.5px solid #FFD700;background:#091224;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 10px rgba(255,215,0,0.35);">' +
           '<img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Logo">' +
         '</div>' +
         '<div>' +
-          '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<div style="display:flex;align-items:center;gap:5px;">' +
             '<b style="color:#FFF;font-size:11px;letter-spacing:1px;display:block;">ISHAK VIP TRADER</b>' +
-            '<span style="background:rgba(255,215,0,0.2);color:#FFE066;border:1px solid rgba(255,215,0,0.4);border-radius:4px;font-size:8px;font-weight:bold;padding:1px 4px;">ROUND v2.0</span>' +
+            '<span style="background:rgba(255,215,0,0.2);color:#FFE066;border:1px solid rgba(255,215,0,0.4);border-radius:4px;font-size:7.5px;font-weight:bold;padding:1px 4px;">ROUND v2.0</span>' +
           '</div>' +
-          '<span style="color:#00E5FF;font-size:8.5px;font-family:sans-serif;font-weight:bold;letter-spacing:0.5px;">⚡ Round Number SNR Terminal</span>' +
+          '<span style="color:#00E5FF;font-size:8px;font-family:sans-serif;font-weight:bold;letter-spacing:0.4px;">⚡ Round Number SNR Terminal</span>' +
         '</div>' +
       '</div>' +
-      '<div style="display:flex;align-items:center;gap:5px;">' +
-        '<button id="rn-switch-back" style="background:rgba(99,102,241,0.3);border:1px solid rgba(0,229,255,0.5);color:#00E5FF;padding:3px 7px;border-radius:6px;font-size:8.5px;font-weight:bold;cursor:pointer;" title="Switch back to Confluence Scanner">🔄 MODE</button>' +
+      '<div style="display:flex;align-items:center;gap:4px;">' +
+        '<button id="rn-switch-back" style="background:rgba(99,102,241,0.3);border:1px solid rgba(0,229,255,0.5);color:#00E5FF;padding:3px 6px;border-radius:6px;font-size:8px;font-weight:bold;cursor:pointer;" title="Switch back to Confluence Scanner">🔄 MODE</button>' +
         '<button id="rn-min-btn" style="background:#1e293b;border:none;color:#94a3b8;width:22px;height:22px;border-radius:6px;font-size:11px;cursor:pointer;">—</button>' +
         '<button id="rn-close-btn" style="background:rgba(239,68,68,0.3);border:1px solid rgba(239,68,68,0.5);color:#ff7878;width:22px;height:22px;border-radius:6px;font-size:10px;cursor:pointer;">✕</button>' +
       '</div>' +
     '</div>' +
-    '<div style="padding:14px;display:flex;flex-direction:column;gap:10px;">' +
+    '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;">' +
       '<!-- Active Pair & Live Price Card -->' +
-      '<div style="background:rgba(9,16,36,0.9);border:1px solid rgba(99,102,241,0.25);border-radius:14px;padding:10px 12px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.6);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-          '<span style="color:#94a3b8;font-size:9.5px;font-family:sans-serif;font-weight:bold;text-transform:uppercase;">Active Asset Pair</span>' +
-          '<span id="rn-pair-badge" style="background:rgba(0,229,255,0.15);color:#00E5FF;border:1px solid rgba(0,229,255,0.3);border-radius:4px;font-size:8px;font-weight:bold;padding:1px 5px;">LIVE ALGO</span>' +
+      '<div style="background:rgba(9,16,36,0.9);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:8px 10px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.6);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
+          '<span style="color:#94a3b8;font-size:9px;font-family:sans-serif;font-weight:bold;text-transform:uppercase;">Active Asset Pair</span>' +
+          '<span id="rn-pair-badge" style="background:rgba(0,229,255,0.15);color:#00E5FF;border:1px solid rgba(0,229,255,0.3);border-radius:4px;font-size:7.5px;font-weight:bold;padding:1px 5px;">LIVE ALGO</span>' +
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
-          '<b id="rn-pair-name" style="font-size:13px;color:#FFF;letter-spacing:0.5px;">USD/BDT (OTC)</b>' +
-          '<span id="rn-live-price" style="font-size:18px;font-weight:bold;color:#00E5FF;font-family:monospace;text-shadow:0 0 10px rgba(0,229,255,0.5);">--.----</span>' +
+          '<b id="rn-pair-name" style="font-size:12.5px;color:#FFF;letter-spacing:0.5px;">USD/BDT (OTC)</b>' +
+          '<span id="rn-live-price" style="font-size:16px;font-weight:bold;color:#00E5FF;font-family:monospace;text-shadow:0 0 10px rgba(0,229,255,0.5);">--.----</span>' +
         '</div>' +
       '</div>' +
       '<!-- Dual SNR Grid -->' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
-        '<div style="background:linear-gradient(180deg,rgba(153,27,27,0.25),rgba(9,16,36,0.9));border:1px solid rgba(248,113,113,0.35);border-radius:12px;padding:9px;">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
+        '<div style="background:linear-gradient(180deg,rgba(153,27,27,0.25),rgba(9,16,36,0.9));border:1px solid rgba(248,113,113,0.35);border-radius:10px;padding:8px;">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
-            '<span style="color:#F87171;font-size:8.5px;font-weight:bold;">▲ RESISTANCE</span>' +
+            '<span style="color:#F87171;font-size:8px;font-weight:bold;">▲ RESISTANCE</span>' +
             '<span id="rn-up-type" style="background:rgba(239,68,68,0.2);color:#fca5a5;border-radius:3px;font-size:7px;padding:1px 3px;">MAJOR .000</span>' +
           '</div>' +
-          '<b id="rn-up-lvl" style="color:#fecaca;font-size:13px;font-family:monospace;">--.---</b>' +
-          '<div style="display:flex;justify-content:space-between;font-size:8.5px;margin-top:2px;font-family:sans-serif;">' +
+          '<b id="rn-up-lvl" style="color:#fecaca;font-size:12px;font-family:monospace;">--.---</b>' +
+          '<div style="display:flex;justify-content:space-between;font-size:8px;margin-top:2px;font-family:sans-serif;">' +
             '<span style="color:#94a3b8;">Dist:</span><span id="rn-up-dist" style="color:#fca5a5;font-weight:bold;font-family:monospace;">+0.0 pips</span>' +
           '</div>' +
         '</div>' +
-        '<div style="background:linear-gradient(180deg,rgba(5,150,105,0.25),rgba(9,16,36,0.9));border:1px solid rgba(52,211,153,0.35);border-radius:12px;padding:9px;">' +
+        '<div style="background:linear-gradient(180deg,rgba(5,150,105,0.25),rgba(9,16,36,0.9));border:1px solid rgba(52,211,153,0.35);border-radius:10px;padding:8px;">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
-            '<span style="color:#34D399;font-size:8.5px;font-weight:bold;">▼ SUPPORT</span>' +
+            '<span style="color:#34D399;font-size:8px;font-weight:bold;">▼ SUPPORT</span>' +
             '<span id="rn-down-type" style="background:rgba(16,185,129,0.2);color:#6ee7b7;border-radius:3px;font-size:7px;padding:1px 3px;">MAJOR .000</span>' +
           '</div>' +
-          '<b id="rn-down-lvl" style="color:#a7f3d0;font-size:13px;font-family:monospace;">--.---</b>' +
-          '<div style="display:flex;justify-content:space-between;font-size:8.5px;margin-top:2px;font-family:sans-serif;">' +
+          '<b id="rn-down-lvl" style="color:#a7f3d0;font-size:12px;font-family:monospace;">--.---</b>' +
+          '<div style="display:flex;justify-content:space-between;font-size:8px;margin-top:2px;font-family:sans-serif;">' +
             '<span style="color:#94a3b8;">Dist:</span><span id="rn-down-dist" style="color:#6ee7b7;font-weight:bold;font-family:monospace;">-0.0 pips</span>' +
           '</div>' +
         '</div>' +
       '</div>' +
       '<!-- Proximity Bar -->' +
-      '<div style="background:rgba(9,16,36,0.7);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:6px 10px;">' +
-        '<div style="display:flex;justify-content:space-between;font-size:8px;font-weight:bold;margin-bottom:3px;">' +
+      '<div style="background:rgba(9,16,36,0.7);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:5px 8px;">' +
+        '<div style="display:flex;justify-content:space-between;font-size:7.5px;font-weight:bold;margin-bottom:2px;">' +
           '<span style="color:#34D399;">Support (0%)</span><span id="rn-prox-label" style="color:#00E5FF;font-family:monospace;">Channel: 50%</span><span style="color:#F87171;">Resistance (100%)</span>' +
         '</div>' +
-        '<div style="position:relative;height:6px;border-radius:99px;background:#030712;overflow:hidden;border:1px solid #1f2937;">' +
+        '<div style="position:relative;height:5px;border-radius:99px;background:#030712;overflow:hidden;border:1px solid #1f2937;">' +
           '<div id="rn-prox-fill" style="position:absolute;left:0;top:0;bottom:0;width:50%;background:linear-gradient(90deg,#10B981,#00E5FF,#EF4444);transition:width 0.25s;"></div>' +
         '</div>' +
       '</div>' +
       '<!-- Signal Diagnosis Panel -->' +
-      '<div id="rn-signal-card" style="background:linear-gradient(180deg,rgba(6,78,59,0.35),rgba(3,19,30,0.9));border:1px solid rgba(52,211,153,0.5);border-radius:14px;padding:10px 12px;box-shadow:0 4px 15px rgba(0,0,0,0.5);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">' +
-          '<b id="rn-signal-text" style="color:#34D399;font-size:12px;letter-spacing:0.8px;">RECOMMENDED: CALL (BUY) ↑</b>' +
-          '<span id="rn-signal-conf" style="background:rgba(16,185,129,0.25);color:#34D399;border:1px solid rgba(52,211,153,0.4);border-radius:99px;font-size:9px;font-weight:bold;padding:1px 6px;">96% ACCURACY</span>' +
+      '<div id="rn-signal-card" style="background:linear-gradient(180deg,rgba(6,78,59,0.35),rgba(3,19,30,0.9));border:1px solid rgba(52,211,153,0.5);border-radius:12px;padding:8px 10px;box-shadow:0 4px 15px rgba(0,0,0,0.5);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
+          '<b id="rn-signal-text" style="color:#34D399;font-size:11px;letter-spacing:0.6px;">RECOMMENDED: CALL (BUY) ↑</b>' +
+          '<span id="rn-signal-conf" style="background:rgba(16,185,129,0.25);color:#34D399;border:1px solid rgba(52,211,153,0.4);border-radius:99px;font-size:8px;font-weight:bold;padding:1px 5px;">96% ACCURACY</span>' +
         '</div>' +
-        '<p id="rn-signal-diag" style="margin:0;font-size:9.5px;color:#e2e8f0;font-family:sans-serif;line-height:1.35;">Institutional Bounce Rejection off Major Support Level</p>' +
+        '<p id="rn-signal-diag" style="margin:0;font-size:9px;color:#e2e8f0;font-family:sans-serif;line-height:1.3;">Institutional Bounce Rejection off Major Support Level</p>' +
       '</div>' +
       '<!-- Duration Chips & Auto-Trade Row -->' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">' +
-        '<div id="rn-dur-chips" style="display:flex;gap:4px;">' +
-          '<button class="rn-chip" data-sec="5" style="background:#FFD700;color:#000;font-weight:black;border:none;padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">5s</button>' +
-          '<button class="rn-chip" data-sec="10" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">10s</button>' +
-          '<button class="rn-chip" data-sec="15" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">15s</button>' +
-          '<button class="rn-chip" data-sec="30" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">30s</button>' +
-          '<button class="rn-chip" data-sec="60" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:4px 7px;border-radius:6px;font-size:9px;cursor:pointer;">1m</button>' +
+        '<div id="rn-dur-chips" style="display:flex;gap:3px;">' +
+          '<button class="rn-chip" data-sec="5" style="background:#FFD700;color:#000;font-weight:black;border:none;padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">5s</button>' +
+          '<button class="rn-chip" data-sec="10" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">10s</button>' +
+          '<button class="rn-chip" data-sec="15" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">15s</button>' +
+          '<button class="rn-chip" data-sec="30" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">30s</button>' +
+          '<button class="rn-chip" data-sec="60" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">1m</button>' +
         '</div>' +
-        '<button id="rn-btn-autotrade" style="background:' + (autoTradeEnabled ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)') + ';color:' + (autoTradeEnabled ? '#34D399' : '#f87171') + ';border:1px solid ' + (autoTradeEnabled ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)') + ';border-radius:6px;padding:3px 8px;font-size:8.5px;font-weight:bold;cursor:pointer;">' +
+        '<button id="rn-btn-autotrade" style="background:' + (autoTradeEnabled ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)') + ';color:' + (autoTradeEnabled ? '#34D399' : '#f87171') + ';border:1px solid ' + (autoTradeEnabled ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)') + ';border-radius:6px;padding:3px 6px;font-size:8px;font-weight:bold;cursor:pointer;">' +
           (autoTradeEnabled ? '⚡ AUTO-TRADE ON' : '○ AUTO-TRADE OFF') +
         '</button>' +
       '</div>' +
       '<!-- Main Scan & Execute Button -->' +
-      '<button id="rn-btn-scan-exec" style="background:linear-gradient(90deg,#00E5FF,#00B4D8,#0077B6);border:none;color:#04091A;padding:12px;border-radius:14px;font-size:11px;font-weight:black;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 6px 20px rgba(0,229,255,0.4), inset 0 1px 0 rgba(255,255,255,0.5);margin-top:2px;">' +
+      '<button id="rn-btn-scan-exec" style="background:linear-gradient(90deg,#00E5FF,#00B4D8,#0077B6);border:none;color:#04091A;padding:10px;border-radius:12px;font-size:11px;font-weight:black;letter-spacing:0.8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 6px 20px rgba(0,229,255,0.4), inset 0 1px 0 rgba(255,255,255,0.5);margin-top:2px;">' +
         '<span>⚡</span><span>SCAN & EXECUTE (' + (tradeDuration || 5) + 's)</span><span>⚡</span>' +
       '</button>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(99,102,241,0.2);padding-top:6px;font-size:8.5px;color:#94a3b8;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(99,102,241,0.2);padding-top:4px;font-size:8px;color:#94a3b8;">' +
         '<span style="color:#34D399;font-weight:bold;">✓ VIP License Active</span>' +
         '<span>Official MD Ishak Algo Engine</span>' +
       '</div>' +
@@ -2715,27 +2721,35 @@ javascript:(function(){
       };
     }
 
-    // Draggable functionality
+    // Draggable functionality (strict viewport boundaries on mobile & desktop)
     var dragBar = document.getElementById('rn-drag-bar');
     var isDragging = false;
     var startX, startY, initX, initY;
 
     function onDown(e) {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button') || e.target.closest('input')) return;
       isDragging = true;
-      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      var clientX = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
+      var clientY = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
       var rect = term.getBoundingClientRect();
       startX = clientX; startY = clientY;
       initX = rect.left; initY = rect.top;
-      e.preventDefault();
+      term.style.transform = 'none';
+      if (e.cancelable) e.preventDefault();
     }
     function onMove(e) {
       if (!isDragging) return;
-      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      var clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      var nx = Math.max(10, Math.min(window.innerWidth - term.offsetWidth - 10, initX + (clientX - startX)));
-      var ny = Math.max(10, Math.min(window.innerHeight - term.offsetHeight - 10, initY + (clientY - startY)));
+      if (e.cancelable) e.preventDefault();
+      var clientX = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
+      var clientY = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
+      var winW = window.innerWidth || 360;
+      var winH = window.innerHeight || 640;
+      var curW = term.offsetWidth || 340;
+      var curH = term.offsetHeight || 440;
+      var maxLeft = Math.max(6, winW - curW - 6);
+      var maxTop = Math.max(6, winH - curH - 6);
+      var nx = Math.max(6, Math.min(maxLeft, initX + (clientX - startX)));
+      var ny = Math.max(6, Math.min(maxTop, initY + (clientY - startY)));
       term.style.left = nx + 'px';
       term.style.top = ny + 'px';
       term.style.transform = 'none';
@@ -2745,9 +2759,25 @@ javascript:(function(){
     dragBar.addEventListener('mousedown', onDown);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-    dragBar.addEventListener('touchstart', onDown);
-    window.addEventListener('touchmove', onMove);
+    dragBar.addEventListener('touchstart', onDown, { passive: false });
+    window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onUp);
+
+    // Keep terminal inside bounds on screen resize / orientation switch
+    window.addEventListener('resize', function() {
+      if (!term || !term.parentNode) return;
+      var winW = window.innerWidth || 360;
+      var winH = window.innerHeight || 640;
+      var curW = term.offsetWidth || 340;
+      var curH = term.offsetHeight || 440;
+      var maxLeft = Math.max(6, winW - curW - 6);
+      var maxTop = Math.max(6, winH - curH - 6);
+      var curLeft = parseInt(term.style.left, 10) || 8;
+      var curTop = parseInt(term.style.top, 10) || 16;
+      term.style.left = Math.max(6, Math.min(maxLeft, curLeft)) + 'px';
+      term.style.top = Math.max(6, Math.min(maxTop, curTop)) + 'px';
+      term.style.maxWidth = 'calc(100vw - 16px)';
+    });
 
     // Live Round Number Tick Engine updater (Every 250ms)
     if (rnUpdateInterval) clearInterval(rnUpdateInterval);

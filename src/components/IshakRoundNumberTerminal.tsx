@@ -16,10 +16,35 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
   isLicenseVerified,
   onExecuteTrade,
 }) => {
-  // Draggable window state
-  const [position, setPosition] = useState({ x: 24, y: 80 });
+  // Draggable window state (auto-centered and clamped to screen)
+  const [position, setPosition] = useState(() => {
+    const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
+    const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
+    const termW = Math.min(345, Math.max(280, winW - 20));
+    return {
+      x: Math.max(8, Math.round((winW - termW) / 2)),
+      y: Math.max(16, Math.min(65, Math.round((winH - 460) / 4))),
+    };
+  });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; initX: number; initY: number } | null>(null);
+
+  // Keep terminal inside viewport on window resize / orientation change
+  useEffect(() => {
+    const handleResize = () => {
+      const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
+      const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
+      const termW = Math.min(345, Math.max(280, winW - 20));
+      const maxX = Math.max(6, winW - termW - 6);
+      const maxY = Math.max(6, winH - 120);
+      setPosition((prev) => ({
+        x: Math.max(6, Math.min(maxX, prev.x)),
+        y: Math.max(6, Math.min(maxY, prev.y)),
+      }));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Terminal state
   const [isMinimized, setIsMinimized] = useState(false);
@@ -64,7 +89,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     }
   }, [currentPrice, recentTicks]);
 
-  // Dragging handlers
+  // Dragging handlers (strict clamping on mobile & desktop)
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
     setIsDragging(true);
@@ -93,20 +118,31 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       if (!isDragging || !dragRef.current) return;
       const dx = e.clientX - dragRef.current.startX;
       const dy = e.clientY - dragRef.current.startY;
+      const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
+      const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
+      const termW = Math.min(345, Math.max(280, winW - 20));
+      const maxX = Math.max(6, winW - termW - 6);
+      const maxY = Math.max(6, winH - 120);
       setPosition({
-        x: Math.max(10, Math.min(window.innerWidth - 380, dragRef.current.initX + dx)),
-        y: Math.max(10, Math.min(window.innerHeight - 200, dragRef.current.initY + dy)),
+        x: Math.max(6, Math.min(maxX, dragRef.current.initX + dx)),
+        y: Math.max(6, Math.min(maxY, dragRef.current.initY + dy)),
       });
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging || !dragRef.current) return;
+      if (e.cancelable) e.preventDefault();
       const t = e.touches[0];
       const dx = t.clientX - dragRef.current.startX;
       const dy = t.clientY - dragRef.current.startY;
+      const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
+      const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
+      const termW = Math.min(345, Math.max(280, winW - 20));
+      const maxX = Math.max(6, winW - termW - 6);
+      const maxY = Math.max(6, winH - 120);
       setPosition({
-        x: Math.max(10, Math.min(window.innerWidth - 380, dragRef.current.initX + dx)),
-        y: Math.max(10, Math.min(window.innerHeight - 200, dragRef.current.initY + dy)),
+        x: Math.max(6, Math.min(maxX, dragRef.current.initX + dx)),
+        y: Math.max(6, Math.min(maxY, dragRef.current.initY + dy)),
       });
     };
 
@@ -182,10 +218,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
   return (
     <div
-      style={{ left: `${position.x}px`, top: `${position.y}px` }}
+      style={{ left: `${position.x}px`, top: `${position.y}px`, transform: 'none' }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      className="fixed z-[999990] w-[345px] sm:w-[375px] max-w-[calc(100vw-24px)] select-none rounded-[24px] overflow-hidden bg-gradient-to-b from-[#0a1024]/98 via-[#060a18]/98 to-[#030611]/99 border-t border-t-cyan-400/80 border-x border-x-indigo-500/30 border-b border-b-black shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(0,229,255,0.2),inset_0_1.5px_1.5px_rgba(255,255,255,0.35)] backdrop-blur-2xl font-sans"
+      className="fixed z-[999990] w-[calc(100vw-16px)] max-w-[345px] max-h-[calc(100vh-25px)] overflow-y-auto overflow-x-hidden select-none rounded-[22px] bg-gradient-to-b from-[#0a1024]/98 via-[#060a18]/98 to-[#030611]/99 border-t border-t-cyan-400/80 border-x border-x-indigo-500/30 border-b border-b-black shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(0,229,255,0.2),inset_0_1.5px_1.5px_rgba(255,255,255,0.35)] backdrop-blur-2xl font-sans box-border"
     >
       {/* Top Specular Rim */}
       <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#00E5FF] to-transparent pointer-events-none" />
