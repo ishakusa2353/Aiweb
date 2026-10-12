@@ -389,9 +389,14 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     }
 
     if (botMode === 'ROUND_NUMBER') {
-      const rnBtn = document.querySelector('button[data-rn-scan="true"]') as HTMLButtonElement | null;
-      if (rnBtn) {
-        rnBtn.click();
+      const pill = document.getElementById('minimizedPill') as HTMLElement | null;
+      if (pill && pill.style.display !== 'none') {
+        pill.click();
+        return;
+      }
+      const startBtn = document.getElementById('btnStart') as HTMLButtonElement | null;
+      if (startBtn && !startBtn.disabled) {
+        startBtn.click();
         return;
       }
     }

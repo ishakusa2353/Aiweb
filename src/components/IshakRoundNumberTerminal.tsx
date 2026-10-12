@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { calculateRoundLevels, evaluateRoundNumberSignal, RoundLevelInfo, RoundNumberSignal } from '../utils/roundNumberEngine';
 import { getBackgroundMarketData } from '../utils/backgroundMarketStream';
 import { playPhotostatScannerSound, playResultSound } from '../utils/audio';
 
@@ -16,27 +15,49 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
   isLicenseVerified,
   onExecuteTrade,
 }) => {
-  // Draggable window state (auto-centered and clamped to screen)
+  // Viewport calculation & boundary clamping
   const [position, setPosition] = useState(() => {
     const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
     const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-    const termW = Math.min(345, Math.max(280, winW - 20));
+    const termW = winW <= 600 ? 236 : 304;
     return {
-      x: Math.max(8, Math.round((winW - termW) / 2)),
-      y: Math.max(16, Math.min(65, Math.round((winH - 460) / 4))),
+      x: Math.max(10, Math.min(winW - termW - 10, 18)),
+      y: Math.max(12, Math.min(winH - 460, 60)),
     };
   });
+
+  const [isMinimized, setIsMinimized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; initX: number; initY: number } | null>(null);
 
-  // Keep terminal inside viewport on window resize / orientation change
+  // Bot configuration state
+  const [activePair, setActivePair] = useState<string>('USD/BDT (OTC)');
+  const [currentPrice, setCurrentPrice] = useState<number>(122.348);
+  const [roundPriceInput, setRoundPriceInput] = useState<string>('');
+  const [durationInput, setDurationInput] = useState<number>(6);
+  const [selectedChip, setSelectedChip] = useState<number>(6);
+
+  // Runtime operational state
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [statusText, setStatusText] = useState<string>('● STANDBY');
+  const [interceptsCount, setInterceptsCount] = useState<number>(0);
+  const [countdown, setCountdown] = useState<number>(0);
+  const [progressPercent, setProgressPercent] = useState<number>(0);
+  const [inputError, setInputError] = useState<boolean>(false);
+
+  // Refs for timer and execution
+  const monitorIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recentTicksRef = useRef<number[]>([]);
+
+  // Keep terminal inside bounds on screen resize
   useEffect(() => {
     const handleResize = () => {
       const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
       const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-      const termW = Math.min(345, Math.max(280, winW - 20));
+      const termW = winW <= 600 ? 236 : 304;
       const maxX = Math.max(6, winW - termW - 6);
-      const maxY = Math.max(6, winH - 120);
+      const maxY = Math.max(6, winH - 100);
       setPosition((prev) => ({
         x: Math.max(6, Math.min(maxX, prev.x)),
         y: Math.max(6, Math.min(maxY, prev.y)),
@@ -46,22 +67,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Terminal state
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState<number>(5);
-  const [autoTradeEnabled, setAutoTradeEnabled] = useState<boolean>(true);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [scanProgress, setScanProgress] = useState<number>(0);
-
-  // Live market and round number tracking
-  const [activePair, setActivePair] = useState<string>('USD/BDT (OTC)');
-  const [currentPrice, setCurrentPrice] = useState<number>(122.348);
-  const [levels, setLevels] = useState<RoundLevelInfo>(() => calculateRoundLevels(122.348));
-  const [activeSignal, setActiveSignal] = useState<RoundNumberSignal | null>(null);
-  const [ticksCount, setTicksCount] = useState<number>(0);
-  const [recentTicks, setRecentTicks] = useState<number[]>([]);
-
-  // Subscribed to live market ticks
+  // Live price tick subscription from background stream
   useEffect(() => {
     const interval = setInterval(() => {
       const live = getBackgroundMarketData();
@@ -69,27 +75,33 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         setCurrentPrice(live.currentPrice);
         const pair = (live as unknown as { currentPair?: string }).currentPair || 'USD/BDT (OTC)';
         setActivePair(pair);
-        setLevels(calculateRoundLevels(live.currentPrice));
-        setTicksCount((c) => c + 1);
-        setRecentTicks((prev) => {
-          const next = [...prev, live.currentPrice];
-          return next.slice(-20);
-        });
+
+        recentTicksRef.current.push(live.currentPrice);
+        if (recentTicksRef.current.length > 25) recentTicksRef.current.shift();
+
+        // Increment live intercepts if running
+        if (isRunning) {
+          setInterceptsCount((c) => c + 1);
+        }
       }
-    }, 250);
+    }, 200);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isRunning]);
 
-  // Update signal when price or ticks change
-  useEffect(() => {
-    if (currentPrice > 0) {
-      const sig = evaluateRoundNumberSignal(currentPrice, recentTicks);
-      setActiveSignal(sig);
-    }
-  }, [currentPrice, recentTicks]);
+  // Auto-suggest closest round number on pair or price load
+  const suggestNearestRoundPrice = () => {
+    if (currentPrice <= 0) return;
+    let step = 0.001;
+    if (currentPrice > 50) step = 0.1;
+    if (currentPrice > 500) step = 1;
+    const nearest = Math.round(currentPrice / step) * step;
+    const decimals = currentPrice > 50 ? (currentPrice > 500 ? 2 : 3) : 5;
+    setRoundPriceInput(nearest.toFixed(decimals));
+    setInputError(false);
+  };
 
-  // Dragging handlers (strict clamping on mobile & desktop)
+  // Dragging event handlers (bounded strictly to viewport)
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
     setIsDragging(true);
@@ -120,9 +132,11 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       const dy = e.clientY - dragRef.current.startY;
       const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
       const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-      const termW = Math.min(345, Math.max(280, winW - 20));
-      const maxX = Math.max(6, winW - termW - 6);
-      const maxY = Math.max(6, winH - 120);
+      const curW = isMinimized ? 48 : (winW <= 600 ? 236 : 304);
+      const curH = isMinimized ? 48 : 390;
+      const maxX = Math.max(6, winW - curW - 6);
+      const maxY = Math.max(6, winH - curH - 6);
+
       setPosition({
         x: Math.max(6, Math.min(maxX, dragRef.current.initX + dx)),
         y: Math.max(6, Math.min(maxY, dragRef.current.initY + dy)),
@@ -131,145 +145,494 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging || !dragRef.current) return;
-      if (e.cancelable) e.preventDefault();
       const t = e.touches[0];
       const dx = t.clientX - dragRef.current.startX;
       const dy = t.clientY - dragRef.current.startY;
       const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
       const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-      const termW = Math.min(345, Math.max(280, winW - 20));
-      const maxX = Math.max(6, winW - termW - 6);
-      const maxY = Math.max(6, winH - 120);
+      const curW = isMinimized ? 48 : (winW <= 600 ? 236 : 304);
+      const curH = isMinimized ? 48 : 390;
+      const maxX = Math.max(6, winW - curW - 6);
+      const maxY = Math.max(6, winH - curH - 6);
+
       setPosition({
         x: Math.max(6, Math.min(maxX, dragRef.current.initX + dx)),
         y: Math.max(6, Math.min(maxY, dragRef.current.initY + dy)),
       });
     };
 
-    const handleMouseUp = () => setIsDragging(false);
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      dragRef.current = null;
+    };
 
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
-      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleMouseUp);
     }
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, isMinimized]);
 
-  // Trigger Round Number Scan & Trade execution
-  const handleScanAndExecute = () => {
-    if (isScanning) return;
-    setIsScanning(true);
-    setScanProgress(0);
-    playPhotostatScannerSound();
-
-    const start = Date.now();
-    const duration = 2200; // 2.2s precision radar scan
-
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const p = Math.min(100, Math.round((elapsed / duration) * 100));
-      setScanProgress(p);
-
-      if (elapsed >= duration) {
-        clearInterval(timer);
-        setIsScanning(false);
-        const finalSignal = evaluateRoundNumberSignal(currentPrice, recentTicks);
-        playResultSound(finalSignal.action === 'CALL');
-        setActiveSignal(finalSignal);
-
-        if (autoTradeEnabled && onExecuteTrade && finalSignal.action !== 'WAIT') {
-          onExecuteTrade(finalSignal.action === 'CALL', selectedDuration);
-        }
-      }
-    }, 60);
+  // Duration chip selection
+  const handleSelectChip = (sec: number) => {
+    setSelectedChip(sec);
+    setDurationInput(sec);
   };
 
+  // Start monitoring loop
+  const handleStart = () => {
+    const target = parseFloat(roundPriceInput);
+    if (!target || isNaN(target) || target <= 0) {
+      setInputError(true);
+      suggestNearestRoundPrice();
+      return;
+    }
+
+    setInputError(false);
+    setIsRunning(true);
+    setStatusText('● MONITORING ROUND SNR...');
+    setInterceptsCount(0);
+    setProgressPercent(0);
+
+    // Continuous real tick proximity surveillance
+    if (monitorIntervalRef.current) clearInterval(monitorIntervalRef.current);
+    monitorIntervalRef.current = setInterval(() => {
+      const live = getBackgroundMarketData();
+      const p = (live && live.currentPrice > 0) ? live.currentPrice : currentPrice;
+      const targetVal = parseFloat(roundPriceInput);
+      if (!targetVal || !p) return;
+
+      const diff = Math.abs(p - targetVal);
+      const pipThreshold = p > 50 ? 0.08 : 0.00015;
+
+      // When price touches or tests the Round SNR level
+      if (diff <= pipThreshold) {
+        if (monitorIntervalRef.current) {
+          clearInterval(monitorIntervalRef.current);
+          monitorIntervalRef.current = null;
+        }
+
+        // Determine reversal direction based on approach angle
+        const isApproachingFromBelow = p <= targetVal;
+        const isCall = !isApproachingFromBelow; // Reversal off level: from below -> PUT; from above -> CALL
+        const duration = durationInput || 6;
+
+        setStatusText(`⚡ ROUND SNR TOUCHED! ${isCall ? 'CALL (BUY) ↑' : 'PUT (SELL) ↓'}`);
+        playPhotostatScannerSound();
+
+        // Trigger trade execution
+        if (onExecuteTrade) {
+          onExecuteTrade(isCall, duration);
+        }
+
+        // Countdown visual timer
+        let rem = duration;
+        setCountdown(rem);
+        setProgressPercent(100);
+
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = setInterval(() => {
+          rem -= 1;
+          setCountdown(rem);
+          const pct = Math.max(0, Math.round((rem / duration) * 100));
+          setProgressPercent(pct);
+
+          if (rem <= 0) {
+            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+            playResultSound(true);
+            setStatusText('✓ TRADE COMPLETE! RESUMING...');
+            setTimeout(() => {
+              handleStart(); // Resume monitoring automatically
+            }, 1500);
+          }
+        }, 1000);
+      }
+    }, 150);
+  };
+
+  // Stop monitoring loop
+  const handleStop = () => {
+    setIsRunning(false);
+    setStatusText('● STANDBY');
+    setCountdown(0);
+    setProgressPercent(0);
+
+    if (monitorIntervalRef.current) {
+      clearInterval(monitorIntervalRef.current);
+      monitorIntervalRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (monitorIntervalRef.current) clearInterval(monitorIntervalRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, []);
+
+  // 1. MINIMIZED STATE: Glowing Floating Cyber Pill with Radar Ring
   if (isMinimized) {
     return (
       <div
-        style={{ left: `${position.x}px`, top: `${position.y}px` }}
-        className="fixed z-[999990] select-none cursor-pointer"
+        id="minimizedPill"
+        title="ISHAK Round Number Tracker - Click to Expand"
+        style={{
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          position: 'fixed',
+          zIndex: 2147483647,
+          width: '46px',
+          height: '46px',
+          borderRadius: '50%',
+          backgroundColor: '#060913',
+          boxShadow: '0 10px 28px rgba(0,0,0,0.9), 0 0 20px rgba(14,165,233,0.5)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1.5px solid #38bdf8',
+          touchAction: 'none',
+        }}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         onClick={() => setIsMinimized(false)}
       >
-        <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#080d1a]/95 border border-[#00E5FF]/60 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_20px_rgba(0,229,255,0.3)] backdrop-blur-xl">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-400 to-indigo-600 flex items-center justify-center text-xs font-black text-black">
-            ⚡
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-[#00E5FF] font-['Orbitron',sans-serif] tracking-wider">
-              ISHAK ROUND TRACKER
-            </span>
-            <span className="text-[9px] text-gray-300 font-mono">
-              {currentPrice.toFixed(levels.decimals)} • {activeSignal?.action || 'SCAN'}
-            </span>
-          </div>
-          <button className="text-gray-400 hover:text-white text-xs pl-1">▲</button>
-        </div>
+        {/* Animated Dashed Radar Ring */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: '-4px',
+            borderRadius: '50%',
+            border: '1.5px dashed rgba(56, 189, 248, 0.45)',
+            animation: 'spin 8s linear infinite',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Beacon Status Dot */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '1px',
+            right: '1px',
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: isRunning ? '#10b981' : '#38bdf8',
+            border: '2px solid #060913',
+            boxShadow: `0 0 8px ${isRunning ? '#10b981' : '#38bdf8'}`,
+          }}
+        />
+        <img
+          src="https://i.ibb.co/Mx90bFy4/file-421.jpg"
+          alt="Ishak VIP Logo"
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            objectFit: 'cover',
+          }}
+        />
       </div>
     );
   }
 
+  // 2. EXPANDED CYBER HACKER HUD MATRIX TERMINAL
   return (
     <div
-      style={{ left: `${position.x}px`, top: `${position.y}px`, transform: 'none' }}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-      className="fixed z-[999990] w-[calc(100vw-16px)] max-w-[345px] max-h-[calc(100vh-25px)] overflow-y-auto overflow-x-hidden select-none rounded-[22px] bg-gradient-to-b from-[#0a1024]/98 via-[#060a18]/98 to-[#030611]/99 border-t border-t-cyan-400/80 border-x border-x-indigo-500/30 border-b border-b-black shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_40px_rgba(0,229,255,0.2),inset_0_1.5px_1.5px_rgba(255,255,255,0.35)] backdrop-blur-2xl font-sans box-border"
+      id="appCard"
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        position: 'fixed',
+        zIndex: 2147483647,
+        width: '304px',
+        maxWidth: 'calc(100vw - 16px)',
+        maxHeight: 'calc(100vh - 20px)',
+        backgroundColor: '#060913',
+        backgroundImage: `
+          radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.22) 0%, transparent 75%),
+          linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px)
+        `,
+        backgroundSize: '100% 100%, 18px 18px, 18px 18px',
+        border: `1px solid ${isRunning ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)'}`,
+        borderRadius: '14px',
+        boxShadow: isRunning
+          ? '0 20px 48px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.45)'
+          : '0 20px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(14, 165, 233, 0.2)',
+        color: '#e2e8f0',
+        fontSize: '13px',
+        overflow: 'hidden',
+        touchAction: 'none',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        transition: 'border-color 0.25s, box-shadow 0.25s',
+        userSelect: 'none',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+      }}
     >
-      {/* Top Specular Rim */}
-      <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#00E5FF] to-transparent pointer-events-none" />
+      {/* HUD Corner Brackets */}
+      <span
+        style={{
+          position: 'absolute',
+          top: '-1px',
+          left: '-1px',
+          width: '14px',
+          height: '14px',
+          borderTop: '2px solid #38bdf8',
+          borderLeft: '2px solid #38bdf8',
+          borderTopLeftRadius: '12px',
+          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
+      />
+      <span
+        style={{
+          position: 'absolute',
+          top: '-1px',
+          right: '-1px',
+          width: '14px',
+          height: '14px',
+          borderTop: '2px solid #38bdf8',
+          borderRight: '2px solid #38bdf8',
+          borderTopRightRadius: '12px',
+          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
+      />
+      <span
+        style={{
+          position: 'absolute',
+          bottom: '-1px',
+          left: '-1px',
+          width: '14px',
+          height: '14px',
+          borderBottom: '2px solid #38bdf8',
+          borderLeft: '2px solid #38bdf8',
+          borderBottomLeftRadius: '12px',
+          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
+      />
+      <span
+        style={{
+          position: 'absolute',
+          bottom: '-1px',
+          right: '-1px',
+          width: '14px',
+          height: '14px',
+          borderBottom: '2px solid #38bdf8',
+          borderRight: '2px solid #38bdf8',
+          borderBottomRightRadius: '12px',
+          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
+      />
 
-      {/* HEADER (Follows CB Terminal Format, 100% Ishak VIP Style & Logo) */}
-      <div className="p-3.5 px-4 flex items-center justify-between border-b border-indigo-500/20 bg-gradient-to-r from-[#0d1633]/80 via-transparent to-[#0d1633]/80">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl border border-amber-400/70 bg-[#091224] p-0.5 overflow-hidden shadow-[0_0_14px_rgba(255,215,0,0.35)] flex items-center justify-center">
+      {/* Luminous Radar Scanline */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent)',
+          boxShadow: '0 0 12px rgba(56, 189, 248, 0.8)',
+          opacity: 0.35,
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}
+      />
+
+      {/* HEADER (Draggable Handle) */}
+      <div
+        id="panelHeader"
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+        style={{
+          padding: '11px 13px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          background: 'rgba(11, 17, 30, 0.92)',
+          borderBottom: '1px solid rgba(56, 189, 248, 0.22)',
+          position: 'relative',
+          zIndex: 3,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+          {/* Logo Frame (Tap to minimize) */}
+          <div
+            id="headerLogo"
+            title="Tap to minimize"
+            onClick={() => setIsMinimized(true)}
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              border: '1.5px solid #38bdf8',
+              boxShadow: '0 0 12px rgba(56, 189, 248, 0.5)',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#050811',
+              flexShrink: 0,
+              cursor: 'pointer',
+            }}
+          >
             <img
               src="https://i.ibb.co/Mx90bFy4/file-421.jpg"
               alt="Ishak VIP Logo"
-              className="w-full h-full object-cover rounded-lg"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-[12px] font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-amber-200 font-['Orbitron',sans-serif] tracking-wider leading-none">
-                ISHAK VIP TRADER
-              </h2>
-              <span className="text-[8px] font-black px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                ROUND v2.0
-              </span>
-            </div>
-            <p className="text-[9px] text-[#00E5FF] font-semibold tracking-wide flex items-center gap-1 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Round Number SNR Terminal
-            </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+            <span
+              style={{
+                fontWeight: 800,
+                fontSize: '12.5px',
+                color: '#f8fafc',
+                letterSpacing: '0.6px',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              ISHAK VIP TRADER
+            </span>
+            <span
+              style={{
+                fontSize: '8.5px',
+                fontWeight: 700,
+                color: '#38bdf8',
+                letterSpacing: '0.8px',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: '#10b981',
+                  boxShadow: '0 0 8px #10b981',
+                  display: 'inline-block',
+                }}
+              />
+              ROUND TERMINAL VIP BOT
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* Header Right Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          {/* Switch Mode Button */}
           <button
             onClick={onSwitchMode}
             title="Switch back to Confluence Scanner Mode"
-            className="px-2 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-400/40 text-cyan-300 hover:text-white text-[9px] font-black font-['Orbitron',sans-serif] transition-colors cursor-pointer flex items-center gap-1"
+            style={{
+              padding: '3px 7px',
+              borderRadius: '6px',
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              color: '#38bdf8',
+              fontSize: '8.5px',
+              fontWeight: 800,
+              fontFamily: 'ui-monospace, monospace',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+            }}
           >
             <span>🔄</span> MODE
           </button>
+
+          {/* Key Status Icon */}
+          <div
+            id="btnKeyStatus"
+            title={isLicenseVerified ? 'License: Active' : 'License: Required'}
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '6px',
+              background: 'rgba(18, 25, 42, 0.85)',
+              border: `1px solid ${isLicenseVerified ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'}`,
+              color: isLicenseVerified ? '#10b981' : '#f87171',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '11px',
+            }}
+          >
+            {isLicenseVerified ? '🔑' : '🔒'}
+          </div>
+
+          {/* Minimize Header Action */}
           <button
+            id="btnMinimizeHeader"
+            title="Minimize"
             onClick={() => setIsMinimized(true)}
-            className="w-6 h-6 rounded-lg bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '6px',
+              background: 'rgba(18, 25, 42, 0.85)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              color: '#94a3b8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold',
+            }}
           >
             —
           </button>
+
+          {/* Close Header Action */}
           {onClose && (
             <button
               onClick={onClose}
-              className="w-6 h-6 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 hover:text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+              title="Close Terminal"
+              style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '6px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.5)',
+                color: '#f87171',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '10px',
+                fontWeight: 'bold',
+              }}
             >
               ✕
             </button>
@@ -277,196 +640,375 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         </div>
       </div>
 
-      <div className="p-3.5 space-y-3">
-        {/* ROW 1: ACTIVE ASSET & LIVE TICK PRICE CARD */}
-        <div className="p-3 rounded-2xl bg-[#091024]/90 border border-indigo-500/25 shadow-inner">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Active Market Pair</span>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
-                {activePair.includes('OTC') ? 'OTC ALGO' : 'REAL FOREX'}
+      {/* BODY */}
+      <div
+        style={{
+          padding: '11px 13px 13px 13px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '9px',
+          position: 'relative',
+          zIndex: 3,
+        }}
+      >
+        {/* MARKET STRIP WITH ECG PULSE WAVE */}
+        <div
+          id="marketStrip"
+          style={{
+            background: 'rgba(10, 15, 27, 0.9)',
+            border: '1px solid rgba(56, 189, 248, 0.28)',
+            borderRadius: '9px',
+            padding: '8px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span
+              style={{
+                fontSize: '8px',
+                fontWeight: 700,
+                color: '#64748b',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                fontFamily: 'ui-monospace, monospace',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span style={{ color: '#38bdf8' }}>⚡</span> MARKET ASSET
+            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span
+                id="marketPair"
+                style={{
+                  fontWeight: 800,
+                  fontSize: '12.5px',
+                  color: '#38bdf8',
+                  fontFamily: 'ui-monospace, monospace',
+                  letterSpacing: '0.3px',
+                  textShadow: '0 0 10px rgba(56, 189, 248, 0.4)',
+                }}
+              >
+                {activePair}
+              </span>
+              <span style={{ fontSize: '11px', color: '#cbd5e1', fontFamily: 'monospace' }}>
+                {currentPrice.toFixed(currentPrice > 50 ? (currentPrice > 500 ? 2 : 3) : 5)}
               </span>
             </div>
-            <span className="text-[10px] font-mono text-gray-400">
-              ⚡ {ticksCount} ticks
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
+            <div
+              style={{
+                fontSize: '8px',
+                fontWeight: 800,
+                color: '#10b981',
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                padding: '1px 6px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              ● LIVE
+            </div>
+            {/* ECG Pulse Wave SVG */}
+            <div style={{ height: '12px', display: 'flex', alignItems: 'center' }}>
+              <svg width="36" height="12" viewBox="0 0 42 14" fill="none">
+                <path
+                  d="M1 7H11L14 1L18 13L22 4L25 9L28 7H41"
+                  stroke="#38bdf8"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* FIELD 1: ROUND NUMBER INPUT */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span
+              style={{
+                fontSize: '9.5px',
+                fontWeight: 700,
+                color: '#94a3b8',
+                letterSpacing: '0.6px',
+                textTransform: 'uppercase',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              ROUND NUMBER
+            </span>
+            <button
+              onClick={suggestNearestRoundPrice}
+              type="button"
+              style={{
+                fontSize: '8.5px',
+                color: '#38bdf8',
+                background: 'rgba(56, 189, 248, 0.1)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                borderRadius: '4px',
+                padding: '1px 5px',
+                cursor: 'pointer',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              🎯 Auto Snap
+            </button>
+          </div>
+          <input
+            id="inputPrice"
+            type="number"
+            step="any"
+            value={roundPriceInput}
+            onChange={(e) => {
+              setRoundPriceInput(e.target.value);
+              setInputError(false);
+            }}
+            placeholder="Enter Round Price (e.g. 122.3000)"
+            style={{
+              width: '100%',
+              background: '#070b14',
+              border: `1px solid ${inputError ? '#ef4444' : 'rgba(56, 189, 248, 0.25)'}`,
+              borderRadius: '8px',
+              padding: '8px 10px',
+              color: '#ffffff',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              fontFamily: 'ui-monospace, monospace',
+              outline: 'none',
+              boxSizing: 'border-box',
+              boxShadow: inputError ? '0 0 10px rgba(239, 68, 68, 0.35)' : 'none',
+            }}
+          />
+        </div>
+
+        {/* FIELD 2: TIME (SECOND) & PRESET CHIPS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span
+              style={{
+                fontSize: '9.5px',
+                fontWeight: 700,
+                color: '#94a3b8',
+                letterSpacing: '0.6px',
+                textTransform: 'uppercase',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              TIME (SECOND)
+            </span>
+            <span
+              id="countdownText"
+              style={{
+                fontSize: '10px',
+                fontWeight: 800,
+                color: countdown > 0 ? '#10b981' : '#38bdf8',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              {countdown > 0 ? `[${String(countdown).padStart(2, '0')}s]` : '[READY]'}
             </span>
           </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-extrabold text-white tracking-wide">{activePair}</span>
-            <div className="text-right">
-              <span className="text-xl font-black font-mono text-[#00E5FF] tracking-tight drop-shadow-[0_0_12px_rgba(0,229,255,0.4)]">
-                {currentPrice.toFixed(levels.decimals)}
-              </span>
-            </div>
-          </div>
-        </div>
 
-        {/* ROW 2: ROUND NUMBER SNR DUAL RADAR GRID (CB FORMAT) */}
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* Upper Resistance Round Number */}
-          <div className="p-3 rounded-2xl bg-gradient-to-b from-rose-950/25 to-[#091024]/90 border border-rose-500/35 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[9.5px] font-extrabold text-rose-400 uppercase tracking-wider">
-                ▲ RESISTANCE SNR
-              </span>
-              <span className="text-[8px] font-black px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-400/30">
-                {levels.upperType.replace('_', ' ')}
-              </span>
-            </div>
-            <div className="font-mono text-base font-black text-rose-200">
-              {levels.upperLevel.toFixed(levels.decimals)}
-            </div>
-            <div className="mt-1 flex items-center justify-between text-[10px] font-bold">
-              <span className="text-gray-400">Distance:</span>
-              <span className="text-rose-300 font-mono">+{levels.distanceToUpperPips} pips</span>
-            </div>
-          </div>
+          <input
+            id="inputDuration"
+            type="number"
+            min="1"
+            max="3600"
+            value={durationInput}
+            onChange={(e) => {
+              const val = parseInt(e.target.value) || 6;
+              setDurationInput(val);
+              setSelectedChip(val);
+            }}
+            placeholder="Enter Seconds (default: 6)"
+            style={{
+              width: '100%',
+              background: '#070b14',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              borderRadius: '8px',
+              padding: '7px 10px',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 600,
+              fontFamily: 'ui-monospace, monospace',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
 
-          {/* Lower Support Round Number */}
-          <div className="p-3 rounded-2xl bg-gradient-to-b from-emerald-950/25 to-[#091024]/90 border border-emerald-500/35 relative overflow-hidden">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[9.5px] font-extrabold text-emerald-400 uppercase tracking-wider">
-                ▼ SUPPORT SNR
-              </span>
-              <span className="text-[8px] font-black px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                {levels.lowerType.replace('_', ' ')}
-              </span>
-            </div>
-            <div className="font-mono text-base font-black text-emerald-200">
-              {levels.lowerLevel.toFixed(levels.decimals)}
-            </div>
-            <div className="mt-1 flex items-center justify-between text-[10px] font-bold">
-              <span className="text-gray-400">Distance:</span>
-              <span className="text-emerald-300 font-mono">-{levels.distanceToLowerPips} pips</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ROW 3: ROUND LEVEL PROXIMITY GAUGE BAR */}
-        <div className="p-2.5 rounded-xl bg-[#091024]/70 border border-indigo-500/20">
-          <div className="flex justify-between text-[9px] font-bold text-gray-400 mb-1">
-            <span className="text-emerald-400">Support (0%)</span>
-            <span className="text-cyan-300 font-mono">Channel: {levels.proximityPercent}%</span>
-            <span className="text-rose-400">Resistance (100%)</span>
-          </div>
-          <div className="relative h-2 rounded-full bg-gray-900 overflow-hidden border border-gray-800">
-            <div
-              className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-emerald-500 via-cyan-400 to-rose-500 transition-all duration-300"
-              style={{ width: `${levels.proximityPercent}%` }}
-            />
-            {/* Price Cursor Marker */}
-            <div
-              className="absolute top-0 bottom-0 w-2 -ml-1 bg-white rounded-full shadow-[0_0_8px_white] transition-all duration-300"
-              style={{ left: `${levels.proximityPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* ROW 4: REAL-TIME ROUND SIGNAL & DIAGNOSIS CARD */}
-        {activeSignal && (
-          <div
-            className={`p-3 rounded-2xl border transition-all ${
-              activeSignal.action === 'CALL'
-                ? 'bg-gradient-to-b from-emerald-950/40 to-[#07131e] border-emerald-400/60 shadow-[0_4px_20px_rgba(16,185,129,0.2)]'
-                : 'bg-gradient-to-b from-rose-950/40 to-[#160714] border-rose-400/60 shadow-[0_4px_20px_rgba(239,68,68,0.2)]'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-base">{activeSignal.action === 'CALL' ? '🟢' : '🔴'}</span>
-                <span
-                  className={`text-sm font-black font-['Orbitron',sans-serif] tracking-wider ${
-                    activeSignal.action === 'CALL' ? 'text-emerald-300' : 'text-rose-300'
-                  }`}
-                >
-                  RECOMMENDED: {activeSignal.action} {activeSignal.action === 'CALL' ? '↑ (BUY)' : '↓ (SELL)'}
-                </span>
-              </div>
-              <span
-                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
-                  activeSignal.action === 'CALL'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                    : 'bg-rose-500/20 text-rose-300 border-rose-400/40'
-                }`}
-              >
-                {activeSignal.confidence}% ACCURACY
-              </span>
-            </div>
-            <p className="text-[10.5px] text-gray-200 font-medium leading-tight">
-              {activeSignal.reason}
-            </p>
-            <div className="mt-1.5 flex items-center justify-between text-[9px] text-gray-400 font-mono">
-              <span>Strategy: {activeSignal.strategy.replace('_', ' ')}</span>
-              <span>Proximity: {activeSignal.proximityPips} pips</span>
-            </div>
-          </div>
-        )}
-
-        {/* ROW 5: DURATION CHIPS & AUTO TRADE TOGGLE */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-1">
-            {[5, 10, 15, 30, 60].map((sec) => (
+          {/* Quick Preset Chips Row */}
+          <div style={{ display: 'flex', gap: '4px', marginTop: '2px' }}>
+            {[5, 6, 10, 15, 30].map((sec) => (
               <button
                 key={sec}
-                onClick={() => setSelectedDuration(sec)}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer ${
-                  selectedDuration === sec
-                    ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-black shadow-[0_0_10px_rgba(255,184,0,0.5)] font-black'
-                    : 'bg-[#0f173b]/80 text-gray-300 hover:text-white border border-indigo-500/20'
-                }`}
+                type="button"
+                onClick={() => handleSelectChip(sec)}
+                style={{
+                  flex: 1,
+                  padding: '3px 0',
+                  textAlign: 'center',
+                  background: selectedChip === sec ? '#0284c7' : 'rgba(16, 22, 36, 0.9)',
+                  border: `1px solid ${selectedChip === sec ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
+                  color: selectedChip === sec ? '#ffffff' : '#94a3b8',
+                  borderRadius: '5px',
+                  fontSize: '9.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'ui-monospace, monospace',
+                  boxShadow: selectedChip === sec ? '0 0 10px rgba(56, 189, 248, 0.45)' : 'none',
+                  transition: 'all 0.15s',
+                }}
               >
-                {sec >= 60 ? `${sec / 60}m` : `${sec}s`}
+                {sec}s
               </button>
             ))}
           </div>
 
-          <button
-            onClick={() => setAutoTradeEnabled(!autoTradeEnabled)}
-            className={`px-2.5 py-1 rounded-lg text-[9.5px] font-bold transition-all cursor-pointer border flex items-center gap-1 ${
-              autoTradeEnabled
-                ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
-                : 'bg-rose-500/20 border-rose-400/50 text-rose-300'
-            }`}
+          {/* Progress Track & Fill */}
+          <div
+            id="progressTrack"
+            style={{
+              height: '3px',
+              background: '#121828',
+              borderRadius: '2px',
+              overflow: 'hidden',
+              marginTop: '4px',
+              display: isRunning ? 'block' : 'none',
+            }}
           >
-            <span>{autoTradeEnabled ? '⚡' : '○'}</span>
-            <span>AUTO-TRADE {autoTradeEnabled ? 'ON' : 'OFF'}</span>
+            <div
+              id="progressFill"
+              style={{
+                height: '100%',
+                width: `${progressPercent}%`,
+                background: 'linear-gradient(90deg, #0284c7, #38bdf8)',
+                transition: 'width 1s linear',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* BUTTON ROW: START & STOP */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '3px' }}>
+          <button
+            id="btnStart"
+            type="button"
+            onClick={handleStart}
+            disabled={isRunning || !isLicenseVerified}
+            style={{
+              flex: 1,
+              padding: '9px 0',
+              borderRadius: '8px',
+              border: 'none',
+              fontWeight: 800,
+              fontSize: '11.5px',
+              cursor: isRunning || !isLicenseVerified ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+              color: '#ffffff',
+              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)',
+              opacity: isRunning || !isLicenseVerified ? 0.4 : 1,
+              transition: 'all 0.18s',
+            }}
+          >
+            START
+          </button>
+
+          <button
+            id="btnStop"
+            type="button"
+            onClick={handleStop}
+            disabled={!isRunning}
+            style={{
+              flex: 1,
+              padding: '9px 0',
+              borderRadius: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.65)',
+              fontWeight: 800,
+              fontSize: '11.5px',
+              cursor: !isRunning ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+              background: 'rgba(239, 68, 68, 0.12)',
+              color: '#f87171',
+              opacity: !isRunning ? 0.4 : 1,
+              transition: 'all 0.18s',
+            }}
+          >
+            STOP
           </button>
         </div>
 
-        {/* SCAN PROGRESS BAR */}
-        {isScanning && (
-          <div className="space-y-1">
-            <div className="flex justify-between text-[9px] font-bold text-cyan-300 font-['Orbitron',sans-serif]">
-              <span>LASER ROUND RADAR SCANNING...</span>
-              <span>{scanProgress}%</span>
-            </div>
-            <div className="h-1.5 w-full bg-gray-900 rounded-full overflow-hidden border border-cyan-500/30">
-              <div
-                className="h-full bg-gradient-to-r from-cyan-400 via-amber-300 to-emerald-400 transition-all duration-75"
-                style={{ width: `${scanProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* MAIN ACTION BUTTON */}
-        <button
-          data-rn-scan="true"
-          onClick={handleScanAndExecute}
-          disabled={isScanning || !isLicenseVerified}
-          className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#00E5FF] via-[#00B4D8] to-[#0077B6] hover:brightness-110 active:scale-[0.98] text-[#050C1D] text-xs font-black tracking-widest font-['Orbitron',sans-serif] uppercase shadow-[0_6px_25px_rgba(0,229,255,0.45),inset_0_1.5px_1px_rgba(255,255,255,0.6)] cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+        {/* FOOTER */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '5px',
+            borderTop: '1px solid rgba(56, 189, 248, 0.18)',
+            paddingTop: '7px',
+          }}
         >
-          <span>⚡</span>
-          <span>{isScanning ? 'RADAR ANALYZING...' : `SCAN & EXECUTE (${selectedDuration}s)`}</span>
-          <span>⚡</span>
-        </button>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '9.5px',
+              fontWeight: 700,
+              color: '#64748b',
+            }}
+          >
+            <span
+              id="statusText"
+              style={{
+                color: isRunning ? '#38bdf8' : '#94a3b8',
+                fontFamily: 'ui-monospace, monospace',
+              }}
+            >
+              {statusText}
+            </span>
+            <span
+              id="ticksCount"
+              style={{ color: '#38bdf8', fontFamily: 'ui-monospace, monospace' }}
+            >
+              INTERCEPTS: {interceptsCount}
+            </span>
+          </div>
 
-        {/* FOOTER BADGE */}
-        <div className="text-center pt-1 border-t border-indigo-500/20 flex items-center justify-between text-[9px] text-gray-400">
-          <span className={`font-bold flex items-center gap-1 ${isLicenseVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
-            <span>{isLicenseVerified ? '✓' : '⚠️'}</span> {isLicenseVerified ? 'VIP License Active' : 'License Required'}
-          </span>
-          <span className="font-semibold text-gray-500">Official MD Ishak Algo Engine</span>
+          <div
+            id="footerMinimizePrompt"
+            onClick={() => setIsMinimized(true)}
+            title="Click to Minimize Terminal"
+            style={{
+              fontSize: '8.5px',
+              fontWeight: 700,
+              color: '#64748b',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              cursor: 'pointer',
+              padding: '3px 0',
+              borderRadius: '4px',
+              fontFamily: 'ui-monospace, monospace',
+            }}
+          >
+            [ ❖ TAP LOGO OR HERE TO MINIMIZE ❖ ]
+          </div>
         </div>
       </div>
     </div>

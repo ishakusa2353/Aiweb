@@ -2560,319 +2560,509 @@ javascript:(function(){
     };
   }
 
+  // ==========================================================================
+  // ⚡ ISHAK VIP TRADER - CYBER HACKER HUD MATRIX TERMINAL (MODE 2)
+  // Re-engineered with Cyberpunk Matrix Hologram HUD, Live Intercepts,
+  // Round Number Snapping, Real Quotex Websocket / DOM Price Surveillance,
+  // and Strict Viewport Clamping (Never leaves screen).
+  // ==========================================================================
+  var hudRunning = false;
+  var hudIntercepts = 0;
+  var hudMonitorTimer = null;
+  var hudCountdownTimer = null;
+  var hudSelectedDuration = 6;
+
   function showRoundNumberTerminal() {
-    var old = document.getElementById('ishak-rn-terminal-root');
-    if (old) {
-      old.style.display = (old.style.display === 'none' ? 'block' : 'none');
+    var existingCard = document.getElementById('appCard');
+    var existingPill = document.getElementById('minimizedPill');
+    if (existingCard) {
+      if (existingCard.style.display === 'none') {
+        if (existingPill) existingPill.style.display = 'none';
+        existingCard.style.display = 'block';
+      } else {
+        existingCard.style.display = 'none';
+        if (existingPill) existingPill.style.display = 'flex';
+      }
       return;
+    }
+
+    // Inject HUD Matrix Styles once
+    if (!document.getElementById('ishak-hud-styles')) {
+      var styleEl = document.createElement('style');
+      styleEl.id = 'ishak-hud-styles';
+      styleEl.textContent = '' +
+        '#appCard {' +
+        '  position: fixed; z-index: 2147483647; width: 304px; max-width: calc(100vw - 16px);' +
+        '  background-color: #060913;' +
+        '  background-image: radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.22) 0%, transparent 75%),' +
+        '    linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),' +
+        '    linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px);' +
+        '  background-size: 100% 100%, 18px 18px, 18px 18px;' +
+        '  border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 14px;' +
+        '  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(14, 165, 233, 0.2);' +
+        '  color: #e2e8f0; font-size: 13px; overflow: hidden; touch-action: none;' +
+        '  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);' +
+        '  user-select: none; -webkit-user-select: none; font-family: ui-monospace, Menlo, Consolas, monospace;' +
+        '}' +
+        '@media (max-width: 600px) {' +
+        '  #appCard { width: 236px !important; border-radius: 11px !important; }' +
+        '}' +
+        '.hud-corner {' +
+        '  position: absolute; width: 14px; height: 14px; pointer-events: none; z-index: 10;' +
+        '  border: 2px solid #38bdf8; filter: drop-shadow(0 0 6px #38bdf8);' +
+        '}' +
+        '.hud-tl { top: -1px; left: -1px; border-right: none; border-bottom: none; border-top-left-radius: 12px; }' +
+        '.hud-tr { top: -1px; right: -1px; border-left: none; border-bottom: none; border-top-right-radius: 12px; }' +
+        '.hud-bl { bottom: -1px; left: -1px; border-right: none; border-top: none; border-bottom-left-radius: 12px; }' +
+        '.hud-br { bottom: -1px; right: -1px; border-left: none; border-top: none; border-bottom-right-radius: 12px; }' +
+        '.radar-scanline {' +
+        '  position: absolute; left: 0; right: 0; height: 2px;' +
+        '  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent);' +
+        '  box-shadow: 0 0 12px rgba(56, 189, 248, 0.8); opacity: 0.35; pointer-events: none; z-index: 2;' +
+        '}' +
+        '.status-dot-green {' +
+        '  width: 6px; height: 6px; border-radius: 50%; background: #10b981;' +
+        '  box-shadow: 0 0 8px #10b981; display: inline-block;' +
+        '}' +
+        '#minimizedPill {' +
+        '  position: fixed; z-index: 2147483647; width: 46px; height: 46px; border-radius: 50%;' +
+        '  background: #060913; box-shadow: 0 10px 28px rgba(0,0,0,0.9), 0 0 20px rgba(14,165,233,0.5);' +
+        '  cursor: pointer; display: none; align-items: center; justify-content: center;' +
+        '  border: 1.5px solid #38bdf8; touch-action: none;' +
+        '}' +
+        '.minimized-pill-radar-ring {' +
+        '  position: absolute; inset: -4px; border-radius: 50%; border: 1.5px dashed rgba(56, 189, 248, 0.45);' +
+        '  animation: ishakRadarSpin 8s linear infinite; pointer-events: none;' +
+        '}' +
+        '@keyframes ishakRadarSpin { 100% { transform: rotate(360deg); } }';
+      document.head.appendChild(styleEl);
     }
 
     var winW = window.innerWidth || 360;
     var winH = window.innerHeight || 640;
-    var termW = Math.min(345, Math.max(280, winW - 16));
-    var initLeft = Math.max(8, Math.round((winW - termW) / 2));
-    var initTop = Math.max(16, Math.min(60, Math.round((winH - 460) / 4)));
+    var termW = winW <= 600 ? 236 : 304;
+    var initLeft = Math.max(10, Math.min(winW - termW - 10, 20));
+    var initTop = Math.max(12, Math.min(winH - 440, 60));
 
-    var term = document.createElement('div');
-    term.id = 'ishak-rn-terminal-root';
-    term.className = 'ishak-rn-terminal-modal';
-    term.style.cssText = 'position:fixed;top:' + initTop + 'px;left:' + initLeft + 'px;transform:none !important;-webkit-transform:none !important;z-index:2147483646;width:' + termW + 'px;max-width:calc(100vw - 16px);max-height:calc(100vh - 25px);overflow-y:auto;overflow-x:hidden;background:linear-gradient(180deg,#0a1024 0%,#060a18 60%,#030611 100%);border-top:2px solid rgba(0,229,255,0.7);border-bottom:3px solid #000;border-left:1px solid rgba(99,102,241,0.3);border-right:1px solid rgba(99,102,241,0.3);border-radius:22px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 35px rgba(0,229,255,0.2), inset 0 1.5px 1.5px rgba(255,255,255,0.35);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;color:#fff;animation:ishakToastIn 0.22s ease-out;';
+    // Create App Card
+    var card = document.createElement('div');
+    card.id = 'appCard';
+    card.style.left = initLeft + 'px';
+    card.style.top = initTop + 'px';
 
-    term.innerHTML = '<div id="rn-drag-bar" style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(99,102,241,0.25);background:linear-gradient(90deg,rgba(13,22,51,0.8),transparent,rgba(13,22,51,0.8));cursor:move;user-select:none;touch-action:none;">' +
-      '<div style="display:flex;align-items:center;gap:8px;">' +
-        '<div style="width:32px;height:32px;border-radius:10px;border:1.5px solid #FFD700;background:#091224;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 10px rgba(255,215,0,0.35);">' +
-          '<img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" style="width:100%;height:100%;object-fit:cover;" alt="Logo">' +
-        '</div>' +
-        '<div>' +
-          '<div style="display:flex;align-items:center;gap:5px;">' +
-            '<b style="color:#FFF;font-size:11px;letter-spacing:1px;display:block;">ISHAK VIP TRADER</b>' +
-            '<span style="background:rgba(255,215,0,0.2);color:#FFE066;border:1px solid rgba(255,215,0,0.4);border-radius:4px;font-size:7.5px;font-weight:bold;padding:1px 4px;">ROUND v2.0</span>' +
-          '</div>' +
-          '<span style="color:#00E5FF;font-size:8px;font-family:sans-serif;font-weight:bold;letter-spacing:0.4px;">⚡ Round Number SNR Terminal</span>' +
-        '</div>' +
-      '</div>' +
-      '<div style="display:flex;align-items:center;gap:4px;">' +
-        '<button id="rn-switch-back" style="background:rgba(99,102,241,0.3);border:1px solid rgba(0,229,255,0.5);color:#00E5FF;padding:3px 6px;border-radius:6px;font-size:8px;font-weight:bold;cursor:pointer;" title="Switch back to Confluence Scanner">🔄 MODE</button>' +
-        '<button id="rn-min-btn" style="background:#1e293b;border:none;color:#94a3b8;width:22px;height:22px;border-radius:6px;font-size:11px;cursor:pointer;">—</button>' +
-        '<button id="rn-close-btn" style="background:rgba(239,68,68,0.3);border:1px solid rgba(239,68,68,0.5);color:#ff7878;width:22px;height:22px;border-radius:6px;font-size:10px;cursor:pointer;">✕</button>' +
-      '</div>' +
-    '</div>' +
-    '<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;">' +
-      '<!-- Active Pair & Live Price Card -->' +
-      '<div style="background:rgba(9,16,36,0.9);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:8px 10px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.6);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
-          '<span style="color:#94a3b8;font-size:9px;font-family:sans-serif;font-weight:bold;text-transform:uppercase;">Active Asset Pair</span>' +
-          '<span id="rn-pair-badge" style="background:rgba(0,229,255,0.15);color:#00E5FF;border:1px solid rgba(0,229,255,0.3);border-radius:4px;font-size:7.5px;font-weight:bold;padding:1px 5px;">LIVE ALGO</span>' +
-        '</div>' +
-        '<div style="display:flex;justify-content:space-between;align-items:baseline;">' +
-          '<b id="rn-pair-name" style="font-size:12.5px;color:#FFF;letter-spacing:0.5px;">USD/BDT (OTC)</b>' +
-          '<span id="rn-live-price" style="font-size:16px;font-weight:bold;color:#00E5FF;font-family:monospace;text-shadow:0 0 10px rgba(0,229,255,0.5);">--.----</span>' +
-        '</div>' +
-      '</div>' +
-      '<!-- Dual SNR Grid -->' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
-        '<div style="background:linear-gradient(180deg,rgba(153,27,27,0.25),rgba(9,16,36,0.9));border:1px solid rgba(248,113,113,0.35);border-radius:10px;padding:8px;">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
-            '<span style="color:#F87171;font-size:8px;font-weight:bold;">▲ RESISTANCE</span>' +
-            '<span id="rn-up-type" style="background:rgba(239,68,68,0.2);color:#fca5a5;border-radius:3px;font-size:7px;padding:1px 3px;">MAJOR .000</span>' +
-          '</div>' +
-          '<b id="rn-up-lvl" style="color:#fecaca;font-size:12px;font-family:monospace;">--.---</b>' +
-          '<div style="display:flex;justify-content:space-between;font-size:8px;margin-top:2px;font-family:sans-serif;">' +
-            '<span style="color:#94a3b8;">Dist:</span><span id="rn-up-dist" style="color:#fca5a5;font-weight:bold;font-family:monospace;">+0.0 pips</span>' +
-          '</div>' +
-        '</div>' +
-        '<div style="background:linear-gradient(180deg,rgba(5,150,105,0.25),rgba(9,16,36,0.9));border:1px solid rgba(52,211,153,0.35);border-radius:10px;padding:8px;">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
-            '<span style="color:#34D399;font-size:8px;font-weight:bold;">▼ SUPPORT</span>' +
-            '<span id="rn-down-type" style="background:rgba(16,185,129,0.2);color:#6ee7b7;border-radius:3px;font-size:7px;padding:1px 3px;">MAJOR .000</span>' +
-          '</div>' +
-          '<b id="rn-down-lvl" style="color:#a7f3d0;font-size:12px;font-family:monospace;">--.---</b>' +
-          '<div style="display:flex;justify-content:space-between;font-size:8px;margin-top:2px;font-family:sans-serif;">' +
-            '<span style="color:#94a3b8;">Dist:</span><span id="rn-down-dist" style="color:#6ee7b7;font-weight:bold;font-family:monospace;">-0.0 pips</span>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<!-- Proximity Bar -->' +
-      '<div style="background:rgba(9,16,36,0.7);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:5px 8px;">' +
-        '<div style="display:flex;justify-content:space-between;font-size:7.5px;font-weight:bold;margin-bottom:2px;">' +
-          '<span style="color:#34D399;">Support (0%)</span><span id="rn-prox-label" style="color:#00E5FF;font-family:monospace;">Channel: 50%</span><span style="color:#F87171;">Resistance (100%)</span>' +
-        '</div>' +
-        '<div style="position:relative;height:5px;border-radius:99px;background:#030712;overflow:hidden;border:1px solid #1f2937;">' +
-          '<div id="rn-prox-fill" style="position:absolute;left:0;top:0;bottom:0;width:50%;background:linear-gradient(90deg,#10B981,#00E5FF,#EF4444);transition:width 0.25s;"></div>' +
-        '</div>' +
-      '</div>' +
-      '<!-- Signal Diagnosis Panel -->' +
-      '<div id="rn-signal-card" style="background:linear-gradient(180deg,rgba(6,78,59,0.35),rgba(3,19,30,0.9));border:1px solid rgba(52,211,153,0.5);border-radius:12px;padding:8px 10px;box-shadow:0 4px 15px rgba(0,0,0,0.5);">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">' +
-          '<b id="rn-signal-text" style="color:#34D399;font-size:11px;letter-spacing:0.6px;">RECOMMENDED: CALL (BUY) ↑</b>' +
-          '<span id="rn-signal-conf" style="background:rgba(16,185,129,0.25);color:#34D399;border:1px solid rgba(52,211,153,0.4);border-radius:99px;font-size:8px;font-weight:bold;padding:1px 5px;">96% ACCURACY</span>' +
-        '</div>' +
-        '<p id="rn-signal-diag" style="margin:0;font-size:9px;color:#e2e8f0;font-family:sans-serif;line-height:1.3;">Institutional Bounce Rejection off Major Support Level</p>' +
-      '</div>' +
-      '<!-- Duration Chips & Auto-Trade Row -->' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">' +
-        '<div id="rn-dur-chips" style="display:flex;gap:3px;">' +
-          '<button class="rn-chip" data-sec="5" style="background:#FFD700;color:#000;font-weight:black;border:none;padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">5s</button>' +
-          '<button class="rn-chip" data-sec="10" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">10s</button>' +
-          '<button class="rn-chip" data-sec="15" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">15s</button>' +
-          '<button class="rn-chip" data-sec="30" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">30s</button>' +
-          '<button class="rn-chip" data-sec="60" style="background:#0f173b;color:#cbd5e1;border:1px solid rgba(99,102,241,0.25);padding:3px 6px;border-radius:5px;font-size:8.5px;cursor:pointer;">1m</button>' +
-        '</div>' +
-        '<button id="rn-btn-autotrade" style="background:' + (autoTradeEnabled ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)') + ';color:' + (autoTradeEnabled ? '#34D399' : '#f87171') + ';border:1px solid ' + (autoTradeEnabled ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)') + ';border-radius:6px;padding:3px 6px;font-size:8px;font-weight:bold;cursor:pointer;">' +
-          (autoTradeEnabled ? '⚡ AUTO-TRADE ON' : '○ AUTO-TRADE OFF') +
-        '</button>' +
-      '</div>' +
-      '<!-- Main Scan & Execute Button -->' +
-      '<button id="rn-btn-scan-exec" style="background:linear-gradient(90deg,#00E5FF,#00B4D8,#0077B6);border:none;color:#04091A;padding:10px;border-radius:12px;font-size:11px;font-weight:black;letter-spacing:0.8px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 6px 20px rgba(0,229,255,0.4), inset 0 1px 0 rgba(255,255,255,0.5);margin-top:2px;">' +
-        '<span>⚡</span><span>SCAN & EXECUTE (' + (tradeDuration || 5) + 's)</span><span>⚡</span>' +
-      '</button>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(99,102,241,0.2);padding-top:4px;font-size:8px;color:#94a3b8;">' +
-        '<span style="color:#34D399;font-weight:bold;">✓ VIP License Active</span>' +
-        '<span>Official MD Ishak Algo Engine</span>' +
-      '</div>' +
-    '</div>';
+    var detectedPair = extractQuotexPair() || 'USD/BDT (OTC)';
+    var initLivePrice = extractQuotexLivePrice() || (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) || 122.348;
+    var initPriceDecimals = initLivePrice > 50 ? (initLivePrice > 500 ? 2 : 3) : 5;
 
-    document.body.appendChild(term);
+    card.innerHTML = '' +
+      '<span class="hud-corner hud-tl"></span>' +
+      '<span class="hud-corner hud-tr"></span>' +
+      '<span class="hud-corner hud-bl"></span>' +
+      '<span class="hud-corner hud-br"></span>' +
+      '<div class="radar-scanline"></div>' +
+      '<!-- HEADER -->' +
+      '<div id="panelHeader" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;cursor:grab;background:rgba(11,17,30,0.92);border-bottom:1px solid rgba(56,189,248,0.22);position:relative;z-index:3;">' +
+      '  <div style="display:flex;align-items:center;gap:8px;">' +
+      '    <div id="headerLogo" title="Tap to minimize" style="width:32px;height:32px;border-radius:50%;border:1.5px solid #38bdf8;box-shadow:0 0 10px rgba(56,189,248,0.5);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#050811;cursor:pointer;flex-shrink:0;">' +
+      '      <img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" alt="Logo" style="width:100%;height:100%;object-fit:cover;">' +
+      '    </div>' +
+      '    <div style="display:flex;flex-direction:column;gap:1px;">' +
+      '      <span style="font-weight:800;font-size:12px;color:#f8fafc;letter-spacing:0.5px;">ISHAK VIP TRADER</span>' +
+      '      <span style="font-size:8px;font-weight:700;color:#38bdf8;letter-spacing:0.7px;text-transform:uppercase;display:flex;align-items:center;gap:4px;">' +
+      '        <span class="status-dot-green"></span>ROUND TERMINAL VIP BOT' +
+      '      </span>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div style="display:flex;align-items:center;gap:4px;">' +
+      '    <button id="btnSwitchModeHeader" title="Switch back to Confluence Scanner" style="padding:3px 6px;border-radius:5px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.4);color:#38bdf8;font-size:8px;font-weight:800;cursor:pointer;">🔄 MODE</button>' +
+      '    <div id="btnKeyStatus" title="VIP License: Active" style="width:22px;height:22px;border-radius:5px;background:rgba(18,25,42,0.85);border:1px solid rgba(16,185,129,0.5);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:10px;">🔑</div>' +
+      '    <button id="btnMinimizeHeader" title="Minimize" style="width:22px;height:22px;border-radius:5px;background:rgba(18,25,42,0.85);border:1px solid rgba(56,189,248,0.25);color:#94a3b8;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;font-weight:bold;">—</button>' +
+      '    <button id="btnCloseHeader" title="Close" style="width:22px;height:22px;border-radius:5px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.5);color:#f87171;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;font-weight:bold;">✕</button>' +
+      '  </div>' +
+      '</div>' +
+      '<!-- BODY -->' +
+      '<div style="padding:10px 12px 12px 12px;display:flex;flex-direction:column;gap:8px;position:relative;z-index:3;">' +
+      '  <!-- Market Asset Strip -->' +
+      '  <div id="marketStrip" style="background:rgba(10,15,27,0.9);border:1px solid rgba(56,189,248,0.28);border-radius:8px;padding:7px 9px;display:flex;align-items:center;justify-content:space-between;overflow:hidden;">' +
+      '    <div style="display:flex;flex-direction:column;gap:2px;">' +
+      '      <span style="font-size:7.5px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:3px;">' +
+      '        <span style="color:#38bdf8;">⚡</span> MARKET ASSET' +
+      '      </span>' +
+      '      <div style="display:flex;align-items:baseline;gap:5px;">' +
+      '        <span id="marketPair" style="font-weight:800;font-size:12px;color:#38bdf8;letter-spacing:0.3px;text-shadow:0 0 10px rgba(56,189,248,0.4);">' + detectedPair + '</span>' +
+      '        <span id="marketLivePrice" style="font-size:10.5px;color:#cbd5e1;font-family:monospace;">' + initLivePrice.toFixed(initPriceDecimals) + '</span>' +
+      '      </div>' +
+      '    </div>' +
+      '    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' +
+      '      <div style="font-size:7.5px;font-weight:800;color:#10b981;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);padding:1px 5px;border-radius:6px;">● LIVE</div>' +
+      '      <div style="height:10px;display:flex;align-items:center;">' +
+      '        <svg width="34" height="10" viewBox="0 0 42 14" fill="none"><path d="M1 7H11L14 1L18 13L22 4L25 9L28 7H41" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+      '  <!-- Field: Round Number -->' +
+      '  <div style="display:flex;flex-direction:column;gap:2px;">' +
+      '    <div style="display:flex;justify-content:space-between;align-items:center;">' +
+      '      <span style="font-size:9px;font-weight:700;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">ROUND NUMBER</span>' +
+      '      <button id="btnAutoSnap" type="button" style="font-size:8px;color:#38bdf8;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.3);border-radius:4px;padding:1px 4px;cursor:pointer;">🎯 Auto Snap</button>' +
+      '    </div>' +
+      '    <input id="inputPrice" type="number" step="any" placeholder="Enter Round Price (e.g. 122.3000)" style="width:100%;background:#070b14;border:1px solid rgba(56,189,248,0.25);border-radius:7px;padding:7px 9px;color:#fff;font-size:12px;font-weight:600;font-family:ui-monospace,monospace;outline:none;box-sizing:border-box;">' +
+      '  </div>' +
+      '  <!-- Field: Time (Second) -->' +
+      '  <div style="display:flex;flex-direction:column;gap:2px;">' +
+      '    <div style="display:flex;justify-content:space-between;align-items:center;">' +
+      '      <span style="font-size:9px;font-weight:700;color:#94a3b8;letter-spacing:0.5px;text-transform:uppercase;">TIME (SECOND)</span>' +
+      '      <span id="countdownText" style="font-size:9.5px;font-weight:800;color:#38bdf8;">[READY]</span>' +
+      '    </div>' +
+      '    <input id="inputDuration" type="number" min="1" max="3600" value="6" placeholder="Enter Seconds (default: 6)" style="width:100%;background:#070b14;border:1px solid rgba(56,189,248,0.25);border-radius:7px;padding:6px 9px;color:#fff;font-size:11.5px;font-weight:600;font-family:ui-monospace,monospace;outline:none;box-sizing:border-box;">' +
+      '    <!-- Chips Row -->' +
+      '    <div style="display:flex;gap:3px;margin-top:2px;">' +
+      '      <div class="hud-chip" data-time="5" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">5s</div>' +
+      '      <div class="hud-chip" data-time="6" style="flex:1;padding:3px 0;text-align:center;background:#0284c7;border:1px solid #38bdf8;border-radius:4px;font-size:9px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 0 8px rgba(56,189,248,0.45);">6s</div>' +
+      '      <div class="hud-chip" data-time="10" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">10s</div>' +
+      '      <div class="hud-chip" data-time="15" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">15s</div>' +
+      '      <div class="hud-chip" data-time="30" style="flex:1;padding:3px 0;text-align:center;background:rgba(16,22,36,0.9);border:1px solid rgba(56,189,248,0.2);border-radius:4px;font-size:9px;font-weight:700;color:#94a3b8;cursor:pointer;">30s</div>' +
+      '    </div>' +
+      '    <!-- Progress Track -->' +
+      '    <div id="progressTrack" style="height:3px;background:#121828;border-radius:2px;overflow:hidden;margin-top:3px;display:none;">' +
+      '      <div id="progressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#0284c7,#38bdf8);transition:width 1s linear;"></div>' +
+      '    </div>' +
+      '  </div>' +
+      '  <!-- Button Row -->' +
+      '  <div style="display:flex;gap:7px;margin-top:2px;">' +
+      '    <button id="btnStart" type="button" style="flex:1;padding:8px 0;border-radius:7px;border:none;font-weight:800;font-size:11px;cursor:pointer;letter-spacing:0.8px;text-transform:uppercase;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;box-shadow:0 4px 12px rgba(2,132,199,0.4);transition:all 0.18s;">START</button>' +
+      '    <button id="btnStop" type="button" disabled style="flex:1;padding:8px 0;border-radius:7px;border:1px solid rgba(239,68,68,0.65);font-weight:800;font-size:11px;cursor:not-allowed;letter-spacing:0.8px;text-transform:uppercase;background:rgba(239,68,68,0.1);color:#f87171;opacity:0.4;transition:all 0.18s;">STOP</button>' +
+      '  </div>' +
+      '  <!-- Footer -->' +
+      '  <div style="display:flex;flex-direction:column;gap:4px;border-top:1px solid rgba(56,189,248,0.18);padding-top:6px;">' +
+      '    <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:700;color:#64748b;">' +
+      '      <span id="statusText" style="color:#94a3b8;">● STANDBY</span>' +
+      '      <span id="ticksCount" style="color:#38bdf8;">INTERCEPTS: 0</span>' +
+      '    </div>' +
+      '    <div id="footerMinimizePrompt" title="Click to Minimize Terminal" style="font-size:8px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase;text-align:center;cursor:pointer;padding:2px 0;">[ ❖ TAP LOGO OR HERE TO MINIMIZE ❖ ]</div>' +
+      '  </div>' +
+      '</div>';
 
-    // Wire terminal header buttons
-    document.getElementById('rn-close-btn').onclick = function(e) { e.stopPropagation(); term.remove(); };
-    document.getElementById('rn-min-btn').onclick = function(e) {
+    document.body.appendChild(card);
+
+    // Create Minimized Pill Widget
+    var pill = document.createElement('div');
+    pill.id = 'minimizedPill';
+    pill.style.left = initLeft + 'px';
+    pill.style.top = initTop + 'px';
+    pill.innerHTML = '' +
+      '<div class="minimized-pill-radar-ring"></div>' +
+      '<div id="pillBeacon" style="position:absolute;top:1px;right:1px;width:9px;height:9px;border-radius:50%;background:#10b981;border:2px solid #060913;box-shadow:0 0 6px #10b981;"></div>' +
+      '<img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" alt="Logo" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">';
+    document.body.appendChild(pill);
+
+    // Toggle minimize/expand
+    function minimizeTerminal() {
+      card.style.display = 'none';
+      pill.style.left = card.style.left;
+      pill.style.top = card.style.top;
+      pill.style.display = 'flex';
+    }
+
+    function expandTerminal() {
+      pill.style.display = 'none';
+      card.style.left = pill.style.left;
+      card.style.top = pill.style.top;
+      card.style.display = 'block';
+    }
+
+    document.getElementById('headerLogo').onclick = minimizeTerminal;
+    document.getElementById('btnMinimizeHeader').onclick = minimizeTerminal;
+    document.getElementById('footerMinimizePrompt').onclick = minimizeTerminal;
+    pill.onclick = expandTerminal;
+
+    document.getElementById('btnCloseHeader').onclick = function(e) {
       e.stopPropagation();
-      term.style.display = 'none';
-      showModalToast(document.body, 'Round Terminal minimized. Re-open via Settings Hub.', false);
+      card.remove();
+      pill.remove();
     };
-    document.getElementById('rn-switch-back').onclick = function(e) {
+
+    // Mode Switch Button (Back to Confluence AI Scanner)
+    document.getElementById('btnSwitchModeHeader').onclick = function(e) {
       e.stopPropagation();
       activeBotMode = 'CONFLUENCE';
       try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch(err){}
-      term.remove();
+      card.remove();
+      pill.remove();
       showModalToast(document.body, '✅ Switched back to: ISHAK VIP CONFLUENCE AI SCANNER!', false);
     };
 
-    // Duration chips
-    var chips = term.querySelectorAll('.rn-chip');
+    // Auto Snap Round Number
+    document.getElementById('btnAutoSnap').onclick = function(e) {
+      e.stopPropagation();
+      var cur = extractQuotexLivePrice() || (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) || 122.348;
+      var step = cur > 50 ? (cur > 500 ? 1 : 0.1) : 0.001;
+      var snap = Math.round(cur / step) * step;
+      var dec = cur > 50 ? (cur > 500 ? 2 : 3) : 5;
+      var inp = document.getElementById('inputPrice');
+      if (inp) inp.value = snap.toFixed(dec);
+    };
+
+    // Preset Chips Selection
+    var chips = card.querySelectorAll('.hud-chip');
     chips.forEach(function(c) {
       c.onclick = function(e) {
         e.stopPropagation();
         chips.forEach(function(x) {
-          x.style.background = '#0f173b';
-          x.style.color = '#cbd5e1';
-          x.style.border = '1px solid rgba(99,102,241,0.25)';
+          x.style.background = 'rgba(16,22,36,0.9)';
+          x.style.borderColor = 'rgba(56,189,248,0.2)';
+          x.style.color = '#94a3b8';
+          x.style.boxShadow = 'none';
         });
-        c.style.background = '#FFD700';
-        c.style.color = '#000';
-        c.style.border = 'none';
-        tradeDuration = parseInt(c.getAttribute('data-sec')) || 5;
-        var btnExec = document.getElementById('rn-btn-scan-exec');
-        if (btnExec) btnExec.innerHTML = '<span>⚡</span><span>SCAN & EXECUTE (' + tradeDuration + 's)</span><span>⚡</span>';
+        c.style.background = '#0284c7';
+        c.style.borderColor = '#38bdf8';
+        c.style.color = '#fff';
+        c.style.boxShadow = '0 0 8px rgba(56,189,248,0.45)';
+        var s = parseInt(c.getAttribute('data-time'), 10) || 6;
+        hudSelectedDuration = s;
+        var inDur = document.getElementById('inputDuration');
+        if (inDur) inDur.value = s;
       };
     });
 
-    // Auto-trade toggle
-    var btnAuto = document.getElementById('rn-btn-autotrade');
-    if (btnAuto) {
-      btnAuto.onclick = function(e) {
-        e.stopPropagation();
-        autoTradeEnabled = !autoTradeEnabled;
-        btnAuto.innerText = autoTradeEnabled ? '⚡ AUTO-TRADE ON' : '○ AUTO-TRADE OFF';
-        btnAuto.style.color = autoTradeEnabled ? '#34D399' : '#f87171';
-        btnAuto.style.background = autoTradeEnabled ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)';
-        btnAuto.style.borderColor = autoTradeEnabled ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)';
+    // Duration input change
+    var inDurEl = document.getElementById('inputDuration');
+    if (inDurEl) {
+      inDurEl.onchange = function() {
+        hudSelectedDuration = parseInt(inDurEl.value, 10) || 6;
       };
     }
 
-    // Draggable functionality (strict viewport boundaries on mobile & desktop)
-    var dragBar = document.getElementById('rn-drag-bar');
-    var isDragging = false;
-    var startX, startY, initX, initY;
+    // Draggable Functionality with Strict Viewport Clamping (For both Card and Pill)
+    function attachDrag(el, handle) {
+      var isDrag = false;
+      var sX, sY, iX, iY;
 
-    function onDown(e) {
-      if (e.target.closest('button') || e.target.closest('input')) return;
-      isDragging = true;
-      var clientX = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
-      var clientY = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
-      var rect = term.getBoundingClientRect();
-      startX = clientX; startY = clientY;
-      initX = rect.left; initY = rect.top;
-      term.style.transform = 'none';
-      if (e.cancelable) e.preventDefault();
+      function down(e) {
+        if (e.target.closest('button') || e.target.closest('input')) return;
+        isDrag = true;
+        var cx = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
+        var cy = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
+        var rect = el.getBoundingClientRect();
+        sX = cx; sY = cy;
+        iX = rect.left; iY = rect.top;
+        if (e.cancelable) e.preventDefault();
+      }
+
+      function move(e) {
+        if (!isDrag) return;
+        if (e.cancelable) e.preventDefault();
+        var cx = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
+        var cy = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
+        var wW = window.innerWidth || 360;
+        var wH = window.innerHeight || 640;
+        var curW = el.offsetWidth || 300;
+        var curH = el.offsetHeight || 380;
+        var maxL = Math.max(6, wW - curW - 6);
+        var maxT = Math.max(6, wH - curH - 6);
+        el.style.left = Math.max(6, Math.min(maxL, iX + (cx - sX))) + 'px';
+        el.style.top = Math.max(6, Math.min(maxT, iY + (cy - sY))) + 'px';
+      }
+
+      function up() { isDrag = false; }
+
+      handle.addEventListener('mousedown', down);
+      window.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', up);
+      handle.addEventListener('touchstart', down, { passive: false });
+      window.addEventListener('touchmove', move, { passive: false });
+      window.addEventListener('touchend', up);
     }
-    function onMove(e) {
-      if (!isDragging) return;
-      if (e.cancelable) e.preventDefault();
-      var clientX = (e.touches && e.touches.length) ? e.touches[0].clientX : e.clientX;
-      var clientY = (e.touches && e.touches.length) ? e.touches[0].clientY : e.clientY;
-      var winW = window.innerWidth || 360;
-      var winH = window.innerHeight || 640;
-      var curW = term.offsetWidth || 340;
-      var curH = term.offsetHeight || 440;
-      var maxLeft = Math.max(6, winW - curW - 6);
-      var maxTop = Math.max(6, winH - curH - 6);
-      var nx = Math.max(6, Math.min(maxLeft, initX + (clientX - startX)));
-      var ny = Math.max(6, Math.min(maxTop, initY + (clientY - startY)));
-      term.style.left = nx + 'px';
-      term.style.top = ny + 'px';
-      term.style.transform = 'none';
-    }
-    function onUp() { isDragging = false; }
 
-    dragBar.addEventListener('mousedown', onDown);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    dragBar.addEventListener('touchstart', onDown, { passive: false });
-    window.addEventListener('touchmove', onMove, { passive: false });
-    window.addEventListener('touchend', onUp);
+    attachDrag(card, document.getElementById('panelHeader'));
+    attachDrag(pill, pill);
 
-    // Keep terminal inside bounds on screen resize / orientation switch
-    window.addEventListener('resize', function() {
-      if (!term || !term.parentNode) return;
-      var winW = window.innerWidth || 360;
-      var winH = window.innerHeight || 640;
-      var curW = term.offsetWidth || 340;
-      var curH = term.offsetHeight || 440;
-      var maxLeft = Math.max(6, winW - curW - 6);
-      var maxTop = Math.max(6, winH - curH - 6);
-      var curLeft = parseInt(term.style.left, 10) || 8;
-      var curTop = parseInt(term.style.top, 10) || 16;
-      term.style.left = Math.max(6, Math.min(maxLeft, curLeft)) + 'px';
-      term.style.top = Math.max(6, Math.min(maxTop, curTop)) + 'px';
-      term.style.maxWidth = 'calc(100vw - 16px)';
-    });
-
-    // Live Round Number Tick Engine updater (Every 250ms)
+    // Live Quotex Price & Intercepts Tracker
     if (rnUpdateInterval) clearInterval(rnUpdateInterval);
     rnUpdateInterval = setInterval(function() {
-      if (!term || !term.parentNode) {
+      if (!document.getElementById('appCard')) {
         clearInterval(rnUpdateInterval);
         return;
       }
+
+      var pair = extractQuotexPair() || 'USD/BDT (OTC)';
+      var pairEl = document.getElementById('marketPair');
+      if (pairEl && pairEl.innerText !== pair) pairEl.innerText = pair;
+
       var p = extractQuotexLivePrice();
-      if (!p || p <= 0) {
-        if (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice > 0) {
-          p = window.__ISHAK_MARKET_STREAM__.currentPrice;
+      if (!p && window.__ISHAK_LAST_WS_PRICE__) p = window.__ISHAK_LAST_WS_PRICE__;
+      if (!p && window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) {
+        p = window.__ISHAK_MARKET_STREAM__.currentPrice;
+      }
+      if (!p && window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
+        p = window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1].price;
+      }
+
+      if (p && p > 0) {
+        var dec = p > 50 ? (p > 500 ? 2 : 3) : 5;
+        var pEl = document.getElementById('marketLivePrice');
+        if (pEl) pEl.innerText = p.toFixed(dec);
+
+        rnRecentTicks.push(p);
+        if (rnRecentTicks.length > 25) rnRecentTicks.shift();
+
+        if (hudRunning) {
+          hudIntercepts++;
+          var cntEl = document.getElementById('ticksCount');
+          if (cntEl) cntEl.innerText = 'INTERCEPTS: ' + hudIntercepts;
         }
       }
-      if (!p || p <= 0) return;
+    }, 200);
 
-      rnRecentTicks.push(p);
-      if (rnRecentTicks.length > 20) rnRecentTicks.shift();
+    // START Button Handler
+    var btnStart = document.getElementById('btnStart');
+    var btnStop = document.getElementById('btnStop');
 
-      var lvls = calculateQuotexRoundLevels(p);
-      var sig = evaluateQuotexRoundSignal(p, rnRecentTicks);
-
-      var elPrice = document.getElementById('rn-live-price');
-      if (elPrice) elPrice.innerText = p.toFixed(lvls.decimals);
-
-      var elUpLvl = document.getElementById('rn-up-lvl');
-      if (elUpLvl) elUpLvl.innerText = lvls.upperLevel.toFixed(lvls.decimals);
-      var elUpType = document.getElementById('rn-up-type');
-      if (elUpType) elUpType.innerText = lvls.upperType;
-      var elUpDist = document.getElementById('rn-up-dist');
-      if (elUpDist) elUpDist.innerText = '+' + lvls.distUpPips + ' pips';
-
-      var elDownLvl = document.getElementById('rn-down-lvl');
-      if (elDownLvl) elDownLvl.innerText = lvls.lowerLevel.toFixed(lvls.decimals);
-      var elDownType = document.getElementById('rn-down-type');
-      if (elDownType) elDownType.innerText = lvls.lowerType;
-      var elDownDist = document.getElementById('rn-down-dist');
-      if (elDownDist) elDownDist.innerText = '-' + lvls.distDownPips + ' pips';
-
-      var elProxFill = document.getElementById('rn-prox-fill');
-      if (elProxFill) elProxFill.style.width = lvls.proximity + '%';
-      var elProxLbl = document.getElementById('rn-prox-label');
-      if (elProxLbl) elProxLbl.innerText = 'Channel: ' + lvls.proximity + '%';
-
-      var elSigText = document.getElementById('rn-signal-text');
-      var elSigConf = document.getElementById('rn-signal-conf');
-      var elSigDiag = document.getElementById('rn-signal-diag');
-      var elSigCard = document.getElementById('rn-signal-card');
-
-      if (elSigText) {
-        elSigText.innerText = 'RECOMMENDED: ' + sig.action + (sig.action === 'CALL' ? ' (BUY) ↑' : ' (SELL) ↓');
-        elSigText.style.color = (sig.action === 'CALL' ? '#34D399' : '#F87171');
-      }
-      if (elSigConf) {
-        elSigConf.innerText = sig.confidence + '% ACCURACY';
-        elSigConf.style.color = (sig.action === 'CALL' ? '#34D399' : '#F87171');
-        elSigConf.style.borderColor = (sig.action === 'CALL' ? 'rgba(52,211,153,0.4)' : 'rgba(248,113,113,0.4)');
-      }
-      if (elSigDiag) elSigDiag.innerText = sig.reason;
-      if (elSigCard) {
-        elSigCard.style.borderColor = (sig.action === 'CALL' ? 'rgba(52,211,153,0.5)' : 'rgba(239,68,68,0.5)');
-      }
-    }, 250);
-
-    // Main Scan & Execute button
-    document.getElementById('rn-btn-scan-exec').onclick = function(e) {
-      e.stopPropagation();
-      var p = extractQuotexLivePrice() || 1.0825;
-      var sig = evaluateQuotexRoundSignal(p, rnRecentTicks);
-      var isCall = sig.action === 'CALL';
-
-      var btn = document.getElementById('rn-btn-scan-exec');
-      if (btn) {
-        btn.innerHTML = '<span>⚡</span><span>SCANNING ROUND RADAR...</span>';
-        btn.style.filter = 'brightness(1.2)';
-      }
-      playPhotostatSound();
-
-      setTimeout(function() {
-        if (btn) {
-          btn.innerHTML = '<span>✓</span><span>EXECUTED ' + (isCall ? 'CALL (BUY)' : 'PUT (SELL)') + '</span>';
+    function startHudMonitoring() {
+      var inP = document.getElementById('inputPrice');
+      var targetVal = parseFloat(inP ? inP.value : '');
+      if (!targetVal || isNaN(targetVal) || targetVal <= 0) {
+        var autoBtn = document.getElementById('btnAutoSnap');
+        if (autoBtn) autoBtn.click();
+        targetVal = parseFloat(inP ? inP.value : '');
+        if (!targetVal) {
+          showModalToast(card, '⚠️ অনুগ্রহ করে একটি সঠিক রাউন্ড প্রাইস ইনপুট দিন!', true);
+          return;
         }
-        playSignalAudio();
-        showFlySignal(isCall ? 'UP' : 'DOWN');
+      }
 
-        if (autoTradeEnabled) {
+      hudRunning = true;
+      hudIntercepts = 0;
+      btnStart.disabled = true;
+      btnStart.style.opacity = '0.4';
+      btnStart.style.cursor = 'not-allowed';
+      btnStop.disabled = false;
+      btnStop.style.opacity = '1';
+      btnStop.style.cursor = 'pointer';
+
+      var stat = document.getElementById('statusText');
+      if (stat) {
+        stat.innerText = '● MONITORING ROUND SNR...';
+        stat.style.color = '#38bdf8';
+      }
+
+      var progTrack = document.getElementById('progressTrack');
+      if (progTrack) progTrack.style.display = 'none';
+
+      // Surveillance Interval
+      if (hudMonitorTimer) clearInterval(hudMonitorTimer);
+      hudMonitorTimer = setInterval(function() {
+        if (!hudRunning) {
+          clearInterval(hudMonitorTimer);
+          return;
+        }
+
+        var liveP = extractQuotexLivePrice();
+        if (!liveP && window.__ISHAK_LAST_WS_PRICE__) liveP = window.__ISHAK_LAST_WS_PRICE__;
+        if (!liveP && window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) {
+          liveP = window.__ISHAK_MARKET_STREAM__.currentPrice;
+        }
+        if (!liveP && rnRecentTicks.length > 0) liveP = rnRecentTicks[rnRecentTicks.length - 1];
+        if (!liveP) return;
+
+        var inPriceEl = document.getElementById('inputPrice');
+        var curTarget = parseFloat(inPriceEl ? inPriceEl.value : targetVal);
+        if (!curTarget) return;
+
+        var diff = Math.abs(liveP - curTarget);
+        var pipThreshold = liveP > 50 ? 0.08 : 0.00015;
+
+        // When Price Touches or Tests the Round Level
+        if (diff <= pipThreshold) {
+          clearInterval(hudMonitorTimer);
+          hudMonitorTimer = null;
+
+          var isCall = liveP > curTarget; // Reversal bounce off level
+          var durSec = hudSelectedDuration || 6;
+
+          var statEl = document.getElementById('statusText');
+          if (statEl) {
+            statEl.innerText = '⚡ ROUND SNR REACHED! ' + (isCall ? 'CALL (BUY) ↑' : 'PUT (SELL) ↓');
+            statEl.style.color = isCall ? '#10b981' : '#f87171';
+          }
+
+          playPhotostatSound();
+          playSignalAudio();
+          showFlySignal(isCall ? 'UP' : 'DOWN');
+
+          // Real Quotex Trade Execution
           executeQuotexTrade(isCall);
-        }
 
-        setTimeout(function() {
-          if (btn) btn.innerHTML = '<span>⚡</span><span>SCAN & EXECUTE (' + (tradeDuration || 5) + 's)</span><span>⚡</span>';
-        }, 1500);
-      }, 1800);
-    };
+          // Visual Countdown & Progress
+          var cText = document.getElementById('countdownText');
+          var pTrack = document.getElementById('progressTrack');
+          var pFill = document.getElementById('progressFill');
+          if (pTrack) pTrack.style.display = 'block';
+
+          var rem = durSec;
+          if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
+          if (pFill) pFill.style.width = '100%';
+
+          if (hudCountdownTimer) clearInterval(hudCountdownTimer);
+          hudCountdownTimer = setInterval(function() {
+            rem -= 1;
+            if (cText) cText.innerText = '[' + (rem < 10 ? '0' : '') + rem + 's]';
+            if (pFill) {
+              var pct = Math.max(0, Math.round((rem / durSec) * 100));
+              pFill.style.width = pct + '%';
+            }
+
+            if (rem <= 0) {
+              clearInterval(hudCountdownTimer);
+              hudCountdownTimer = null;
+              if (cText) cText.innerText = '[READY]';
+              if (pTrack) pTrack.style.display = 'none';
+              if (statEl) {
+                statEl.innerText = '✓ TRADE COMPLETE! RESUMING...';
+                statEl.style.color = '#10b981';
+              }
+              setTimeout(function() {
+                if (hudRunning) startHudMonitoring();
+              }, 1500);
+            }
+          }, 1000);
+        }
+      }, 150);
+    }
+
+    function stopHudMonitoring() {
+      hudRunning = false;
+      btnStart.disabled = false;
+      btnStart.style.opacity = '1';
+      btnStart.style.cursor = 'pointer';
+      btnStop.disabled = true;
+      btnStop.style.opacity = '0.4';
+      btnStop.style.cursor = 'not-allowed';
+
+      if (hudMonitorTimer) {
+        clearInterval(hudMonitorTimer);
+        hudMonitorTimer = null;
+      }
+      if (hudCountdownTimer) {
+        clearInterval(hudCountdownTimer);
+        hudCountdownTimer = null;
+      }
+
+      var stat = document.getElementById('statusText');
+      if (stat) {
+        stat.innerText = '● STANDBY';
+        stat.style.color = '#94a3b8';
+      }
+      var cText = document.getElementById('countdownText');
+      if (cText) cText.innerText = '[READY]';
+      var pTrack = document.getElementById('progressTrack');
+      if (pTrack) pTrack.style.display = 'none';
+    }
+
+    btnStart.onclick = startHudMonitoring;
+    btnStop.onclick = stopHudMonitoring;
   }
+
 
   // 6. REAL CHART & RUNNING CANDLE ANALYSIS ENGINE
   // Analyzes Quotex live chart canvas, running candle anatomy (body vs wick ratio),
@@ -3647,6 +3837,27 @@ javascript:(function(){
       }
     }
 
+    // --- ⚡ 8.5 INSTITUTIONAL ROUND NUMBER SNR CONFLUENCE BOOST ---
+    // Institutional round numbers (.000, .500, .100) act as massive psychological barriers
+    if (entryPrice && entryPrice > 0) {
+      var rnLvls = calculateQuotexRoundLevels(entryPrice);
+      if (rnLvls) {
+        if (rnLvls.proximity >= 85 && (rnLvls.distUpPips <= 3.0 || distToResistance < 0.20)) {
+          // Testing Major Round Resistance (.000 / .500)
+          if (upperWickRatio >= 0.18 || tickVelocity <= 0.0000001 || tickSlope <= 0.0000001) {
+            sellScore += 35;
+            downFactorsList.push('⚡ Round Number SNR Resistance Rejection (' + rnLvls.upperLevel.toFixed(rnLvls.decimals) + ') [+35]');
+          }
+        } else if (rnLvls.proximity <= 15 && (rnLvls.distDownPips <= 3.0 || distToSupport < 0.20)) {
+          // Testing Major Round Support (.000 / .500)
+          if (lowerWickRatio >= 0.18 || tickVelocity >= -0.0000001 || tickSlope >= -0.0000001) {
+            buyScore += 35;
+            upFactorsList.push('⚡ Round Number SNR Support Bounce (' + rnLvls.lowerLevel.toFixed(rnLvls.decimals) + ') [+35]');
+          }
+        }
+      }
+    }
+
     // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION WITH ANTI-STREAK GUARD ---
     var netConfluence = buyScore - sellScore;
     var scoreDiff = Math.abs(buyScore - sellScore);
@@ -4054,12 +4265,17 @@ javascript:(function(){
         return;
       }
       if (activeBotMode === 'ROUND_NUMBER') {
-        var term = document.getElementById('ishak-rn-terminal-root');
-        if (!term || term.style.display === 'none') {
+        var card = document.getElementById('appCard');
+        var pill = document.getElementById('minimizedPill');
+        if (!card && !pill) {
           showRoundNumberTerminal();
+        } else if (pill && pill.style.display !== 'none') {
+          pill.click();
+        } else if (card && card.style.display !== 'none') {
+          var btnStart = document.getElementById('btnStart');
+          if (btnStart && !btnStart.disabled) btnStart.click();
         } else {
-          var btnExec = document.getElementById('rn-btn-scan-exec');
-          if (btnExec) btnExec.click();
+          showRoundNumberTerminal();
         }
         return;
       }
