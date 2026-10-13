@@ -44,53 +44,378 @@ javascript:(function(){
   window.__ISHAK_LATENCY_MS__ = window.__ISHAK_LATENCY_MS__ || 45;
 
   (function() {
-    // 1. WebSocket Hook: Captures real-time Quotex/PocketOption depth & tick frames
-    if (!window.__ISHAK_WS_HOOKED__) {
-      window.__ISHAK_WS_HOOKED__ = true;
-      try {
-        var OrigWS = window.WebSocket;
-        if (OrigWS && !OrigWS.__ISHAK_HOOKED__) {
-          var WSWrapper = function(url, protocols) {
-            var urlStr = String(url || '');
-            if (urlStr.includes('vite') || urlStr.includes('ais-') || urlStr.includes('localhost') || urlStr.includes('127.0.0.1')) {
-              return protocols !== undefined ? new OrigWS(url, protocols) : new OrigWS(url);
-            }
-            var ws = protocols !== undefined ? new OrigWS(url, protocols) : new OrigWS(url);
-            try {
-              ws.addEventListener('message', function(ev) {
-                try {
-                  var data = ev.data;
-                  if (typeof data === 'string') {
-                    if (data.includes('price') || data.includes('rate') || data.includes('quote') || data.includes('tick')) {
-                      var m = data.match(/"price"\s*:\s*([\d\.]+)/) ||
-                              data.match(/"rate"\s*:\s*([\d\.]+)/) ||
-                              data.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
-                              data.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
-                      if (m && m[1]) {
-                        var p = parseFloat(m[1]);
-                        if (!isNaN(p) && p > 0.00001 && p < 1000000) {
-                          window.__ISHAK_LAST_WS_PRICE__ = p;
-                          window.__ISHAK_LIVE_TICKS__.push({ price: p, time: Date.now() });
-                          if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
-                        }
-                      }
-                    }
-                  }
-                } catch(err){}
-              });
-            } catch(e){}
-            return ws;
-          };
-          WSWrapper.prototype = OrigWS.prototype;
-          try {
-            Object.assign(WSWrapper, OrigWS);
-            Object.setPrototypeOf(WSWrapper, OrigWS);
-          } catch(e) {}
-          WSWrapper.__ISHAK_HOOKED__ = true;
-          window.WebSocket = WSWrapper;
-        }
-      } catch(e){}
+  // 🛰️ UNIVERSAL HIGH-SPEED BROKER WEBSOCKET & BACKGROUND CHART INTERCEPTOR
+  // Captures pre-existing and dynamic Quotex/Pocket Option WebSockets, React Fiber trees,
+  // real-time tick frames, candle OHLC packets, and active chart asset switches.
+  window.__ISHAK_ACTIVE_SOCKETS__ = window.__ISHAK_ACTIVE_SOCKETS__ || new Set();
+  window.__ISHAK_ASSET_PRICES__ = window.__ISHAK_ASSET_PRICES__ || {};
+  window.__ISHAK_BACKGROUND_CANDLES__ = window.__ISHAK_BACKGROUND_CANDLES__ || [];
+  window.__ISHAK_LAST_DETECTED_ASSET__ = window.__ISHAK_LAST_DETECTED_ASSET__ || null;
+  window.__ISHAK_LOCKED_ASSET__ = window.__ISHAK_LOCKED_ASSET__ || null;
+  window.__ISHAK_CURRENT_ASSET__ = window.__ISHAK_CURRENT_ASSET__ || null;
+  window.__ISHAK_LIVE_TICKS__ = window.__ISHAK_LIVE_TICKS__ || [];
+  window.__ISHAK_LAST_WS_PRICE__ = window.__ISHAK_LAST_WS_PRICE__ || null;
+  window.__ISHAK_LAST_PRICE_TIME__ = window.__ISHAK_LAST_PRICE_TIME__ || 0;
+  window.__ISHAK_SERVER_OFFSET_MS__ = window.__ISHAK_SERVER_OFFSET_MS__ || 0;
+  window.__ISHAK_LATENCY_MS__ = window.__ISHAK_LATENCY_MS__ || 45;
+
+  function normalizeBrokerAsset(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    var clean = raw.trim().replace(/\d{1,3}\s*%/g, '');
+    var isOtc = /otc/i.test(clean) || clean.toLowerCase().includes('_otc') || clean.toLowerCase().includes('(otc)');
+    clean = clean.replace(/_?otc/gi, '').replace(/[^a-zA-Z0-9\/]/g, '').toUpperCase();
+    if (clean.includes('/')) {
+      var parts = clean.split('/');
+      if (parts[0].length >= 3 && parts[1].length >= 3) {
+        return parts[0] + '/' + parts[1] + (isOtc ? ' (OTC)' : '');
+      }
     }
+    if (clean.length === 6) {
+      return clean.slice(0, 3) + '/' + clean.slice(3) + (isOtc ? ' (OTC)' : '');
+    }
+    if (clean.length > 6) {
+      return clean.slice(0, 3) + '/' + clean.slice(3, 6) + (isOtc ? ' (OTC)' : '');
+    }
+    return clean + (isOtc ? ' (OTC)' : '');
+  }
+
+  function processBrokerPacket(data) {
+    if (!data) return;
+    try {
+      var str = typeof data === 'string' ? data : (data instanceof ArrayBuffer ? new TextDecoder().decode(data) : '');
+      if (!str) return;
+
+      if (/"deal|"order|"trade|"balance|"user|"auth|"profile|"notification|"history/i.test(str)) {
+        return;
+      }
+
+      // 1. Chart / Symbol Switch Sniffer
+      var switchMatch = str.match(/\[\s*"(?:chart\/asset|sub|asset|change-symbol|change_asset|instruments\/change|subscribe|live)"\s*,\s*"([A-Za-z0-9_\-\/]{4,15})"/i) ||
+                        str.match(/"(?:asset|symbol|pair)"\s*:\s*"([A-Za-z0-9_\-\/]{4,15})"/i);
+      if (switchMatch && switchMatch[1]) {
+        var switchedAsset = normalizeBrokerAsset(switchMatch[1]);
+        if (switchedAsset && switchedAsset !== window.__ISHAK_CURRENT_ASSET__) {
+          window.__ISHAK_CURRENT_ASSET__ = switchedAsset;
+          window.__ISHAK_LAST_DETECTED_ASSET__ = switchedAsset;
+          window.__ISHAK_LOCKED_ASSET__ = switchedAsset;
+          window.__ISHAK_BACKGROUND_CANDLES__ = [];
+          window.__ISHAK_LIVE_TICKS__ = [];
+        }
+      }
+
+      // 2. Candle OHLC Frame Sniffer: [asset, timestamp, open, high, low, close]
+      var candleMatch = str.match(/\[\s*"([A-Za-z0-9_\-\/]{4,16})"\s*,\s*\d{9,13}\s*,\s*([0-9\.]+)\s*,\s*([0-9\.]+)\s*,\s*([0-9\.]+)\s*,\s*([0-9]+(?:\.[0-9]+)?)\s*\]/);
+      if (candleMatch) {
+        var cAsset = normalizeBrokerAsset(candleMatch[1]);
+        var cOpen = parseFloat(candleMatch[2]);
+        var cHigh = parseFloat(candleMatch[3]);
+        var cLow = parseFloat(candleMatch[4]);
+        var cClose = parseFloat(candleMatch[5]);
+        if (!isNaN(cClose) && cClose > 0) {
+          if (!window.__ISHAK_CURRENT_ASSET__) {
+            window.__ISHAK_CURRENT_ASSET__ = cAsset;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = cAsset;
+          }
+          if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === cAsset) {
+            window.__ISHAK_LAST_WS_PRICE__ = cClose;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_ASSET_PRICES__[cAsset] = cClose;
+            window.__ISHAK_LIVE_TICKS__.push({ price: cClose, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+
+            window.__ISHAK_BACKGROUND_CANDLES__.push({
+              time: Date.now(),
+              open: cOpen,
+              high: cHigh,
+              low: cLow,
+              close: cClose
+            });
+            if (window.__ISHAK_BACKGROUND_CANDLES__.length > 60) window.__ISHAK_BACKGROUND_CANDLES__.shift();
+          }
+        }
+      }
+
+      // 3. Tick Frame Sniffer: [asset, timestamp, price]
+      var tickMatch = str.match(/\[\s*"([A-Za-z0-9_\-\/]{4,16})"\s*,\s*\d{9,13}\s*,\s*([0-9]+(?:\.[0-9]+)?)/);
+      if (tickMatch) {
+        var tAsset = normalizeBrokerAsset(tickMatch[1]);
+        var tPrice = parseFloat(tickMatch[2]);
+        if (!isNaN(tPrice) && tPrice > 0) {
+          if (!window.__ISHAK_CURRENT_ASSET__) {
+            window.__ISHAK_CURRENT_ASSET__ = tAsset;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = tAsset;
+          }
+          if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === tAsset) {
+            window.__ISHAK_LAST_WS_PRICE__ = tPrice;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_ASSET_PRICES__[tAsset] = tPrice;
+            window.__ISHAK_LIVE_TICKS__.push({ price: tPrice, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+            if (window.__ISHAK_BACKGROUND_CANDLES__.length > 0) {
+              var curC = window.__ISHAK_BACKGROUND_CANDLES__[window.__ISHAK_BACKGROUND_CANDLES__.length - 1];
+              curC.close = tPrice;
+              curC.high = Math.max(curC.high, tPrice);
+              curC.low = Math.min(curC.low, tPrice);
+            } else {
+              window.__ISHAK_BACKGROUND_CANDLES__.push({ time: Date.now(), open: tPrice, high: tPrice, low: tPrice, close: tPrice });
+            }
+          }
+        }
+      }
+
+      // 4. JSON Quote Objects Sniffer
+      var jsonMatch = str.match(/"(?:asset|symbol)"\s*:\s*"([A-Za-z0-9_\-\/]{4,16})"[^}]*?"(?:price|close)"\s*:\s*([0-9]+(?:\.[0-9]+)?)/i) ||
+                      str.match(/"(?:price|close)"\s*:\s*([0-9]+(?:\.[0-9]+)?)[^}]*?"(?:asset|symbol)"\s*:\s*"([A-Za-z0-9_\-\/]{4,16})"/i);
+      if (jsonMatch) {
+        var jAsset = normalizeBrokerAsset(jsonMatch[1]);
+        var jPrice = parseFloat(jsonMatch[2]);
+        if (!isNaN(jPrice) && jPrice > 0) {
+          if (!window.__ISHAK_CURRENT_ASSET__) {
+            window.__ISHAK_CURRENT_ASSET__ = jAsset;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = jAsset;
+          }
+          if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === jAsset) {
+            window.__ISHAK_LAST_WS_PRICE__ = jPrice;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_ASSET_PRICES__[jAsset] = jPrice;
+            window.__ISHAK_LIVE_TICKS__.push({ price: jPrice, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+          }
+        }
+      }
+
+      // 5. Generic Price/Rate Sniffer (fallback)
+      if (str.includes('price') || str.includes('rate') || str.includes('quote') || str.includes('tick')) {
+        var genM = str.match(/"price"\s*:\s*([\d\.]+)/) ||
+                   str.match(/"rate"\s*:\s*([\d\.]+)/) ||
+                   str.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
+                   str.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
+        if (genM && genM[1]) {
+          var gp = parseFloat(genM[1]);
+          if (!isNaN(gp) && gp > 0.00001 && gp < 1000000) {
+            window.__ISHAK_LAST_WS_PRICE__ = gp;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_LIVE_TICKS__.push({ price: gp, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+          }
+        }
+      }
+    } catch (err) {}
+  }
+
+  function attachSocketInterceptor(ws) {
+    if (!ws || ws.__ishak_hooked__) return;
+    try {
+      ws.__ishak_hooked__ = true;
+      window.__ISHAK_ACTIVE_SOCKETS__.add(ws);
+      ws.addEventListener('message', function(ev) {
+        processBrokerPacket(ev.data);
+      });
+      try {
+        var origOnMsg = ws.onmessage;
+        if (typeof origOnMsg === 'function' && !ws.__ishak_onmsg_wrapped__) {
+          ws.__ishak_onmsg_wrapped__ = true;
+          ws.onmessage = function(ev) {
+            processBrokerPacket(ev.data);
+            return origOnMsg.apply(this, arguments);
+          };
+        }
+      } catch (e) {}
+    } catch (e) {}
+  }
+
+  function discoverAndHookBrokerSockets() {
+    try {
+      var globalCandidates = ['socket', 'ws', 'websocket', 'conn', 'connection', 'chart', 'trading', 'quotex', 'qx', 'po', 'pocket'];
+      for (var gi = 0; gi < globalCandidates.length; gi++) {
+        var obj = window[globalCandidates[gi]];
+        if (obj) {
+          if (obj instanceof window.WebSocket || (obj.readyState !== undefined && typeof obj.send === 'function')) {
+            attachSocketInterceptor(obj);
+          }
+          if (obj.ws && (obj.ws instanceof window.WebSocket || (obj.ws.readyState !== undefined && typeof obj.ws.send === 'function'))) {
+            attachSocketInterceptor(obj.ws);
+          }
+          if (obj.transport && obj.transport.ws) {
+            attachSocketInterceptor(obj.transport.ws);
+          }
+          if (obj.socket && obj.socket.ws) {
+            attachSocketInterceptor(obj.socket.ws);
+          }
+        }
+      }
+
+      var rootEl = document.getElementById('root') || document.getElementById('app') || document.body;
+      if (rootEl && document.createTreeWalker) {
+        var walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT);
+        var currNode = walker.currentNode;
+        var inspectedCount = 0;
+        var visitedObjects = new Set();
+
+        while (currNode && inspectedCount < 120) {
+          inspectedCount++;
+          for (var key in currNode) {
+            if (key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')) {
+              var fiber = currNode[key];
+              var depth = 0;
+              while (fiber && depth < 25) {
+                depth++;
+                var checkItem = function(target) {
+                  if (!target || typeof target !== 'object' || visitedObjects.has(target)) return;
+                  visitedObjects.add(target);
+                  if (target instanceof window.WebSocket || (target.readyState !== undefined && typeof target.send === 'function')) {
+                    attachSocketInterceptor(target);
+                  }
+                  if (target.ws && (target.ws instanceof window.WebSocket || (target.ws.readyState !== undefined && typeof target.ws.send === 'function'))) {
+                    attachSocketInterceptor(target.ws);
+                  }
+                  if (target.transport && target.transport.ws) {
+                    attachSocketInterceptor(target.transport.ws);
+                  }
+                  if (target.socket && target.socket.ws) {
+                    attachSocketInterceptor(target.socket.ws);
+                  }
+                };
+
+                if (fiber.memoizedProps) checkItem(fiber.memoizedProps);
+                if (fiber.memoizedState) checkItem(fiber.memoizedState);
+                if (fiber.stateNode) checkItem(fiber.stateNode);
+                fiber = fiber.child || fiber.return;
+              }
+            }
+          }
+          currNode = walker.nextNode();
+        }
+      }
+    } catch (err) {}
+  }
+
+  (function initBrokerWebSocketHooks() {
+    if (window.__ISHAK_WS_HOOKED__) return;
+    window.__ISHAK_WS_HOOKED__ = true;
+    try {
+      var RealWS = window.WebSocket;
+      if (RealWS && RealWS.prototype) {
+        var origAddEvt = RealWS.prototype.addEventListener;
+        RealWS.prototype.addEventListener = function(type, listener, options) {
+          attachSocketInterceptor(this);
+          return origAddEvt.apply(this, arguments);
+        };
+
+        var origSend = RealWS.prototype.send;
+        RealWS.prototype.send = function(data) {
+          attachSocketInterceptor(this);
+          try {
+            if (typeof data === 'string') {
+              var mOut = data.match(/\[\s*"(?:chart\/asset|sub|asset|change-symbol|change_asset|instruments\/change|subscribe|live)"\s*,\s*"([A-Za-z0-9_\-\/]{4,15})"/i) ||
+                         data.match(/"(?:asset|symbol|pair)"\s*:\s*"([A-Za-z0-9_\-\/]{4,15})"/i);
+              if (mOut && mOut[1]) {
+                var oAsset = normalizeBrokerAsset(mOut[1]);
+                if (oAsset) {
+                  window.__ISHAK_CURRENT_ASSET__ = oAsset;
+                  window.__ISHAK_LAST_DETECTED_ASSET__ = oAsset;
+                  window.__ISHAK_BACKGROUND_CANDLES__ = [];
+                  window.__ISHAK_LIVE_TICKS__ = [];
+                }
+              }
+            }
+          } catch(e){}
+          return origSend.apply(this, arguments);
+        };
+
+        try {
+          var desc = Object.getOwnPropertyDescriptor(RealWS.prototype, 'onmessage');
+          Object.defineProperty(RealWS.prototype, 'onmessage', {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+              return desc ? desc.get.call(this) : this.__ishak_onmsg;
+            },
+            set: function(handler) {
+              attachSocketInterceptor(this);
+              var self = this;
+              var wrappedHandler = function(ev) {
+                processBrokerPacket(ev.data);
+                if (typeof handler === 'function') {
+                  return handler.apply(self, arguments);
+                }
+              };
+              this.__ishak_onmsg = wrappedHandler;
+              if (desc && desc.set) {
+                return desc.set.call(this, wrappedHandler);
+              }
+            }
+          });
+        } catch(e){}
+
+        var WSConstructor = function(url, protocols) {
+          var urlStr = String(url || '');
+          if (urlStr.includes('vite') || urlStr.includes('ais-') || urlStr.includes('localhost') || urlStr.includes('127.0.0.1')) {
+            return protocols !== undefined ? new RealWS(url, protocols) : new RealWS(url);
+          }
+          var instance = protocols !== undefined ? new RealWS(url, protocols) : new RealWS(url);
+          attachSocketInterceptor(instance);
+          return instance;
+        };
+        WSConstructor.prototype = RealWS.prototype;
+        try {
+          Object.assign(WSConstructor, RealWS);
+          Object.setPrototypeOf(WSConstructor, RealWS);
+        } catch(e){}
+        window.WebSocket = WSConstructor;
+      }
+    } catch(err){}
+
+    discoverAndHookBrokerSockets();
+    setInterval(discoverAndHookBrokerSockets, 1200);
+  })();
+
+  function scanBackgroundChart() {
+    try {
+      var allTabs = document.querySelectorAll(
+        '.header-sub__asset, .header-sub__asset-name, .tab-list__item--active, .tab-item.active, ' +
+        '.asset-select__button, [data-test="active-asset"], [data-test="asset-name"], .trading-chart__asset, .current-asset'
+      );
+      for (var ti = 0; ti < allTabs.length; ti++) {
+        var tEl = allTabs[ti];
+        if (tEl.closest('#ishak-trade-wrap') || tEl.closest('#ishak-hud-panel') || tEl.closest('.ishak-dialog-modal')) continue;
+        if (tEl.closest('[class*="deal"], [class*="order"], [class*="history"], [class*="trades"], [class*="positions"], [class*="leaderboard"]')) continue;
+        var r = tEl.getBoundingClientRect();
+        if (r.top >= 0 && r.top <= 200 && r.width >= 30) {
+          var txt = (tEl.innerText || tEl.textContent || '').trim();
+          var norm = validateAndNormalizeAsset(txt);
+          if (norm) {
+            window.__ISHAK_CURRENT_ASSET__ = norm;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = norm;
+            break;
+          }
+        }
+      }
+
+      var axisEls = document.querySelectorAll(
+        '.chart-axis-price, .chart-price-current, .axis-price-current, [class*="price-current"], ' +
+        '.current-quote, .deal-form__quote, .section-deal__rate, .deal-form__rate'
+      );
+      for (var ai = 0; ai < axisEls.length; ai++) {
+        var aEl = axisEls[ai];
+        if (aEl.closest('#ishak-trade-wrap') || aEl.closest('#ishak-hud-panel')) continue;
+        var aTxt = aEl.tagName === 'INPUT' ? (aEl.value || '') : (aEl.innerText || aEl.textContent || '');
+        if (aTxt.includes('%') || aTxt.includes('$') || aTxt.includes('€') || aTxt.includes('₹') || aTxt.includes('৳')) continue;
+        var mAx = aTxt.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
+        if (mAx) {
+          var ap = parseFloat(mAx[0].replace(/,/g, ''));
+          if (!isNaN(ap) && ap > 0.0001 && ap < 1000000) {
+            window.__ISHAK_LAST_WS_PRICE__ = ap;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_LIVE_TICKS__.push({ price: ap, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+            break;
+          }
+        }
+      }
+    } catch(err){}
+  }
+  setInterval(scanBackgroundChart, 400);
 
     // Helper: Safely ingest touch/telemetry data from qxtrxhost.com/api/v1/touch
     function processTouchPayload(data) {
@@ -198,6 +523,8 @@ javascript:(function(){
   var autoTradeEnabled = true; // Auto-click Quotex CALL/PUT button (Default: ON)
   var autoPilotMode = false; // Continuous auto-trading loop
   var autoPilotTimer = null;
+  window.__ISHAK_LAST_DIRECTION__ = window.__ISHAK_LAST_DIRECTION__ || null;
+  window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0;
 
   var MARKETS_DATABASE = [{"category":"QUOTEX OTC CURRENCIES (২৪/৭)","items":["AUD/CAD (OTC)","AUD/CHF (OTC)","AUD/JPY (OTC)","AUD/NZD (OTC)","AUD/USD (OTC)","CAD/CHF (OTC)","CAD/JPY (OTC)","CHF/JPY (OTC)","EUR/AUD (OTC)","EUR/CAD (OTC)","EUR/CHF (OTC)","EUR/GBP (OTC)","EUR/JPY (OTC)","EUR/NZD (OTC)","EUR/USD (OTC)","GBP/AUD (OTC)","GBP/CAD (OTC)","GBP/CHF (OTC)","GBP/JPY (OTC)","GBP/NZD (OTC)","GBP/USD (OTC)","NZD/CAD (OTC)","NZD/CHF (OTC)","NZD/JPY (OTC)","NZD/USD (OTC)","USD/BDT (OTC)","USD/BRL (OTC)","USD/CAD (OTC)","USD/CHF (OTC)","USD/DZD (OTC)","USD/EGP (OTC)","USD/IDR (OTC)","USD/INR (OTC)","USD/JPY (OTC)","USD/MXN (OTC)","USD/MYR (OTC)","USD/NGN (OTC)","USD/PHP (OTC)","USD/PKR (OTC)","USD/RUB (OTC)","USD/THB (OTC)","USD/TRY (OTC)","USD/VND (OTC)","USD/ZAR (OTC)"]},{"category":"QUOTEX REAL FOREX (লাইভ মার্কেট)","items":["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD","EUR/JPY","GBP/JPY","EUR/GBP","AUD/CAD","AUD/CHF","AUD/JPY","CAD/JPY","EUR/AUD","EUR/CAD","EUR/CHF","GBP/AUD","GBP/CAD","GBP/CHF","NZD/JPY","USD/NOK","USD/SEK","USD/TRY","USD/SGD"]},{"category":"COMMODITIES & METALS (OTC & REAL)","items":["Gold (OTC)","Silver (OTC)","Crude Oil (OTC)","UKBrent (OTC)","USCrude (OTC)","GOLD (XAU/USD)","SILVER (XAG/USD)","UKBrent","USCrude"]},{"category":"CRYPTO & STOCKS OTC (QUOTEX)","items":["Bitcoin (OTC)","Ethereum (OTC)","Litecoin (OTC)","Ripple (OTC)","BTC/USD","ETH/USD","Boeing Company (OTC)","Intel (OTC)","Microsoft (OTC)","Apple (OTC)","Johnson & Johnson (OTC)","McDonald's (OTC)","Meta (OTC)","Pfizer (OTC)","American Express (OTC)"]}];
 
@@ -294,88 +621,55 @@ javascript:(function(){
   // 📈 Quotex Live Price Extractor (Multi-Layer Resilient Precision)
   function extractQuotexLivePrice() {
     try {
-      // 1. Direct High-Priority Live Price Elements (Quotex, Pocket Option, TradingView, Mobile & Web)
+      // 1. Fresh High-Speed WebSocket Intercepted Price from background chart (< 3.5s old)
+      if (window.__ISHAK_LAST_WS_PRICE__ && window.__ISHAK_LAST_WS_PRICE__ > 0) {
+        if (!window.__ISHAK_LAST_PRICE_TIME__ || (Date.now() - window.__ISHAK_LAST_PRICE_TIME__ < 3500)) {
+          return window.__ISHAK_LAST_WS_PRICE__;
+        }
+      }
+
+      // 2. Direct Background Chart Axis & Deal Form Rates
       var directSelectors = [
+        '.chart-axis-price', '.chart-price-current', '.axis-price-current',
+        '.current-quote', '.deal-form__quote', '.quote-value',
+        '.section-deal__rate', '.deal-form__rate', '.rate-value', '.current-rate',
         '#ishak-live-price-val', '[data-live-price="true"]', '.ishak-live-price',
         '.header-sub__asset-rate', '.header-sub__asset-value', '.current-asset-price',
         '.tab--active .rate', '.tab--active [class*="rate"]', '.tab--active [class*="price"]',
         '.tabs__item--active .rate', '.tabs__item--active [class*="rate"]',
-        '.chart-axis-price', '.chart-price-current', '.axis-price-current',
-        '.current-price', '.current-quote',
-        '.section-deal__rate', '.deal-form__rate', '.rate-value', '.current-rate',
         '.trading-chart__price', '.chart__price', '.strike-price',
         '[class*="price-current"]', '[class*="current-price"]', '[class*="current-value"]',
         '[class*="currentPrice"]', '[class*="price_current"]', '[class*="axis-label"]',
-        '[class*="axis-item--current"]', '.deal-form__quote', '.quote-value',
+        '[class*="axis-item--current"]',
         '[data-test*="rate"]', '[data-test*="price"]', '[data-test*="quote"]',
         '[data-price]', '[data-rate]', '[class*="strike"]', '.chart-container [class*="price"]'
       ];
       for (var i = 0; i < directSelectors.length; i++) {
         var el = document.querySelector(directSelectors[i]);
         if (el) {
+          if (el.closest('#ishak-trade-wrap') || el.closest('#ishak-hud-panel')) continue;
           var txt = el.tagName === 'INPUT' ? (el.value || '') : (el.innerText || el.textContent || '');
+          if (txt.includes('%') || txt.includes('$') || txt.includes('€') || txt.includes('₹') || txt.includes('৳')) continue;
           var m = txt.match(/\b\d{1,6}(?:,\d{3})*(?:\.\d{2,6})\b/);
           if (m) {
             var num = parseFloat(m[0].replace(/,/g, ''));
-            if (!isNaN(num) && num > 0.00001 && num < 1000000) return num;
+            if (!isNaN(num) && num > 0.00001 && num < 1000000) {
+              window.__ISHAK_LAST_WS_PRICE__ = num;
+              window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+              return num;
+            }
           }
         }
       }
 
-      // 2. Running Candle DOM Attributes
-      var runCandle = document.querySelector('#ishak-running-candle, [data-running-candle="true"], .ishak-active-candle');
-      if (runCandle) {
-        var cClose = parseFloat(runCandle.getAttribute('data-close') || '');
-        if (!isNaN(cClose) && cClose > 0) return cClose;
-      }
-
-      // 3. Search Deal Form container
-      var dealForm = document.querySelector('.section-deal, .deal-form, aside.deal-form, .trade-panel');
-      if (dealForm) {
-        var els = dealForm.querySelectorAll('div, span, p, strong, b');
-        for (var j = 0; j < els.length; j++) {
-          var t = (els[j].innerText || els[j].textContent || '').trim();
-          if (t.includes('%') || t.includes('$') || t.includes('€') || t.includes('₹') || t.includes('৳')) continue;
-          var mNum = t.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
-          if (mNum) {
-            var p = parseFloat(mNum[0].replace(/,/g, ''));
-            if (!isNaN(p) && p > 0.0001 && p < 1000000) return p;
-          }
-        }
-      }
-
-      // 4. Quotex / TradingView SVG Y-Axis Labels
-      var svgTexts = document.querySelectorAll('svg text, .trading-chart svg text');
-      for (var s = svgTexts.length - 1; s >= 0; s--) {
-        var st = (svgTexts[s].textContent || '').trim();
-        var sm = st.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
-        if (sm) {
-          var sp = parseFloat(sm[0].replace(/,/g, ''));
-          if (!isNaN(sp) && sp > 0.0001 && sp < 1000000) return sp;
-        }
-      }
-
-      // 5. Document Title (e.g. "EUR/USD 1.08453 (OTC) | Quotex")
-      if (document.title) {
-        var mTitle = document.title.match(/\b(\d{1,6}(?:,\d{3})*\.\d{2,6})\b/);
-        if (mTitle) {
-          var tp = parseFloat(mTitle[1].replace(/,/g, ''));
-          if (!isNaN(tp) && tp > 0) return tp;
-        }
-      }
-
-      // 6. High-Speed WebSocket Intercepted Price
+      // 3. Fallback to last WebSocket price
       if (window.__ISHAK_LAST_WS_PRICE__ && window.__ISHAK_LAST_WS_PRICE__ > 0) {
         return window.__ISHAK_LAST_WS_PRICE__;
       }
 
-      // 7. Active Background Real-Time Market Stream & Memory Cache
-      if (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice > 0) {
-        return window.__ISHAK_MARKET_STREAM__.currentPrice;
-      }
+      // 4. Fallback to tick buffer
       if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
-        var lastTickObj = window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1];
-        if (lastTickObj && lastTickObj.price > 0) return lastTickObj.price;
+        return window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1].price;
       }
     } catch (e) {}
     return null;
@@ -543,15 +837,26 @@ javascript:(function(){
   // 🌐 Extract Live Market/Asset Name Directly from Screen (Quotex / Simulator)
   function extractQuotexAsset() {
     try {
-      // 1. Simulator / Custom DOM active asset
+      // 1. High-Priority WebSocket & Active Background Chart Sniffer
+      if (window.__ISHAK_CURRENT_ASSET__) {
+        return window.__ISHAK_CURRENT_ASSET__;
+      }
+      if (window.__ISHAK_LAST_DETECTED_ASSET__) {
+        return window.__ISHAK_LAST_DETECTED_ASSET__;
+      }
+
+      // 2. Simulator / Custom DOM active asset
       var simAsset = document.querySelector('.current-asset, [data-asset], #current-asset, .ishak-current-asset');
       if (simAsset) {
         var saTxt = (simAsset.getAttribute('data-asset') || simAsset.innerText || simAsset.textContent || '').trim();
         var valSim = validateAndNormalizeAsset(saTxt);
-        if (valSim) return valSim;
+        if (valSim) {
+          window.__ISHAK_CURRENT_ASSET__ = valSim;
+          return valSim;
+        }
       }
 
-      // 2. Quotex active tab & header sub asset selectors
+      // 3. Quotex active tab & header sub asset selectors
       var activeTabSelectors = [
         '.header-sub__asset-name',
         '.header-sub__asset',
@@ -566,38 +871,37 @@ javascript:(function(){
       for (var i = 0; i < activeTabSelectors.length; i++) {
         var el = document.querySelector(activeTabSelectors[i]);
         if (el) {
+          if (el.closest('#ishak-trade-wrap') || el.closest('#ishak-hud-panel')) continue;
           var txt = (el.innerText || el.textContent || '').trim();
           var validated = validateAndNormalizeAsset(txt);
-          if (validated) return validated;
+          if (validated) {
+            window.__ISHAK_CURRENT_ASSET__ = validated;
+            return validated;
+          }
         }
       }
 
-      // 3. Document Title match (e.g. "EUR/USD (OTC) | Quotex", "USD/BDT (OTC) | Quotex", "Bitcoin (OTC)")
+      // 4. Document Title match (e.g. "EUR/USD (OTC) | Quotex")
       if (document.title) {
         var docTitle = document.title;
         var titleMatch = docTitle.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?|[A-Za-z\s.-]+(\s*\(OTC\)))/i);
         if (titleMatch && titleMatch[1]) {
           var valTitle = validateAndNormalizeAsset(titleMatch[1]);
-          if (valTitle) return valTitle;
+          if (valTitle) {
+            window.__ISHAK_CURRENT_ASSET__ = valTitle;
+            return valTitle;
+          }
         }
       }
 
-      // 4. URL path / query (e.g. /trade/EURUSD_otc or ?asset=EURUSD_otc)
+      // 5. URL path / query
       var href = window.location.href || '';
       var urlMatch = href.match(/(?:trade\/|asset=|\/chart\/)([A-Za-z0-9_-]+)/i);
       if (urlMatch && urlMatch[1]) {
         var valUrl = validateAndNormalizeAsset(urlMatch[1]);
-        if (valUrl) return valUrl;
-      }
-
-      // 5. Deal Panel text scan
-      var dealPanel = document.querySelector('.deal-form, .section-deal, aside.deal-form');
-      if (dealPanel) {
-        var dText = dealPanel.innerText || '';
-        var mDeal = dText.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?)/);
-        if (mDeal && mDeal[1]) {
-          var valDeal = validateAndNormalizeAsset(mDeal[1]);
-          if (valDeal) return valDeal;
+        if (valUrl) {
+          window.__ISHAK_CURRENT_ASSET__ = valUrl;
+          return valUrl;
         }
       }
     } catch(e){}
@@ -2403,6 +2707,52 @@ javascript:(function(){
   // - Market Regime Detection (Trending Bullish, Trending Bearish, Ranging, Volatile)
   // - Signal Quality Filter & Symmetrical Decision
   // - ZERO Math.random(), ZERO hardcoded calls, ZERO 'market data not found' rejections
+  // 🎯 PRECISION ROUND NUMBER (SNR) TRACKER ENGINE
+  // Extracts institutional psychological levels (.000, .500, .00, .50),
+  // distance to support/resistance, rejection wicks, and breakout momentum.
+  function analyzeRoundNumbers(currentPrice, assetName) {
+    if (!currentPrice || currentPrice <= 0) return null;
+    var decimals = 5;
+    if (assetName && (assetName.includes('JPY') || currentPrice > 50)) decimals = 2;
+    if (currentPrice > 1000) decimals = 1;
+
+    var stepMajor = Math.pow(10, -(decimals - 2)); // 0.00100 for 5 dec, 1.00 for JPY
+    var stepHalf = stepMajor / 2;                  // 0.00050 for 5 dec, 0.50 for JPY
+    var stepMicro = stepMajor / 10;                // 0.00010 for 5 dec, 0.10 for JPY
+
+    var nearestMajorAbove = Math.ceil(currentPrice / stepMajor) * stepMajor;
+    var nearestMajorBelow = Math.floor(currentPrice / stepMajor) * stepMajor;
+    var nearestHalfAbove = Math.ceil(currentPrice / stepHalf) * stepHalf;
+    var nearestHalfBelow = Math.floor(currentPrice / stepHalf) * stepHalf;
+
+    var distToMajorRes = nearestMajorAbove - currentPrice;
+    var distToMajorSup = currentPrice - nearestMajorBelow;
+    var distToHalfRes = nearestHalfAbove - currentPrice;
+    var distToHalfSup = currentPrice - nearestHalfBelow;
+
+    var nearestRes = (distToHalfRes < distToMajorRes) ? nearestHalfAbove : nearestMajorAbove;
+    var nearestSup = (distToHalfSup < distToMajorSup) ? nearestHalfBelow : nearestMajorBelow;
+    var distToRes = nearestRes - currentPrice;
+    var distToSup = currentPrice - nearestSup;
+
+    var isNearRoundRes = distToRes <= (stepMicro * 1.6);
+    var isNearRoundSup = distToSup <= (stepMicro * 1.6);
+    var majorLevel = distToMajorRes < distToMajorSup ? nearestMajorAbove : nearestMajorBelow;
+
+    return {
+      currentPrice: currentPrice,
+      nearestRes: parseFloat(nearestRes.toFixed(decimals)),
+      nearestSup: parseFloat(nearestSup.toFixed(decimals)),
+      distToRes: parseFloat(distToRes.toFixed(decimals)),
+      distToSup: parseFloat(distToSup.toFixed(decimals)),
+      isNearRoundRes: isNearRoundRes,
+      isNearRoundSup: isNearRoundSup,
+      majorLevel: parseFloat(majorLevel.toFixed(decimals)),
+      decimals: decimals,
+      stepMicro: stepMicro
+    };
+  }
+
   function evaluateMarketConfluence(priceSamples, durationSec) {
     var dur = durationSec || tradeDuration || 5;
     var durLabel = (dur >= 60) ? (dur / 60) + 'M' : dur + 'S';
@@ -2562,18 +2912,23 @@ javascript:(function(){
     var lastCandle = candleData[candleData.length - 1];
     var prevCandle = candleData[candleData.length - 2] || lastCandle;
 
-    // Running Candle Anatomy
-    var runningOpen = lastCandle.open;
-    var runningClose = entryPrice;
-
-    // Realistic clamp: A 5s/10s candle cannot exceed 0.25% in body size under normal OTC/broker conditions
-    if (Math.abs(runningClose - runningOpen) / entryPrice > 0.0025) {
-      var spreadDir = runningClose >= runningOpen ? 1 : -1;
-      runningOpen = parseFloat((runningClose - (spreadDir * entryPrice * 0.00010)).toFixed(5));
+    // Running Candle Anatomy (Strictly from fresh scan ticks if available)
+    var runningOpen, runningClose, runningHigh, runningLow;
+    if (priceSamples && priceSamples.length >= 2) {
+      runningOpen = priceSamples[0];
+      runningClose = priceSamples[priceSamples.length - 1];
+      runningHigh = Math.max.apply(null, priceSamples);
+      runningLow = Math.min.apply(null, priceSamples);
+    } else {
+      runningOpen = lastCandle.open;
+      runningClose = entryPrice;
+      if (Math.abs(runningClose - runningOpen) / (entryPrice || 1) > 0.0025) {
+        var spreadDir = runningClose >= runningOpen ? 1 : -1;
+        runningOpen = parseFloat((runningClose - (spreadDir * entryPrice * 0.00010)).toFixed(5));
+      }
+      runningHigh = Math.max(lastCandle.high, runningOpen, runningClose);
+      runningLow = Math.min(lastCandle.low, runningOpen, runningClose);
     }
-
-    var runningHigh = Math.max(lastCandle.high, runningOpen, runningClose);
-    var runningLow = Math.min(lastCandle.low, runningOpen, runningClose);
     var bodySize = Math.abs(runningClose - runningOpen);
     var upperWick = runningHigh - Math.max(runningOpen, runningClose);
     var lowerWick = Math.min(runningOpen, runningClose) - runningLow;
@@ -2757,6 +3112,33 @@ javascript:(function(){
       downFactorsList.push('Bearish BOS (Swing Low Breakdown) [+16]');
     }
 
+    // 🎯 Round Number Tracker (Institutional Psychological SNR Levels)
+    var activeAssetForRound = (typeof currentAsset !== 'undefined' && currentAsset) ? currentAsset : (window.__ISHAK_CURRENT_ASSET__ || '');
+    var roundInfo = analyzeRoundNumbers(entryPrice, activeAssetForRound);
+    if (roundInfo) {
+      if (roundInfo.isNearRoundRes) {
+        if (upperWick >= candleRange * 0.18 || tickVelocity <= 0) {
+          sellScore += 35;
+          srPattern = 'Round Number Resistance Rejection (' + roundInfo.nearestRes + ')';
+          downFactorsList.push('Round Number Resistance Rejection at ' + roundInfo.nearestRes + ' [+35]');
+        } else if (tickVelocity > 0 && isUp) {
+          buyScore += 30;
+          srPattern = 'Round Number Breakout Push (' + roundInfo.nearestRes + ')';
+          upFactorsList.push('Round Number Resistance Breakout Momentum ' + roundInfo.nearestRes + ' [+30]');
+        }
+      } else if (roundInfo.isNearRoundSup) {
+        if (lowerWick >= candleRange * 0.18 || tickVelocity >= 0) {
+          buyScore += 35;
+          srPattern = 'Round Number Support Bounce (' + roundInfo.nearestSup + ')';
+          upFactorsList.push('Round Number Support Bounce at ' + roundInfo.nearestSup + ' [+35]');
+        } else if (tickVelocity < 0 && isDown) {
+          sellScore += 30;
+          srPattern = 'Round Number Breakdown Push (' + roundInfo.nearestSup + ')';
+          downFactorsList.push('Round Number Support Breakdown Momentum ' + roundInfo.nearestSup + ' [+30]');
+        }
+      }
+    }
+
     // 5. Support & Resistance Zones (Rolling Pivots, Breakout & Retest)
     var lookback = Math.min(25, candleData.length);
     var recentCandles = candleData.slice(-lookback);
@@ -2889,7 +3271,7 @@ javascript:(function(){
         if (midPathPullbackRisk === 'LOW') pricePathScore += 6;
         buyScore += pricePathScore;
         upFactorsList.push('Forward Price-Path Forecast Bullish (' + (callPathProb * 100).toFixed(1) + '%) [+' + pricePathScore + ']');
-      } else if (callPathProb < 495) {
+      } else if (callPathProb < 0.495) {
         var pScoreAbs = Math.abs(pricePathScore);
         if (recoveryCapacity === 'STRONG') pScoreAbs += 8;
         if (midPathPullbackRisk === 'LOW') pScoreAbs += 6;
@@ -2915,15 +3297,15 @@ javascript:(function(){
       // 100% Dynamic - Zero Memorization - Evaluates THIS Specific Scan's Fresh Ticks
       // =========================================================
 
-      // A. Fresh Scan Ticks Analysis (Ticks captured during this 3.5s scan)
+      // A. Fresh Scan Ticks Analysis (Ticks captured during this scan)
       if (priceSamples && priceSamples.length >= 2) {
         var pStart = priceSamples[0];
         var pEnd = priceSamples[priceSamples.length - 1];
         var pDelta = pEnd - pStart;
-        if (pDelta > 0.000001) {
+        if (pDelta > 0.0000003) {
           buyScore += 45;
           upFactorsList.push('5S Fresh Scan Ticks Net Gain (+' + pDelta.toFixed(5) + ') [+45]');
-        } else if (pDelta < -0.000001) {
+        } else if (pDelta < -0.0000003) {
           sellScore += 45;
           downFactorsList.push('5S Fresh Scan Ticks Net Loss (' + pDelta.toFixed(5) + ') [+45]');
         }
@@ -2934,36 +3316,39 @@ javascript:(function(){
           else if (priceSamples[spi] < priceSamples[spi - 1]) scanDown++;
         }
         if (scanUp > scanDown) {
-          buyScore += 25;
-          upFactorsList.push('5S Scan Tick Steps Bullish (' + scanUp + ' Up vs ' + scanDown + ' Down) [+25]');
+          var uStepBonus = Math.min(30, 16 + (scanUp - scanDown) * 3);
+          buyScore += uStepBonus;
+          upFactorsList.push('5S Scan Tick Steps Bullish (' + scanUp + ' Up vs ' + scanDown + ' Down) [+' + uStepBonus + ']');
         } else if (scanDown > scanUp) {
-          sellScore += 25;
-          downFactorsList.push('5S Scan Tick Steps Bearish (' + scanDown + ' Down vs ' + scanUp + ' Up) [+25]');
+          var dStepBonus = Math.min(30, 16 + (scanDown - scanUp) * 3);
+          sellScore += dStepBonus;
+          downFactorsList.push('5S Scan Tick Steps Bearish (' + scanDown + ' Down vs ' + scanUp + ' Up) [+' + dStepBonus + ']');
         }
 
-        var lateStart = priceSamples[Math.max(0, priceSamples.length - 3)];
-        if (pEnd > lateStart) {
-          buyScore += 20;
-          upFactorsList.push('5S Late-Scan Impulse Push Up [+20]');
-        } else if (pEnd < lateStart) {
-          sellScore += 20;
-          downFactorsList.push('5S Late-Scan Impulse Push Down [+20]');
+        var lateSlice = priceSamples.slice(-Math.max(3, Math.floor(priceSamples.length * 0.35)));
+        var lateDelta = lateSlice[lateSlice.length - 1] - lateSlice[0];
+        if (lateDelta > 0.0000002) {
+          buyScore += 24;
+          upFactorsList.push('5S Late-Scan Impulse Push Up [+24]');
+        } else if (lateDelta < -0.0000002) {
+          sellScore += 24;
+          downFactorsList.push('5S Late-Scan Impulse Push Down [+24]');
         }
       }
 
       // B. Real-Time Micro Tick Slope & Velocity
-      if (tickSlope > 0.000002) {
-        buyScore += 28;
-        upFactorsList.push('5S Micro Tick Slope Bullish [+' + 28 + ']');
-      } else if (tickSlope < -0.000002) {
-        sellScore += 28;
-        downFactorsList.push('5S Micro Tick Slope Bearish [+' + 28 + ']');
+      if (tickSlope > 0.0000003) {
+        buyScore += 26;
+        upFactorsList.push('5S Micro Tick Slope Bullish [+26]');
+      } else if (tickSlope < -0.0000003) {
+        sellScore += 26;
+        downFactorsList.push('5S Micro Tick Slope Bearish [+26]');
       }
 
-      if (tickVelocity > 0.000004) {
+      if (tickVelocity > 0.0000004) {
         buyScore += 18;
         upFactorsList.push('5S Instant Velocity Push Up [+18]');
-      } else if (tickVelocity < -0.000004) {
+      } else if (tickVelocity < -0.0000004) {
         sellScore += 18;
         downFactorsList.push('5S Instant Velocity Push Down [+18]');
       }
@@ -2977,32 +3362,34 @@ javascript:(function(){
         downFactorsList.push('5S Active Running Bar Bearish [+30]');
       }
 
-      if (lowerWick >= candleRange * 0.30 && lowerWick > upperWick * 1.1) {
-        buyScore += 35;
-        srPattern = 'Bullish Lower Wick Floor Absorption';
-        upFactorsList.push('5S Lower Wick Absorption Bounce [+35]');
-      } else if (upperWick >= candleRange * 0.30 && upperWick > lowerWick * 1.1) {
-        sellScore += 35;
-        srPattern = 'Bearish Upper Wick Peak Rejection';
-        downFactorsList.push('5S Upper Wick Peak Rejection [+35]');
+      if (candleRange > 0.00001) {
+        if (lowerWick >= candleRange * 0.28 && lowerWick > upperWick * 1.1) {
+          buyScore += 32;
+          srPattern = 'Bullish Lower Wick Floor Absorption';
+          upFactorsList.push('5S Lower Wick Absorption Bounce [+32]');
+        } else if (upperWick >= candleRange * 0.28 && upperWick > lowerWick * 1.1) {
+          sellScore += 32;
+          srPattern = 'Bearish Upper Wick Peak Rejection';
+          downFactorsList.push('5S Upper Wick Peak Rejection [+32]');
+        }
       }
 
       // D. RSI Extreme Exhaustion only (Reversal Trigger)
-      if (calculatedRsi >= 74) {
+      if (calculatedRsi >= 72) {
         sellScore += 24;
         downFactorsList.push('5S RSI Overbought Peak Exhaustion [+24]');
-      } else if (calculatedRsi <= 26) {
+      } else if (calculatedRsi <= 28) {
         buyScore += 24;
         upFactorsList.push('5S RSI Oversold Floor Exhaustion [+24]');
       }
 
-      // E. Micro Context (Light tie-breaker, max 5-6 pts)
+      // E. Micro Context (Fast EMA5 vs EMA9)
       if (ema5 > ema9) {
-        buyScore += 6;
-        upFactorsList.push('5S Micro EMA5 > EMA9 [+6]');
+        buyScore += 8;
+        upFactorsList.push('5S Micro EMA5 > EMA9 [+8]');
       } else if (ema5 < ema9) {
-        sellScore += 6;
-        downFactorsList.push('5S Micro EMA5 < EMA9 [+6]');
+        sellScore += 8;
+        downFactorsList.push('5S Micro EMA5 < EMA9 [+8]');
       }
 
     } else if (dur <= 15) {
@@ -3015,10 +3402,10 @@ javascript:(function(){
         var pStart10 = priceSamples[0];
         var pEnd10 = priceSamples[priceSamples.length - 1];
         var pDelta10 = pEnd10 - pStart10;
-        if (pDelta10 > 0.000001) {
+        if (pDelta10 > 0.0000004) {
           buyScore += 40;
           upFactorsList.push('10S/15S Fresh Scan Ticks Net Gain (+' + pDelta10.toFixed(5) + ') [+40]');
-        } else if (pDelta10 < -0.000001) {
+        } else if (pDelta10 < -0.0000004) {
           sellScore += 40;
           downFactorsList.push('10S/15S Fresh Scan Ticks Net Loss (' + pDelta10.toFixed(5) + ') [+40]');
         }
@@ -3029,26 +3416,38 @@ javascript:(function(){
           else if (priceSamples[spi10] < priceSamples[spi10 - 1]) scanDown10++;
         }
         if (scanUp10 > scanDown10) {
-          buyScore += 22;
-          upFactorsList.push('10S/15S Scan Tick Steps Bullish (' + scanUp10 + ' Up vs ' + scanDown10 + ' Down) [+22]');
+          var uStep10 = Math.min(28, 14 + (scanUp10 - scanDown10) * 3);
+          buyScore += uStep10;
+          upFactorsList.push('10S/15S Scan Tick Steps Bullish (' + scanUp10 + ' Up vs ' + scanDown10 + ' Down) [+' + uStep10 + ']');
         } else if (scanDown10 > scanUp10) {
+          var dStep10 = Math.min(28, 14 + (scanDown10 - scanUp10) * 3);
+          sellScore += dStep10;
+          downFactorsList.push('10S/15S Scan Tick Steps Bearish (' + scanDown10 + ' Down vs ' + scanUp10 + ' Up) [+' + dStep10 + ']');
+        }
+
+        var lateSlice10 = priceSamples.slice(-Math.max(3, Math.floor(priceSamples.length * 0.35)));
+        var lateDelta10 = lateSlice10[lateSlice10.length - 1] - lateSlice10[0];
+        if (lateDelta10 > 0.0000003) {
+          buyScore += 22;
+          upFactorsList.push('10S/15S Late-Scan Impulse Push Up [+22]');
+        } else if (lateDelta10 < -0.0000003) {
           sellScore += 22;
-          downFactorsList.push('10S/15S Scan Tick Steps Bearish (' + scanDown10 + ' Down vs ' + scanUp10 + ' Up) [+22]');
+          downFactorsList.push('10S/15S Late-Scan Impulse Push Down [+22]');
         }
       }
 
-      if (tickSlope > 0.000002) {
+      if (tickSlope > 0.0000004) {
         buyScore += 26;
         upFactorsList.push('10S/15S Tick Slope Bullish [+26]');
-      } else if (tickSlope < -0.000002) {
+      } else if (tickSlope < -0.0000004) {
         sellScore += 26;
         downFactorsList.push('10S/15S Tick Slope Bearish [+26]');
       }
 
-      if (tickVelocity > 0.000003) {
+      if (tickVelocity > 0.0000005) {
         buyScore += 18;
         upFactorsList.push('10S/15S Real-Time Velocity Up [+18]');
-      } else if (tickVelocity < -0.000003) {
+      } else if (tickVelocity < -0.0000005) {
         sellScore += 18;
         downFactorsList.push('10S/15S Real-Time Velocity Down [+18]');
       }
@@ -3061,20 +3460,22 @@ javascript:(function(){
         downFactorsList.push('10S/15S Active Running Bar Bearish [+28]');
       }
 
-      if (lowerWick >= candleRange * 0.32 && lowerWick > upperWick) {
-        buyScore += 30;
-        srPattern = 'Lower Wick Support Bounce';
-        upFactorsList.push('10S/15S Lower Wick Support Bounce [+30]');
-      } else if (upperWick >= candleRange * 0.32 && upperWick > lowerWick) {
-        sellScore += 30;
-        srPattern = 'Upper Wick Resistance Rejection';
-        downFactorsList.push('10S/15S Upper Wick Resistance Rejection [+30]');
+      if (candleRange > 0.00001) {
+        if (lowerWick >= candleRange * 0.30 && lowerWick > upperWick) {
+          buyScore += 30;
+          srPattern = 'Lower Wick Support Bounce';
+          upFactorsList.push('10S/15S Lower Wick Support Bounce [+30]');
+        } else if (upperWick >= candleRange * 0.30 && upperWick > lowerWick) {
+          sellScore += 30;
+          srPattern = 'Upper Wick Resistance Rejection';
+          downFactorsList.push('10S/15S Upper Wick Resistance Rejection [+30]');
+        }
       }
 
-      if (calculatedRsi >= 75) {
+      if (calculatedRsi >= 73) {
         sellScore += 22;
         downFactorsList.push('10S/15S RSI Overbought Peak Exhaustion [+22]');
-      } else if (calculatedRsi <= 25) {
+      } else if (calculatedRsi <= 27) {
         buyScore += 22;
         upFactorsList.push('10S/15S RSI Oversold Floor Exhaustion [+22]');
       }
@@ -3136,17 +3537,34 @@ javascript:(function(){
       }
     }
 
-    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION ---
+    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION WITH ANTI-STREAK GUARD ---
     var netConfluence = buyScore - sellScore;
+    var scoreDiff = Math.abs(buyScore - sellScore);
     var isCall;
-    if (buyScore > sellScore) {
+
+    if (scoreDiff >= 14) {
+      // Clear decisive dominance from market data
+      isCall = buyScore > sellScore;
+    } else if (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ >= 2 && window.__ISHAK_LAST_DIRECTION__ === 'PUT') {
+      // Previous 2+ trades were PUT/SELL. If market is balanced or shows any upward tick, rotate to CALL/BUY!
+      if (buyScore >= sellScore || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] >= priceSamples[0]) || runningClose >= runningOpen || calculatedRsi <= 52) {
+        isCall = true;
+      } else {
+        isCall = false;
+      }
+    } else if (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ >= 2 && window.__ISHAK_LAST_DIRECTION__ === 'CALL') {
+      // Previous 2+ trades were CALL/BUY. If market is balanced or shows any downward tick, rotate to PUT/SELL!
+      if (sellScore >= buyScore || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] <= priceSamples[0]) || runningClose <= runningOpen || calculatedRsi >= 48) {
+        isCall = false;
+      } else {
+        isCall = true;
+      }
+    } else if (buyScore > sellScore) {
       isCall = true;
     } else if (sellScore > buyScore) {
       isCall = false;
-    } else if (callPathProb > 0.505) {
-      isCall = true;
-    } else if (callPathProb < 0.495) {
-      isCall = false;
+    } else if (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] !== priceSamples[0]) {
+      isCall = priceSamples[priceSamples.length - 1] > priceSamples[0];
     } else if (Math.abs(tickSlope) > 0.0000001) {
       isCall = tickSlope > 0;
     } else if (tickVelocity !== 0) {
@@ -3154,7 +3572,24 @@ javascript:(function(){
     } else if (runningClose !== runningOpen) {
       isCall = runningClose > runningOpen;
     } else {
-      isCall = null;
+      isCall = window.__ISHAK_LAST_DIRECTION__ === 'PUT' ? true : false;
+    }
+
+    // Update persistent direction tracking for anti-streak assurance
+    if (isCall === true) {
+      if (window.__ISHAK_LAST_DIRECTION__ === 'CALL') {
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0) + 1;
+      } else {
+        window.__ISHAK_LAST_DIRECTION__ = 'CALL';
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = 1;
+      }
+    } else if (isCall === false) {
+      if (window.__ISHAK_LAST_DIRECTION__ === 'PUT') {
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0) + 1;
+      } else {
+        window.__ISHAK_LAST_DIRECTION__ = 'PUT';
+        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = 1;
+      }
     }
 
     var isTradeApproved = isCall !== null;
@@ -3271,6 +3706,18 @@ javascript:(function(){
       target.dispatchEvent(new MouseEvent('mouseup', opts));
       target.click();
 
+      try {
+        window.dispatchEvent(new CustomEvent('ishak_trade_execute', {
+          detail: {
+            type: isCall ? 'CALL' : 'PUT',
+            isCall: isCall,
+            duration: tradeDuration || 5,
+            signalId: signalId,
+            timestamp: Date.now()
+          }
+        }));
+      } catch(e){}
+
       return { success: true, element: target, isCall: isCall };
     } catch(err) {
       return { success: false, reason: err.message };
@@ -3350,14 +3797,23 @@ javascript:(function(){
 
       playPhotostatScannerSound();
 
-      // Real-Time High-Frequency Price Sampler during 3.5s Laser Scan
+      // Real-Time High-Frequency Price Sampler during 3.5s Laser Scan (Captured afresh every click)
       var livePriceSamples = [];
-      var pInit = extractQuotexLivePrice();
-      if (pInit) livePriceSamples.push(pInit);
-      var priceSamplerInterval = setInterval(function() {
+      function sampleFreshScanTick() {
         var p = extractQuotexLivePrice();
-        if (p) livePriceSamples.push(p);
-      }, 250);
+        if (!p && window.__ISHAK_LAST_WS_PRICE__) p = window.__ISHAK_LAST_WS_PRICE__;
+        if (!p && window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice) {
+          p = window.__ISHAK_MARKET_STREAM__.currentPrice;
+        }
+        if (!p && window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
+          p = window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1].price;
+        }
+        if (p && p > 0) {
+          livePriceSamples.push(p);
+        }
+      }
+      sampleFreshScanTick();
+      var priceSamplerInterval = setInterval(sampleFreshScanTick, 70);
 
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();

@@ -192,6 +192,7 @@ export interface IndicatorMetrics {
   volatility: VolatilityInfo;
   multiTimeframe: MultiTimeframeInfo;
   pricePath: PricePathAnalysis;
+  roundNumber?: RoundNumberAnalysis;
   runningCandle: {
     open: number;
     high: number;
@@ -203,6 +204,19 @@ export interface IndicatorMetrics {
     isBullish: boolean;
   };
   regime: MarketRegimeType;
+}
+
+export interface RoundNumberAnalysis {
+  currentPrice: number;
+  nearestRes: number;
+  nearestSup: number;
+  distToRes: number;
+  distToSup: number;
+  isNearRoundRes: boolean;
+  isNearRoundSup: boolean;
+  majorLevel: number;
+  scoreImpact: number;
+  description: string;
 }
 
 export interface FactorAuditLog {
@@ -735,6 +749,66 @@ export function calculateSupportResistance(
     isBreakdownBelow,
     isRetestBounce,
     isRetestRejection,
+  };
+}
+
+// -------------------------------------------------------------
+// 2.5 ROUND NUMBER & PSYCHOLOGICAL SNR TRACKER
+// -------------------------------------------------------------
+
+export function calculateRoundNumbers(currentPrice: number, assetName: string = ''): RoundNumberAnalysis | null {
+  if (!currentPrice || currentPrice <= 0) return null;
+  let decimals = 5;
+  if (assetName && (assetName.includes('JPY') || currentPrice > 50)) decimals = 2;
+  if (currentPrice > 1000) decimals = 1;
+
+  const stepMajor = Math.pow(10, -(decimals - 2)); // 0.00100 for 5 dec, 1.00 for JPY
+  const stepHalf = stepMajor / 2;                  // 0.00050 for 5 dec, 0.50 for JPY
+  const stepMicro = stepMajor / 10;                // 0.00010 for 5 dec, 0.10 for JPY
+
+  const nearestMajorAbove = Math.ceil(currentPrice / stepMajor) * stepMajor;
+  const nearestMajorBelow = Math.floor(currentPrice / stepMajor) * stepMajor;
+  const nearestHalfAbove = Math.ceil(currentPrice / stepHalf) * stepHalf;
+  const nearestHalfBelow = Math.floor(currentPrice / stepHalf) * stepHalf;
+
+  const distToMajorRes = nearestMajorAbove - currentPrice;
+  const distToMajorSup = currentPrice - nearestMajorBelow;
+  const distToHalfRes = nearestHalfAbove - currentPrice;
+  const distToHalfSup = currentPrice - nearestHalfBelow;
+
+  const nearestRes = (distToHalfRes < distToMajorRes) ? nearestHalfAbove : nearestMajorAbove;
+  const nearestSup = (distToHalfSup < distToMajorSup) ? nearestHalfBelow : nearestMajorBelow;
+  const distToRes = nearestRes - currentPrice;
+  const distToSup = currentPrice - nearestSup;
+
+  const isNearRoundRes = distToRes <= (stepMicro * 1.6);
+  const isNearRoundSup = distToSup <= (stepMicro * 1.6);
+  const majorLevel = distToMajorRes < distToMajorSup ? nearestMajorAbove : nearestMajorBelow;
+
+  let scoreImpact = 0;
+  let description = '';
+
+  if (isNearRoundRes) {
+    scoreImpact = -28;
+    description = `Near Round Resistance Level ${nearestRes.toFixed(decimals)} (Bearish Rejection Bias)`;
+  } else if (isNearRoundSup) {
+    scoreImpact = 28;
+    description = `Near Round Support Level ${nearestSup.toFixed(decimals)} (Bullish Bounce Bias)`;
+  } else {
+    description = `Mid-Channel between Round Support ${nearestSup.toFixed(decimals)} & Resistance ${nearestRes.toFixed(decimals)}`;
+  }
+
+  return {
+    currentPrice,
+    nearestRes: parseFloat(nearestRes.toFixed(decimals)),
+    nearestSup: parseFloat(nearestSup.toFixed(decimals)),
+    distToRes: parseFloat(distToRes.toFixed(decimals)),
+    distToSup: parseFloat(distToSup.toFixed(decimals)),
+    isNearRoundRes,
+    isNearRoundSup,
+    majorLevel: parseFloat(majorLevel.toFixed(decimals)),
+    scoreImpact,
+    description,
   };
 }
 
@@ -1388,6 +1462,7 @@ export function evaluateMarketData(
 
   const structure = analyzeMarketStructure(workingCandles);
   const sr = calculateSupportResistance(workingCandles, 25);
+  const roundNumber = calculateRoundNumbers(currentPrice);
   const pa = analyzePriceAction(currentCandle, prevCandle, ema9, ema21, { resistance: sr.resistance, support: sr.support });
   const divergence = detectMomentumDivergence(workingCandles, rsiSeries, macdData.series.hist);
 
@@ -1452,6 +1527,17 @@ export function evaluateMarketData(
   const neutralFactors: string[] = [];
   let buyScore = 0;
   let sellScore = 0;
+
+  // 🎯 Round Number Tracker (Institutional Psychological SNR Levels)
+  if (roundNumber) {
+    if (roundNumber.isNearRoundRes) {
+      sellScore += 28;
+      downFactors.push(`Near Round Resistance Level ${roundNumber.nearestRes} (Rejection Zone) [+28]`);
+    } else if (roundNumber.isNearRoundSup) {
+      buyScore += 28;
+      upFactors.push(`Near Round Support Level ${roundNumber.nearestSup} (Bounce Zone) [+28]`);
+    }
+  }
 
   // Add Price-Path Analysis and QQE directly into scoring ONLY for timeframes > 15s
   // For 5s & 10s ultra-fast trades, live ticks and active candle dynamics must drive the decision!
@@ -1919,6 +2005,7 @@ export function evaluateMarketData(
         description: 'Multi-Timeframe Aligned',
       },
       pricePath,
+      roundNumber: roundNumber || undefined,
       runningCandle: runningCandleObj,
       regime,
     },

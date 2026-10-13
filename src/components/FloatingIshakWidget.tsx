@@ -6,6 +6,7 @@ import { Search, ShieldAlert, Sparkles, KeyRound, Cpu, Database, Zap, Activity }
 import { supabaseService } from '../lib/supabaseService';
 import { evaluateMarketData, Candle } from '../utils/marketAnalysisEngine';
 import { getBackgroundMarketData } from '../utils/backgroundMarketStream';
+import { IshakRoundNumberTerminal } from './IshakRoundNumberTerminal';
 
 interface FloatingIshakWidgetProps {
   soundEnabled: boolean;
@@ -66,6 +67,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const [flySignal, setFlySignal] = useState<'UP' | 'DOWN' | null>(null);
 
   const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
+  const [botMode, setBotMode] = useState<'CONFLUENCE' | 'ROUND_NUMBER'>(() => {
+    try {
+      return (localStorage.getItem('ishak_active_mode') as 'CONFLUENCE' | 'ROUND_NUMBER') || 'CONFLUENCE';
+    } catch (e) {
+      return 'CONFLUENCE';
+    }
+  });
 
   // Expiration countdown
   const [remainingTimeStr, setRemainingTimeStr] = useState<string>('');
@@ -183,6 +191,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.key) {
+          parsed.verified = true;
           setActiveLicense(parsed);
           setLicenseInput(parsed.key);
           return;
@@ -195,6 +204,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         duration: '30d',
         traderId: 'VIP_SIMULATOR',
         tier: 'VIP',
+        verified: true,
       };
       localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(simLic));
       setActiveLicense(simLic);
@@ -376,6 +386,19 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       setShowKeyModal(true);
       showToast('⚠️ অনুগ্রহ করে প্রথমে আপনার VIP লাইসেন্স কি ভেরিফাই করুন!', true);
       return;
+    }
+
+    if (botMode === 'ROUND_NUMBER') {
+      const pill = document.getElementById('minimizedPill') as HTMLElement | null;
+      if (pill && pill.style.display !== 'none') {
+        pill.click();
+        return;
+      }
+      const startBtn = document.getElementById('btnStart') as HTMLButtonElement | null;
+      if (startBtn && !startBtn.disabled) {
+        startBtn.click();
+        return;
+      }
     }
 
     // Check 2: LIVE CLOUD LICENSE VERIFICATION WITH SUPABASE
@@ -707,6 +730,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           duration: data.duration || '30d',
           traderId: '',
           tier: data.tier || 'VIP',
+          verified: true,
         };
         localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(lic));
         setActiveLicense(lic);
@@ -1029,6 +1053,42 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
               <button
                 onClick={() => {
+                  const next = botMode === 'ROUND_NUMBER' ? 'CONFLUENCE' : 'ROUND_NUMBER';
+                  setBotMode(next);
+                  try {
+                    localStorage.setItem('ishak_active_mode', next);
+                  } catch (e) {}
+                  setShowHub(false);
+                  showToast(
+                    next === 'ROUND_NUMBER'
+                      ? '✅ SWITCHED TO: ISHAK VIP ROUND CONTROLLER!'
+                      : '✅ SWITCHED TO: ISHAK VIP CONFLUENCE AI SCANNER!',
+                    false
+                  );
+                }}
+                className={`w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${
+                  botMode === 'ROUND_NUMBER'
+                    ? 'border-t border-t-amber-400/90 shadow-[0_6px_22px_rgba(245,158,11,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                    : 'border-t border-t-cyan-300/40 hover:border-t-cyan-300/80'
+                }`}
+              >
+                <span className="text-gray-100 font-semibold flex items-center gap-2">
+                  <span className="text-base group-hover:scale-110 transition-transform">🔄</span>
+                  <span>SWITCH MODE</span>
+                </span>
+                <b
+                  className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
+                    botMode === 'ROUND_NUMBER'
+                      ? 'text-amber-300 bg-gradient-to-b from-amber-400/25 to-amber-950/70 border-t-amber-300/70'
+                      : 'text-cyan-300 bg-gradient-to-b from-cyan-400/20 to-indigo-950/70 border-t-cyan-300/60'
+                  }`}
+                >
+                  {botMode === 'ROUND_NUMBER' ? '⚡ [2] ROUND SNR' : '🎯 [1] CONFLUENCE'}
+                </b>
+              </button>
+
+              <button
+                onClick={() => {
                   setShowHub(false);
                   setShowKeyModal(true);
                 }}
@@ -1327,6 +1387,23 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 5. ⚡ ISHAK VIP ROUND CONTROLLER TERMINAL (SWITCH MODE) */}
+      {botMode === 'ROUND_NUMBER' && (
+        <IshakRoundNumberTerminal
+          isLicenseVerified={Boolean(activeLicense && activeLicense.key && (!activeLicense.exp || activeLicense.exp > Date.now()))}
+          onClose={() => {
+            setBotMode('CONFLUENCE');
+            try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}
+            showToast('✅ SWITCHED TO: CONFLUENCE AI SCANNER MODE!', false);
+          }}
+          onSwitchMode={() => {
+            setBotMode('CONFLUENCE');
+            try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}
+            showToast('✅ SWITCHED TO: CONFLUENCE AI SCANNER MODE!', false);
+          }}
+        />
       )}
     </>
   );

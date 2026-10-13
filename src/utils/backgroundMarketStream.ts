@@ -108,7 +108,11 @@ export function startBackgroundMarketStream() {
   tickerTimer = setInterval(() => {
     tickCount++;
     const now = Date.now();
-    state.currentPrice = getHarmonicPrice(now);
+    // Prioritize real intercepted broker WebSocket price if available
+    const liveWs = (typeof window !== 'undefined' && typeof window.__ISHAK_LAST_WS_PRICE__ === 'number' && window.__ISHAK_LAST_WS_PRICE__ > 0)
+      ? window.__ISHAK_LAST_WS_PRICE__
+      : null;
+    state.currentPrice = liveWs || getHarmonicPrice(now);
 
     // Push tick
     state.liveTicks.push({ price: state.currentPrice, time: now });
@@ -143,7 +147,9 @@ export function startBackgroundMarketStream() {
     state.lastUpdate = now;
 
     if (typeof window !== 'undefined') {
-      window.__ISHAK_LAST_WS_PRICE__ = state.currentPrice;
+      if (!liveWs) {
+        window.__ISHAK_LAST_WS_PRICE__ = state.currentPrice;
+      }
       window.__ISHAK_LIVE_TICKS__ = state.liveTicks;
     }
   }, 100);
@@ -177,6 +183,11 @@ export function getBackgroundMarketData(): {
     startBackgroundMarketStream();
   }
 
+  // Prioritize real intercepted background candles
+  const bgCandles = (typeof window !== 'undefined' && (window as any).__ISHAK_BACKGROUND_CANDLES__ && (window as any).__ISHAK_BACKGROUND_CANDLES__.length >= 3)
+    ? (window as any).__ISHAK_BACKGROUND_CANDLES__
+    : state.candles;
+
   const ticks = state.liveTicks.map((t) => t.price);
   if (ticks.length === 0 && state.currentPrice > 0) {
     ticks.push(state.currentPrice);
@@ -184,7 +195,7 @@ export function getBackgroundMarketData(): {
 
   return {
     currentPrice: state.currentPrice,
-    candles: [...state.candles],
+    candles: [...bgCandles],
     ticks,
   };
 }

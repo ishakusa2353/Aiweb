@@ -44,88 +44,378 @@ javascript:(function(){
   window.__ISHAK_LATENCY_MS__ = window.__ISHAK_LATENCY_MS__ || 45;
 
   (function() {
-    // 1. WebSocket Hook: Captures real-time Quotex/PocketOption depth & tick frames
-    if (!window.__ISHAK_WS_HOOKED__) {
-      window.__ISHAK_WS_HOOKED__ = true;
-      try {
-        var OrigWS = window.WebSocket;
-        if (OrigWS && !OrigWS.__ISHAK_HOOKED__) {
-          var WSWrapper = function(url, protocols) {
-            var urlStr = String(url || '');
-            if (urlStr.includes('vite') || urlStr.includes('ais-') || urlStr.includes('localhost') || urlStr.includes('127.0.0.1')) {
-              return protocols !== undefined ? new OrigWS(url, protocols) : new OrigWS(url);
-            }
-            var ws = protocols !== undefined ? new OrigWS(url, protocols) : new OrigWS(url);
-            try {
-              ws.addEventListener('message', function(ev) {
-                try {
-                  var data = ev.data;
-                  if (typeof data === 'string') {
-                    if (data.includes('price') || data.includes('rate') || data.includes('quote') || data.includes('tick')) {
-                      var m = data.match(/"price"\s*:\s*([\d\.]+)/) ||
-                              data.match(/"rate"\s*:\s*([\d\.]+)/) ||
-                              data.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
-                              data.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
-                      if (m && m[1]) {
-                        var p = parseFloat(m[1]);
-                        if (!isNaN(p) && p > 0.00001 && p < 1000000) {
-                          window.__ISHAK_LAST_WS_PRICE__ = p;
-                          window.__ISHAK_LIVE_TICKS__.push({ price: p, time: Date.now() });
-                          if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
-                        }
-                      }
-                    }
-                  }
-                } catch(err){}
-              });
-            } catch(e){}
-            return ws;
-          };
-          WSWrapper.prototype = OrigWS.prototype;
-          try {
-            Object.assign(WSWrapper, OrigWS);
-            Object.setPrototypeOf(WSWrapper, OrigWS);
-          } catch(e) {}
-          WSWrapper.__ISHAK_HOOKED__ = true;
-          window.WebSocket = WSWrapper;
-        }
-      } catch(e){}
+  // 🛰️ UNIVERSAL HIGH-SPEED BROKER WEBSOCKET & BACKGROUND CHART INTERCEPTOR
+  // Captures pre-existing and dynamic Quotex/Pocket Option WebSockets, React Fiber trees,
+  // real-time tick frames, candle OHLC packets, and active chart asset switches.
+  window.__ISHAK_ACTIVE_SOCKETS__ = window.__ISHAK_ACTIVE_SOCKETS__ || new Set();
+  window.__ISHAK_ASSET_PRICES__ = window.__ISHAK_ASSET_PRICES__ || {};
+  window.__ISHAK_BACKGROUND_CANDLES__ = window.__ISHAK_BACKGROUND_CANDLES__ || [];
+  window.__ISHAK_LAST_DETECTED_ASSET__ = window.__ISHAK_LAST_DETECTED_ASSET__ || null;
+  window.__ISHAK_LOCKED_ASSET__ = window.__ISHAK_LOCKED_ASSET__ || null;
+  window.__ISHAK_CURRENT_ASSET__ = window.__ISHAK_CURRENT_ASSET__ || null;
+  window.__ISHAK_LIVE_TICKS__ = window.__ISHAK_LIVE_TICKS__ || [];
+  window.__ISHAK_LAST_WS_PRICE__ = window.__ISHAK_LAST_WS_PRICE__ || null;
+  window.__ISHAK_LAST_PRICE_TIME__ = window.__ISHAK_LAST_PRICE_TIME__ || 0;
+  window.__ISHAK_SERVER_OFFSET_MS__ = window.__ISHAK_SERVER_OFFSET_MS__ || 0;
+  window.__ISHAK_LATENCY_MS__ = window.__ISHAK_LATENCY_MS__ || 45;
 
-      // Hook existing WebSocket instances via prototype.send
-      try {
-        if (window.WebSocket && window.WebSocket.prototype && !window.WebSocket.prototype.__ISHAK_SEND_HOOKED__) {
-          window.WebSocket.prototype.__ISHAK_SEND_HOOKED__ = true;
-          var origSend = window.WebSocket.prototype.send;
-          window.WebSocket.prototype.send = function(data) {
-            if (!this.__ishak_listener_added) {
-              this.__ishak_listener_added = true;
-              try {
-                this.addEventListener('message', function(ev) {
-                  try {
-                    var d = ev.data;
-                    if (typeof d === 'string' && (d.includes('price') || d.includes('rate') || d.includes('quote') || d.includes('tick'))) {
-                      var m = d.match(/"price"\s*:\s*([\d\.]+)/) ||
-                              d.match(/"rate"\s*:\s*([\d\.]+)/) ||
-                              d.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
-                              d.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
-                      if (m && m[1]) {
-                        var p = parseFloat(m[1]);
-                        if (!isNaN(p) && p > 0.00001 && p < 1000000) {
-                          window.__ISHAK_LAST_WS_PRICE__ = p;
-                          window.__ISHAK_LIVE_TICKS__.push({ price: p, time: Date.now() });
-                          if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
-                        }
-                      }
-                    }
-                  } catch(err){}
-                });
-              } catch(e){}
+  function normalizeBrokerAsset(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    var clean = raw.trim().replace(/\d{1,3}\s*%/g, '');
+    var isOtc = /otc/i.test(clean) || clean.toLowerCase().includes('_otc') || clean.toLowerCase().includes('(otc)');
+    clean = clean.replace(/_?otc/gi, '').replace(/[^a-zA-Z0-9\/]/g, '').toUpperCase();
+    if (clean.includes('/')) {
+      var parts = clean.split('/');
+      if (parts[0].length >= 3 && parts[1].length >= 3) {
+        return parts[0] + '/' + parts[1] + (isOtc ? ' (OTC)' : '');
+      }
+    }
+    if (clean.length === 6) {
+      return clean.slice(0, 3) + '/' + clean.slice(3) + (isOtc ? ' (OTC)' : '');
+    }
+    if (clean.length > 6) {
+      return clean.slice(0, 3) + '/' + clean.slice(3, 6) + (isOtc ? ' (OTC)' : '');
+    }
+    return clean + (isOtc ? ' (OTC)' : '');
+  }
+
+  function processBrokerPacket(data) {
+    if (!data) return;
+    try {
+      var str = typeof data === 'string' ? data : (data instanceof ArrayBuffer ? new TextDecoder().decode(data) : '');
+      if (!str) return;
+
+      if (/"deal|"order|"trade|"balance|"user|"auth|"profile|"notification|"history/i.test(str)) {
+        return;
+      }
+
+      // 1. Chart / Symbol Switch Sniffer
+      var switchMatch = str.match(/\[\s*"(?:chart\/asset|sub|asset|change-symbol|change_asset|instruments\/change|subscribe|live)"\s*,\s*"([A-Za-z0-9_\-\/]{4,15})"/i) ||
+                        str.match(/"(?:asset|symbol|pair)"\s*:\s*"([A-Za-z0-9_\-\/]{4,15})"/i);
+      if (switchMatch && switchMatch[1]) {
+        var switchedAsset = normalizeBrokerAsset(switchMatch[1]);
+        if (switchedAsset && switchedAsset !== window.__ISHAK_CURRENT_ASSET__) {
+          window.__ISHAK_CURRENT_ASSET__ = switchedAsset;
+          window.__ISHAK_LAST_DETECTED_ASSET__ = switchedAsset;
+          window.__ISHAK_LOCKED_ASSET__ = switchedAsset;
+          window.__ISHAK_BACKGROUND_CANDLES__ = [];
+          window.__ISHAK_LIVE_TICKS__ = [];
+        }
+      }
+
+      // 2. Candle OHLC Frame Sniffer: [asset, timestamp, open, high, low, close]
+      var candleMatch = str.match(/\[\s*"([A-Za-z0-9_\-\/]{4,16})"\s*,\s*\d{9,13}\s*,\s*([0-9\.]+)\s*,\s*([0-9\.]+)\s*,\s*([0-9\.]+)\s*,\s*([0-9]+(?:\.[0-9]+)?)\s*\]/);
+      if (candleMatch) {
+        var cAsset = normalizeBrokerAsset(candleMatch[1]);
+        var cOpen = parseFloat(candleMatch[2]);
+        var cHigh = parseFloat(candleMatch[3]);
+        var cLow = parseFloat(candleMatch[4]);
+        var cClose = parseFloat(candleMatch[5]);
+        if (!isNaN(cClose) && cClose > 0) {
+          if (!window.__ISHAK_CURRENT_ASSET__) {
+            window.__ISHAK_CURRENT_ASSET__ = cAsset;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = cAsset;
+          }
+          if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === cAsset) {
+            window.__ISHAK_LAST_WS_PRICE__ = cClose;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_ASSET_PRICES__[cAsset] = cClose;
+            window.__ISHAK_LIVE_TICKS__.push({ price: cClose, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+
+            window.__ISHAK_BACKGROUND_CANDLES__.push({
+              time: Date.now(),
+              open: cOpen,
+              high: cHigh,
+              low: cLow,
+              close: cClose
+            });
+            if (window.__ISHAK_BACKGROUND_CANDLES__.length > 60) window.__ISHAK_BACKGROUND_CANDLES__.shift();
+          }
+        }
+      }
+
+      // 3. Tick Frame Sniffer: [asset, timestamp, price]
+      var tickMatch = str.match(/\[\s*"([A-Za-z0-9_\-\/]{4,16})"\s*,\s*\d{9,13}\s*,\s*([0-9]+(?:\.[0-9]+)?)/);
+      if (tickMatch) {
+        var tAsset = normalizeBrokerAsset(tickMatch[1]);
+        var tPrice = parseFloat(tickMatch[2]);
+        if (!isNaN(tPrice) && tPrice > 0) {
+          if (!window.__ISHAK_CURRENT_ASSET__) {
+            window.__ISHAK_CURRENT_ASSET__ = tAsset;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = tAsset;
+          }
+          if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === tAsset) {
+            window.__ISHAK_LAST_WS_PRICE__ = tPrice;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_ASSET_PRICES__[tAsset] = tPrice;
+            window.__ISHAK_LIVE_TICKS__.push({ price: tPrice, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+            if (window.__ISHAK_BACKGROUND_CANDLES__.length > 0) {
+              var curC = window.__ISHAK_BACKGROUND_CANDLES__[window.__ISHAK_BACKGROUND_CANDLES__.length - 1];
+              curC.close = tPrice;
+              curC.high = Math.max(curC.high, tPrice);
+              curC.low = Math.min(curC.low, tPrice);
+            } else {
+              window.__ISHAK_BACKGROUND_CANDLES__.push({ time: Date.now(), open: tPrice, high: tPrice, low: tPrice, close: tPrice });
             }
-            return origSend.apply(this, arguments);
+          }
+        }
+      }
+
+      // 4. JSON Quote Objects Sniffer
+      var jsonMatch = str.match(/"(?:asset|symbol)"\s*:\s*"([A-Za-z0-9_\-\/]{4,16})"[^}]*?"(?:price|close)"\s*:\s*([0-9]+(?:\.[0-9]+)?)/i) ||
+                      str.match(/"(?:price|close)"\s*:\s*([0-9]+(?:\.[0-9]+)?)[^}]*?"(?:asset|symbol)"\s*:\s*"([A-Za-z0-9_\-\/]{4,16})"/i);
+      if (jsonMatch) {
+        var jAsset = normalizeBrokerAsset(jsonMatch[1]);
+        var jPrice = parseFloat(jsonMatch[2]);
+        if (!isNaN(jPrice) && jPrice > 0) {
+          if (!window.__ISHAK_CURRENT_ASSET__) {
+            window.__ISHAK_CURRENT_ASSET__ = jAsset;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = jAsset;
+          }
+          if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === jAsset) {
+            window.__ISHAK_LAST_WS_PRICE__ = jPrice;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_ASSET_PRICES__[jAsset] = jPrice;
+            window.__ISHAK_LIVE_TICKS__.push({ price: jPrice, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+          }
+        }
+      }
+
+      // 5. Generic Price/Rate Sniffer (fallback)
+      if (str.includes('price') || str.includes('rate') || str.includes('quote') || str.includes('tick')) {
+        var genM = str.match(/"price"\s*:\s*([\d\.]+)/) ||
+                   str.match(/"rate"\s*:\s*([\d\.]+)/) ||
+                   str.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
+                   str.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
+        if (genM && genM[1]) {
+          var gp = parseFloat(genM[1]);
+          if (!isNaN(gp) && gp > 0.00001 && gp < 1000000) {
+            window.__ISHAK_LAST_WS_PRICE__ = gp;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_LIVE_TICKS__.push({ price: gp, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+          }
+        }
+      }
+    } catch (err) {}
+  }
+
+  function attachSocketInterceptor(ws) {
+    if (!ws || ws.__ishak_hooked__) return;
+    try {
+      ws.__ishak_hooked__ = true;
+      window.__ISHAK_ACTIVE_SOCKETS__.add(ws);
+      ws.addEventListener('message', function(ev) {
+        processBrokerPacket(ev.data);
+      });
+      try {
+        var origOnMsg = ws.onmessage;
+        if (typeof origOnMsg === 'function' && !ws.__ishak_onmsg_wrapped__) {
+          ws.__ishak_onmsg_wrapped__ = true;
+          ws.onmessage = function(ev) {
+            processBrokerPacket(ev.data);
+            return origOnMsg.apply(this, arguments);
           };
         }
-      } catch(e){}
-    }
+      } catch (e) {}
+    } catch (e) {}
+  }
+
+  function discoverAndHookBrokerSockets() {
+    try {
+      var globalCandidates = ['socket', 'ws', 'websocket', 'conn', 'connection', 'chart', 'trading', 'quotex', 'qx', 'po', 'pocket'];
+      for (var gi = 0; gi < globalCandidates.length; gi++) {
+        var obj = window[globalCandidates[gi]];
+        if (obj) {
+          if (obj instanceof window.WebSocket || (obj.readyState !== undefined && typeof obj.send === 'function')) {
+            attachSocketInterceptor(obj);
+          }
+          if (obj.ws && (obj.ws instanceof window.WebSocket || (obj.ws.readyState !== undefined && typeof obj.ws.send === 'function'))) {
+            attachSocketInterceptor(obj.ws);
+          }
+          if (obj.transport && obj.transport.ws) {
+            attachSocketInterceptor(obj.transport.ws);
+          }
+          if (obj.socket && obj.socket.ws) {
+            attachSocketInterceptor(obj.socket.ws);
+          }
+        }
+      }
+
+      var rootEl = document.getElementById('root') || document.getElementById('app') || document.body;
+      if (rootEl && document.createTreeWalker) {
+        var walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT);
+        var currNode = walker.currentNode;
+        var inspectedCount = 0;
+        var visitedObjects = new Set();
+
+        while (currNode && inspectedCount < 120) {
+          inspectedCount++;
+          for (var key in currNode) {
+            if (key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')) {
+              var fiber = currNode[key];
+              var depth = 0;
+              while (fiber && depth < 25) {
+                depth++;
+                var checkItem = function(target) {
+                  if (!target || typeof target !== 'object' || visitedObjects.has(target)) return;
+                  visitedObjects.add(target);
+                  if (target instanceof window.WebSocket || (target.readyState !== undefined && typeof target.send === 'function')) {
+                    attachSocketInterceptor(target);
+                  }
+                  if (target.ws && (target.ws instanceof window.WebSocket || (target.ws.readyState !== undefined && typeof target.ws.send === 'function'))) {
+                    attachSocketInterceptor(target.ws);
+                  }
+                  if (target.transport && target.transport.ws) {
+                    attachSocketInterceptor(target.transport.ws);
+                  }
+                  if (target.socket && target.socket.ws) {
+                    attachSocketInterceptor(target.socket.ws);
+                  }
+                };
+
+                if (fiber.memoizedProps) checkItem(fiber.memoizedProps);
+                if (fiber.memoizedState) checkItem(fiber.memoizedState);
+                if (fiber.stateNode) checkItem(fiber.stateNode);
+                fiber = fiber.child || fiber.return;
+              }
+            }
+          }
+          currNode = walker.nextNode();
+        }
+      }
+    } catch (err) {}
+  }
+
+  (function initBrokerWebSocketHooks() {
+    if (window.__ISHAK_WS_HOOKED__) return;
+    window.__ISHAK_WS_HOOKED__ = true;
+    try {
+      var RealWS = window.WebSocket;
+      if (RealWS && RealWS.prototype) {
+        var origAddEvt = RealWS.prototype.addEventListener;
+        RealWS.prototype.addEventListener = function(type, listener, options) {
+          attachSocketInterceptor(this);
+          return origAddEvt.apply(this, arguments);
+        };
+
+        var origSend = RealWS.prototype.send;
+        RealWS.prototype.send = function(data) {
+          attachSocketInterceptor(this);
+          try {
+            if (typeof data === 'string') {
+              var mOut = data.match(/\[\s*"(?:chart\/asset|sub|asset|change-symbol|change_asset|instruments\/change|subscribe|live)"\s*,\s*"([A-Za-z0-9_\-\/]{4,15})"/i) ||
+                         data.match(/"(?:asset|symbol|pair)"\s*:\s*"([A-Za-z0-9_\-\/]{4,15})"/i);
+              if (mOut && mOut[1]) {
+                var oAsset = normalizeBrokerAsset(mOut[1]);
+                if (oAsset) {
+                  window.__ISHAK_CURRENT_ASSET__ = oAsset;
+                  window.__ISHAK_LAST_DETECTED_ASSET__ = oAsset;
+                  window.__ISHAK_BACKGROUND_CANDLES__ = [];
+                  window.__ISHAK_LIVE_TICKS__ = [];
+                }
+              }
+            }
+          } catch(e){}
+          return origSend.apply(this, arguments);
+        };
+
+        try {
+          var desc = Object.getOwnPropertyDescriptor(RealWS.prototype, 'onmessage');
+          Object.defineProperty(RealWS.prototype, 'onmessage', {
+            configurable: true,
+            enumerable: true,
+            get: function() {
+              return desc ? desc.get.call(this) : this.__ishak_onmsg;
+            },
+            set: function(handler) {
+              attachSocketInterceptor(this);
+              var self = this;
+              var wrappedHandler = function(ev) {
+                processBrokerPacket(ev.data);
+                if (typeof handler === 'function') {
+                  return handler.apply(self, arguments);
+                }
+              };
+              this.__ishak_onmsg = wrappedHandler;
+              if (desc && desc.set) {
+                return desc.set.call(this, wrappedHandler);
+              }
+            }
+          });
+        } catch(e){}
+
+        var WSConstructor = function(url, protocols) {
+          var urlStr = String(url || '');
+          if (urlStr.includes('vite') || urlStr.includes('ais-') || urlStr.includes('localhost') || urlStr.includes('127.0.0.1')) {
+            return protocols !== undefined ? new RealWS(url, protocols) : new RealWS(url);
+          }
+          var instance = protocols !== undefined ? new RealWS(url, protocols) : new RealWS(url);
+          attachSocketInterceptor(instance);
+          return instance;
+        };
+        WSConstructor.prototype = RealWS.prototype;
+        try {
+          Object.assign(WSConstructor, RealWS);
+          Object.setPrototypeOf(WSConstructor, RealWS);
+        } catch(e){}
+        window.WebSocket = WSConstructor;
+      }
+    } catch(err){}
+
+    discoverAndHookBrokerSockets();
+    setInterval(discoverAndHookBrokerSockets, 1200);
+  })();
+
+  function scanBackgroundChart() {
+    try {
+      var allTabs = document.querySelectorAll(
+        '.header-sub__asset, .header-sub__asset-name, .tab-list__item--active, .tab-item.active, ' +
+        '.asset-select__button, [data-test="active-asset"], [data-test="asset-name"], .trading-chart__asset, .current-asset'
+      );
+      for (var ti = 0; ti < allTabs.length; ti++) {
+        var tEl = allTabs[ti];
+        if (tEl.closest('#ishak-trade-wrap') || tEl.closest('#ishak-hud-panel') || tEl.closest('.ishak-dialog-modal')) continue;
+        if (tEl.closest('[class*="deal"], [class*="order"], [class*="history"], [class*="trades"], [class*="positions"], [class*="leaderboard"]')) continue;
+        var r = tEl.getBoundingClientRect();
+        if (r.top >= 0 && r.top <= 200 && r.width >= 30) {
+          var txt = (tEl.innerText || tEl.textContent || '').trim();
+          var norm = validateAndNormalizeAsset(txt);
+          if (norm) {
+            window.__ISHAK_CURRENT_ASSET__ = norm;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = norm;
+            break;
+          }
+        }
+      }
+
+      var axisEls = document.querySelectorAll(
+        '.chart-axis-price, .chart-price-current, .axis-price-current, [class*="price-current"], ' +
+        '.current-quote, .deal-form__quote, .section-deal__rate, .deal-form__rate'
+      );
+      for (var ai = 0; ai < axisEls.length; ai++) {
+        var aEl = axisEls[ai];
+        if (aEl.closest('#ishak-trade-wrap') || aEl.closest('#ishak-hud-panel')) continue;
+        var aTxt = aEl.tagName === 'INPUT' ? (aEl.value || '') : (aEl.innerText || aEl.textContent || '');
+        if (aTxt.includes('%') || aTxt.includes('$') || aTxt.includes('€') || aTxt.includes('₹') || aTxt.includes('৳')) continue;
+        var mAx = aTxt.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
+        if (mAx) {
+          var ap = parseFloat(mAx[0].replace(/,/g, ''));
+          if (!isNaN(ap) && ap > 0.0001 && ap < 1000000) {
+            window.__ISHAK_LAST_WS_PRICE__ = ap;
+            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_LIVE_TICKS__.push({ price: ap, time: Date.now() });
+            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+            break;
+          }
+        }
+      }
+    } catch(err){}
+  }
+  setInterval(scanBackgroundChart, 400);
 
     // Helper: Safely ingest touch/telemetry data from qxtrxhost.com/api/v1/touch
     function processTouchPayload(data) {
@@ -331,84 +621,55 @@ javascript:(function(){
   // 📈 Quotex Live Price Extractor (Multi-Layer Resilient Precision)
   function extractQuotexLivePrice() {
     try {
-      // 1. Direct High-Priority Live Price Elements (Quotex, Pocket Option, TradingView, Mobile & Web)
+      // 1. Fresh High-Speed WebSocket Intercepted Price from background chart (< 3.5s old)
+      if (window.__ISHAK_LAST_WS_PRICE__ && window.__ISHAK_LAST_WS_PRICE__ > 0) {
+        if (!window.__ISHAK_LAST_PRICE_TIME__ || (Date.now() - window.__ISHAK_LAST_PRICE_TIME__ < 3500)) {
+          return window.__ISHAK_LAST_WS_PRICE__;
+        }
+      }
+
+      // 2. Direct Background Chart Axis & Deal Form Rates
       var directSelectors = [
+        '.chart-axis-price', '.chart-price-current', '.axis-price-current',
+        '.current-quote', '.deal-form__quote', '.quote-value',
+        '.section-deal__rate', '.deal-form__rate', '.rate-value', '.current-rate',
         '#ishak-live-price-val', '[data-live-price="true"]', '.ishak-live-price',
         '.header-sub__asset-rate', '.header-sub__asset-value', '.current-asset-price',
         '.tab--active .rate', '.tab--active [class*="rate"]', '.tab--active [class*="price"]',
         '.tabs__item--active .rate', '.tabs__item--active [class*="rate"]',
-        '.chart-axis-price', '.chart-price-current', '.axis-price-current',
-        '.current-price', '.current-quote',
-        '.section-deal__rate', '.deal-form__rate', '.rate-value', '.current-rate',
         '.trading-chart__price', '.chart__price', '.strike-price',
         '[class*="price-current"]', '[class*="current-price"]', '[class*="current-value"]',
         '[class*="currentPrice"]', '[class*="price_current"]', '[class*="axis-label"]',
-        '[class*="axis-item--current"]', '.deal-form__quote', '.quote-value',
+        '[class*="axis-item--current"]',
         '[data-test*="rate"]', '[data-test*="price"]', '[data-test*="quote"]',
         '[data-price]', '[data-rate]', '[class*="strike"]', '.chart-container [class*="price"]'
       ];
       for (var i = 0; i < directSelectors.length; i++) {
         var el = document.querySelector(directSelectors[i]);
         if (el) {
+          if (el.closest('#ishak-trade-wrap') || el.closest('#ishak-hud-panel')) continue;
           var txt = el.tagName === 'INPUT' ? (el.value || '') : (el.innerText || el.textContent || '');
+          if (txt.includes('%') || txt.includes('$') || txt.includes('€') || txt.includes('₹') || txt.includes('৳')) continue;
           var m = txt.match(/\b\d{1,6}(?:,\d{3})*(?:\.\d{2,6})\b/);
           if (m) {
             var num = parseFloat(m[0].replace(/,/g, ''));
-            if (!isNaN(num) && num > 0.00001 && num < 1000000) return num;
+            if (!isNaN(num) && num > 0.00001 && num < 1000000) {
+              window.__ISHAK_LAST_WS_PRICE__ = num;
+              window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+              return num;
+            }
           }
         }
       }
 
-      // 2. Running Candle DOM Attributes
-      var runCandle = document.querySelector('#ishak-running-candle, [data-running-candle="true"], .ishak-active-candle');
-      if (runCandle) {
-        var cClose = parseFloat(runCandle.getAttribute('data-close') || '');
-        if (!isNaN(cClose) && cClose > 0) return cClose;
-      }
-
-      // 3. Search Deal Form container
-      var dealForm = document.querySelector('.section-deal, .deal-form, aside.deal-form, .trade-panel');
-      if (dealForm) {
-        var els = dealForm.querySelectorAll('div, span, p, strong, b');
-        for (var j = 0; j < els.length; j++) {
-          var t = (els[j].innerText || els[j].textContent || '').trim();
-          if (t.includes('%') || t.includes('$') || t.includes('€') || t.includes('₹') || t.includes('৳')) continue;
-          var mNum = t.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
-          if (mNum) {
-            var p = parseFloat(mNum[0].replace(/,/g, ''));
-            if (!isNaN(p) && p > 0.0001 && p < 1000000) return p;
-          }
-        }
-      }
-
-      // 4. Quotex / TradingView SVG Y-Axis Labels
-      var svgTexts = document.querySelectorAll('svg text, .trading-chart svg text');
-      for (var s = svgTexts.length - 1; s >= 0; s--) {
-        var st = (svgTexts[s].textContent || '').trim();
-        var sm = st.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
-        if (sm) {
-          var sp = parseFloat(sm[0].replace(/,/g, ''));
-          if (!isNaN(sp) && sp > 0.0001 && sp < 1000000) return sp;
-        }
-      }
-
-      // 5. Document Title (e.g. "EUR/USD 1.08453 (OTC) | Quotex")
-      if (document.title) {
-        var mTitle = document.title.match(/\b(\d{1,6}(?:,\d{3})*\.\d{2,6})\b/);
-        if (mTitle) {
-          var tp = parseFloat(mTitle[1].replace(/,/g, ''));
-          if (!isNaN(tp) && tp > 0) return tp;
-        }
-      }
-
-      // 6. High-Speed WebSocket Intercepted Price
+      // 3. Fallback to last WebSocket price
       if (window.__ISHAK_LAST_WS_PRICE__ && window.__ISHAK_LAST_WS_PRICE__ > 0) {
         return window.__ISHAK_LAST_WS_PRICE__;
       }
 
-      // 7. Active Background Real-Time Market Stream
-      if (window.__ISHAK_MARKET_STREAM__ && window.__ISHAK_MARKET_STREAM__.currentPrice > 0) {
-        return window.__ISHAK_MARKET_STREAM__.currentPrice;
+      // 4. Fallback to tick buffer
+      if (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0) {
+        return window.__ISHAK_LIVE_TICKS__[window.__ISHAK_LIVE_TICKS__.length - 1].price;
       }
     } catch (e) {}
     return null;
@@ -576,15 +837,26 @@ javascript:(function(){
   // 🌐 Extract Live Market/Asset Name Directly from Screen (Quotex / Simulator)
   function extractQuotexAsset() {
     try {
-      // 1. Simulator / Custom DOM active asset
+      // 1. High-Priority WebSocket & Active Background Chart Sniffer
+      if (window.__ISHAK_CURRENT_ASSET__) {
+        return window.__ISHAK_CURRENT_ASSET__;
+      }
+      if (window.__ISHAK_LAST_DETECTED_ASSET__) {
+        return window.__ISHAK_LAST_DETECTED_ASSET__;
+      }
+
+      // 2. Simulator / Custom DOM active asset
       var simAsset = document.querySelector('.current-asset, [data-asset], #current-asset, .ishak-current-asset');
       if (simAsset) {
         var saTxt = (simAsset.getAttribute('data-asset') || simAsset.innerText || simAsset.textContent || '').trim();
         var valSim = validateAndNormalizeAsset(saTxt);
-        if (valSim) return valSim;
+        if (valSim) {
+          window.__ISHAK_CURRENT_ASSET__ = valSim;
+          return valSim;
+        }
       }
 
-      // 2. Quotex active tab & header sub asset selectors
+      // 3. Quotex active tab & header sub asset selectors
       var activeTabSelectors = [
         '.header-sub__asset-name',
         '.header-sub__asset',
@@ -599,38 +871,37 @@ javascript:(function(){
       for (var i = 0; i < activeTabSelectors.length; i++) {
         var el = document.querySelector(activeTabSelectors[i]);
         if (el) {
+          if (el.closest('#ishak-trade-wrap') || el.closest('#ishak-hud-panel')) continue;
           var txt = (el.innerText || el.textContent || '').trim();
           var validated = validateAndNormalizeAsset(txt);
-          if (validated) return validated;
+          if (validated) {
+            window.__ISHAK_CURRENT_ASSET__ = validated;
+            return validated;
+          }
         }
       }
 
-      // 3. Document Title match (e.g. "EUR/USD (OTC) | Quotex", "USD/BDT (OTC) | Quotex", "Bitcoin (OTC)")
+      // 4. Document Title match (e.g. "EUR/USD (OTC) | Quotex")
       if (document.title) {
         var docTitle = document.title;
         var titleMatch = docTitle.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?|[A-Za-z\s.-]+(\s*\(OTC\)))/i);
         if (titleMatch && titleMatch[1]) {
           var valTitle = validateAndNormalizeAsset(titleMatch[1]);
-          if (valTitle) return valTitle;
+          if (valTitle) {
+            window.__ISHAK_CURRENT_ASSET__ = valTitle;
+            return valTitle;
+          }
         }
       }
 
-      // 4. URL path / query (e.g. /trade/EURUSD_otc or ?asset=EURUSD_otc)
+      // 5. URL path / query
       var href = window.location.href || '';
       var urlMatch = href.match(/(?:trade\/|asset=|\/chart\/)([A-Za-z0-9_-]+)/i);
       if (urlMatch && urlMatch[1]) {
         var valUrl = validateAndNormalizeAsset(urlMatch[1]);
-        if (valUrl) return valUrl;
-      }
-
-      // 5. Deal Panel text scan
-      var dealPanel = document.querySelector('.deal-form, .section-deal, aside.deal-form');
-      if (dealPanel) {
-        var dText = dealPanel.innerText || '';
-        var mDeal = dText.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?)/);
-        if (mDeal && mDeal[1]) {
-          var valDeal = validateAndNormalizeAsset(mDeal[1]);
-          if (valDeal) return valDeal;
+        if (valUrl) {
+          window.__ISHAK_CURRENT_ASSET__ = valUrl;
+          return valUrl;
         }
       }
     } catch(e){}
@@ -2436,6 +2707,52 @@ javascript:(function(){
   // - Market Regime Detection (Trending Bullish, Trending Bearish, Ranging, Volatile)
   // - Signal Quality Filter & Symmetrical Decision
   // - ZERO Math.random(), ZERO hardcoded calls, ZERO 'market data not found' rejections
+  // 🎯 PRECISION ROUND NUMBER (SNR) TRACKER ENGINE
+  // Extracts institutional psychological levels (.000, .500, .00, .50),
+  // distance to support/resistance, rejection wicks, and breakout momentum.
+  function analyzeRoundNumbers(currentPrice, assetName) {
+    if (!currentPrice || currentPrice <= 0) return null;
+    var decimals = 5;
+    if (assetName && (assetName.includes('JPY') || currentPrice > 50)) decimals = 2;
+    if (currentPrice > 1000) decimals = 1;
+
+    var stepMajor = Math.pow(10, -(decimals - 2)); // 0.00100 for 5 dec, 1.00 for JPY
+    var stepHalf = stepMajor / 2;                  // 0.00050 for 5 dec, 0.50 for JPY
+    var stepMicro = stepMajor / 10;                // 0.00010 for 5 dec, 0.10 for JPY
+
+    var nearestMajorAbove = Math.ceil(currentPrice / stepMajor) * stepMajor;
+    var nearestMajorBelow = Math.floor(currentPrice / stepMajor) * stepMajor;
+    var nearestHalfAbove = Math.ceil(currentPrice / stepHalf) * stepHalf;
+    var nearestHalfBelow = Math.floor(currentPrice / stepHalf) * stepHalf;
+
+    var distToMajorRes = nearestMajorAbove - currentPrice;
+    var distToMajorSup = currentPrice - nearestMajorBelow;
+    var distToHalfRes = nearestHalfAbove - currentPrice;
+    var distToHalfSup = currentPrice - nearestHalfBelow;
+
+    var nearestRes = (distToHalfRes < distToMajorRes) ? nearestHalfAbove : nearestMajorAbove;
+    var nearestSup = (distToHalfSup < distToMajorSup) ? nearestHalfBelow : nearestMajorBelow;
+    var distToRes = nearestRes - currentPrice;
+    var distToSup = currentPrice - nearestSup;
+
+    var isNearRoundRes = distToRes <= (stepMicro * 1.6);
+    var isNearRoundSup = distToSup <= (stepMicro * 1.6);
+    var majorLevel = distToMajorRes < distToMajorSup ? nearestMajorAbove : nearestMajorBelow;
+
+    return {
+      currentPrice: currentPrice,
+      nearestRes: parseFloat(nearestRes.toFixed(decimals)),
+      nearestSup: parseFloat(nearestSup.toFixed(decimals)),
+      distToRes: parseFloat(distToRes.toFixed(decimals)),
+      distToSup: parseFloat(distToSup.toFixed(decimals)),
+      isNearRoundRes: isNearRoundRes,
+      isNearRoundSup: isNearRoundSup,
+      majorLevel: parseFloat(majorLevel.toFixed(decimals)),
+      decimals: decimals,
+      stepMicro: stepMicro
+    };
+  }
+
   function evaluateMarketConfluence(priceSamples, durationSec) {
     var dur = durationSec || tradeDuration || 5;
     var durLabel = (dur >= 60) ? (dur / 60) + 'M' : dur + 'S';
@@ -2793,6 +3110,33 @@ javascript:(function(){
       sellScore += 16;
       structDesc += ' | Bearish BOS (Swing Low Breakdown)';
       downFactorsList.push('Bearish BOS (Swing Low Breakdown) [+16]');
+    }
+
+    // 🎯 Round Number Tracker (Institutional Psychological SNR Levels)
+    var activeAssetForRound = (typeof currentAsset !== 'undefined' && currentAsset) ? currentAsset : (window.__ISHAK_CURRENT_ASSET__ || '');
+    var roundInfo = analyzeRoundNumbers(entryPrice, activeAssetForRound);
+    if (roundInfo) {
+      if (roundInfo.isNearRoundRes) {
+        if (upperWick >= candleRange * 0.18 || tickVelocity <= 0) {
+          sellScore += 35;
+          srPattern = 'Round Number Resistance Rejection (' + roundInfo.nearestRes + ')';
+          downFactorsList.push('Round Number Resistance Rejection at ' + roundInfo.nearestRes + ' [+35]');
+        } else if (tickVelocity > 0 && isUp) {
+          buyScore += 30;
+          srPattern = 'Round Number Breakout Push (' + roundInfo.nearestRes + ')';
+          upFactorsList.push('Round Number Resistance Breakout Momentum ' + roundInfo.nearestRes + ' [+30]');
+        }
+      } else if (roundInfo.isNearRoundSup) {
+        if (lowerWick >= candleRange * 0.18 || tickVelocity >= 0) {
+          buyScore += 35;
+          srPattern = 'Round Number Support Bounce (' + roundInfo.nearestSup + ')';
+          upFactorsList.push('Round Number Support Bounce at ' + roundInfo.nearestSup + ' [+35]');
+        } else if (tickVelocity < 0 && isDown) {
+          sellScore += 30;
+          srPattern = 'Round Number Breakdown Push (' + roundInfo.nearestSup + ')';
+          downFactorsList.push('Round Number Support Breakdown Momentum ' + roundInfo.nearestSup + ' [+30]');
+        }
+      }
     }
 
     // 5. Support & Resistance Zones (Rolling Pivots, Breakout & Retest)
