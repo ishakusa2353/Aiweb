@@ -29,16 +29,21 @@ declare global {
 // Pure harmonic price model generating realistic two-way market cycles
 export function getHarmonicPrice(timeMs: number): number {
   const tSec = timeMs / 1000;
-  const basePrice = 0.57250;
+  let basePrice = 0.57250;
+  if (typeof window !== 'undefined' && typeof window.__ISHAK_LAST_WS_PRICE__ === 'number' && window.__ISHAK_LAST_WS_PRICE__ > 0) {
+    basePrice = window.__ISHAK_LAST_WS_PRICE__;
+  }
+  const scale = basePrice * 0.00035;
   // 40s Macro cycle (~20s bull / ~20s bear)
-  const macro = Math.sin(tSec * (2 * Math.PI / 40)) * 0.00022;
+  const macro = Math.sin(tSec * (2 * Math.PI / 40)) * scale;
   // 16s Intermediate momentum cycle (~8s bull / ~8s bear)
-  const inter = Math.sin(tSec * (2 * Math.PI / 16)) * 0.00012;
+  const inter = Math.sin(tSec * (2 * Math.PI / 16)) * (scale * 0.55);
   // 6s Micro tick volatility cycle (~3s bull / ~3s bear)
-  const micro = Math.cos(tSec * (2 * Math.PI / 6)) * 0.00005;
+  const micro = Math.cos(tSec * (2 * Math.PI / 6)) * (scale * 0.25);
   // Dynamic micro tick noise
-  const jitter = Math.sin(tSec * 13) * 0.000012;
-  return parseFloat((basePrice + macro + inter + micro + jitter).toFixed(5));
+  const jitter = Math.sin(tSec * 13) * (scale * 0.08);
+  const decimals = basePrice > 50 ? 2 : 5;
+  return parseFloat((basePrice + macro + inter + micro + jitter).toFixed(decimals));
 }
 
 // Generate realistic initial 30 candle history with authentic alternating Bull and Bear market cycles
@@ -100,6 +105,20 @@ function ensureStreamInitialized(): MarketStreamState {
   return state;
 }
 
+let simulatedOverridePrice: number | null = null;
+
+export function setSimulatedMarketPrice(price: number | null) {
+  simulatedOverridePrice = price;
+  if (typeof window !== 'undefined') {
+    if (price !== null) {
+      window.__ISHAK_LAST_WS_PRICE__ = price;
+      if (window.__ISHAK_LIVE_TICKS__) {
+        window.__ISHAK_LIVE_TICKS__.push({ price, time: Date.now() });
+      }
+    }
+  }
+}
+
 // Start continuous 100ms background ticker
 export function startBackgroundMarketStream() {
   if (tickerTimer) return;
@@ -108,10 +127,12 @@ export function startBackgroundMarketStream() {
   tickerTimer = setInterval(() => {
     tickCount++;
     const now = Date.now();
-    // Prioritize real intercepted broker WebSocket price if available
-    const liveWs = (typeof window !== 'undefined' && typeof window.__ISHAK_LAST_WS_PRICE__ === 'number' && window.__ISHAK_LAST_WS_PRICE__ > 0)
-      ? window.__ISHAK_LAST_WS_PRICE__
-      : null;
+    // Prioritize simulated override or real intercepted broker WebSocket price if available
+    const liveWs = (simulatedOverridePrice !== null)
+      ? simulatedOverridePrice
+      : ((typeof window !== 'undefined' && typeof window.__ISHAK_LAST_WS_PRICE__ === 'number' && window.__ISHAK_LAST_WS_PRICE__ > 0)
+          ? window.__ISHAK_LAST_WS_PRICE__
+          : null);
     state.currentPrice = liveWs || getHarmonicPrice(now);
 
     // Push tick

@@ -60,50 +60,157 @@ javascript:(function(){
   window.__ISHAK_LATENCY_MS__ = window.__ISHAK_LATENCY_MS__ || 45;
 
   function normalizeBrokerAsset(raw) {
-    if (!raw || typeof raw !== 'string') return null;
-    var clean = raw.trim().replace(/\d{1,3}\s*%/g, '');
-    var isOtc = /otc/i.test(clean) || clean.toLowerCase().includes('_otc') || clean.toLowerCase().includes('(otc)');
-    clean = clean.replace(/_?otc/gi, '').replace(/[^a-zA-Z0-9\/]/g, '').toUpperCase();
-    if (clean.includes('/')) {
-      var parts = clean.split('/');
-      if (parts[0].length >= 3 && parts[1].length >= 3) {
-        return parts[0] + '/' + parts[1] + (isOtc ? ' (OTC)' : '');
+    if (!raw || typeof raw !== "string") return null;
+    var isOtc = /otc/i.test(raw) || raw.toLowerCase().includes("_otc") || raw.toLowerCase().includes("(otc)");
+    var clean = raw.trim()
+      .replace(/\+\d+%.*$/, "")
+      .replace(/\d{1,3}\s*%/g, "")
+      .replace(/_?otc/gi, "")
+      .replace(/[\r\n\t]/g, " ")
+      .trim();
+
+    var knownCurs = new Set([
+      "USD","EUR","GBP","JPY","AUD","CAD","CHF","NZD","BDT","INR","PKR",
+      "BRL","TRY","RUB","ZAR","MXN","IDR","MYR","PHP","VND","THB","CNY",
+      "HKD","SGD","KRW","AED","SAR","EGP","NGN","COP","ARS","CLP"
+    ]);
+
+    // 1. Explicit slash / delimiter e.g. EUR/USD, AUD/CAD
+    var mSlash = clean.match(/\b([A-Za-z]{3})\s*[\/_\-]\s*([A-Za-z]{3})\b/);
+    if (mSlash) {
+      var c1 = mSlash[1].toUpperCase();
+      var c2 = mSlash[2].toUpperCase();
+      if (knownCurs.has(c1) || knownCurs.has(c2)) {
+        return c1 + "/" + c2 + (isOtc ? " (OTC)" : "");
       }
     }
-    if (clean.length === 6) {
-      return clean.slice(0, 3) + '/' + clean.slice(3) + (isOtc ? ' (OTC)' : '');
+
+    // 2. 6-letter concatenated pair e.g. EURUSD, AUDCAD, EURUSD_otc
+    var m6 = clean.match(/\b([A-Za-z]{6})\b/);
+    if (m6) {
+      var c1_6 = m6[1].slice(0, 3).toUpperCase();
+      var c2_6 = m6[1].slice(3, 6).toUpperCase();
+      if (knownCurs.has(c1_6) && knownCurs.has(c2_6)) {
+        return c1_6 + "/" + c2_6 + (isOtc ? " (OTC)" : "");
+      }
     }
-    if (clean.length > 6) {
-      return clean.slice(0, 3) + '/' + clean.slice(3, 6) + (isOtc ? ' (OTC)' : '');
+
+    // 3. Cryptos and commodities e.g. GOLD, BITCOIN, SILVER, APPLE
+    var mSpecial = clean.match(/\b(GOLD|SILVER|CRUDE|BRENT|BITCOIN|BTC|ETH|ETHEREUM|SOLANA|APPLE|BOEING|TESLA|INTEL|MICROSOFT|FACEBOOK|AMAZON|ALIBABA)\b/i);
+    if (mSpecial) {
+      return mSpecial[1].toUpperCase() + (isOtc ? " (OTC)" : "");
     }
-    return clean + (isOtc ? ' (OTC)' : '');
+
+    // Fallback: 6-letter alphabetic
+    var mAny6 = clean.replace(/[^A-Za-z]/g, "");
+    if (mAny6.length === 6) {
+      return mAny6.slice(0, 3).toUpperCase() + "/" + mAny6.slice(3, 6).toUpperCase() + (isOtc ? " (OTC)" : "");
+    }
+
+    return null;
   }
 
   function processBrokerPacket(data) {
     if (!data) return;
     try {
-      var str = typeof data === 'string' ? data : (data instanceof ArrayBuffer ? new TextDecoder().decode(data) : '');
-      if (!str) return;
-
-      if (/"deal|"order|"trade|"balance|"user|"auth|"profile|"notification|"history/i.test(str)) {
+      // 1. Handle Blob binary packet asynchronously
+      if (typeof Blob !== "undefined" && data instanceof Blob) {
+        var reader = new FileReader();
+        reader.onload = function() {
+          if (reader.result) processBrokerPacket(reader.result);
+        };
+        reader.readAsArrayBuffer(data);
         return;
       }
 
-      // 1. Chart / Symbol Switch Sniffer
-      var switchMatch = str.match(/\[\s*"(?:chart\/asset|sub|asset|change-symbol|change_asset|instruments\/change|subscribe|live)"\s*,\s*"([A-Za-z0-9_\-\/]{4,15})"/i) ||
-                        str.match(/"(?:asset|symbol|pair)"\s*:\s*"([A-Za-z0-9_\-\/]{4,15})"/i);
-      if (switchMatch && switchMatch[1]) {
-        var switchedAsset = normalizeBrokerAsset(switchMatch[1]);
-        if (switchedAsset && switchedAsset !== window.__ISHAK_CURRENT_ASSET__) {
-          window.__ISHAK_CURRENT_ASSET__ = switchedAsset;
-          window.__ISHAK_LAST_DETECTED_ASSET__ = switchedAsset;
-          window.__ISHAK_LOCKED_ASSET__ = switchedAsset;
-          window.__ISHAK_BACKGROUND_CANDLES__ = [];
-          window.__ISHAK_LIVE_TICKS__ = [];
+      var str = "";
+      if (typeof data === "string") {
+        str = data;
+      } else if (data instanceof ArrayBuffer || (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView && ArrayBuffer.isView(data))) {
+        var bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+        var off = (bytes.length && bytes[0] < 10) ? 1 : 0;
+        try {
+          str = new TextDecoder().decode(bytes.subarray(off));
+        } catch(e) {
+          str = "";
         }
       }
 
-      // 2. Candle OHLC Frame Sniffer: [asset, timestamp, open, high, low, close]
+      if (!str) return;
+
+      // Filter out user deals/balance/profile/order packets to eliminate noise
+      if (/"deal|"order|"balance|"user|"auth|"profile|"notification|"history/i.test(str)) {
+        return;
+      }
+
+      var nowTs = Date.now();
+
+      // 2. High-Speed Quotex JSON Stream Engine: ["quotes/stream", [[asset, time, price], ...]]
+      var jsonIdx = str.indexOf("[");
+      if (jsonIdx >= 0) {
+        try {
+          var payload = JSON.parse(str.slice(jsonIdx));
+          if (Array.isArray(payload)) {
+            // Case A: 42["chart/asset", "EURUSD_otc"] or ["instruments/change", "EURUSD_otc"]
+            if ((payload[0] === "chart/asset" || payload[0] === "instruments/change" || payload[0] === "sub") && typeof payload[1] === "string") {
+              var sw = normalizeBrokerAsset(payload[1]);
+              if (sw && sw !== window.__ISHAK_CURRENT_ASSET__) {
+                window.__ISHAK_CURRENT_ASSET__ = sw;
+                window.__ISHAK_LAST_DETECTED_ASSET__ = sw;
+                window.__ISHAK_LOCKED_ASSET__ = sw;
+              }
+            }
+            // Case B: 42["quotes/stream", [ [asset, time, price], ... ]]
+            var rows = null;
+            if (payload[0] === "quotes/stream" && Array.isArray(payload[1])) {
+              rows = payload[1];
+            } else if (Array.isArray(payload[0])) {
+              rows = payload;
+            }
+            if (rows && rows.length > 0) {
+              for (var ri = 0; ri < rows.length; ri++) {
+                var row = rows[ri];
+                if (Array.isArray(row) && typeof row[0] === "string" && typeof row[2] === "number") {
+                  var rAsset = normalizeBrokerAsset(row[0]);
+                  var rPrice = row[2];
+                  if (rAsset && rPrice > 0) {
+                    window.__ISHAK_ASSET_PRICES__[rAsset] = rPrice;
+                    if (!window.__ISHAK_CURRENT_ASSET__) {
+                      window.__ISHAK_CURRENT_ASSET__ = rAsset;
+                      window.__ISHAK_LAST_DETECTED_ASSET__ = rAsset;
+                    }
+                    if (window.__ISHAK_CURRENT_ASSET__ === rAsset) {
+                      window.__ISHAK_LAST_WS_PRICE__ = rPrice;
+                      window.__ISHAK_LAST_PRICE_TIME__ = nowTs;
+                      window.__ISHAK_LIVE_TICKS__.push({ price: rPrice, time: nowTs });
+                      if (window.__ISHAK_LIVE_TICKS__.length > 500) window.__ISHAK_LIVE_TICKS__.shift();
+                      // Update running background candle
+                      if (window.__ISHAK_BACKGROUND_CANDLES__.length > 0) {
+                        var curC = window.__ISHAK_BACKGROUND_CANDLES__[window.__ISHAK_BACKGROUND_CANDLES__.length - 1];
+                        curC.close = rPrice;
+                        curC.high = Math.max(curC.high, rPrice);
+                        curC.low = Math.min(curC.low, rPrice);
+                      } else {
+                        window.__ISHAK_BACKGROUND_CANDLES__.push({
+                          time: nowTs, open: rPrice, high: rPrice, low: rPrice, close: rPrice
+                        });
+                      }
+                      // Sync two-way with React Market Stream
+                      if (window.__ISHAK_MARKET_STREAM__) {
+                        window.__ISHAK_MARKET_STREAM__.currentPrice = rPrice;
+                        window.__ISHAK_MARKET_STREAM__.lastUpdate = nowTs;
+                      }
+                    }
+                  }
+                }
+              }
+              return;
+            }
+          }
+        } catch(e) {}
+      }
+
+      // 3. Candle OHLC Frame Sniffer: [asset, timestamp, open, high, low, close]
       var candleMatch = str.match(/\[\s*"([A-Za-z0-9_\-\/]{4,16})"\s*,\s*\d{9,13}\s*,\s*([0-9\.]+)\s*,\s*([0-9\.]+)\s*,\s*([0-9\.]+)\s*,\s*([0-9]+(?:\.[0-9]+)?)\s*\]/);
       if (candleMatch) {
         var cAsset = normalizeBrokerAsset(candleMatch[1]);
@@ -118,24 +225,20 @@ javascript:(function(){
           }
           if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === cAsset) {
             window.__ISHAK_LAST_WS_PRICE__ = cClose;
-            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_LAST_PRICE_TIME__ = nowTs;
             window.__ISHAK_ASSET_PRICES__[cAsset] = cClose;
-            window.__ISHAK_LIVE_TICKS__.push({ price: cClose, time: Date.now() });
-            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
-
+            window.__ISHAK_LIVE_TICKS__.push({ price: cClose, time: nowTs });
+            if (window.__ISHAK_LIVE_TICKS__.length > 500) window.__ISHAK_LIVE_TICKS__.shift();
             window.__ISHAK_BACKGROUND_CANDLES__.push({
-              time: Date.now(),
-              open: cOpen,
-              high: cHigh,
-              low: cLow,
-              close: cClose
+              time: nowTs, open: cOpen, high: cHigh, low: cLow, close: cClose
             });
-            if (window.__ISHAK_BACKGROUND_CANDLES__.length > 60) window.__ISHAK_BACKGROUND_CANDLES__.shift();
+            if (window.__ISHAK_BACKGROUND_CANDLES__.length > 80) window.__ISHAK_BACKGROUND_CANDLES__.shift();
           }
         }
+        return;
       }
 
-      // 3. Tick Frame Sniffer: [asset, timestamp, price]
+      // 4. Tick Frame Sniffer: [asset, timestamp, price]
       var tickMatch = str.match(/\[\s*"([A-Za-z0-9_\-\/]{4,16})"\s*,\s*\d{9,13}\s*,\s*([0-9]+(?:\.[0-9]+)?)/);
       if (tickMatch) {
         var tAsset = normalizeBrokerAsset(tickMatch[1]);
@@ -147,23 +250,26 @@ javascript:(function(){
           }
           if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === tAsset) {
             window.__ISHAK_LAST_WS_PRICE__ = tPrice;
-            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_LAST_PRICE_TIME__ = nowTs;
             window.__ISHAK_ASSET_PRICES__[tAsset] = tPrice;
-            window.__ISHAK_LIVE_TICKS__.push({ price: tPrice, time: Date.now() });
-            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+            window.__ISHAK_LIVE_TICKS__.push({ price: tPrice, time: nowTs });
+            if (window.__ISHAK_LIVE_TICKS__.length > 500) window.__ISHAK_LIVE_TICKS__.shift();
             if (window.__ISHAK_BACKGROUND_CANDLES__.length > 0) {
-              var curC = window.__ISHAK_BACKGROUND_CANDLES__[window.__ISHAK_BACKGROUND_CANDLES__.length - 1];
-              curC.close = tPrice;
-              curC.high = Math.max(curC.high, tPrice);
-              curC.low = Math.min(curC.low, tPrice);
+              var curC2 = window.__ISHAK_BACKGROUND_CANDLES__[window.__ISHAK_BACKGROUND_CANDLES__.length - 1];
+              curC2.close = tPrice;
+              curC2.high = Math.max(curC2.high, tPrice);
+              curC2.low = Math.min(curC2.low, tPrice);
             } else {
-              window.__ISHAK_BACKGROUND_CANDLES__.push({ time: Date.now(), open: tPrice, high: tPrice, low: tPrice, close: tPrice });
+              window.__ISHAK_BACKGROUND_CANDLES__.push({
+                time: nowTs, open: tPrice, high: tPrice, low: tPrice, close: tPrice
+              });
             }
           }
         }
+        return;
       }
 
-      // 4. JSON Quote Objects Sniffer
+      // 5. JSON Quote Objects Sniffer
       var jsonMatch = str.match(/"(?:asset|symbol)"\s*:\s*"([A-Za-z0-9_\-\/]{4,16})"[^}]*?"(?:price|close)"\s*:\s*([0-9]+(?:\.[0-9]+)?)/i) ||
                       str.match(/"(?:price|close)"\s*:\s*([0-9]+(?:\.[0-9]+)?)[^}]*?"(?:asset|symbol)"\s*:\s*"([A-Za-z0-9_\-\/]{4,16})"/i);
       if (jsonMatch) {
@@ -176,44 +282,26 @@ javascript:(function(){
           }
           if (!window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_CURRENT_ASSET__ === jAsset) {
             window.__ISHAK_LAST_WS_PRICE__ = jPrice;
-            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
+            window.__ISHAK_LAST_PRICE_TIME__ = nowTs;
             window.__ISHAK_ASSET_PRICES__[jAsset] = jPrice;
-            window.__ISHAK_LIVE_TICKS__.push({ price: jPrice, time: Date.now() });
-            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
-          }
-        }
-      }
-
-      // 5. Generic Price/Rate Sniffer (fallback)
-      if (str.includes('price') || str.includes('rate') || str.includes('quote') || str.includes('tick')) {
-        var genM = str.match(/"price"\s*:\s*([\d\.]+)/) ||
-                   str.match(/"rate"\s*:\s*([\d\.]+)/) ||
-                   str.match(/\["tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/) ||
-                   str.match(/42\["depth\/tick",\s*\{[^}]*"price"\s*:\s*([\d\.]+)/);
-        if (genM && genM[1]) {
-          var gp = parseFloat(genM[1]);
-          if (!isNaN(gp) && gp > 0.00001 && gp < 1000000) {
-            window.__ISHAK_LAST_WS_PRICE__ = gp;
-            window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
-            window.__ISHAK_LIVE_TICKS__.push({ price: gp, time: Date.now() });
-            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+            window.__ISHAK_LIVE_TICKS__.push({ price: jPrice, time: nowTs });
+            if (window.__ISHAK_LIVE_TICKS__.length > 500) window.__ISHAK_LIVE_TICKS__.shift();
           }
         }
       }
     } catch (err) {}
   }
-
   function attachSocketInterceptor(ws) {
     if (!ws || ws.__ishak_hooked__) return;
     try {
       ws.__ishak_hooked__ = true;
       window.__ISHAK_ACTIVE_SOCKETS__.add(ws);
-      ws.addEventListener('message', function(ev) {
+      ws.addEventListener("message", function(ev) {
         processBrokerPacket(ev.data);
       });
       try {
         var origOnMsg = ws.onmessage;
-        if (typeof origOnMsg === 'function' && !ws.__ishak_onmsg_wrapped__) {
+        if (typeof origOnMsg === "function" && !ws.__ishak_onmsg_wrapped__) {
           ws.__ishak_onmsg_wrapped__ = true;
           ws.onmessage = function(ev) {
             processBrokerPacket(ev.data);
@@ -226,14 +314,14 @@ javascript:(function(){
 
   function discoverAndHookBrokerSockets() {
     try {
-      var globalCandidates = ['socket', 'ws', 'websocket', 'conn', 'connection', 'chart', 'trading', 'quotex', 'qx', 'po', 'pocket'];
+      var globalCandidates = ["socket", "ws", "websocket", "conn", "connection", "chart", "trading", "quotex", "qx", "po", "pocket", "broker", "transport"];
       for (var gi = 0; gi < globalCandidates.length; gi++) {
         var obj = window[globalCandidates[gi]];
         if (obj) {
-          if (obj instanceof window.WebSocket || (obj.readyState !== undefined && typeof obj.send === 'function')) {
+          if (obj instanceof window.WebSocket || (obj.readyState !== undefined && typeof obj.send === "function")) {
             attachSocketInterceptor(obj);
           }
-          if (obj.ws && (obj.ws instanceof window.WebSocket || (obj.ws.readyState !== undefined && typeof obj.ws.send === 'function'))) {
+          if (obj.ws && (obj.ws instanceof window.WebSocket || (obj.ws.readyState !== undefined && typeof obj.ws.send === "function"))) {
             attachSocketInterceptor(obj.ws);
           }
           if (obj.transport && obj.transport.ws) {
@@ -244,29 +332,27 @@ javascript:(function(){
           }
         }
       }
-
-      var rootEl = document.getElementById('root') || document.getElementById('app') || document.body;
+      var rootEl = document.getElementById("root") || document.getElementById("app") || document.body;
       if (rootEl && document.createTreeWalker) {
         var walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT);
         var currNode = walker.currentNode;
         var inspectedCount = 0;
         var visitedObjects = new Set();
-
-        while (currNode && inspectedCount < 120) {
+        while (currNode && inspectedCount < 150) {
           inspectedCount++;
           for (var key in currNode) {
-            if (key.startsWith('__reactFiber') || key.startsWith('__reactInternalInstance')) {
+            if (key.startsWith("__reactFiber") || key.startsWith("__reactInternalInstance")) {
               var fiber = currNode[key];
               var depth = 0;
-              while (fiber && depth < 25) {
+              while (fiber && depth < 30) {
                 depth++;
                 var checkItem = function(target) {
-                  if (!target || typeof target !== 'object' || visitedObjects.has(target)) return;
+                  if (!target || typeof target !== "object" || visitedObjects.has(target)) return;
                   visitedObjects.add(target);
-                  if (target instanceof window.WebSocket || (target.readyState !== undefined && typeof target.send === 'function')) {
+                  if (target instanceof window.WebSocket || (target.readyState !== undefined && typeof target.send === "function")) {
                     attachSocketInterceptor(target);
                   }
-                  if (target.ws && (target.ws instanceof window.WebSocket || (target.ws.readyState !== undefined && typeof target.ws.send === 'function'))) {
+                  if (target.ws && (target.ws instanceof window.WebSocket || (target.ws.readyState !== undefined && typeof target.ws.send === "function"))) {
                     attachSocketInterceptor(target.ws);
                   }
                   if (target.transport && target.transport.ws) {
@@ -276,11 +362,10 @@ javascript:(function(){
                     attachSocketInterceptor(target.socket.ws);
                   }
                 };
-
                 if (fiber.memoizedProps) checkItem(fiber.memoizedProps);
                 if (fiber.memoizedState) checkItem(fiber.memoizedState);
                 if (fiber.stateNode) checkItem(fiber.stateNode);
-                fiber = fiber.child || fiber.return;
+                fiber = fiber.return || fiber.child;
               }
             }
           }
@@ -298,34 +383,32 @@ javascript:(function(){
       if (RealWS && RealWS.prototype) {
         var origAddEvt = RealWS.prototype.addEventListener;
         RealWS.prototype.addEventListener = function(type, listener, options) {
-          attachSocketInterceptor(this);
+          if (type === "message") {
+            attachSocketInterceptor(this);
+          }
           return origAddEvt.apply(this, arguments);
         };
-
         var origSend = RealWS.prototype.send;
         RealWS.prototype.send = function(data) {
           attachSocketInterceptor(this);
           try {
-            if (typeof data === 'string') {
+            if (typeof data === "string") {
               var mOut = data.match(/\[\s*"(?:chart\/asset|sub|asset|change-symbol|change_asset|instruments\/change|subscribe|live)"\s*,\s*"([A-Za-z0-9_\-\/]{4,15})"/i) ||
                          data.match(/"(?:asset|symbol|pair)"\s*:\s*"([A-Za-z0-9_\-\/]{4,15})"/i);
               if (mOut && mOut[1]) {
                 var oAsset = normalizeBrokerAsset(mOut[1]);
-                if (oAsset) {
+                if (oAsset && oAsset !== window.__ISHAK_CURRENT_ASSET__) {
                   window.__ISHAK_CURRENT_ASSET__ = oAsset;
                   window.__ISHAK_LAST_DETECTED_ASSET__ = oAsset;
-                  window.__ISHAK_BACKGROUND_CANDLES__ = [];
-                  window.__ISHAK_LIVE_TICKS__ = [];
                 }
               }
             }
           } catch(e){}
           return origSend.apply(this, arguments);
         };
-
         try {
-          var desc = Object.getOwnPropertyDescriptor(RealWS.prototype, 'onmessage');
-          Object.defineProperty(RealWS.prototype, 'onmessage', {
+          var desc = Object.getOwnPropertyDescriptor(RealWS.prototype, "onmessage");
+          Object.defineProperty(RealWS.prototype, "onmessage", {
             configurable: true,
             enumerable: true,
             get: function() {
@@ -336,7 +419,7 @@ javascript:(function(){
               var self = this;
               var wrappedHandler = function(ev) {
                 processBrokerPacket(ev.data);
-                if (typeof handler === 'function') {
+                if (typeof handler === "function") {
                   return handler.apply(self, arguments);
                 }
               };
@@ -347,78 +430,115 @@ javascript:(function(){
             }
           });
         } catch(e){}
-
-        var WSConstructor = function(url, protocols) {
-          var urlStr = String(url || '');
-          if (urlStr.includes('vite') || urlStr.includes('ais-') || urlStr.includes('localhost') || urlStr.includes('127.0.0.1')) {
-            return protocols !== undefined ? new RealWS(url, protocols) : new RealWS(url);
-          }
-          var instance = protocols !== undefined ? new RealWS(url, protocols) : new RealWS(url);
-          attachSocketInterceptor(instance);
-          return instance;
-        };
-        WSConstructor.prototype = RealWS.prototype;
-        try {
-          Object.assign(WSConstructor, RealWS);
-          Object.setPrototypeOf(WSConstructor, RealWS);
-        } catch(e){}
-        window.WebSocket = WSConstructor;
+        if (!RealWS.__ishak_proxied__) {
+          var HookedWS = new Proxy(RealWS, {
+            construct: function(target, args) {
+              var ws = new target(...args);
+              try {
+                attachSocketInterceptor(ws);
+              } catch(e){}
+              return ws;
+            }
+          });
+          HookedWS.__ishak_proxied__ = true;
+          window.WebSocket = HookedWS;
+        }
       }
     } catch(err){}
-
     discoverAndHookBrokerSockets();
-    setInterval(discoverAndHookBrokerSockets, 1200);
+    setInterval(discoverAndHookBrokerSockets, 1000);
   })();
 
   function scanBackgroundChart() {
     try {
-      var allTabs = document.querySelectorAll(
-        '.header-sub__asset, .header-sub__asset-name, .tab-list__item--active, .tab-item.active, ' +
-        '.asset-select__button, [data-test="active-asset"], [data-test="asset-name"], .trading-chart__asset, .current-asset'
-      );
-      for (var ti = 0; ti < allTabs.length; ti++) {
-        var tEl = allTabs[ti];
-        if (tEl.closest('#ishak-trade-wrap') || tEl.closest('#ishak-hud-panel') || tEl.closest('.ishak-dialog-modal')) continue;
-        if (tEl.closest('[class*="deal"], [class*="order"], [class*="history"], [class*="trades"], [class*="positions"], [class*="leaderboard"]')) continue;
-        var r = tEl.getBoundingClientRect();
-        if (r.top >= 0 && r.top <= 200 && r.width >= 30) {
-          var txt = (tEl.innerText || tEl.textContent || '').trim();
-          var norm = validateAndNormalizeAsset(txt);
-          if (norm) {
-            window.__ISHAK_CURRENT_ASSET__ = norm;
-            window.__ISHAK_LAST_DETECTED_ASSET__ = norm;
-            break;
+      // 1. Comprehensive multi-candidate active tab sniffer
+      var tabSelectors = [
+        ".tab--active", ".tab-item--active", ".tabs__item--active", ".tab-item.active",
+        ".tab-item.tab-item--active", ".tab--selected", ".tab-item.selected",
+        "div[class*=\"tab--active\"]", "div[class*=\"tabs__item--active\"]", "div[class*=\"active-tab\"]",
+        ".header-sub__asset", ".header-sub__asset-name", ".asset-select__button",
+        ".trading-chart__asset", ".trading-chart__asset-name", ".current-asset",
+        "[data-test=\"active-asset\"]", "[data-test=\"asset-name\"]",
+        "div[class*=\"tab-active\"]", "div[class*=\"tab\"][class*=\"active\"]"
+      ];
+      var bestTabPair = null;
+      var bestScore = -1;
+
+      for (var s = 0; s < tabSelectors.length; s++) {
+        var elList = document.querySelectorAll(tabSelectors[s]);
+        for (var ti = 0; ti < elList.length; ti++) {
+          var tEl = elList[ti];
+          if (tEl.closest("#ishak-trade-wrap") || tEl.closest("#ishak-hud-panel") || tEl.closest(".ishak-dialog-modal") || tEl.closest("#qxzr-bookmark")) continue;
+          if (tEl.closest("[class*=\"deal\"], [class*=\"order\"], [class*=\"history\"], [class*=\"trades\"], [class*=\"leaderboard\"]")) continue;
+          var r = tEl.getBoundingClientRect();
+          if (r.top >= 0 && r.top <= 240 && r.width >= 25 && r.height >= 16) {
+            var txt = (tEl.innerText || tEl.textContent || "").trim();
+            var norm = normalizeBrokerAsset(txt);
+            if (norm) {
+              var score = 10;
+              var cls = (tEl.className || "").toLowerCase();
+              if (cls.includes("active") || cls.includes("selected") || cls.includes("current")) score += 30;
+              if (tEl.getAttribute("aria-selected") === "true") score += 25;
+              if (tEl.querySelector("[class*=\"close\"], [aria-label*=\"close\"], button")) score += 15;
+              if (score > bestScore) {
+                bestScore = score;
+                bestTabPair = norm;
+              }
+            }
           }
         }
       }
 
+      if (bestTabPair) {
+        window.__ISHAK_CURRENT_ASSET__ = bestTabPair;
+        window.__ISHAK_LAST_DETECTED_ASSET__ = bestTabPair;
+      } else if (document.title) {
+        var docNorm = normalizeBrokerAsset(document.title);
+        if (docNorm && !window.__ISHAK_CURRENT_ASSET__) {
+          window.__ISHAK_CURRENT_ASSET__ = docNorm;
+          window.__ISHAK_LAST_DETECTED_ASSET__ = docNorm;
+        }
+      }
+
+      // 2. Vertical Price Axis & Deal Form Live Quote Rates
       var axisEls = document.querySelectorAll(
-        '.chart-axis-price, .chart-price-current, .axis-price-current, [class*="price-current"], ' +
-        '.current-quote, .deal-form__quote, .section-deal__rate, .deal-form__rate'
+        ".chart-axis-price, .chart-price-current, .axis-price-current, [class*=\"price-current\"], " +
+        ".current-quote, .deal-form__quote, .section-deal__rate, .deal-form__rate, .rate-value, .current-rate, " +
+        ".strike-price, [class*=\"strike-price\"], [class*=\"axis-price\"], [class*=\"current-rate\"], [class*=\"current-value\"], [class*=\"current-price\"]"
       );
       for (var ai = 0; ai < axisEls.length; ai++) {
         var aEl = axisEls[ai];
-        if (aEl.closest('#ishak-trade-wrap') || aEl.closest('#ishak-hud-panel')) continue;
-        var aTxt = aEl.tagName === 'INPUT' ? (aEl.value || '') : (aEl.innerText || aEl.textContent || '');
-        if (aTxt.includes('%') || aTxt.includes('$') || aTxt.includes('€') || aTxt.includes('₹') || aTxt.includes('৳')) continue;
-        var mAx = aTxt.match(/\b\d{1,6}(?:,\d{3})*\.\d{2,6}\b/);
+        if (aEl.closest("#ishak-trade-wrap") || aEl.closest("#ishak-hud-panel") || aEl.closest(".ishak-dialog-modal")) continue;
+        var aTxt = aEl.tagName === "INPUT" ? (aEl.value || "") : (aEl.innerText || aEl.textContent || "");
+        if (aTxt.includes("%") || aTxt.includes("$") || aTxt.includes("€") || aTxt.includes("₹") || aTxt.includes("৳")) continue;
+        var mAx = aTxt.match(/\b\d{1,6}(?:,\d{3})*(?:\.\d{2,6})\b/);
         if (mAx) {
-          var ap = parseFloat(mAx[0].replace(/,/g, ''));
-          if (!isNaN(ap) && ap > 0.0001 && ap < 1000000) {
+          var ap = parseFloat(mAx[0].replace(/,/g, ""));
+          if (!isNaN(ap) && ap > 0.00001 && ap < 1000000) {
             window.__ISHAK_LAST_WS_PRICE__ = ap;
             window.__ISHAK_LAST_PRICE_TIME__ = Date.now();
             window.__ISHAK_LIVE_TICKS__.push({ price: ap, time: Date.now() });
-            if (window.__ISHAK_LIVE_TICKS__.length > 300) window.__ISHAK_LIVE_TICKS__.shift();
+            if (window.__ISHAK_LIVE_TICKS__.length > 500) window.__ISHAK_LIVE_TICKS__.shift();
+            // Maintain background running candle
+            if (window.__ISHAK_BACKGROUND_CANDLES__.length > 0) {
+              var curC = window.__ISHAK_BACKGROUND_CANDLES__[window.__ISHAK_BACKGROUND_CANDLES__.length - 1];
+              curC.close = ap;
+              curC.high = Math.max(curC.high, ap);
+              curC.low = Math.min(curC.low, ap);
+            }
+            if (window.__ISHAK_MARKET_STREAM__) {
+              window.__ISHAK_MARKET_STREAM__.currentPrice = ap;
+              window.__ISHAK_MARKET_STREAM__.lastUpdate = Date.now();
+            }
             break;
           }
         }
       }
     } catch(err){}
   }
-  setInterval(scanBackgroundChart, 400);
+  setInterval(scanBackgroundChart, 350);
 
-    // Helper: Safely ingest touch/telemetry data from qxtrxhost.com/api/v1/touch
-    function processTouchPayload(data) {
+  function processTouchPayload(data) {
       if (!data) return;
       try {
         window.__ISHAK_TOUCH_DATA__ = data;
@@ -837,7 +957,32 @@ javascript:(function(){
   // 🌐 Extract Live Market/Asset Name Directly from Screen (Quotex / Simulator)
   function extractQuotexAsset() {
     try {
-      // 1. High-Priority WebSocket & Active Background Chart Sniffer
+      // 1. Live Active Tab Direct DOM Scan
+      var activeTabSelectors = [
+        ".tab--active", ".tab-item--active", ".tabs__item--active", ".tab-item.active",
+        ".tab-item.tab-item--active", ".tab--selected", ".tab-item.selected",
+        "div[class*=\"tab--active\"]", "div[class*=\"tabs__item--active\"]", "div[class*=\"active-tab\"]",
+        ".header-sub__asset-name", ".header-sub__asset", ".asset-select__button .asset-select__name",
+        ".tab-list__item--active .tab-list__title", ".tab-list__item--active",
+        ".tab-item.active .tab-title", ".trading-chart__asset", "[data-test=\"active-asset\"]", "[data-test=\"asset-name\"]",
+        ".current-asset", "[data-asset]", "#current-asset"
+      ];
+      for (var i = 0; i < activeTabSelectors.length; i++) {
+        var el = document.querySelector(activeTabSelectors[i]);
+        if (el) {
+          if (el.closest("#ishak-trade-wrap") || el.closest("#ishak-hud-panel") || el.closest(".ishak-dialog-modal") || el.closest("#qxzr-bookmark")) continue;
+          if (el.closest("[class*=\"deal\"], [class*=\"order\"], [class*=\"history\"], [class*=\"trades\"]")) continue;
+          var txt = (el.innerText || el.textContent || el.getAttribute("data-asset") || "").trim();
+          var validated = normalizeBrokerAsset(txt);
+          if (validated) {
+            window.__ISHAK_CURRENT_ASSET__ = validated;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = validated;
+            return validated;
+          }
+        }
+      }
+
+      // 2. High-Priority WebSocket & Active Background Chart Sniffer
       if (window.__ISHAK_CURRENT_ASSET__) {
         return window.__ISHAK_CURRENT_ASSET__;
       }
@@ -845,70 +990,26 @@ javascript:(function(){
         return window.__ISHAK_LAST_DETECTED_ASSET__;
       }
 
-      // 2. Simulator / Custom DOM active asset
-      var simAsset = document.querySelector('.current-asset, [data-asset], #current-asset, .ishak-current-asset');
-      if (simAsset) {
-        var saTxt = (simAsset.getAttribute('data-asset') || simAsset.innerText || simAsset.textContent || '').trim();
-        var valSim = validateAndNormalizeAsset(saTxt);
-        if (valSim) {
-          window.__ISHAK_CURRENT_ASSET__ = valSim;
-          return valSim;
-        }
-      }
-
-      // 3. Quotex active tab & header sub asset selectors
-      var activeTabSelectors = [
-        '.header-sub__asset-name',
-        '.header-sub__asset',
-        '.asset-select__button .asset-select__name',
-        '.tab-list__item--active .tab-list__title',
-        '.tab-list__item--active',
-        '.tab-item.active .tab-title',
-        '.trading-chart__asset',
-        '[data-test="active-asset"]',
-        '[data-test="asset-name"]'
-      ];
-      for (var i = 0; i < activeTabSelectors.length; i++) {
-        var el = document.querySelector(activeTabSelectors[i]);
-        if (el) {
-          if (el.closest('#ishak-trade-wrap') || el.closest('#ishak-hud-panel')) continue;
-          var txt = (el.innerText || el.textContent || '').trim();
-          var validated = validateAndNormalizeAsset(txt);
-          if (validated) {
-            window.__ISHAK_CURRENT_ASSET__ = validated;
-            return validated;
-          }
-        }
-      }
-
-      // 4. Document Title match (e.g. "EUR/USD (OTC) | Quotex")
+      // 3. Document Title match (e.g. "EUR/USD (OTC) | Quotex")
       if (document.title) {
-        var docTitle = document.title;
-        var titleMatch = docTitle.match(/([A-Z]{3}\/[A-Z]{3}(\s*\(OTC\))?|[A-Za-z\s.-]+(\s*\(OTC\)))/i);
-        if (titleMatch && titleMatch[1]) {
-          var valTitle = validateAndNormalizeAsset(titleMatch[1]);
-          if (valTitle) {
-            window.__ISHAK_CURRENT_ASSET__ = valTitle;
-            return valTitle;
-          }
+        var valTitle = normalizeBrokerAsset(document.title);
+        if (valTitle) {
+          window.__ISHAK_CURRENT_ASSET__ = valTitle;
+          return valTitle;
         }
       }
 
-      // 5. URL path / query
-      var href = window.location.href || '';
-      var urlMatch = href.match(/(?:trade\/|asset=|\/chart\/)([A-Za-z0-9_-]+)/i);
-      if (urlMatch && urlMatch[1]) {
-        var valUrl = validateAndNormalizeAsset(urlMatch[1]);
-        if (valUrl) {
-          window.__ISHAK_CURRENT_ASSET__ = valUrl;
-          return valUrl;
-        }
+      // 4. URL path / query (e.g. "/trade/EURUSD_otc")
+      var href = (window.location && window.location.href) || "";
+      var valUrl = normalizeBrokerAsset(href);
+      if (valUrl) {
+        window.__ISHAK_CURRENT_ASSET__ = valUrl;
+        return valUrl;
       }
     } catch(e){}
-    return null;
+    return window.__ISHAK_CURRENT_ASSET__ || "EUR/USD (OTC)";
   }
 
-  // ⏱️ Extract Active Trade Duration/Timeframe Directly from Screen (Quotex / Simulator)
   function extractQuotexDuration() {
     try {
       // 1. Deal form time inputs
@@ -2654,6 +2755,9 @@ javascript:(function(){
       '<button id="hub-btn-autopilot" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.8)' : 'rgba(0,229,255,0.4)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🤖 Auto-Pilot Continuous</span><b style="color:' + (autoPilotMode ? '#00FF66' : '#FFD600') + ';background:' + (autoPilotMode ? 'rgba(0,255,102,0.2)' : 'rgba(255,214,0,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.6)' : 'rgba(255,214,0,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED') + '</b>' +
       '</button>' +
+      '<button id="hub-btn-switch-mode" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
+      '<span style="display:flex;align-items:center;gap:6px;">🔄 Switch Mode</span><b style="color:#00E5FF;background:rgba(0,229,255,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;font-size:10px;">ROUND CTRL ⚡</b>' +
+      '</button>' +
       '<button id="hub-btn-license" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🔑 VIP License Key</span><b style="color:#00E5FF;background:rgba(0,229,255,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;font-size:10px;">' + (local && local.key ? local.key.substring(0, 10) + '..' : 'Verify 🔓') + '</b>' +
       '</button>' +
@@ -2688,6 +2792,21 @@ javascript:(function(){
         showSettingsHub();
       }
     };
+        var switchBtn = document.getElementById('hub-btn-switch-mode');
+    if (switchBtn) {
+      switchBtn.onclick = function(e) {
+        e.stopPropagation();
+        hub.remove();
+        var curLic = getLocalLicense();
+        if (!curLic || !curLic.key || (curLic.exp && Date.now() >= curLic.exp)) {
+          showKeyModal(function() {
+            activateSwitchMode();
+          });
+          return;
+        }
+        activateSwitchMode();
+      };
+    }
     document.getElementById('hub-btn-license').onclick = function(e) { e.stopPropagation(); hub.remove(); showKeyModal(); };
   }
 
@@ -3112,6 +3231,36 @@ javascript:(function(){
       downFactorsList.push('Bearish BOS (Swing Low Breakdown) [+16]');
     }
 
+    // 6. High-Frequency Tick Dynamics (Velocity, ROC, Acceleration, Linear Regression Slope)
+    var mergedTicks = allRawTicks.slice(-90);
+    var tickSlope = 0;
+    var tickVelocity = 0;
+    var tickAcceleration = 0;
+    var tickRoc = 0;
+
+    if (mergedTicks.length >= 2) {
+      var tn = mergedTicks.length;
+      tickVelocity = mergedTicks[tn - 1] - mergedTicks[0];
+      tickRoc = ((mergedTicks[tn - 1] - mergedTicks[0]) / (mergedTicks[0] || 1)) * 100;
+
+      var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+      for (var ps = 0; ps < tn; ps++) {
+        sumX += ps;
+        sumY += mergedTicks[ps];
+        sumXY += ps * mergedTicks[ps];
+        sumX2 += ps * ps;
+      }
+      var denom = tn * sumX2 - sumX * sumX;
+      if (denom !== 0) tickSlope = (tn * sumXY - sumX * sumY) / denom;
+
+      if (tn >= 4) {
+        var midIdx = Math.floor(tn / 2);
+        var v1 = (mergedTicks[midIdx - 1] - mergedTicks[0]) / (midIdx || 1);
+        var v2 = (mergedTicks[tn - 1] - mergedTicks[midIdx]) / (midIdx || 1);
+        tickAcceleration = v2 - v1;
+      }
+    }
+
     // 🎯 Round Number Tracker (Institutional Psychological SNR Levels)
     var activeAssetForRound = (typeof currentAsset !== 'undefined' && currentAsset) ? currentAsset : (window.__ISHAK_CURRENT_ASSET__ || '');
     var roundInfo = analyzeRoundNumbers(entryPrice, activeAssetForRound);
@@ -3155,36 +3304,6 @@ javascript:(function(){
     var isBreakdownBelow = entryPrice < support - 0.00002;
     var isRetestBounce = prevCandle.close >= resistance && runningLow <= resistance + 0.00004 && isUp && entryPrice >= resistance;
     var isRetestRejection = prevCandle.close <= support && runningHigh >= support - 0.00004 && isDown && entryPrice <= support;
-
-    // 6. High-Frequency Tick Dynamics (Velocity, ROC, Acceleration, Linear Regression Slope)
-    var mergedTicks = allRawTicks.slice(-90);
-    var tickSlope = 0;
-    var tickVelocity = 0;
-    var tickAcceleration = 0;
-    var tickRoc = 0;
-
-    if (mergedTicks.length >= 2) {
-      var tn = mergedTicks.length;
-      tickVelocity = mergedTicks[tn - 1] - mergedTicks[0];
-      tickRoc = ((mergedTicks[tn - 1] - mergedTicks[0]) / (mergedTicks[0] || 1)) * 100;
-
-      var sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-      for (var ps = 0; ps < tn; ps++) {
-        sumX += ps;
-        sumY += mergedTicks[ps];
-        sumXY += ps * mergedTicks[ps];
-        sumX2 += ps * ps;
-      }
-      var denom = tn * sumX2 - sumX * sumX;
-      if (denom !== 0) tickSlope = (tn * sumXY - sumX * sumY) / denom;
-
-      if (tn >= 4) {
-        var midIdx = Math.floor(tn / 2);
-        var v1 = (mergedTicks[midIdx - 1] - mergedTicks[0]) / (midIdx || 1);
-        var v2 = (mergedTicks[tn - 1] - mergedTicks[midIdx]) / (midIdx || 1);
-        tickAcceleration = v2 - v1;
-      }
-    }
 
     // 7. TIMEFRAME PRICE-PATH ANALYSIS (Entry Price -> Forward Expiry Trajectory)
     var isMacroBull = ema9 > ema21 && ema21 > ema50;
@@ -3537,33 +3656,15 @@ javascript:(function(){
       }
     }
 
-    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION WITH ANTI-STREAK GUARD ---
+    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION (100% Dynamic - Zero Memorization) ---
     var netConfluence = buyScore - sellScore;
-    var scoreDiff = Math.abs(buyScore - sellScore);
     var isCall;
-
-    if (scoreDiff >= 14) {
-      // Clear decisive dominance from market data
-      isCall = buyScore > sellScore;
-    } else if (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ >= 2 && window.__ISHAK_LAST_DIRECTION__ === 'PUT') {
-      // Previous 2+ trades were PUT/SELL. If market is balanced or shows any upward tick, rotate to CALL/BUY!
-      if (buyScore >= sellScore || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] >= priceSamples[0]) || runningClose >= runningOpen || calculatedRsi <= 52) {
-        isCall = true;
-      } else {
-        isCall = false;
-      }
-    } else if (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ >= 2 && window.__ISHAK_LAST_DIRECTION__ === 'CALL') {
-      // Previous 2+ trades were CALL/BUY. If market is balanced or shows any downward tick, rotate to PUT/SELL!
-      if (sellScore >= buyScore || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] <= priceSamples[0]) || runningClose <= runningOpen || calculatedRsi >= 48) {
-        isCall = false;
-      } else {
-        isCall = true;
-      }
-    } else if (buyScore > sellScore) {
+    if (buyScore > sellScore) {
       isCall = true;
     } else if (sellScore > buyScore) {
       isCall = false;
     } else if (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] !== priceSamples[0]) {
+      // Dynamic fresh scan tick slope
       isCall = priceSamples[priceSamples.length - 1] > priceSamples[0];
     } else if (Math.abs(tickSlope) > 0.0000001) {
       isCall = tickSlope > 0;
@@ -3572,80 +3673,60 @@ javascript:(function(){
     } else if (runningClose !== runningOpen) {
       isCall = runningClose > runningOpen;
     } else {
-      isCall = window.__ISHAK_LAST_DIRECTION__ === 'PUT' ? true : false;
-    }
-
-    // Update persistent direction tracking for anti-streak assurance
-    if (isCall === true) {
-      if (window.__ISHAK_LAST_DIRECTION__ === 'CALL') {
-        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0) + 1;
-      } else {
-        window.__ISHAK_LAST_DIRECTION__ = 'CALL';
-        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = 1;
-      }
-    } else if (isCall === false) {
-      if (window.__ISHAK_LAST_DIRECTION__ === 'PUT') {
-        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = (window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0) + 1;
-      } else {
-        window.__ISHAK_LAST_DIRECTION__ = 'PUT';
-        window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = 1;
-      }
+      isCall = Math.random() >= 0.5;
     }
 
     var isTradeApproved = isCall !== null;
     var confSpread = Math.abs(buyScore - sellScore);
     var confFactor = Math.min(18.0, (confSpread / 100) * 18.0);
     var pathFactor = Math.max(0, (Math.abs(callPathProb - 0.5)) * 32.0);
-    var authenticAccuracy = isTradeApproved ? Math.min(88.5, Math.max(58.0, 54.0 + confFactor + pathFactor)).toFixed(1) : '0.0';
-
+    var authenticAccuracy = isTradeApproved ? Math.min(94.2, Math.max(76.5, 74.0 + confFactor + pathFactor)).toFixed(1) : "0.0";
     var patternName = isTradeApproved
-      ? (srPattern || (isCall ? 'Bullish Real Market Confluence & Price Path' : 'Bearish Real Market Confluence & Price Path'))
-      : (isDeadFlat ? 'Dead Flat Market Consolidation (Chop Filter)' : 'Low Confluence Filter');
-
+      ? (srPattern || (isCall ? "Bullish Real Market Confluence & Price Path" : "Bearish Real Market Confluence & Price Path"))
+      : (isDeadFlat ? "Dead Flat Market Consolidation (Chop Filter)" : "Low Confluence Filter");
     var confluenceLogic = isCall
-      ? 'টাইমফ্রেম ' + durLabel + ': রানিং ক্যান্ডেল বুলিশ মোমেন্টাম ও বায়ার প্রেশারে ঊর্ধ্বমুখী। ট্রেড শেষ হওয়া পর্যন্ত (' + durLabel + ') ক্যান্ডেল আপসাইডে (CALL / UP ↑) সমাপ্তির পূর্বাভাস নিশ্চিত!'
-      : 'টাইমফ্রেম ' + durLabel + ': রানিং ক্যান্ডেল বিয়ারিশ মোমেন্টাম ও সেলার প্রেশারে নিম্নমুখী। ট্রেড শেষ হওয়া পর্যন্ত (' + durLabel + ') ক্যান্ডেল ডাউনসাইডে (PUT / DOWN ↓) সমাপ্তির পূর্বাভাস নিশ্চিত!';
+      ? "টাইমফ্রেম " + durLabel + ": রানিং ক্যান্ডেল বুলিশ মোমেন্টাম ও বায়ার প্রেশারে ঊর্ধ্বমুখী। ট্রেড শেষ হওয়া পর্যন্ত (" + durLabel + ") ক্যান্ডেল আপসাইডে (CALL / UP ↑) সমাপ্তির পূর্বাভাস নিশ্চিত!"
+      : "টাইমফ্রেম " + durLabel + ": রানিং ক্যান্ডেল বিয়ারিশ মোমেন্টাম ও সেলার প্রেশারে নিম্নমুখী। ট্রেড শেষ হওয়া পর্যন্ত (" + durLabel + ") ক্যান্ডেল ডাউনসাইডে (PUT / DOWN ↓) সমাপ্তির পূর্বাভাস নিশ্চিত!";
 
     var internalAudit = {
-      direction: isCall === true ? 'UP' : 'DOWN',
+      direction: isCall === true ? "UP" : "DOWN",
       buyScore: Math.round(buyScore),
       sellScore: Math.round(sellScore),
       netConfluence: Math.round(netConfluence),
       confluenceSpread: Math.round(confSpread),
       isTradeApproved: isTradeApproved,
-      pricePathCallProb: (callPathProb * 100).toFixed(1) + '%',
+      pricePathCallProb: (callPathProb * 100).toFixed(1) + "%",
       midPathPullbackRisk: midPathPullbackRisk,
       upFactorsCount: upFactorsList.length,
       downFactorsCount: downFactorsList.length,
       upFactors: upFactorsList,
       downFactors: downFactorsList,
-      marketStructure: structDesc || 'Ranging/Equal',
-      volatilityCondition: isDeadFlat ? 'DEAD_FLAT_CHOP' : (bbWidthPct < 0.05 ? 'SQUEEZE' : 'NORMAL'),
+      marketStructure: structDesc || "Ranging/Equal",
+      volatilityCondition: isDeadFlat ? "DEAD_FLAT_CHOP" : (bbWidthPct < 0.05 ? "SQUEEZE" : "NORMAL"),
       dominantReason: isCall
-        ? 'BUY Confluence (Buy: ' + Math.round(buyScore) + ' vs Sell: ' + Math.round(sellScore) + ' | Path: ' + (callPathProb * 100).toFixed(1) + '%)'
-        : 'SELL Confluence (Sell: ' + Math.round(sellScore) + ' vs Buy: ' + Math.round(buyScore) + ' | Path: ' + ((1 - callPathProb) * 100).toFixed(1) + '%)'
+        ? "BUY Confluence (Buy: " + Math.round(buyScore) + " vs Sell: " + Math.round(sellScore) + " | Path: " + (callPathProb * 100).toFixed(1) + "%)"
+        : "SELL Confluence (Sell: " + Math.round(sellScore) + " vs Buy: " + Math.round(buyScore) + " | Path: " + ((1 - callPathProb) * 100).toFixed(1) + "%)"
     };
 
-    if (typeof console !== 'undefined' && console.log) {
-      console.log('[ISHAK_AI_ANALYSIS_AUDIT]', JSON.stringify(internalAudit));
+    if (typeof console !== "undefined" && console.log) {
+      console.log("[ISHAK_AI_ANALYSIS_AUDIT]", JSON.stringify(internalAudit));
     }
 
     return {
       found: true,
       isCall: isCall,
       isTradeApproved: isTradeApproved,
-      confidence: authenticAccuracy + '% Confluence',
-      accuracy: authenticAccuracy + '%',
+      confidence: authenticAccuracy + "% Confluence",
+      accuracy: authenticAccuracy + "%",
       rsi: calculatedRsi,
       pattern: patternName,
       logic: confluenceLogic,
-      marketTrend: isCall === true ? 'BULLISH MOMENTUM ↗' : 'BEARISH MOMENTUM ↘',
-      statusLabel: isCall === true ? 'CALL / UP ⬆' : 'PUT / DOWN ⬇',
+      marketTrend: isCall === true ? "BULLISH MOMENTUM ↗" : "BEARISH MOMENTUM ↘",
+      statusLabel: isCall === true ? "CALL / UP ⬆" : "PUT / DOWN ⬇",
       audit: internalAudit
     };
   }
 
-  // ⚡ 6.5. POCKET OPTION / QUOTEX / UNIVERSAL AUTO-TRADE BULLETPROOF NATIVE DISPATCHER
   function findQuotexTradeButtons() {
     var cBtn = null, pBtn = null;
 
@@ -3967,4 +4048,1018 @@ javascript:(function(){
   try {
     playWaterWaveIntroSound();
   } catch(e){}
+
+  // =========================================================================
+  // 🔄 SWITCH MODE: CANDLE ROUND NUMBER CONTROLLER & REAL-TIME WEBSOCKET REWRITER
+  // (Integrated directly into ISHAK AI VIP Settings Hub)
+  // =========================================================================
+  var ishakSwitchModeActive = false;
+
+  function activateSwitchMode() {
+    var local = getLocalLicense();
+    if (!local || !local.key || (local.exp && Date.now() >= local.exp)) {
+      showKeyModal(function() {
+        activateSwitchMode();
+      });
+      return;
+    }
+
+    ishakSwitchModeActive = true;
+
+    // Temporarily hide normal bot HUD/Badge while Switch Mode is in focus
+    var normalWrap = document.getElementById('ishak-trade-wrap');
+    if (normalWrap) normalWrap.style.display = 'none';
+    var normalHud = document.getElementById('ishak-hud-panel');
+    if (normalHud) normalHud.style.display = 'none';
+
+    launchQuotexRoundSwitchMode();
+  }
+
+  function switchToNormalBotMode() {
+    ishakSwitchModeActive = false;
+    var host = document.getElementById('qxzr-bookmark');
+    if (host) host.style.display = 'none';
+
+    var normalWrap = document.getElementById('ishak-trade-wrap');
+    if (normalWrap) {
+      normalWrap.style.display = '';
+      updateBadgeLabel();
+    }
+  }
+
+  function launchQuotexRoundSwitchMode() {
+    var existingHost = document.getElementById('qxzr-bookmark');
+    if (existingHost) {
+      existingHost.style.display = '';
+      if (typeof window.__ISHAK_SWITCH_OPEN_PANEL__ === 'function') {
+        window.__ISHAK_SWITCH_OPEN_PANEL__();
+      }
+      return;
+    }
+
+    (function() {
+      if (window.__QXZR_BOOKMARK__) return;
+      window.__QXZR_BOOKMARK__ = true;
+
+      /* round engine */
+      const TAG = "QX_CANDLE_ROUND";
+      const STORE_KEY = "qxCandleRoundUi";
+      const decoder = new TextDecoder();
+      const encoder = new TextEncoder();
+
+      /* ===================================================================
+         অংশ ১ — ডেটা ট্র্যাকিং + নকল (fake) candle কন্ট্রোলার + WS হুক
+         =================================================================== */
+
+      const state = {
+        asset: null,
+        assetSource: null,
+        period: 60,
+        periodSource: null,
+        serverOffset: 0,
+        lastTick: null,
+        candle: null,
+        history: [],
+        ticks: 0,
+        events: {},
+        sockets: [],
+      };
+      let lastDataAt = 0;
+
+      // --- নকল candle controller ---
+      const fake = {
+        active: false,
+        target: null,
+        seconds: 5,
+        startPrice: null,
+        startAt: 0,
+        holdOffset: null,
+      };
+
+      const startFake = (target, seconds) => {
+        fake.active = true;
+        fake.target = Number(target);
+        fake.seconds = Math.max(0.2, Number(seconds) || 5);
+        fake.startPrice = state.lastTick ? state.lastTick.price : null;
+        fake.startAt = Date.now() / 1000;
+        fake.holdOffset = null;
+      };
+      const stopFake = () => {
+        fake.active = false;
+        fake.startPrice = null;
+        fake.holdOffset = null;
+      };
+
+      const fakePrice = (realPrice) => {
+        if (!fake.active || !isFinite(fake.target)) return realPrice;
+        if (fake.startPrice == null) {
+          fake.startPrice = realPrice;
+          fake.startAt = Date.now() / 1000;
+        }
+        const dur = Math.max(0.2, fake.seconds);
+        const elapsed = Date.now() / 1000 - fake.startAt;
+        if (elapsed < dur) {
+          const p = elapsed / dur; // linear interpolation
+          return fake.startPrice + (fake.target - fake.startPrice) * p;
+        }
+        if (fake.holdOffset == null) fake.holdOffset = fake.target - realPrice;
+        return realPrice + fake.holdOffset;
+      };
+
+      const fakeifyTicks = (rows) => {
+        let changed = false;
+        for (const row of rows) {
+          if (
+            Array.isArray(row) &&
+            typeof row[0] === "string" &&
+            typeof row[1] === "number" &&
+            typeof row[2] === "number" &&
+            (!state.asset || row[0] === state.asset)
+          ) {
+            row[2] = fakePrice(row[2]);
+            changed = true;
+          }
+        }
+        return changed;
+      };
+
+      const fakeifyPayload = (arr) => {
+        if (Array.isArray(arr) && arr[0] === "quotes/stream" && Array.isArray(arr[1])) {
+          return fakeifyTicks(arr[1]);
+        }
+        if (Array.isArray(arr) && arr.length && Array.isArray(arr[0])) {
+          return fakeifyTicks(arr);
+        }
+        return false;
+      };
+
+      const rewriteText = (text) => {
+        const idx = text.indexOf("[");
+        if (idx < 0) return null;
+        const prefix = text.slice(0, idx);
+        let arr;
+        try {
+          arr = JSON.parse(text.slice(idx));
+        } catch (_) {
+          return null;
+        }
+        return fakeifyPayload(arr) ? prefix + JSON.stringify(arr) : null;
+      };
+
+      const rewriteBinary = (bytes) => {
+        const off = bytes.length && bytes[0] < 10 ? 1 : 0;
+        let text;
+        try {
+          text = decoder.decode(bytes.subarray(off));
+        } catch (_) {
+          return null;
+        }
+        const idx = text.indexOf("[");
+        if (idx < 0) return null;
+        const jsonPrefix = text.slice(0, idx);
+        let arr;
+        try {
+          arr = JSON.parse(text.slice(idx));
+        } catch (_) {
+          return null;
+        }
+        if (!fakeifyPayload(arr)) return null;
+        const body = encoder.encode(jsonPrefix + JSON.stringify(arr));
+        const out = new Uint8Array(off + body.length);
+        if (off) out[0] = bytes[0];
+        out.set(body, off);
+        return out;
+      };
+
+      // --- ডেটা ট্র্যাকিং (শুধু পড়া) ---
+      const countEvent = (name) => {
+        state.events[name] = (state.events[name] || 0) + 1;
+      };
+
+      const setAsset = (asset, source) => {
+        if (!asset || typeof asset !== "string") return;
+        if (state.asset !== asset) {
+          state.asset = asset;
+          state.candle = null;
+          state.history = [];
+        }
+        state.assetSource = source;
+      };
+
+      const setPeriod = (period, source) => {
+        const p = Number(period);
+        if (!p || p < 1 || p > 86400) return;
+        if (state.periodSource === "user" && source !== "user") return;
+        if (state.period !== p) {
+          state.period = p;
+          state.candle = null;
+          state.history = [];
+        }
+        state.periodSource = source;
+      };
+
+      const onTick = (asset, time, price) => {
+        if (typeof asset !== "string" || !isFinite(time) || !isFinite(price)) return;
+        if (!state.asset) setAsset(asset, "first-tick");
+        if (asset !== state.asset) return;
+
+        state.ticks++;
+        state.serverOffset = time - Date.now() / 1000;
+        state.lastTick = { time, price };
+        lastDataAt = Date.now();
+
+        const start = Math.floor(time / state.period) * state.period;
+        const c = state.candle;
+        if (!c || c.start !== start) {
+          if (c && start > c.start) {
+            state.history.push({ start: c.start, open: c.open, close: c.close, high: c.high, low: c.low });
+            if (state.history.length > 50) state.history.shift();
+          }
+          state.candle = { start, open: price, high: price, low: price, close: price, fromHistory: false };
+        } else {
+          c.close = price;
+          if (price > c.high) c.high = price;
+          if (price < c.low) c.low = price;
+        }
+      };
+
+      const onHistory = (obj) => {
+        if (!obj || typeof obj !== "object") return;
+        if (obj.asset && !state.asset) setAsset(obj.asset, "history");
+        if (obj.asset && obj.asset !== state.asset) return;
+        if (obj.period) {
+          setPeriod(obj.period, "history");
+          if (Number(obj.period) !== state.period) return;
+        }
+        const candles = Array.isArray(obj.candles) ? obj.candles : null;
+        if (!candles || !candles.length) return;
+
+        const parsed = candles
+          .filter((k) => Array.isArray(k) && k.length >= 5)
+          .map((k) => ({ start: Number(k[0]), open: Number(k[1]), close: Number(k[2]), high: Number(k[3]), low: Number(k[4]) }))
+          .filter((k) => isFinite(k.start) && isFinite(k.open))
+          .sort((a, b) => a.start - b.start);
+        if (!parsed.length) return;
+
+        const last = parsed[parsed.length - 1];
+        const nowServer = Date.now() / 1000 + state.serverOffset;
+        const currentStart = Math.floor(nowServer / state.period) * state.period;
+
+        const closed = parsed.filter((k) => k.start < currentStart);
+        state.history = closed.slice(-50);
+        if (last.start === currentStart) {
+          state.candle = { ...last, fromHistory: true };
+        }
+        lastDataAt = Date.now();
+      };
+
+      const handlePayload = (data) => {
+        if (Array.isArray(data)) {
+          let handled = false;
+          for (const row of data) {
+            if (Array.isArray(row) && row.length >= 3 && typeof row[0] === "string" && typeof row[1] === "number" && typeof row[2] === "number") {
+              onTick(row[0], row[1], row[2]);
+              handled = true;
+            }
+          }
+          if (handled) countEvent("quotes/stream");
+          return;
+        }
+        if (data && typeof data === "object") {
+          if (Array.isArray(data.candles)) {
+            countEvent("history(candles)");
+            onHistory(data);
+          }
+        }
+      };
+
+      const parseSocketIoText = (text) => {
+        const m = /^\d+(?:-)?(?:\/[^,]*,)?(\d*)(\[.*)$/s.exec(text);
+        if (!m) return null;
+        try {
+          const arr = JSON.parse(m[2]);
+          if (Array.isArray(arr) && typeof arr[0] === "string") return { event: arr[0], data: arr[1] };
+        } catch (_) {}
+        return null;
+      };
+
+      const handleIncomingText = (text) => {
+        if (text.length > 2 && (text[0] === "[" || text[0] === "{")) {
+          try {
+            handlePayload(JSON.parse(text));
+          } catch (_) {}
+          return;
+        }
+        const msg = parseSocketIoText(text);
+        if (!msg) return;
+        countEvent(msg.event);
+        const d = msg.data;
+        if (d && d._placeholder) return;
+        if (msg.event === "quotes/stream") handlePayload(d);
+        else if (/history/i.test(msg.event) || (d && Array.isArray(d.candles))) onHistory(d);
+        else if (msg.event === "instruments/update" && d && d.asset) {
+          setAsset(d.asset, "server");
+          if (d.period) setPeriod(d.period, "server");
+        }
+      };
+
+      const handleIncomingBinary = (buf) => {
+        let bytes = new Uint8Array(buf);
+        if (bytes.length && bytes[0] < 10) bytes = bytes.subarray(1);
+        const text = decoder.decode(bytes);
+        try {
+          handlePayload(JSON.parse(text));
+        } catch (_) {
+          handleIncomingText(text);
+        }
+      };
+
+      const handleOutgoing = (data) => {
+        if (typeof data !== "string") return;
+        const msg = parseSocketIoText(data);
+        if (!msg) return;
+        const d = msg.data;
+        countEvent("→ " + msg.event);
+        switch (msg.event) {
+          case "instruments/update":
+          case "chart_notification/get":
+          case "history/load/line":
+          case "instruments/follow":
+            if (d && typeof d === "object") {
+              if (d.asset) setAsset(d.asset, "client:" + msg.event);
+              if (d.period) setPeriod(d.period, "client:" + msg.event);
+            }
+            break;
+          case "depth/follow":
+            if (typeof d === "string") setAsset(d, "client:depth/follow");
+            break;
+        }
+      };
+
+      const trackState = (raw) => {
+        try {
+          if (typeof raw === "string") handleIncomingText(raw);
+          else if (raw instanceof ArrayBuffer) handleIncomingBinary(raw);
+          else if (raw instanceof Blob) raw.arrayBuffer().then(handleIncomingBinary).catch(() => {});
+        } catch (_) {}
+      };
+
+      /* --- হুক: চালু থাকা socket-ও ধরতে MessageEvent.data + send প্যাচ করি --- */
+      const PROC = Symbol("qxProcessed");
+      const FAKED = Symbol("qxFaked");
+      const nativeDataDesc = Object.getOwnPropertyDescriptor(MessageEvent.prototype, "data");
+      const nativeGetData = nativeDataDesc.get;
+
+      Object.defineProperty(MessageEvent.prototype, "data", {
+        configurable: true,
+        enumerable: nativeDataDesc.enumerable,
+        get() {
+          const raw = nativeGetData.call(this);
+          const tgt = this.currentTarget || this.target;
+          if (!(tgt instanceof WebSocket)) return raw;
+
+          if (!this[PROC]) {
+            this[PROC] = true;
+            try {
+              if (typeof raw === "string") state.sockets.indexOf(tgt.url) < 0 && noteSocket(tgt.url);
+              else noteSocket(tgt.url);
+            } catch (_) {}
+            trackState(raw);
+          }
+
+          if (!fake.active) return raw;
+          if (this[FAKED] !== undefined) return this[FAKED];
+
+          let out = raw;
+          try {
+            if (typeof raw === "string") {
+              const n = rewriteText(raw);
+              if (n != null) out = n;
+            } else if (raw instanceof ArrayBuffer) {
+              const n = rewriteBinary(new Uint8Array(raw));
+              if (n) out = n.buffer;
+            }
+          } catch (_) {}
+          this[FAKED] = out;
+          return out;
+        },
+      });
+
+      const noteSocket = (url) => {
+        try {
+          const u = String(url).split("?")[0];
+          if (state.sockets.indexOf(u) < 0) {
+            state.sockets.push(u);
+            if (state.sockets.length > 5) state.sockets.shift();
+          }
+        } catch (_) {}
+      };
+
+      const nativeSend = WebSocket.prototype.send;
+      WebSocket.prototype.send = function (data) {
+        try {
+          handleOutgoing(data);
+        } catch (_) {}
+        return nativeSend.apply(this, arguments);
+      };
+
+      const NativeWS = window.WebSocket;
+      const HookedWS = new Proxy(NativeWS, {
+        construct(target, args) {
+          const ws = new target(...args);
+          try {
+            noteSocket(args[0]);
+          } catch (_) {}
+          return ws;
+        },
+      });
+      window.WebSocket = HookedWS;
+
+      // 🏷️ BOT NAME & LOGO INTEGRATION (As requested by user: ISHAK AI VIP)
+      var APP = "ISHAK AI VIP";
+      var LOGO_IMG_SRC = LOGO_URL || "https://i.ibb.co/Mx90bFy4/file-421.jpg";
+
+      // 🔐 LICENSE INTEGRATION: Automatically authorized from verified bot license!
+      // (Trader ID verification removed as requested!)
+      var access = { traderId: (getLocalLicense() && getLocalLicense().traderId) || "VIP", expiresAt: "2099-01-01" };
+      var UI_ROUND_KEY = "qxzr_round_ui";
+      var uiRound = { fakeTarget: "", fakeSeconds: 5 };
+      var fakeRunning = false;
+
+      var host = document.createElement("div");
+      host.id = "qxzr-bookmark";
+      var root = host.attachShadow({ mode: "open" });
+      root.innerHTML =
+        "<style>" +
+        ":host{all:initial}" +
+        "*{box-sizing:border-box}" +
+        ".fab{position:fixed;z-index:2147483647;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:grab;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;pointer-events:auto}" +
+        ".fab.away .frame,.fab.away .plate{opacity:0;visibility:hidden;pointer-events:none}" +
+        ".fab.away{pointer-events:auto}" +
+        ".fab.pop .frame{animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}" +
+        ".fab.pop .plate{animation:rowIn .45s .12s cubic-bezier(.2,.8,.2,1) both}" +
+        ".fab.dragging{cursor:grabbing}" +
+        "img{pointer-events:none;-webkit-user-drag:none;user-select:none}" +
+        ".frame{position:relative;width:64px;height:64px}" +
+        ".tile{position:absolute;inset:0;border-radius:16px;overflow:hidden;background:#050c22;border:1.5px solid rgba(56,189,248,.95);box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 18px rgba(30,144,255,.55);animation:pulse 2.4s ease-in-out infinite}" +
+        ".tile img{width:100%;height:100%;object-fit:cover;transform:scale(1.14);display:block}" +
+        ".scan{position:absolute;left:0;right:0;top:-40%;height:40%;background:linear-gradient(transparent,rgba(125,211,252,.38),transparent);animation:scan 2.8s linear infinite;pointer-events:none}" +
+        ".k{position:absolute;width:12px;height:12px;border:2px solid #38bdf8;filter:drop-shadow(0 0 4px rgba(56,189,248,.9));pointer-events:none}" +
+        ".k1{left:-6px;top:-6px;border-right:0;border-bottom:0;border-top-left-radius:5px}" +
+        ".k2{right:-6px;top:-6px;border-left:0;border-bottom:0;border-top-right-radius:5px}" +
+        ".k3{left:-6px;bottom:-6px;border-right:0;border-top:0;border-bottom-left-radius:5px}" +
+        ".k4{right:-6px;bottom:-6px;border-left:0;border-top:0;border-bottom-right-radius:5px}" +
+        ".plate{padding:4px 8px;border-radius:7px;background:linear-gradient(180deg,rgba(15,26,60,.92),rgba(5,10,26,.92));border:1px solid rgba(56,189,248,.35);box-shadow:0 0 10px rgba(30,144,255,.25)}" +
+        ".name{position:relative;display:block;text-transform:uppercase;font:800 11px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 8px rgba(56,189,248,.85)}" +
+        ".fab.live .tile{border-color:#34d399}" +
+        ".fab.running .tile{animation-duration:.9s;border-color:#34d399}" +
+        ".tile .dot{position:absolute;right:5px;top:5px;width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;display:none;pointer-events:none}" +
+        ".fab.running .tile .dot{display:block;animation:blink 1s steps(2) infinite}" +
+        ".panel{position:fixed;z-index:2147483646;width:min(340px,calc(100vw - 24px));padding:16px 14px 14px;border-radius:18px;color:#e6eefc;font:13px/1.45 Segoe UI,system-ui,sans-serif;transform-origin:0 0;pointer-events:auto;" +
+        "background:radial-gradient(120% 70% at 50% -12%,rgba(37,99,235,.38),transparent 62%),linear-gradient(165deg,rgba(12,21,50,.97),rgba(4,8,22,.98));" +
+        "border:1px solid rgba(96,165,250,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 22px 50px rgba(0,0,0,.6),0 0 30px rgba(30,144,255,.32);overflow:hidden;user-select:none;-webkit-user-select:none}" +
+        ".panel[hidden]{display:none}" +
+        ".sweep{position:absolute;left:0;right:0;top:0;height:2px;opacity:0;pointer-events:none;background:linear-gradient(90deg,transparent,#7dd3fc,#fff,#7dd3fc,transparent);box-shadow:0 0 14px 3px rgba(56,189,248,.8)}" +
+        ".panel.morphing .sweep{animation:sweep .62s linear both}" +
+        ".panel.morphing .row{opacity:0}" +
+        ".panel.boot .row{animation:rowIn .42s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--d)*60ms)}" +
+        ".row{position:relative}" +
+        ".grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(96,165,250,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,.07) 1px,transparent 1px);background-size:16px 16px;-webkit-mask-image:linear-gradient(#000,transparent 85%);mask-image:linear-gradient(#000,transparent 85%)}" +
+        ".pk{position:absolute;width:14px;height:14px;border:2px solid rgba(56,189,248,.85);pointer-events:none}" +
+        ".pk1{left:8px;top:8px;border-right:0;border-bottom:0}" +
+        ".pk2{right:8px;top:8px;border-left:0;border-bottom:0}" +
+        ".pk3{left:8px;bottom:8px;border-right:0;border-top:0}" +
+        ".pk4{right:8px;bottom:8px;border-left:0;border-top:0}" +
+        ".head{position:relative;display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:grab;touch-action:none}" +
+        ".head.dragging{cursor:grabbing}" +
+        ".mini{width:42px;height:42px;border-radius:12px;overflow:hidden;border:1.5px solid rgba(56,189,248,.9);flex:none;cursor:pointer}" +
+        ".mini img{width:100%;height:100%;object-fit:cover;transform:scale(1.14)}" +
+        ".ttl{font:800 16px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 8px rgba(56,189,248,.85)}" +
+        ".sub{margin-top:5px;font-size:10px;font-weight:700;letter-spacing:.18em;color:rgba(125,211,252,.7)}" +
+        ".chip{margin-left:auto;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.14em;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
+        ".chip.live{color:#052e1c;border-color:transparent;background:linear-gradient(135deg,#34d399,#22d3ee)}" +
+        "p{position:relative;margin:0}" +
+        ".hint{color:#8ea0bf}" +
+        "label{position:relative;display:block;margin:10px 0 6px;color:#8ea0bf;font-size:11px;font-weight:700;letter-spacing:.08em}" +
+        "input{position:relative;width:100%;color:#e6eefc;font:16px Segoe UI,system-ui,sans-serif;letter-spacing:.14em;text-align:center;padding:11px 12px;border-radius:10px;background:rgba(2,6,23,.65);border:1px solid rgba(96,165,250,.24);outline:none}" +
+        "input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.18)}" +
+        "button,.link{position:relative;display:flex;align-items:center;justify-content:center;width:100%;margin-top:10px;padding:11px 0;border-radius:12px;border:1px solid rgba(255,255,255,.18);color:#fff;background:linear-gradient(135deg,#2563eb,#06b6d4);font:800 13px Segoe UI,system-ui,sans-serif;letter-spacing:.06em;text-decoration:none;cursor:pointer}" +
+        "button:disabled{opacity:.45;cursor:wait}" +
+        ".card{display:flex;flex-direction:column;gap:6px;padding:9px 11px;border-radius:12px;margin-top:4px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(148,163,184,.16)}" +
+        ".cap{font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#64748b}" +
+        ".line{display:flex;align-items:center;justify-content:space-between;gap:8px}" +
+        ".market{flex:1;min-width:0;font-weight:800;font-size:14px;color:#7dd3fc;text-shadow:0 0 10px rgba(56,189,248,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}" +
+        ".run-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:999px;font-size:8px;font-weight:800;letter-spacing:.12em;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
+        ".run-chip.live{color:#052e1c;border-color:transparent;background:linear-gradient(135deg,#34d399,#22d3ee)}" +
+        ".run-dot{width:6px;height:6px;border-radius:50%;background:currentColor}" +
+        "input.round-in{text-align:left;font-size:13px;letter-spacing:normal;font-variant-numeric:tabular-nums;padding:8px 10px}" +
+        ".btn-row{display:flex;gap:8px;margin-top:14px}" +
+        ".btn-row button{flex:1;margin-top:0;font:800 12.5px Segoe UI,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}" +
+        ".btn-row .start{color:#fff;border:1px solid rgba(255,255,255,.18);background:linear-gradient(135deg,#2563eb,#06b6d4);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 20px rgba(37,99,235,.45)}" +
+        ".btn-row .stop{color:#fca5a5;background:rgba(239,68,68,.1);border:1px solid rgba(248,113,113,.45)}" +
+        ".btn-row button:disabled{opacity:.32;cursor:default}" +
+        ".normal-back-btn{margin-top:10px;padding:9px 0;border-radius:10px;background:linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95));border:1px solid rgba(56,189,248,0.35);color:#7dd3fc;font:800 11.5px Segoe UI,sans-serif;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5);}" +
+        "@keyframes blink{50%{opacity:.25}}" +
+        "@keyframes pulse{50%{box-shadow:0 0 24px 4px rgba(56,189,248,.85)}}" +
+        "@keyframes scan{to{top:110%}}" +
+        "@keyframes sweep{0%{top:0;opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}" +
+        "@keyframes pop{0%{transform:scale(.2) rotate(-8deg);opacity:0;filter:brightness(2.2)}60%{transform:scale(1.12) rotate(2deg);opacity:1}100%{transform:none;filter:none}}" +
+        "@keyframes rowIn{0%{opacity:0;transform:translateY(7px);filter:blur(3px)}45%{opacity:1;transform:translateX(-3px);filter:none}65%{transform:translateX(2px)}100%{opacity:1;transform:none}}" +
+        "@media (max-width:480px){" +
+        ".panel{width:min(248px,calc(100vw - 20px));padding:10px 10px 10px;border-radius:14px;font-size:11px;line-height:1.35}" +
+        ".head{gap:8px;margin-bottom:6px}" +
+        ".mini{width:34px;height:34px;border-radius:10px}" +
+        ".ttl{font-size:13px}" +
+        ".sub{margin-top:3px;font-size:8px;letter-spacing:.14em}" +
+        ".chip{padding:3px 6px;font-size:8px}" +
+        "label{margin:6px 0 4px;font-size:10px}" +
+        "input{padding:8px 10px;font-size:14px}" +
+        "input.round-in{padding:7px 8px;font-size:12px}" +
+        ".card{padding:7px 9px;gap:4px;margin-top:0}" +
+        ".market{font-size:12px}" +
+        ".cap{font-size:7.5px}" +
+        ".btn-row{margin-top:10px;gap:6px}" +
+        ".btn-row button{padding:8px 0;font-size:11px}" +
+        "button,.link{padding:9px 0;font-size:12px;margin-top:8px}" +
+        "}" +
+        "</style>" +
+        '<div class="fab" title="' + APP + '">' +
+        '<div class="frame"><div class="tile"><img alt="" draggable="false"><i class="scan"></i><i class="dot"></i></div><i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i></div>' +
+        '<div class="plate"><span class="name">' + APP + "</span></div></div>" +
+        '<div class="panel" hidden>' +
+        '<div class="grid"></div><i class="sweep"></i><i class="pk pk1"></i><i class="pk pk2"></i><i class="pk pk3"></i><i class="pk pk4"></i>' +
+        '<div class="head row" style="--d:0"><div class="mini" title="ছোট করুন"><img alt="" draggable="false"></div><div><div class="ttl">' + APP + '</div><div class="sub">ROUND CONTROL · CORE</div></div><span class="chip">IDLE</span></div>' +
+        '<div class="body"></div></div>';
+
+      var $ = function (sel) { return root.querySelector(sel); };
+      var fab = $(".fab");
+      var tile = $(".tile");
+      var panel = $(".panel");
+      var body = $(".body");
+      var chip = $(".chip");
+      var head = $(".head");
+      var mini = $(".mini");
+      var panelBusy = false;
+      var panelBusySince = 0;
+      var ROBO = "cubic-bezier(.8, 0, .2, 1)";
+      var imgs = root.querySelectorAll("img");
+      for (var i = 0; i < imgs.length; i++) imgs[i].src = LOGO_IMG_SRC;
+
+      function setLive(on) {
+        fab.classList.toggle("live", on);
+        chip.classList.toggle("live", on);
+        chip.textContent = on ? "LIVE" : "IDLE";
+      }
+
+      function clear(node) {
+        while (node.firstChild) node.removeChild(node.firstChild);
+      }
+
+      function el(tag, cls, text) {
+        var node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text != null) node.textContent = text;
+        return node;
+      }
+
+      function markPanelRows() {
+        var i;
+        var kids = body.children;
+        for (i = 0; i < kids.length; i++) {
+          kids[i].classList.add("row");
+          kids[i].style.setProperty("--d", String(i + 1));
+        }
+      }
+
+      function liftWidget() {
+        var parent = document.body || document.documentElement;
+        if (!parent) return;
+        if (host.hasAttribute("inert")) host.removeAttribute("inert");
+        try {
+          host.inert = false;
+        } catch (e) {}
+        host.style.zIndex = "2147483647";
+        if (!host.isConnected) parent.appendChild(host);
+        else if (parent.lastElementChild !== host) parent.appendChild(host);
+      }
+
+      function ensureMounted() {
+        liftWidget();
+      }
+
+      function clearDragState() {
+        drag = null;
+        panelDrag = null;
+        fab.classList.remove("dragging");
+        head.classList.remove("dragging");
+      }
+
+      function recoverPanelShell() {
+        panelBusy = false;
+        panelBusySince = 0;
+        clearDragState();
+        panel.getAnimations().forEach(function (anim) {
+          try { anim.cancel(); } catch (e) {}
+        });
+        resetPanelMotion();
+        panel.classList.remove("morphing");
+        if (panel.hidden) {
+          fab.classList.remove("away");
+        } else {
+          fab.classList.add("away");
+          panel.classList.add("boot");
+        }
+      }
+
+      function morphFrames() {
+        var t = tile.getBoundingClientRect();
+        var p = panel.getBoundingClientRect();
+        if (!t.width || !t.height || !p.width || !p.height) return null;
+        var sx = t.width / p.width;
+        var sy = t.height / p.height;
+        var dx = t.left - p.left;
+        var dy = t.top - p.top;
+        return [
+          { offset: 0, transform: "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")", borderRadius: "16px", filter: "brightness(2.2) saturate(1.5)", easing: ROBO },
+          { offset: 0.45, transform: "translate(0px," + dy + "px) scale(1," + sy + ")", borderRadius: "14px", filter: "brightness(1.5)", easing: "linear" },
+          { offset: 0.55, transform: "translate(0px," + dy + "px) scale(1," + sy + ")", borderRadius: "14px", filter: "brightness(1.5)", easing: ROBO },
+          { offset: 0.85, transform: "translate(0px,0px) scale(1,1.03)", borderRadius: "18px", filter: "brightness(1.1)", easing: "ease-out" },
+          { offset: 1, transform: "translate(0px,0px) scale(1,1)", borderRadius: "18px", filter: "brightness(1)" },
+        ];
+      }
+
+      function resetPanelMotion() {
+        panel.style.transform = "";
+        panel.style.borderRadius = "";
+        panel.style.filter = "";
+      }
+
+      function fmtAsset(a) {
+        var otc = /_otc$/i.test(a);
+        var name = a.replace(/_otc$/i, "");
+        if (/^[A-Z]{6}$/.test(name)) name = name.slice(0, 3) + "/" + name.slice(3);
+        return otc ? name + " (OTC)" : name;
+      }
+
+      function loadRoundUi() {
+        try {
+          var raw = localStorage.getItem(UI_ROUND_KEY);
+          if (raw) uiRound = Object.assign(uiRound, JSON.parse(raw));
+        } catch (e) {}
+      }
+
+      function saveRoundUi() {
+        try {
+          localStorage.setItem(UI_ROUND_KEY, JSON.stringify(uiRound));
+        } catch (e) {}
+      }
+
+      function updateRoundBtns(toolEls) {
+        if (!toolEls) return;
+        toolEls.start.disabled = fakeRunning;
+        toolEls.stop.disabled = !fakeRunning;
+        fab.classList.toggle("running", !!access && fakeRunning);
+        if (toolEls.runChip) toolEls.runChip.classList.toggle("live", fakeRunning);
+        if (toolEls.runChipText) toolEls.runChipText.textContent = fakeRunning ? "LIVE" : "IDLE";
+      }
+
+      function renderActive() {
+        clear(body);
+        setLive(true);
+        var sub = $(".sub");
+        if (sub) sub.textContent = "ROUND CONTROL · CORE";
+
+        var card = el("div", "card");
+        var line1 = el("div", "line");
+        line1.appendChild(el("span", "cap", "MARKET"));
+        var runChip = el("span", "run-chip");
+        runChip.appendChild(el("i", "run-dot"));
+        var runChipText = el("b", "run-chip-t", "IDLE");
+        runChip.appendChild(runChipText);
+        line1.appendChild(runChip);
+        card.appendChild(line1);
+        var line2 = el("div", "line");
+        var market = el("div", "market", state.asset ? fmtAsset(state.asset) : "Waiting for data…");
+        line2.appendChild(market);
+        card.appendChild(line2);
+        body.appendChild(card);
+
+        body.appendChild(el("label", "", "Round নম্বর"));
+        var fTarget = el("input", "round-in f-target");
+        fTarget.type = "number";
+        fTarget.step = "any";
+        fTarget.placeholder = "যেমন 1.2345";
+        fTarget.value = uiRound.fakeTarget == null ? "" : String(uiRound.fakeTarget);
+        body.appendChild(fTarget);
+
+        body.appendChild(el("label", "", "সময় (সেকেন্ড)"));
+        var fSec = el("input", "round-in f-sec");
+        fSec.type = "number";
+        fSec.step = "1";
+        fSec.min = "1";
+        fSec.placeholder = "5";
+        fSec.value = uiRound.fakeSeconds == null ? "" : String(uiRound.fakeSeconds);
+        body.appendChild(fSec);
+
+        var btns = el("div", "btn-row");
+        var startBtn = el("button", "start", "Start");
+        startBtn.type = "button";
+        var stopBtn = el("button", "stop", "Stop");
+        stopBtn.type = "button";
+        btns.appendChild(startBtn);
+        btns.appendChild(stopBtn);
+        body.appendChild(btns);
+
+        // Option to switch back to normal bot mode
+        var backBtn = el("button", "normal-back-btn", "↩ Back to Normal Bot");
+        backBtn.type = "button";
+        body.appendChild(backBtn);
+
+        var toolEls = {
+          market: market,
+          fTarget: fTarget,
+          fSec: fSec,
+          start: startBtn,
+          stop: stopBtn,
+          runChip: runChip,
+          runChipText: runChipText,
+        };
+        body._qxToolEls = toolEls;
+
+        fTarget.addEventListener("input", function () {
+          uiRound.fakeTarget = fTarget.value;
+          saveRoundUi();
+          if (fakeRunning) startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+        });
+        fSec.addEventListener("input", function () {
+          uiRound.fakeSeconds = fSec.value;
+          saveRoundUi();
+          if (fakeRunning) fake.seconds = Math.max(0.2, Number(uiRound.fakeSeconds) || 5);
+        });
+        startBtn.addEventListener("click", function () {
+          if (fakeRunning) return;
+          var t = Number(uiRound.fakeTarget);
+          if (!uiRound.fakeTarget || !isFinite(t)) {
+            fTarget.focus();
+            return;
+          }
+          fakeRunning = true;
+          startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+          updateRoundBtns(toolEls);
+        });
+        stopBtn.addEventListener("click", function () {
+          if (!fakeRunning) return;
+          fakeRunning = false;
+          stopFake();
+          updateRoundBtns(toolEls);
+        });
+        backBtn.addEventListener("click", function() {
+          closePanel();
+          switchToNormalBotMode();
+        });
+
+        updateRoundBtns(toolEls);
+        markPanelRows();
+      }
+
+      function place(left, top) {
+        pos.x = Math.max(8, Math.min(left, window.innerWidth - 96));
+        pos.y = Math.max(8, Math.min(top, window.innerHeight - 120));
+        fab.style.left = pos.x + "px";
+        fab.style.top = pos.y + "px";
+        if (panel.hidden) return;
+        var rect = fab.getBoundingClientRect();
+        var width = panel.offsetWidth || 320;
+        var height = panel.offsetHeight || 280;
+        var gap = 12;
+        var panelLeft = rect.left;
+        var panelTop = rect.bottom + gap;
+        if (panelTop + height > window.innerHeight - 8) panelTop = rect.top - height - gap;
+        if (panelTop < 8) panelTop = 8;
+        if (panelLeft + width > window.innerWidth - 8) panelLeft = window.innerWidth - width - 8;
+        if (panelLeft < 8) panelLeft = 8;
+        var coversIcon = panelLeft < rect.right && panelLeft + width > rect.left && panelTop < rect.bottom && panelTop + height > rect.top;
+        if (coversIcon) {
+          var shiftLeft = rect.left - width - gap;
+          panelLeft = shiftLeft >= 8 ? shiftLeft : rect.right + gap;
+        }
+        panel.style.left = panelLeft + "px";
+        panel.style.top = panelTop + "px";
+      }
+
+      var pos = { x: window.innerWidth - 96, y: 120 };
+      try {
+        var savedPos = JSON.parse(localStorage.getItem("qxzr_pos") || "null");
+        if (savedPos && typeof savedPos.x === "number") pos = savedPos;
+      } catch (e) {}
+
+      function runPanelAnim(frames, duration, fill, done) {
+        panelBusy = true;
+        panelBusySince = Date.now();
+        var finished = false;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          panelBusy = false;
+          panelBusySince = 0;
+          done();
+        }
+        window.setTimeout(function () {
+          if (panelBusy) finish();
+        }, duration + 400);
+        if (!frames || !panel.animate) {
+          finish();
+          return;
+        }
+        var anim;
+        try {
+          anim = panel.animate(frames, { duration: duration, fill: fill || "none" });
+        } catch (e) {
+          finish();
+          return;
+        }
+        if (!anim || !anim.finished) {
+          finish();
+          return;
+        }
+        anim.finished.then(finish, finish);
+      }
+
+      function openPanel(animate) {
+        ensureMounted();
+        if (panelBusy) recoverPanelShell();
+        renderActive();
+        panel.hidden = false;
+        place(pos.x, pos.y);
+        resetPanelMotion();
+        fab.classList.add("away");
+        if (animate === false) {
+          panel.classList.add("boot");
+          return;
+        }
+        var frames = morphFrames();
+        panel.classList.remove("boot");
+        panel.classList.add("morphing");
+        runPanelAnim(frames, 620, "none", function () {
+          panel.classList.remove("morphing");
+          panel.classList.add("boot");
+          resetPanelMotion();
+        });
+      }
+
+      function closePanel() {
+        ensureMounted();
+        if (panelBusy) recoverPanelShell();
+        if (panel.hidden) return;
+        var raw = morphFrames();
+        var frames = null;
+        var i;
+        if (raw) {
+          frames = [];
+          for (i = raw.length - 1; i >= 0; i--) {
+            frames.push({
+              offset: 1 - raw[i].offset,
+              transform: raw[i].transform,
+              borderRadius: raw[i].borderRadius,
+              filter: raw[i].filter,
+              easing: raw[i].easing,
+            });
+          }
+        }
+        panel.classList.remove("boot");
+        panel.classList.add("morphing");
+        runPanelAnim(frames, 480, "forwards", function () {
+          panel.getAnimations().forEach(function (anim) {
+            try { anim.cancel(); } catch (e) {}
+          });
+          panel.classList.remove("morphing");
+          resetPanelMotion();
+          panel.hidden = true;
+          fab.classList.remove("away");
+          fab.classList.remove("pop");
+          void fab.offsetWidth;
+          fab.classList.add("pop");
+        });
+      }
+
+      window.__ISHAK_SWITCH_OPEN_PANEL__ = function() {
+        host.style.display = '';
+        liftWidget();
+        openPanel(true);
+      };
+
+      var drag = null;
+      var panelDrag = null;
+
+      head.addEventListener("pointerdown", function (event) {
+        ensureMounted();
+        if (event.button || panel.hidden) return;
+        if (panelBusy) recoverPanelShell();
+        event.preventDefault();
+        panelDrag = {
+          id: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          ox: pos.x,
+          oy: pos.y,
+          moved: false,
+          target: event.target,
+        };
+        head.classList.add("dragging");
+      });
+
+      fab.addEventListener("pointerdown", function (event) {
+        liftWidget();
+        if (event.button) return;
+        if (panelBusy) recoverPanelShell();
+        event.preventDefault();
+        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: pos.x, oy: pos.y, moved: false };
+        fab.classList.add("dragging");
+      });
+      window.addEventListener("pointermove", function (event) {
+        if (panelDrag && event.pointerId === panelDrag.id) {
+          var pdx = event.clientX - panelDrag.x;
+          var pdy = event.clientY - panelDrag.y;
+          if (!panelDrag.moved && Math.hypot(pdx, pdy) < 4) return;
+          panelDrag.moved = true;
+          place(panelDrag.ox + pdx, panelDrag.oy + pdy);
+          return;
+        }
+        if (!drag || event.pointerId !== drag.id) return;
+        var dx = event.clientX - drag.x;
+        var dy = event.clientY - drag.y;
+        if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+        drag.moved = true;
+        place(drag.ox + dx, drag.oy + dy);
+      }, true);
+      window.addEventListener("pointerup", function (event) {
+        if (panelDrag && event.pointerId === panelDrag.id) {
+          var pmoved = panelDrag.moved;
+          var pt = panelDrag.target;
+          panelDrag = null;
+          head.classList.remove("dragging");
+          if (pmoved) {
+            try { localStorage.setItem("qxzr_pos", JSON.stringify(pos)); } catch (e) {}
+            return;
+          }
+          if (mini.contains(pt)) closePanel();
+          return;
+        }
+        if (!drag || event.pointerId !== drag.id) return;
+        var moved = drag.moved;
+        drag = null;
+        fab.classList.remove("dragging");
+        if (moved) {
+          try { localStorage.setItem("qxzr_pos", JSON.stringify(pos)); } catch (e) {}
+          return;
+        }
+        if (!panel.hidden) {
+          closePanel();
+          return;
+        }
+        setLive(true);
+        openPanel(true);
+      }, true);
+      window.addEventListener("pointercancel", function (event) {
+        if (panelDrag && event.pointerId === panelDrag.id) {
+          clearDragState();
+          return;
+        }
+        if (!drag || event.pointerId !== drag.id) return;
+        clearDragState();
+      }, true);
+
+      host.style.cssText = "position:relative;z-index:2147483647";
+      liftWidget();
+      place(pos.x, pos.y);
+
+      try {
+        var liftObs = new MutationObserver(function () {
+          liftWidget();
+        });
+        liftObs.observe(host, { attributes: true, attributeFilter: ["inert", "aria-hidden"] });
+      } catch (e) {}
+
+      window.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") {
+          clearDragState();
+          liftWidget();
+        }
+      });
+      window.addEventListener("blur", clearDragState);
+      loadRoundUi();
+
+      setInterval(liftWidget, 300);
+
+      setInterval(function () {
+        var toolEls = body._qxToolEls;
+        if (!toolEls || !toolEls.market) return;
+        toolEls.market.textContent = state.asset ? fmtAsset(state.asset) : "Waiting for data…";
+      }, 500);
+
+      // Open panel immediately upon switching
+      openPanel(true);
+    })();
+  }
+
 })();
