@@ -774,197 +774,54 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
   return (
     <>
-      {/* 🛰️ CINEMATIC FULLSCREEN CYBER MATRIX RADAR SCANNER OVERLAY */}
+      {/* Bot Scanning UI: Laser Scanner Sweep + Pure Circular Gauge (no bg) + Percentage inside + Stylish Analyzing below */}
       {isScanning && (
-        <div
-          id="ishak-fullscreen-cyber-scan"
-          className="fixed inset-0 z-[9999999] flex flex-col items-center justify-between p-4 sm:p-8 select-none pointer-events-auto"
-          style={{
-            backgroundColor: 'rgba(3, 6, 14, 0.90)',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-            fontFamily: 'ui-monospace, Menlo, Monaco, Consolas, monospace',
-            animation: 'ishakOverlayFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-          }}
-        >
-          {/* Ambient Cyber Grid & Radial Vignette */}
+        <>
+          {/* 🌟 ULTRA-SMOOTH, CONTINUOUS UNIFIED GOLDEN LASER SCANNER (Lag-Free GPU Transform) */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-20"
+            className="fixed top-0 left-0 w-screen pointer-events-none z-[999998] will-change-transform"
             style={{
-              backgroundImage: `
-                radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.15) 0%, transparent 80%),
-                linear-gradient(rgba(0, 229, 255, 0.08) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 229, 255, 0.08) 1px, transparent 1px)
-              `,
-              backgroundSize: '100% 100%, 28px 28px, 28px 28px',
+              height: '32px',
+              animation: 'ishakGoldenLaserSweep 3.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
             }}
-          />
+          >
+            {/* Top Volumetric Smooth Glow */}
+            <div
+              className="absolute bottom-1/2 left-0 w-full pointer-events-none"
+              style={{
+                height: '30px',
+                background: 'linear-gradient(to top, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%)'
+              }}
+            />
 
-          {/* TOP HUD: Real-time Live Market & System Status */}
-          <header className="relative z-10 w-full max-w-4xl flex items-center justify-between bg-black/60 border border-amber-500/30 rounded-2xl px-4 py-2.5 backdrop-blur-md shadow-[0_4px_25px_rgba(0,0,0,0.8)]">
-            <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shadow-[0_0_10px_#10b981]" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🛰️</span> ALGORITHMIC CHART INTERCEPTOR
-                </span>
-                <span className="text-sm sm:text-base font-extrabold text-white tracking-wide flex items-center gap-2">
-                  <span className="text-cyan-400">{getBackgroundMarketData().currentPair}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/30 font-mono">
-                    {tradeDuration || 5}S TIMEFRAME
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 text-right">
-              <div className="hidden sm:flex flex-col">
-                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">LIVE BROKER RATE</span>
-                <span className="text-sm font-mono font-black text-amber-300">
-                  {getBackgroundMarketData().currentPrice.toFixed(getBackgroundMarketData().currentPrice > 50 ? 2 : 5)}
-                </span>
-              </div>
-              <div className="px-3 py-1 rounded-xl bg-amber-500/15 border border-amber-400/40 text-amber-300 text-xs font-black shadow-[0_0_15px_rgba(245,158,11,0.25)] flex items-center gap-1.5">
-                <span className="animate-spin text-sm">⚙️</span> SCANNING
-              </div>
-            </div>
-          </header>
-
-          {/* CENTER: HOLOGRAPHIC QUANTUM RADAR DIAL (ঘড়ির কাঁটার মতো 360-degree rotating radar scan) */}
-          <div className="relative z-10 my-auto flex flex-col items-center justify-center">
-            {/* The Outer Quantum Dial */}
-            <div className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full border-2 border-amber-500/40 flex items-center justify-center shadow-[0_0_50px_rgba(245,158,11,0.25),inset_0_0_35px_rgba(245,158,11,0.15)] bg-black/40 backdrop-blur-sm">
-              {/* Concentric Calibration Circles */}
-              <div className="absolute inset-4 rounded-full border border-cyan-500/25 pointer-events-none" />
-              <div className="absolute inset-10 rounded-full border border-amber-500/20 border-dashed pointer-events-none" />
-              <div className="absolute inset-16 rounded-full border border-cyan-500/30 pointer-events-none" />
-
-              {/* Crosshair Axis Reticles */}
-              <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[1px] bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent pointer-events-none" />
-              <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent pointer-events-none" />
-
-              {/* Degree Angle Indicators */}
-              <span className="absolute top-1 text-[9px] font-mono text-amber-400/80 font-bold">0° N</span>
-              <span className="absolute bottom-1 text-[9px] font-mono text-amber-400/80 font-bold">180° S</span>
-              <span className="absolute right-2 text-[9px] font-mono text-amber-400/80 font-bold">90° E</span>
-              <span className="absolute left-2 text-[9px] font-mono text-amber-400/80 font-bold">270° W</span>
-
-              {/* ⚡ CLOCKWISE 360° RADAR SWEEPER BEAM (ঘড়ির কাঁটার মতো ঘুরে স্ক্যান) */}
+            {/* Continuous, Solid, Silky Golden Laser Beam (Zero fragmentation, Zero gaps) */}
+            <div className="relative w-full h-[3.5px] flex items-center justify-center">
               <div
-                className="absolute inset-0 rounded-full pointer-events-none overflow-hidden"
+                className="w-full h-full"
                 style={{
-                  animation: 'ishakRadarSweep 1.6s linear infinite',
-                }}
-              >
-                {/* Radar Sweep Conic Trail */}
-                <div
-                  className="w-full h-full rounded-full"
-                  style={{
-                    background: 'conic-gradient(from 0deg, rgba(245, 158, 11, 0.45) 0deg, rgba(245, 158, 11, 0.15) 45deg, transparent 90deg, transparent 360deg)',
-                  }}
-                />
-                {/* Luminous Leading Edge Beam Needle */}
-                <div
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-[2.5px] h-1/2 origin-bottom pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(to top, rgba(255, 255, 255, 0.9), #FFD700)',
-                    boxShadow: '0 0 12px #FFD700, 0 0 25px #FFA500',
-                  }}
-                />
-              </div>
-
-              {/* Outer Reverse Counter-Rotating Reticle */}
-              <div
-                className="absolute -inset-2.5 rounded-full border-t-2 border-b-2 border-cyan-400/40 pointer-events-none"
-                style={{
-                  animation: 'ishakReticleSpin 5s linear infinite',
+                  background: 'linear-gradient(90deg, rgba(255,184,0,0) 0%, rgba(255,215,0,0.9) 3%, #FFFFFF 15%, #FFFFFF 85%, rgba(255,215,0,0.9) 97%, rgba(255,184,0,0) 100%)',
+                  boxShadow: '0 0 10px #FFFFFF, 0 0 20px #FFD700, 0 0 35px #FF9E00, 0 0 55px rgba(255,158,11,0.7)'
                 }}
               />
 
-              {/* Central Core: Ishak Logo + Progress Percentage */}
-              <div className="relative z-20 flex flex-col items-center justify-center p-4 rounded-full bg-[#070b18]/90 border border-amber-500/60 shadow-[0_0_30px_rgba(0,0,0,0.9),0_0_20px_rgba(245,158,11,0.4)]">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.6)] mb-2">
-                  <img
-                    src="https://i.ibb.co/Mx90bFy4/file-421.jpg"
-                    alt="Ishak AI Core"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="text-2xl sm:text-3xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-white via-amber-200 to-amber-400 tracking-wider">
-                  {scanProgress}%
-                </div>
-                <span className="text-[9px] font-bold text-cyan-300 tracking-widest uppercase">
-                  DECODING CHART
-                </span>
+              {/* Optical Laser Focus Core (Crystal Diamond, Stable and Sharp) */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
+                <div
+                  className="w-3.5 h-3.5 bg-gradient-to-br from-white via-amber-200 to-yellow-500 border border-white rotate-45 shadow-[0_0_15px_#FFE066,0_0_30px_#FFB800]"
+                />
               </div>
             </div>
 
-            {/* Signal Direction Lock Flash (at 88%+ scan progress) */}
-            {scanProgress >= 88 && (
-              <div className="mt-4 px-6 py-2 rounded-2xl bg-black/80 border border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.5)] animate-bounce flex items-center gap-3">
-                <span className="text-xl">🎯</span>
-                <span className="text-sm sm:text-base font-black text-amber-300 tracking-wide">
-                  SIGNAL CONFLUENCE LOCKED • EXECUTING ENTRY...
-                </span>
-              </div>
-            )}
+            {/* Bottom Volumetric Smooth Glow */}
+            <div
+              className="absolute top-1/2 left-0 w-full pointer-events-none"
+              style={{
+                height: '30px',
+                background: 'linear-gradient(to bottom, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%)'
+              }}
+            />
           </div>
-
-          {/* BOTTOM: MATRIX CYBER DIAGNOSTICS STREAM (হ্যাকিং স্টাইল রিয়েল-টাইম মার্কেট ডাটা স্ট্রিম) */}
-          <footer className="relative z-10 w-full max-w-4xl bg-black/75 border border-cyan-500/30 rounded-2xl p-3 sm:p-4 backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.9)]">
-            <div className="flex items-center justify-between border-b border-cyan-500/20 pb-1.5 mb-2">
-              <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                TERMINAL TELEMETRY // REAL-TIME MARKET ENGINE
-              </span>
-              <span className="text-[9px] text-gray-400 font-mono">
-                FEED LATENCY: ~18ms
-              </span>
-            </div>
-
-            {/* Matrix Terminal Stream Lines */}
-            <div className="flex flex-col gap-1 text-[11px] sm:text-xs font-mono">
-              <div className="text-emerald-400 flex items-center gap-2">
-                <span className="text-gray-500">[0.00s]</span>
-                <span>🛰️ CONNECTING BROKER WEBSOCKET: {getBackgroundMarketData().currentPair}</span>
-              </div>
-
-              {scanProgress >= 20 && (
-                <div className="text-cyan-300 flex items-center gap-2">
-                  <span className="text-gray-500">[0.75s]</span>
-                  <span>📊 DECODING RUNNING OHLC CANDLE BARS & TICKS FEED (30+ BARS OK)</span>
-                </div>
-              )}
-
-              {scanProgress >= 45 && (
-                <div className="text-amber-300 flex items-center gap-2">
-                  <span className="text-gray-500">[1.55s]</span>
-                  <span>📐 EVALUATING EMA(9/21) CROSSOVER + RSI(14) MOMENTUM REVERSAL</span>
-                </div>
-              )}
-
-              {scanProgress >= 70 && (
-                <div className="text-yellow-200 flex items-center gap-2">
-                  <span className="text-gray-500">[2.45s]</span>
-                  <span>🎯 ROUND LEVEL SUPPORT/RESISTANCE BOUNCE DETECTED (CONFIRMATION 95%+)</span>
-                </div>
-              )}
-
-              {scanProgress >= 90 && (
-                <div className="text-emerald-300 font-bold flex items-center gap-2">
-                  <span className="text-gray-500">[3.15s]</span>
-                  <span>⚡ DISPATCHING BROKER TRADE INJECTION ORDER • ONE SIGNAL ONE TRADE RULE</span>
-                </div>
-              )}
-
-              {/* Blinking Typing Cursor */}
-              <div className="flex items-center gap-1 text-cyan-400 pt-0.5">
-                <span className="text-gray-500">[{((scanProgress * 3.5) / 100).toFixed(2)}s]</span>
-                <span className="animate-pulse">_</span>
-              </div>
-            </div>
-          </footer>
-        </div>
+        </>
       )}
 
       {/* Floating Circular Robot Button (Draggable) with Intro Spawn Animation */}
@@ -1080,6 +937,46 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           </span>
         </div>
       </div>
+
+      {/* ⚡ CLEAN, COMPACT BUY / SELL SIGNAL (1.5s Duration, Zero Circles/Auras) */}
+      {flySignal && (
+        <div
+          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[999999] select-none text-center flex items-center justify-center"
+          style={{
+            animation: flySignal === 'UP'
+              ? 'ishakBuyFlyUp1500 1.5s cubic-bezier(0.16, 0.9, 0.25, 1) forwards'
+              : 'ishakSellFlyDown1500 1.5s cubic-bezier(0.16, 0.9, 0.25, 1) forwards',
+            fontFamily: '"Syncopate", "Orbitron", sans-serif'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-3xl sm:text-4xl font-black tracking-[0.18em] leading-none select-none uppercase ${
+                flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
+              }`}
+              style={{
+                textShadow: flySignal === 'UP'
+                  ? '0 0 16px #00FF66, 0 0 32px rgba(0,255,102,0.8), 0 2px 10px rgba(0,0,0,0.95)'
+                  : '0 0 16px #FF1744, 0 0 32px rgba(255,23,68,0.8), 0 2px 10px rgba(0,0,0,0.95)'
+              }}
+            >
+              {flySignal === 'UP' ? 'BUY' : 'SELL'}
+            </span>
+            <span
+              className={`text-2xl sm:text-3xl font-black ${
+                flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
+              }`}
+              style={{
+                textShadow: flySignal === 'UP'
+                  ? '0 0 14px #00FF66, 0 2px 8px rgba(0,0,0,0.95)'
+                  : '0 0 14px #FF1744, 0 2px 8px rgba(0,0,0,0.95)'
+              }}
+            >
+              {flySignal === 'UP' ? '↑' : '↓'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* 1. SETTINGS HUB MODAL (STYLISH COSMIC GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showHub && (

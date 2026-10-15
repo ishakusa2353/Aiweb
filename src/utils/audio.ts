@@ -19,140 +19,124 @@ function getAudioContext(): AudioContext | null {
 }
 
 /**
- * Futuristic Cyber Quantum Radar & Matrix Telemetry Sound Synthesizer:
- * - Synchronized 3.5s multi-layer sound with quantum radar sweep pings (every 400ms)
- * - Micro cybernetic data telemetry blips matching the Matrix terminal stream
- * - Deep resonant sub-frequency hum and zero mechanical distortion
+ * Futuristic Laser Scanner Sound Synthesizer:
+ * - High-impact, powerful and loud optical laser frequency sweep
+ * - Deep sub-harmonic resonance & airy laser harmonics
+ * - ZERO mechanical ticks or 'put-put' click noises
  */
 export function playPhotostatScannerSound(): void {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
     const t = ctx.currentTime;
-    const totalDuration = 3.5;
+    const totalDuration = 3.6; // 3.6s matching the laser animation
 
-    // Master Limiter / Compressor for clean, loud, punchy cyber audio
+    // Master Limiter / Compressor to allow rich, loud audio without digital clipping
     const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-4, t);
+    compressor.threshold.setValueAtTime(-6, t);
     compressor.knee.setValueAtTime(6, t);
-    compressor.ratio.setValueAtTime(3.5, t);
-    compressor.attack.setValueAtTime(0.002, t);
-    compressor.release.setValueAtTime(0.1, t);
+    compressor.ratio.setValueAtTime(3, t);
+    compressor.attack.setValueAtTime(0.003, t);
+    compressor.release.setValueAtTime(0.12, t);
     compressor.connect(ctx.destination);
 
-    // 1. Deep Sub-Bass Quantum Resonance Hum
+    // 1. Primary Powerful Laser Sweeper
+    const laserOsc = ctx.createOscillator();
+    const laserGain = ctx.createGain();
+    const laserFilter = ctx.createBiquadFilter();
+
+    laserOsc.type = 'sawtooth';
+    laserFilter.type = 'lowpass';
+    laserFilter.frequency.setValueAtTime(1100, t);
+    laserFilter.Q.setValueAtTime(3.2, t);
+
+    // Laser frequency sweep
+    laserOsc.frequency.setValueAtTime(320, t);
+    laserOsc.frequency.exponentialRampToValueAtTime(520, t + 1.8);
+    laserOsc.frequency.exponentialRampToValueAtTime(380, t + 3.0);
+    laserOsc.frequency.exponentialRampToValueAtTime(260, t + totalDuration);
+
+    // Strong, noticeably louder gain envelope as requested
+    laserGain.gain.setValueAtTime(0.001, t);
+    laserGain.gain.linearRampToValueAtTime(0.55, t + 0.22);
+    laserGain.gain.setValueAtTime(0.55, t + totalDuration - 0.35);
+    laserGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
+
+    laserOsc.connect(laserFilter);
+    laserFilter.connect(laserGain);
+    laserGain.connect(compressor);
+
+    laserOsc.start(t);
+    laserOsc.stop(t + totalDuration);
+
+    // 2. Sub Ambient Resonance Layer (Deep power undertone)
     const subOsc = ctx.createOscillator();
     const subGain = ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(95, t);
-    subOsc.frequency.linearRampToValueAtTime(145, t + 1.8);
-    subOsc.frequency.linearRampToValueAtTime(90, t + totalDuration);
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(140, t);
+    subOsc.frequency.linearRampToValueAtTime(195, t + 1.8);
+    subOsc.frequency.linearRampToValueAtTime(130, t + totalDuration);
 
     subGain.gain.setValueAtTime(0.001, t);
-    subGain.gain.linearRampToValueAtTime(0.38, t + 0.2);
-    subGain.gain.setValueAtTime(0.38, t + totalDuration - 0.25);
+    subGain.gain.linearRampToValueAtTime(0.35, t + 0.25);
+    subGain.gain.setValueAtTime(0.35, t + totalDuration - 0.25);
     subGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
 
     subOsc.connect(subGain);
     subGain.connect(compressor);
+
     subOsc.start(t);
     subOsc.stop(t + totalDuration);
 
-    // 2. Continuous Cyber Harmonic Frequency Sweep (Optical Radar)
-    const sweepOsc = ctx.createOscillator();
-    const sweepGain = ctx.createGain();
-    const sweepFilter = ctx.createBiquadFilter();
-    sweepOsc.type = 'sawtooth';
-    sweepFilter.type = 'bandpass';
-    sweepFilter.frequency.setValueAtTime(450, t);
-    sweepFilter.Q.setValueAtTime(3.5, t);
+    // 3. Cyber Harmonic Sheen Layer (High optical shimmer)
+    const shimmerOsc = ctx.createOscillator();
+    const shimmerGain = ctx.createGain();
+    shimmerOsc.type = 'sine';
+    shimmerOsc.frequency.setValueAtTime(580, t);
+    shimmerOsc.frequency.exponentialRampToValueAtTime(960, t + 1.8);
+    shimmerOsc.frequency.exponentialRampToValueAtTime(520, t + totalDuration);
 
-    sweepOsc.frequency.setValueAtTime(280, t);
-    sweepOsc.frequency.exponentialRampToValueAtTime(620, t + 1.7);
-    sweepOsc.frequency.exponentialRampToValueAtTime(420, t + totalDuration);
-    sweepFilter.frequency.exponentialRampToValueAtTime(950, t + 1.7);
-    sweepFilter.frequency.exponentialRampToValueAtTime(500, t + totalDuration);
+    shimmerGain.gain.setValueAtTime(0.001, t);
+    shimmerGain.gain.linearRampToValueAtTime(0.24, t + 0.3);
+    shimmerGain.gain.setValueAtTime(0.24, t + totalDuration - 0.3);
+    shimmerGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
 
-    sweepGain.gain.setValueAtTime(0.001, t);
-    sweepGain.gain.linearRampToValueAtTime(0.28, t + 0.15);
-    sweepGain.gain.setValueAtTime(0.28, t + totalDuration - 0.3);
-    sweepGain.gain.linearRampToValueAtTime(0.001, t + totalDuration);
+    shimmerOsc.connect(shimmerGain);
+    shimmerGain.connect(compressor);
 
-    sweepOsc.connect(sweepFilter);
-    sweepFilter.connect(sweepGain);
-    sweepGain.connect(compressor);
-    sweepOsc.start(t);
-    sweepOsc.stop(t + totalDuration);
-
-    // 3. Rhythmic Radar Sweep Pings (every ~450ms)
-    const pingTimes = [0.05, 0.5, 0.95, 1.4, 1.85, 2.3, 2.75, 3.15];
-    pingTimes.forEach((pt, idx) => {
-      if (t + pt + 0.25 > t + totalDuration) return;
-      const pingOsc = ctx.createOscillator();
-      const pingGain = ctx.createGain();
-      pingOsc.type = 'sine';
-      const baseFreq = 880 + idx * 85;
-      pingOsc.frequency.setValueAtTime(baseFreq, t + pt);
-      pingOsc.frequency.exponentialRampToValueAtTime(baseFreq * 1.35, t + pt + 0.12);
-
-      pingGain.gain.setValueAtTime(0.18, t + pt);
-      pingGain.gain.exponentialRampToValueAtTime(0.001, t + pt + 0.16);
-
-      pingOsc.connect(pingGain);
-      pingGain.connect(compressor);
-      pingOsc.start(t + pt);
-      pingOsc.stop(t + pt + 0.18);
-    });
-
-    // 4. Fast High-Tech Telemetry Data Chirps (Matrix typing simulation)
-    const dataChirps = [0.2, 0.4, 0.7, 0.85, 1.1, 1.25, 1.6, 1.75, 2.05, 2.2, 2.5, 2.65, 2.95, 3.1];
-    dataChirps.forEach((dt) => {
-      const chirpOsc = ctx.createOscillator();
-      const chirpGain = ctx.createGain();
-      chirpOsc.type = 'triangle';
-      chirpOsc.frequency.setValueAtTime(1400 + Math.random() * 800, t + dt);
-      chirpGain.gain.setValueAtTime(0.09, t + dt);
-      chirpGain.gain.exponentialRampToValueAtTime(0.001, t + dt + 0.04);
-      chirpOsc.connect(chirpGain);
-      chirpGain.connect(compressor);
-      chirpOsc.start(t + dt);
-      chirpOsc.stop(t + dt + 0.05);
-    });
+    shimmerOsc.start(t);
+    shimmerOsc.stop(t + totalDuration);
   } catch (e) {
     console.warn('Audio playback error', e);
   }
 }
 
-export function playTradeLockedSound(isCall: boolean): void {
+export function playResultSound(isCall: boolean): void {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
     const t = ctx.currentTime;
 
-    // Powerful sci-fi lock confirmation sound
-    const chords = isCall
-      ? [523.25, 659.25, 783.99, 1046.50, 1318.51] // High C-Major triumphant arpeggio
-      : [880.00, 698.46, 554.37, 440.00, 329.63]; // Dramatic descending lock chord
+    const notes = isCall
+      ? [523.25, 659.25, 783.99, 1046.50] // C5, E5, G5, C6 (Ascending arpeggio)
+      : [783.99, 587.33, 440.00, 329.63]; // G5, D5, A4, E4 (Descending arpeggio)
 
-    chords.forEach((freq, idx) => {
+    notes.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t + idx * 0.07);
-      gain.gain.setValueAtTime(0.22, t + idx * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.07 + 0.38);
+      osc.frequency.setValueAtTime(freq, t + idx * 0.1);
+      gain.gain.setValueAtTime(0.16, t + idx * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.1 + 0.28);
+
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(t + idx * 0.07);
-      osc.stop(t + idx * 0.07 + 0.4);
+      osc.start(t + idx * 0.1);
+      osc.stop(t + idx * 0.1 + 0.3);
     });
   } catch (e) {
-    console.warn('Audio lock error', e);
+    console.warn('Audio playback error', e);
   }
-}
-
-export function playResultSound(isCall: boolean): void {
-  playTradeLockedSound(isCall);
 }
 
 export function playRiskWarningSound(): void {
