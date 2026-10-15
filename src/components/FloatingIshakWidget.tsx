@@ -1081,46 +1081,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       </div>
 
-      {/* ⚡ CLEAN, COMPACT BUY / SELL SIGNAL (1.5s Duration, Zero Circles/Auras) */}
-      {flySignal && (
-        <div
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[999999] select-none text-center flex items-center justify-center"
-          style={{
-            animation: flySignal === 'UP'
-              ? 'ishakBuyFlyUp1500 1.5s cubic-bezier(0.16, 0.9, 0.25, 1) forwards'
-              : 'ishakSellFlyDown1500 1.5s cubic-bezier(0.16, 0.9, 0.25, 1) forwards',
-            fontFamily: '"Syncopate", "Orbitron", sans-serif'
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className={`text-3xl sm:text-4xl font-black tracking-[0.18em] leading-none select-none uppercase ${
-                flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
-              }`}
-              style={{
-                textShadow: flySignal === 'UP'
-                  ? '0 0 16px #00FF66, 0 0 32px rgba(0,255,102,0.8), 0 2px 10px rgba(0,0,0,0.95)'
-                  : '0 0 16px #FF1744, 0 0 32px rgba(255,23,68,0.8), 0 2px 10px rgba(0,0,0,0.95)'
-              }}
-            >
-              {flySignal === 'UP' ? 'BUY' : 'SELL'}
-            </span>
-            <span
-              className={`text-2xl sm:text-3xl font-black ${
-                flySignal === 'UP' ? 'text-[#00FF66]' : 'text-[#FF1744]'
-              }`}
-              style={{
-                textShadow: flySignal === 'UP'
-                  ? '0 0 14px #00FF66, 0 2px 8px rgba(0,0,0,0.95)'
-                  : '0 0 14px #FF1744, 0 2px 8px rgba(0,0,0,0.95)'
-              }}
-            >
-              {flySignal === 'UP' ? '↑' : '↓'}
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* 1. SETTINGS HUB MODAL (STYLISH COSMIC GLASSMORPHISM + FAUX 3D + BEVEL/DEPTH) */}
       {showHub && (
         <div className="fixed inset-0 bg-[#060a1e]/70 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
