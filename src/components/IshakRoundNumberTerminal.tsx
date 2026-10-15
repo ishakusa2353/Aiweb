@@ -323,7 +323,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '1.5px solid #38bdf8',
+          border: '1.5px solid #f59e0b',
           touchAction: 'none',
         }}
         onMouseDown={handleMouseDown}
@@ -336,7 +336,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             position: 'absolute',
             inset: '-4px',
             borderRadius: '50%',
-            border: '1.5px dashed rgba(56, 189, 248, 0.45)',
+            border: '1.5px dashed rgba(245, 158, 11, 0.45)',
             animation: 'spin 8s linear infinite',
             pointerEvents: 'none',
           }}
@@ -350,9 +350,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             width: '10px',
             height: '10px',
             borderRadius: '50%',
-            backgroundColor: isRunning ? '#10b981' : '#38bdf8',
+            backgroundColor: isRunning ? '#10b981' : '#f59e0b',
             border: '2px solid #060913',
-            boxShadow: `0 0 8px ${isRunning ? '#10b981' : '#38bdf8'}`,
+            boxShadow: `0 0 8px ${isRunning ? '#10b981' : '#f59e0b'}`,
           }}
         />
         <img
@@ -381,41 +381,41 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         width: '304px',
         maxWidth: 'calc(100vw - 16px)',
         maxHeight: 'calc(100vh - 20px)',
-        backgroundColor: '#060913',
+        backgroundColor: '#070913',
         backgroundImage: `
-          radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.22) 0%, transparent 75%),
-          linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px)
+          radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.22) 0%, transparent 75%),
+          linear-gradient(rgba(245, 158, 11, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(245, 158, 11, 0.05) 1px, transparent 1px)
         `,
-        backgroundSize: '100% 100%, 18px 18px, 18px 18px',
-        border: `1px solid ${isRunning ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)'}`,
-        borderRadius: '14px',
+        backgroundSize: '100% 100%, 20px 20px, 20px 20px',
+        border: `1.5px solid ${isRunning ? '#f59e0b' : 'rgba(245, 158, 11, 0.38)'}`,
+        borderRadius: '18px',
         boxShadow: isRunning
-          ? '0 20px 48px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.45)'
-          : '0 20px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(14, 165, 233, 0.2)',
-        color: '#e2e8f0',
+          ? '0 24px 55px rgba(0, 0, 0, 0.95), 0 0 38px rgba(245, 158, 11, 0.45)'
+          : '0 24px 55px rgba(0, 0, 0, 0.95), 0 0 22px rgba(245, 158, 11, 0.2)',
+        color: '#f1f5f9',
         fontSize: '13px',
         overflow: 'hidden',
         touchAction: 'none',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         transition: 'border-color 0.25s, box-shadow 0.25s',
         userSelect: 'none',
         fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
       }}
     >
-      {/* HUD Corner Brackets */}
+      {/* Bespoke Luxury Gold Accent Trims */}
       <span
         style={{
           position: 'absolute',
           top: '-1px',
           left: '-1px',
-          width: '14px',
-          height: '14px',
-          borderTop: '2px solid #38bdf8',
-          borderLeft: '2px solid #38bdf8',
-          borderTopLeftRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          width: '16px',
+          height: '16px',
+          borderTop: '2.5px solid #f59e0b',
+          borderLeft: '2.5px solid #f59e0b',
+          borderTopLeftRadius: '16px',
+          filter: 'drop-shadow(0 0 8px #f59e0b)',
           pointerEvents: 'none',
           zIndex: 10,
         }}
@@ -425,12 +425,12 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           position: 'absolute',
           top: '-1px',
           right: '-1px',
-          width: '14px',
-          height: '14px',
-          borderTop: '2px solid #38bdf8',
-          borderRight: '2px solid #38bdf8',
-          borderTopRightRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          width: '16px',
+          height: '16px',
+          borderTop: '2.5px solid #f59e0b',
+          borderRight: '2.5px solid #f59e0b',
+          borderTopRightRadius: '16px',
+          filter: 'drop-shadow(0 0 8px #f59e0b)',
           pointerEvents: 'none',
           zIndex: 10,
         }}
@@ -440,12 +440,12 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           position: 'absolute',
           bottom: '-1px',
           left: '-1px',
-          width: '14px',
-          height: '14px',
-          borderBottom: '2px solid #38bdf8',
-          borderLeft: '2px solid #38bdf8',
-          borderBottomLeftRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          width: '16px',
+          height: '16px',
+          borderBottom: '2.5px solid #f59e0b',
+          borderLeft: '2.5px solid #f59e0b',
+          borderBottomLeftRadius: '16px',
+          filter: 'drop-shadow(0 0 8px #f59e0b)',
           pointerEvents: 'none',
           zIndex: 10,
         }}
@@ -455,27 +455,27 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           position: 'absolute',
           bottom: '-1px',
           right: '-1px',
-          width: '14px',
-          height: '14px',
-          borderBottom: '2px solid #38bdf8',
-          borderRight: '2px solid #38bdf8',
-          borderBottomRightRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
+          width: '16px',
+          height: '16px',
+          borderBottom: '2.5px solid #f59e0b',
+          borderRight: '2.5px solid #f59e0b',
+          borderBottomRightRadius: '16px',
+          filter: 'drop-shadow(0 0 8px #f59e0b)',
           pointerEvents: 'none',
           zIndex: 10,
         }}
       />
 
-      {/* Luminous Radar Scanline */}
+      {/* Luminous Gold Radar Scanline */}
       <div
         style={{
           position: 'absolute',
           left: 0,
           right: 0,
           height: '2px',
-          background: 'linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent)',
-          boxShadow: '0 0 12px rgba(56, 189, 248, 0.8)',
-          opacity: 0.35,
+          background: 'linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.85), transparent)',
+          boxShadow: '0 0 14px rgba(245, 158, 11, 0.9)',
+          opacity: 0.4,
           pointerEvents: 'none',
           zIndex: 2,
         }}
@@ -492,8 +492,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           alignItems: 'center',
           justifyContent: 'space-between',
           cursor: isDragging ? 'grabbing' : 'grab',
-          background: 'rgba(11, 17, 30, 0.92)',
-          borderBottom: '1px solid rgba(56, 189, 248, 0.22)',
+          background: 'linear-gradient(180deg, rgba(20, 16, 10, 0.95), rgba(12, 10, 18, 0.95))',
+          borderBottom: '1px solid rgba(245, 158, 11, 0.28)',
           position: 'relative',
           zIndex: 3,
         }}
@@ -508,13 +508,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              border: '1.5px solid #38bdf8',
-              boxShadow: '0 0 10px rgba(56, 189, 248, 0.5)',
+              border: '1.5px solid #f59e0b',
+              boxShadow: '0 0 12px rgba(245, 158, 11, 0.55)',
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: '#050811',
+              background: '#070913',
               flexShrink: 0,
               cursor: 'pointer',
             }}
@@ -531,18 +531,21 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               style={{
                 fontWeight: 800,
                 fontSize: '12px',
-                color: '#f8fafc',
-                letterSpacing: '0.5px',
+                color: '#fef3c7',
+                letterSpacing: '0.6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
             >
-              ISHAK VIP TRADER
+              <span>👑</span> ISHAK APEX VIP
             </span>
             <span
               style={{
                 fontSize: '8px',
                 fontWeight: 700,
-                color: '#38bdf8',
-                letterSpacing: '0.7px',
+                color: '#f59e0b',
+                letterSpacing: '0.8px',
                 textTransform: 'uppercase',
                 display: 'flex',
                 alignItems: 'center',
@@ -559,7 +562,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                   display: 'inline-block',
                 }}
               />
-              ROUND TERMINAL FREE BOT
+              ROUND LEVEL CONTROLLER
             </span>
           </div>
         </div>
@@ -574,9 +577,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               style={{
                 padding: '3px 6px',
                 borderRadius: '5px',
-                background: 'rgba(56, 189, 248, 0.15)',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                color: '#38bdf8',
+                background: 'rgba(245, 158, 11, 0.15)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                color: '#f59e0b',
                 fontSize: '8px',
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -619,7 +622,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               height: '22px',
               borderRadius: '5px',
               background: 'rgba(18, 25, 42, 0.85)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
+              border: '1px solid rgba(245, 158, 11, 0.25)',
               color: '#94a3b8',
               display: 'flex',
               alignItems: 'center',
@@ -675,7 +678,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           id="marketStrip"
           style={{
             background: 'rgba(10, 15, 27, 0.9)',
-            border: '1px solid rgba(56, 189, 248, 0.28)',
+            border: '1px solid rgba(245, 158, 11, 0.28)',
             borderRadius: '8px',
             padding: '7px 9px',
             display: 'flex',
@@ -698,7 +701,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 gap: '3px',
               }}
             >
-              <span style={{ color: '#38bdf8' }}>⚡</span> MARKET ASSET
+              <span style={{ color: '#f59e0b' }}>⚡</span> MARKET ASSET
             </span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
               <span
@@ -706,9 +709,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 style={{
                   fontWeight: 800,
                   fontSize: '12px',
-                  color: '#38bdf8',
+                  color: '#f59e0b',
                   letterSpacing: '0.3px',
-                  textShadow: '0 0 10px rgba(56, 189, 248, 0.4)',
+                  textShadow: '0 0 10px rgba(245, 158, 11, 0.4)',
                 }}
               >
                 {activePair}
@@ -744,7 +747,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               <svg width="34" height="10" viewBox="0 0 42 14" fill="none">
                 <path
                   d="M1 7H11L14 1L18 13L22 4L25 9L28 7H41"
-                  stroke="#38bdf8"
+                  stroke="#f59e0b"
                   strokeWidth="1.8"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -773,9 +776,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               type="button"
               style={{
                 fontSize: '8px',
-                color: '#38bdf8',
-                background: 'rgba(56, 189, 248, 0.1)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
+                color: '#f59e0b',
+                background: 'rgba(245, 158, 11, 0.1)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
                 borderRadius: '4px',
                 padding: '1px 4px',
                 cursor: 'pointer',
@@ -797,7 +800,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             style={{
               width: '100%',
               background: '#070b14',
-              border: `1px solid ${inputError ? '#ef4444' : 'rgba(56, 189, 248, 0.25)'}`,
+              border: `1px solid ${inputError ? '#ef4444' : 'rgba(245, 158, 11, 0.25)'}`,
               borderRadius: '7px',
               padding: '7px 9px',
               color: '#ffffff',
@@ -830,7 +833,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               style={{
                 fontSize: '9.5px',
                 fontWeight: 800,
-                color: countdown > 0 ? '#10b981' : '#38bdf8',
+                color: countdown > 0 ? '#10b981' : '#f59e0b',
               }}
             >
               {countdown > 0 ? `[${String(countdown).padStart(2, '0')}s]` : '[READY]'}
@@ -852,7 +855,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             style={{
               width: '100%',
               background: '#070b14',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
+              border: '1px solid rgba(245, 158, 11, 0.25)',
               borderRadius: '7px',
               padding: '6px 9px',
               color: '#ffffff',
@@ -875,14 +878,14 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                   flex: 1,
                   padding: '3px 0',
                   textAlign: 'center',
-                  background: selectedChip === sec ? '#0284c7' : 'rgba(16, 22, 36, 0.9)',
-                  border: `1px solid ${selectedChip === sec ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
+                  background: selectedChip === sec ? '#d97706' : 'rgba(16, 22, 36, 0.9)',
+                  border: `1px solid ${selectedChip === sec ? '#f59e0b' : 'rgba(245, 158, 11, 0.2)'}`,
                   color: selectedChip === sec ? '#ffffff' : '#94a3b8',
                   borderRadius: '4px',
                   fontSize: '9px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: selectedChip === sec ? '0 0 8px rgba(56, 189, 248, 0.45)' : 'none',
+                  boxShadow: selectedChip === sec ? '0 0 8px rgba(245, 158, 11, 0.45)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
@@ -908,7 +911,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               style={{
                 height: '100%',
                 width: `${progressPercent}%`,
-                background: 'linear-gradient(90deg, #0284c7, #38bdf8)',
+                background: 'linear-gradient(90deg, #d97706, #f59e0b)',
                 transition: 'width 1s linear',
               }}
             />
@@ -932,7 +935,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               cursor: isRunning ? 'not-allowed' : 'pointer',
               letterSpacing: '0.8px',
               textTransform: 'uppercase',
-              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+              background: 'linear-gradient(135deg, #d97706, #0369a1)',
               color: '#ffffff',
               boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
               opacity: isRunning ? 0.4 : 1,
@@ -973,7 +976,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             display: 'flex',
             flexDirection: 'column',
             gap: '4px',
-            borderTop: '1px solid rgba(56, 189, 248, 0.18)',
+            borderTop: '1px solid rgba(245, 158, 11, 0.18)',
             paddingTop: '6px',
           }}
         >
@@ -990,14 +993,14 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             <span
               id="statusText"
               style={{
-                color: isRunning ? '#38bdf8' : '#94a3b8',
+                color: isRunning ? '#f59e0b' : '#94a3b8',
               }}
             >
               {statusText}
             </span>
             <span
               id="ticksCount"
-              style={{ color: '#38bdf8' }}
+              style={{ color: '#f59e0b' }}
             >
               INTERCEPTS: {interceptsCount}
             </span>

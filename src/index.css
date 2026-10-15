@@ -11,33 +11,41 @@
   }
 }
 
-@keyframes ishakLaserSweepSlow {
+@keyframes ishakRadarSweep {
   0% {
-    top: -20px;
-  }
-  48% {
-    top: calc(100vh - 20px);
-  }
-  52% {
-    top: calc(100vh - 20px);
+    transform: rotate(0deg);
   }
   100% {
-    top: -20px;
+    transform: rotate(360deg);
   }
 }
 
-@keyframes ishakGoldenLaserSweep {
+@keyframes ishakReticleSpin {
   0% {
-    transform: translate3d(0, -35px, 0);
-  }
-  48% {
-    transform: translate3d(0, calc(100vh - 10px), 0);
-  }
-  52% {
-    transform: translate3d(0, calc(100vh - 10px), 0);
+    transform: rotate(0deg);
   }
   100% {
-    transform: translate3d(0, -35px, 0);
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes ishakMatrixPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(0.99);
+  }
+}
+
+@keyframes ishakOverlayFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }
 

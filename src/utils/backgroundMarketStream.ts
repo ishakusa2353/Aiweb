@@ -198,26 +198,40 @@ export function getBackgroundMarketData(): {
   currentPrice: number;
   candles: Candle[];
   ticks: number[];
+  currentPair: string;
 } {
   const state = ensureStreamInitialized();
   if (!tickerTimer) {
     startBackgroundMarketStream();
   }
 
-  // Prioritize real intercepted background candles
-  const bgCandles = (typeof window !== 'undefined' && (window as any).__ISHAK_BACKGROUND_CANDLES__ && (window as any).__ISHAK_BACKGROUND_CANDLES__.length >= 3)
-    ? (window as any).__ISHAK_BACKGROUND_CANDLES__
-    : state.candles;
+  // 1. Highest Priority: Real Background Chart Candles captured from Quotex WebSocket or DOM/Canvas
+  let activeCandles = state.candles;
+  if (typeof window !== 'undefined') {
+    const realCandles = (window as any).__ISHAK_REAL_CHART_CANDLES__;
+    if (Array.isArray(realCandles) && realCandles.length >= 3) {
+      activeCandles = realCandles;
+    } else if ((window as any).__ISHAK_BACKGROUND_CANDLES__ && (window as any).__ISHAK_BACKGROUND_CANDLES__.length >= 3) {
+      activeCandles = (window as any).__ISHAK_BACKGROUND_CANDLES__;
+    }
+  }
 
-  const ticks = state.liveTicks.map((t) => t.price);
+  // 2. Real Live Tick Stream
+  let ticks = state.liveTicks.map((t) => t.price);
+  if (typeof window !== 'undefined' && Array.isArray((window as any).__ISHAK_REAL_WS_TICKS__) && (window as any).__ISHAK_REAL_WS_TICKS__.length >= 2) {
+    ticks = (window as any).__ISHAK_REAL_WS_TICKS__.map((t: any) => typeof t === 'number' ? t : t.price);
+  }
   if (ticks.length === 0 && state.currentPrice > 0) {
     ticks.push(state.currentPrice);
   }
 
+  const livePair = (typeof window !== 'undefined' && ((window as any).__ISHAK_CURRENT_ASSET__ || (window as any).__ISHAK_LAST_DETECTED_ASSET__)) || 'EUR/USD (OTC)';
+
   return {
     currentPrice: state.currentPrice,
-    candles: [...bgCandles],
+    candles: [...activeCandles],
     ticks,
+    currentPair: livePair,
   };
 }
 
