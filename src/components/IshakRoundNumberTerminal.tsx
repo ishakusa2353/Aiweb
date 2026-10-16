@@ -356,12 +356,12 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           }}
         />
         <img
-          src="https://i.ibb.co/Mx90bFy4/file-421.jpg"
-          alt="Ishak VIP Logo"
+          src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
+          alt="TradePilot VIP Logo"
           style={{
             width: '100%',
             height: '100%',
-            borderRadius: '50%',
+            borderRadius: '12px',
             objectFit: 'cover',
           }}
         />
@@ -507,9 +507,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             style={{
               width: '32px',
               height: '32px',
-              borderRadius: '50%',
-              border: '1.5px solid #38bdf8',
-              boxShadow: '0 0 10px rgba(56, 189, 248, 0.5)',
+              borderRadius: '9px',
+              border: '1.5px solid #d946ef',
+              boxShadow: '0 0 10px rgba(217, 70, 239, 0.5)',
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
@@ -520,8 +520,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             }}
           >
             <img
-              src="https://i.ibb.co/Mx90bFy4/file-421.jpg"
-              alt="Ishak VIP Logo"
+              src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
+              alt="TradePilot VIP Logo"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
@@ -535,7 +535,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 letterSpacing: '0.5px',
               }}
             >
-              ISHAK VIP TRADER
+              TRADEPILOT VIP TRADER
             </span>
             <span
               style={{

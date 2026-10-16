@@ -17,8 +17,10 @@ export function computeKeyChecksum(base: string): string {
 export function generateOfflineSignedKey(tier: string = 'VIP', duration: string = '30D'): string {
   const cleanTier = (tier || 'VIP').toUpperCase();
   const cleanDur = (duration || '30D').toUpperCase();
-  const token = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const base = `ISHAK-${cleanTier}-${cleanDur}-${token}`;
+  const token1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const token2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const token3 = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const base = `TP-${cleanTier}-${cleanDur}-${token1}-${token2}-${token3}`;
   const sig = computeKeyChecksum(base);
   return `${base}-${sig}`;
 }
@@ -50,7 +52,7 @@ export function generateBookmarkletCode(
   if (baseUrl) {
     script = script.replace(/var BACKEND_SERVER_URL = "[^"]*";/, `var BACKEND_SERVER_URL = "${baseUrl}";`);
   }
-  const directLogoUrl = "https://i.ibb.co/Mx90bFy4/file-421.jpg";
+  const directLogoUrl = "https://i.ibb.co/qLkRtpxt/file-441.jpg";
   script = script.replace(/var LOGO_URL = "[^"]*";/, `var LOGO_URL = "${directLogoUrl}";`);
 
   if (!script.startsWith('javascript:')) {

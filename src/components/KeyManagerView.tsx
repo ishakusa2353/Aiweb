@@ -14,6 +14,7 @@ interface KeyManagerViewProps {
     customUnit?: string;
     traderId?: string;
     note?: string;
+    deviceLimit?: number;
   }) => Promise<boolean>;
   onToggleActive: (key: string, currentActive: boolean) => Promise<boolean>;
   onExtend: (key: string, value: number, unit?: 'minutes' | 'hours' | 'days') => Promise<boolean>;
@@ -178,7 +179,7 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
 
     const devLimit = lic.device_limit !== undefined && lic.device_limit !== null ? Number(lic.device_limit) : 1;
     const devLimitLabel = devLimit === 0 || devLimit === -1
-      ? 'Unlimited Devices'
+      ? 'Unlimited Devices (সীমাহীন ডিভাইস)'
       : `${devLimit} Device${devLimit > 1 ? 's' : ''}`;
 
     const expiryInfo = lic.first_login_at && lic.exp
@@ -187,9 +188,9 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
       ? 'Lifetime Access'
       : 'Countdown starts upon first login in the bot';
 
-    return `⚡ ISHAK AI PRO - VIP LICENSE DELIVERY ⚡
+    return `⚡ TRADEPILOT AI PRO - VIP LICENSE DELIVERY ⚡
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Congratulations! Your Quotex VIP Trading Bot License is ready.
+Congratulations! Your TradePilot VIP Trading Bot License is ready.
 
 🔑 License Key: ${lic.key}
 💎 Membership Tier: ${(lic.tier || 'VIP').toUpperCase()}
@@ -200,10 +201,10 @@ ${lic.trader_id ? `👤 Trader ID: ${lic.trader_id}\n` : ''}${lic.note ? `📝 N
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📌 How to Activate & Trade in Quotex:
 1. Open Quotex in Kiwi Browser or Chrome.
-2. Launch the Ishak AI Trading Bot widget on your chart.
-3. Click the circular Bot Logo / VIP Key button.
+2. Launch the TradePilot Trading Bot widget on your chart.
+3. Click the Bot Logo / VIP Key button.
 4. Enter your VIP License Key and click "Verify & Unlock".
-5. Choose your desired Market & Timeframe to start receiving 1-trade auto signals!
+5. Choose your desired Timeframe to start receiving 1-trade auto signals!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
   };
 
@@ -315,13 +316,24 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
       finalDuration = customUnit === 'lifetime' ? 'lifetime' : `${customValue}${customUnit === 'minutes' ? 'm' : customUnit === 'hours' ? 'h' : 'd'}`;
     }
 
+    let finalNote = note.trim();
+    if (finalDeviceLimit === 0) {
+      if (!finalNote.includes('[DEV_LIMIT:0]')) {
+        finalNote = (finalNote ? finalNote + ' ' : '') + '[DEV_LIMIT:0] [UNLIMITED_DEVICES]';
+      }
+    } else {
+      if (!finalNote.includes('[DEV_LIMIT:')) {
+        finalNote = (finalNote ? finalNote + ' ' : '') + `[DEV_LIMIT:${finalDeviceLimit}]`;
+      }
+    }
+
     const payload: any = {
       key: customKey.trim() || undefined,
       tier: selectedTier,
       duration: finalDuration,
       deviceLimit: finalDeviceLimit,
       traderId: traderId.trim() || undefined,
-      note: note.trim() || undefined,
+      note: finalNote || undefined,
     };
 
     if (timePreset === 'custom' && customUnit !== 'lifetime') {
@@ -333,9 +345,13 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
     setIsSubmitting(false);
 
     if (success) {
-      const generatedKey = customKey.trim().toUpperCase() || 'ISHAK-' + selectedTier.toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const rand1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const rand2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const rand3 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const timeTk = Date.now().toString(36).substring(3, 7).toUpperCase();
+      const generatedKey = customKey.trim().toUpperCase() || `TP-${selectedTier.toUpperCase()}-${rand1}-${rand2}-${rand3}-${timeTk}`;
       const genTraderId = traderId.trim() || undefined;
-      const genNote = note.trim() || undefined;
+      const genNote = finalNote || undefined;
 
       setCustomKey('');
       setTraderId('');
@@ -1103,7 +1119,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
                 <label className="text-cyan-200/90 block mb-1 font-bold">কাস্টম কী কোড (ঐচ্ছিক):</label>
                 <input
                   type="text"
-                  placeholder="ফাঁকা রাখলে অটোমেটিক VIP কোড তৈরি হবে"
+                  placeholder="ফাঁকা রাখলে অটোমেটিক TP-VIP-30D-... কোড তৈরি হবে"
                   value={customKey}
                   onChange={(e) => setCustomKey(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-cyan-300 font-mono outline-none focus:border-cyan-400"

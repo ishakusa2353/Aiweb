@@ -629,7 +629,7 @@ javascript:(function(){
   var SUPABASE_URL = "https://qbazzarqiplrqqfytajz.supabase.co";
   var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
   var BACKEND_SERVER_URL = "";
-  var LOGO_URL = "https://i.ibb.co/Mx90bFy4/file-421.jpg";
+  var LOGO_URL = "https://i.ibb.co/qLkRtpxt/file-441.jpg";
 
   // 1. CONFIGURATION & STATE (Mandatory selection required on load)
   var tradeDuration = null;
@@ -1844,13 +1844,19 @@ javascript:(function(){
             .filter(Boolean);
 
           var devLimit = 1;
-          if (row.device_limit !== undefined && row.device_limit !== null) {
+          if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+            devLimit = 0;
+          } else if (row.device_limit !== undefined && row.device_limit !== null) {
             devLimit = Number(row.device_limit);
-          } else if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
+          }
+          if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
             var mLimit = row.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
             if (mLimit) devLimit = Number(mLimit[1]);
           }
-          var isUnlimited = (devLimit === 0 || devLimit === -1);
+          if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+            devLimit = 0;
+          }
+          var isUnlimited = (devLimit === 0 || devLimit === -1 || devLimit >= 9999);
 
           var updates = {};
           var needPatch = false;
@@ -1963,13 +1969,19 @@ javascript:(function(){
                     .filter(Boolean);
 
                   var devLimit = 1;
-                  if (row.device_limit !== undefined && row.device_limit !== null) {
+                  if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+                    devLimit = 0;
+                  } else if (row.device_limit !== undefined && row.device_limit !== null) {
                     devLimit = Number(row.device_limit);
-                  } else if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
+                  }
+                  if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
                     var mLimit = row.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
                     if (mLimit) devLimit = Number(mLimit[1]);
                   }
-                  var isUnlimited = (devLimit === 0 || devLimit === -1);
+                  if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+                    devLimit = 0;
+                  }
+                  var isUnlimited = (devLimit === 0 || devLimit === -1 || devLimit >= 9999);
 
                   if (myDeviceId) {
                     var alreadyRegistered = registeredDevices.indexOf(myDeviceId) !== -1;
@@ -2153,9 +2165,9 @@ javascript:(function(){
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
     '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(255,184,0,0.85) 0%, rgba(255,158,11,0.5) 40%, rgba(255,184,0,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 5; width: 56px; height: 56px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 1.5px solid rgba(255,184,0,0.5); box-shadow: 0 4px 16px rgba(0,0,0,0.9), inset 0 0 10px rgba(255,184,0,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
-    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(255,184,0,0.4); }' +
-    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #FFD700; box-shadow: 0 0 28px #FFD700, 0 0 55px rgba(255,184,0,0.85), inset 0 0 14px rgba(255,184,0,0.5); }' +
+    '#ishak-circle-btn { position: relative; z-index: 5; width: 56px; height: 56px; border-radius: 16px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.75); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(0,229,255,0.65); border-color: #00E5FF; }' +
+    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 35px #00E5FF, 0 0 55px rgba(217,70,239,0.8), inset 0 0 14px rgba(0,229,255,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 8.5px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; white-space: nowrap; }' +
     '#ishak-pill-time { background: linear-gradient(135deg, #00E5FF, #22D3EE); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1.5px 6px; border-radius: 8px; letter-spacing: 0.3px; display: inline-flex; align-items: center; justify-content: center; transform: none !important; animation: none !important; white-space: nowrap; line-height: 1.1; }' +
@@ -2330,7 +2342,7 @@ javascript:(function(){
   btnBox.appendChild(orbitalWrap);
 
   var pillBadge = document.createElement('div'); pillBadge.id = 'ishak-pill-badge';
-  pillBadge.innerHTML = '<span id="ishak-pill-name">⚡ ISHAK AI</span><span id="ishak-pill-time">5S</span>';
+  pillBadge.innerHTML = '<span id="ishak-pill-name">⚡ TradePilot</span><span id="ishak-pill-time">5S</span>';
   mainWrap.appendChild(pillBadge);
   var pillName = document.getElementById('ishak-pill-name');
   var pillTime = document.getElementById('ishak-pill-time');
@@ -2347,7 +2359,7 @@ javascript:(function(){
   var hudPanel = document.createElement('div');
   hudPanel.id = 'ishak-hud-panel';
   hudPanel.innerHTML = '<div id="ishak-hud-drag-handle">' +
-    '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;font-size:12px;">❖</span><b style="color:#00E5FF;font-size:11px;letter-spacing:0.5px;">ISHAK AI PRO 3D HUD</b></div>' +
+    '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;font-size:12px;">❖</span><b style="color:#00E5FF;font-size:11px;letter-spacing:0.5px;">TRADEPILOT AI PRO 3D HUD</b></div>' +
     '<div class="ishak-close-btn" id="hud-close-btn">✕</div>' +
     '</div>' +
     '<div id="ishak-hud-body" style="padding:10px 12px;"></div>';

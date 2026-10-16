@@ -90,6 +90,7 @@ export default function App() {
     customUnit?: string;
     traderId?: string;
     note?: string;
+    deviceLimit?: number;
   }): Promise<boolean> => {
     try {
       const result = await supabaseService.createLicense(data);

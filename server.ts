@@ -77,7 +77,10 @@ async function startServer() {
         const mDev = license.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
         if (mDev) deviceLimit = Number(mDev[1]);
       }
-      const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1;
+      if (license.note && (license.note.includes('UNLIMITED') || license.note.includes('[DEV_LIMIT:0]'))) {
+        deviceLimit = 0;
+      }
+      const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1 || deviceLimit >= 9999;
       let needSave = false;
 
       if (inputDeviceId) {
@@ -197,7 +200,10 @@ async function startServer() {
         const mDev = license.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
         if (mDev) deviceLimit = Number(mDev[1]);
       }
-      const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1;
+      if (license.note && (license.note.includes('UNLIMITED') || license.note.includes('[DEV_LIMIT:0]'))) {
+        deviceLimit = 0;
+      }
+      const isUnlimitedDevices = deviceLimit === 0 || deviceLimit === -1 || deviceLimit >= 9999;
       let needSave = false;
 
       if (inputDeviceId) {
@@ -405,7 +411,25 @@ async function startServer() {
         parsedDurationMs = parseDurationToMs(finalDurationStr);
       }
 
-      const parsedDeviceLimit = deviceLimit !== undefined ? Number(deviceLimit) : 1;
+      let parsedDeviceLimit = 1;
+      if (deviceLimit !== undefined && deviceLimit !== null) {
+        if (deviceLimit === 'unlimited' || deviceLimit === 0 || deviceLimit === -1 || (typeof deviceLimit === 'string' && deviceLimit.toLowerCase().includes('unlimited'))) {
+          parsedDeviceLimit = 0;
+        } else {
+          parsedDeviceLimit = Math.max(0, Number(deviceLimit));
+        }
+      }
+
+      let finalNote = (note || "").trim();
+      if (parsedDeviceLimit === 0 || parsedDeviceLimit === -1) {
+        if (!finalNote.includes('[DEV_LIMIT:0]')) {
+          finalNote = (finalNote ? finalNote + ' ' : '') + '[DEV_LIMIT:0] [UNLIMITED_DEVICES]';
+        }
+      } else {
+        if (!finalNote.includes('[DEV_LIMIT:')) {
+          finalNote = (finalNote ? finalNote + ' ' : '') + `[DEV_LIMIT:${parsedDeviceLimit}]`;
+        }
+      }
 
       const newRecord: LicenseRecord = {
         key: finalKey,
@@ -420,7 +444,7 @@ async function startServer() {
         trader_id: (traderId || "").trim(),
         created_at: Date.now(),
         last_used_at: null,
-        note: (note || "").trim()
+        note: finalNote
       };
 
       await licenseDb.saveLicense(newRecord);

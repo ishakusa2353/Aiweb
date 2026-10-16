@@ -273,6 +273,9 @@ class LicenseDatabase {
               const mLimit = d.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
               if (mLimit) limit = Number(mLimit[1]);
             }
+            if (d.note && (d.note.includes('UNLIMITED') || d.note.includes('[DEV_LIMIT:0]'))) {
+              limit = 0;
+            }
             return {
               key: d.key,
               active: d.active !== false,
@@ -315,6 +318,9 @@ class LicenseDatabase {
             const mLimit = data.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
             if (mLimit) limit = Number(mLimit[1]);
           }
+          if (data.note && (data.note.includes('UNLIMITED') || data.note.includes('[DEV_LIMIT:0]'))) {
+            limit = 0;
+          }
           return {
             key: data.key,
             active: data.active !== false,
@@ -341,10 +347,31 @@ class LicenseDatabase {
 
   public async saveLicense(record: LicenseRecord): Promise<boolean> {
     const key = record.key.trim().toUpperCase();
+    let limit = record.device_limit !== undefined && record.device_limit !== null ? Number(record.device_limit) : 1;
+    if (record.note && record.note.includes('[DEV_LIMIT:')) {
+      const mDev = record.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+      if (mDev) limit = Number(mDev[1]);
+    }
+    if (record.note && (record.note.includes('UNLIMITED') || record.note.includes('[DEV_LIMIT:0]'))) {
+      limit = 0;
+    }
+
+    let updatedNote = record.note || '';
+    if (limit === 0 || limit === -1) {
+      if (!updatedNote.includes('[DEV_LIMIT:0]')) {
+        updatedNote = (updatedNote ? updatedNote + ' ' : '') + '[DEV_LIMIT:0] [UNLIMITED_DEVICES]';
+      }
+    } else {
+      if (!updatedNote.includes('[DEV_LIMIT:')) {
+        updatedNote = (updatedNote ? updatedNote + ' ' : '') + `[DEV_LIMIT:${limit}]`;
+      }
+    }
+
     const formatted: LicenseRecord = {
       ...record,
       key,
-      device_limit: record.device_limit !== undefined ? Number(record.device_limit) : 1
+      device_limit: limit,
+      note: updatedNote
     };
 
     this.localStore.set(key, formatted);

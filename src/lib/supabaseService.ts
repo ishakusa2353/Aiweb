@@ -222,6 +222,9 @@ export const supabaseService = {
               const mLimit = d.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
               if (mLimit) limit = Number(mLimit[1]);
             }
+            if (d.note && (d.note.includes('UNLIMITED') || d.note.includes('[DEV_LIMIT:0]'))) {
+              limit = 0;
+            }
             return {
               key: d.key,
               active: d.active !== false,
@@ -296,8 +299,11 @@ export const supabaseService = {
     // 2. Direct Supabase Fallback if server is not reachable
     let finalKey = (payload.key || '').trim().toUpperCase();
     if (!finalKey) {
-      const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-      finalKey = `ISHAK-${(payload.tier || 'VIP').toUpperCase()}-${rand}-${Date.now().toString(36).substring(3, 7).toUpperCase()}`;
+      const rand1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const rand2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const rand3 = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const timeToken = Date.now().toString(36).substring(3, 7).toUpperCase();
+      finalKey = `TP-${(payload.tier || 'VIP').toUpperCase()}-${rand1}-${rand2}-${rand3}-${timeToken}`;
     }
 
     let finalDuration = payload.duration || '30d';
@@ -320,7 +326,25 @@ export const supabaseService = {
       }
     }
 
-    const deviceLimit = payload.deviceLimit !== undefined ? Number(payload.deviceLimit) : 1;
+    let deviceLimit = 1;
+    if (payload.deviceLimit !== undefined && payload.deviceLimit !== null) {
+      if (payload.deviceLimit === 0 || payload.deviceLimit === -1 || String(payload.deviceLimit).toLowerCase().includes('unlimited')) {
+        deviceLimit = 0;
+      } else {
+        deviceLimit = Math.max(0, Number(payload.deviceLimit));
+      }
+    }
+
+    let finalNote = (payload.note || '').trim();
+    if (deviceLimit === 0 || deviceLimit === -1) {
+      if (!finalNote.includes('[DEV_LIMIT:0]')) {
+        finalNote = (finalNote ? finalNote + ' ' : '') + '[DEV_LIMIT:0] [UNLIMITED_DEVICES]';
+      }
+    } else {
+      if (!finalNote.includes('[DEV_LIMIT:')) {
+        finalNote = (finalNote ? finalNote + ' ' : '') + `[DEV_LIMIT:${deviceLimit}]`;
+      }
+    }
 
     if (isSupabaseConfigured) {
       try {
@@ -337,7 +361,7 @@ export const supabaseService = {
           trader_id: (payload.traderId || '').trim(),
           created_at: Date.now(),
           last_used_at: null,
-          note: (payload.note || '').trim(),
+          note: finalNote,
         };
 
         const { error } = await supabase.from('ishak_licenses').insert(insertObj);
@@ -598,8 +622,15 @@ export const supabaseService = {
           .map((d: string) => d.trim())
           .filter(Boolean);
 
-        const devLimit = row.device_limit !== undefined && row.device_limit !== null ? Number(row.device_limit) : 1;
-        const isUnlimited = devLimit === 0 || devLimit === -1;
+        let devLimit = row.device_limit !== undefined && row.device_limit !== null ? Number(row.device_limit) : 1;
+        if (row.note && row.note.includes('[DEV_LIMIT:')) {
+          const mDev = row.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+          if (mDev) devLimit = Number(mDev[1]);
+        }
+        if (row.note && (row.note.includes('UNLIMITED') || row.note.includes('[DEV_LIMIT:0]'))) {
+          devLimit = 0;
+        }
+        const isUnlimited = devLimit === 0 || devLimit === -1 || devLimit >= 9999;
         const updates: any = {};
         let needPatch = false;
 
