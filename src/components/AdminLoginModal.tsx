@@ -65,7 +65,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ onLoginSuccess
               <span>ADMIN SECURITY GATEWAY</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide">
-              TRADEPILOT AI CLOUD
+              TRADEPILOT CLOUD
             </h2>
             <p className="text-xs text-gray-400 mt-1">
               এডমিন প্যানেলে প্রবেশ করতে আপনার নিরাপত্তা পাসওয়ার্ড লিখুন

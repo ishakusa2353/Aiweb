@@ -112,7 +112,7 @@ export const BookmarkletView: React.FC = () => {
               <span>ENCAPSULATED atob() SHORT LOADER (আপনার চাওয়া ফরম্যাট)</span>
             </div>
             <h3 className="text-white font-black text-base sm:text-xl">
-              TradePilot AI আল্ট্রা-শর্ট হিডেন ইউআরএল লোডার
+              TradePilot আল্ট্রা-শর্ট হিডেন ইউআরএল লোডার
             </h3>
             <p className="text-xs text-gray-300 leading-relaxed max-w-2xl">
               আপনার দেওয়া হুবহু টেকনিক দিয়ে তৈরি করা হয়েছে! এটি <code className="text-cyan-300 font-mono">atob()</code> এর মাধ্যমে আপনার সার্ভার ইউআরএলটি এনক্রিপ্ট/হাইড করে রাখে এবং ব্রাউজারে রান হওয়ামাত্র সার্ভার থেকে বড় কোডটি লোড করে নেয়।
@@ -464,7 +464,7 @@ export const BookmarkletView: React.FC = () => {
             }}
             className="px-4 py-2 rounded-xl bg-[#0B132B] border-2 border-cyan-400 text-cyan-300 font-black text-xs shadow-[0_0_12px_rgba(0,229,255,0.4)] hover:scale-105 transition cursor-grab active:cursor-grabbing shrink-0 flex items-center gap-2"
           >
-            <span>⚡ TradePilot AI Pro</span>
+            <span>⚡ TradePilot</span>
           </a>
         </div>
       </div>

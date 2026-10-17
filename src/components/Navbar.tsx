@@ -45,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-white font-black text-sm sm:text-base tracking-wide flex items-center gap-1 font-['Orbitron',sans-serif]">
-                  TradePilot <span className="text-pink-300 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-lg bg-gradient-to-b from-fuchsia-500/25 to-indigo-950/80 border-t border-t-fuchsia-400/60 border-b border-b-black/80 font-black shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)]">VIP AI</span>
+                  TradePilot
                 </span>
               </div>
               <p className="text-[10px] text-cyan-200/70 hidden lg:block font-medium">
