@@ -47,9 +47,9 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ onLoginSuccess
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="relative">
             <img
-              src="https://i.ibb.co/Mx90bFy4/file-421.jpg"
-              alt="Ishak AI"
-              className="w-18 h-18 rounded-full border-2 border-[#00E5FF] shadow-[0_0_30px_rgba(0,229,255,0.7),0_0_40px_rgba(0,229,255,0.35)] object-cover"
+              src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
+              alt="TradePilot"
+              className="w-18 h-18 rounded-2xl border-2 border-[#00E5FF] shadow-[0_0_30px_rgba(0,229,255,0.7),0_0_40px_rgba(0,229,255,0.35)] object-cover"
               referrerPolicy="no-referrer"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = 'none';
@@ -65,7 +65,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ onLoginSuccess
               <span>ADMIN SECURITY GATEWAY</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide">
-              ISHAK AI PRO CLOUD
+              TRADEPILOT AI CLOUD
             </h2>
             <p className="text-xs text-gray-400 mt-1">
               এডমিন প্যানেলে প্রবেশ করতে আপনার নিরাপত্তা পাসওয়ার্ড লিখুন

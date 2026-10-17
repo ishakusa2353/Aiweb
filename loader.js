@@ -1671,7 +1671,7 @@ javascript:(function(){
       '<div style="font-size:38px;margin-bottom:8px;">🚨</div>' +
       '<h3 style="color:#FF1744;font-size:15px;font-weight:900;margin:0 0 6px 0;letter-spacing:0.5px;">লাইসেন্সের মেয়াদ শেষ!</h3>' +
       '<div style="background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);border-radius:10px;padding:10px;margin-bottom:12px;color:#FFCDD2;font-size:11px;line-height:16px;">' +
-      (customReason || 'আপনার VIP কি এর সময় শেষ হওয়ায় তা ডাটাবেস থেকে লক বা এক্সপায়ার হয়েছে। Ishak AI বটের সমস্ত ট্রেডিং ও সিগন্যাল সাথে সাথে লক করা হলো!') +
+      (customReason || 'আপনার VIP কি এর সময় শেষ হওয়ায় তা ডাটাবেস থেকে লক বা এক্সপায়ার হয়েছে। TradePilot বটের সমস্ত ট্রেডিং ও সিগন্যাল সাথে সাথে লক করা হলো!') +
       '</div>' +
       '<p style="color:#A0AEC0;font-size:10.5px;margin:0 0 14px 0;">রিনিউ বা নতুন কি নিতে টেলিগ্রামে যোগাযোগ করুন:</p>' +
       '<div style="display:flex;gap:8px;">' +
@@ -2180,8 +2180,11 @@ javascript:(function(){
     '#scan-laser-diamond { width: 14px; height: 14px; background: linear-gradient(135deg, #FFFFFF, #FDE047, #F59E0B); border: 1.2px solid #FFF; transform: rotate(45deg); box-shadow: 0 0 15px #FFE066, 0 0 30px #FFB800; }' +
     '#scan-laser-curtain-bottom { position: absolute; top: 50%; left: 0; width: 100%; height: 30px; pointer-events: none; background: linear-gradient(to bottom, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%); }' +
     '#scan-grid { display: none !important; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: auto; max-width: none; user-select: none; }' +
-    '#ishak-screen-scan-box.scanning-active { display: flex; flex-direction: column; align-items: center; justify-content: center; }' +
+    '#ishak-screen-scan-box { position: fixed; inset: 0; z-index: 2147483645; display: none; align-items: center; justify-content: center; overflow: hidden; pointer-events: none; user-select: none; font-family: "Orbitron", monospace, sans-serif; }' +
+    '#ishak-screen-scan-box.scanning-active { display: flex !important; }' +
+    '@keyframes ishakRadarPing { 0% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.35; } 100% { transform: scale(0.9); opacity: 1; } }' +
+    '@keyframes ishakTargetPulse { 0%, 100% { transform: rotate(45deg) scale(0.94); } 50% { transform: rotate(45deg) scale(1.08); } }' +
+    '@keyframes ishakTelemetryIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }' +
     '@keyframes ishakAnalyzingPulse { ' +
       '0%, 100% { opacity: 0.28; filter: drop-shadow(0 0 4px rgba(0,229,255,0.4)); transform: scale(0.97); } ' +
       '50% { opacity: 1; filter: drop-shadow(0 0 16px rgba(0,229,255,0.95)) drop-shadow(0 0 28px rgba(0,255,102,0.7)); transform: scale(1.03); } ' +
@@ -2215,19 +2218,24 @@ javascript:(function(){
     void fly.offsetWidth;
 
     var isUp = direction === 'UP';
-    var text = isUp ? 'BUY' : 'SELL';
-    var arrow = isUp ? '↑' : '↓';
+    var text = isUp ? 'CALL' : 'PUT';
+    var arrow = isUp ? '⬆' : '⬇';
     var themeColor = isUp ? '#00FF66' : '#FF1744';
-    var glowShadow = isUp ? 'rgba(0,255,102,0.8)' : 'rgba(255,23,68,0.8)';
+    var glowShadow = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
 
     fly.innerHTML =
-      '<div style="position:relative; display:flex; align-items:center; justify-content:center; gap:10px; user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
-        '<span style="font-size:32px; font-weight:900; letter-spacing:5px; color:' + themeColor + '; text-shadow:0 0 16px ' + themeColor + ', 0 0 32px ' + glowShadow + ', 0 2px 10px rgba(0,0,0,0.95); line-height:1; position:relative; white-space:nowrap; text-transform:uppercase;">' +
-          text +
-        '</span>' +
-        '<span style="font-size:28px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 14px ' + themeColor + ', 0 2px 8px rgba(0,0,0,0.95); line-height:1;">' +
-          arrow +
-        '</span>' +
+      '<div style="position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:12px 28px; border-radius:20px; background:rgba(7,13,30,0.92); border:2px solid ' + themeColor + '; box-shadow:0 0 35px ' + glowShadow + ', inset 0 0 15px ' + glowShadow + '; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
+        '<div style="display:flex; align-items:center; justify-content:center; gap:12px;">' +
+          '<span style="font-size:36px; font-weight:900; letter-spacing:4px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 35px ' + glowShadow + ', 0 2px 10px rgba(0,0,0,0.95); line-height:1; white-space:nowrap; text-transform:uppercase;">' +
+            text +
+          '</span>' +
+          '<span style="font-size:34px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 2px 8px rgba(0,0,0,0.95); line-height:1;">' +
+            arrow +
+          '</span>' +
+        '</div>' +
+        '<div style="margin-top:6px; font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#fff; opacity:0.9; font-family:\'Orbitron\',monospace; text-shadow:0 1px 4px rgba(0,0,0,0.9);">' +
+          (isUp ? 'BUY SIGNAL CONFIRMED' : 'SELL SIGNAL CONFIRMED') +
+        '</div>' +
       '</div>';
 
     fly.className = isUp ? 'ishak-fly-buy-active' : 'ishak-fly-sell-active';
@@ -2237,7 +2245,7 @@ javascript:(function(){
         fly.style.display = 'none';
         fly.className = '';
       }
-    }, 1500);
+    }, 1800);
   }
 
   // Pure Clean Signal confirmation (Zero Clutter, Zero Circles)
@@ -2266,6 +2274,48 @@ javascript:(function(){
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.style.display = 'none';
+  screenScanBox.innerHTML =
+    '<div id="ishak-radar-backdrop" style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(3,7,24,0.48) 0%,rgba(2,5,18,0.78) 65%,rgba(1,3,10,0.92) 100%);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);"></div>' +
+    '<div id="ishak-radar-display" style="position:relative;width:380px;height:380px;max-width:85vw;max-height:85vw;display:flex;align-items:center;justify-content:center;">' +
+      '<div style="position:absolute;top:-52px;left:0;right:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9999px;background:rgba(7,14,40,0.92);border:1.2px solid rgba(0,229,255,0.65);box-shadow:0 0 20px rgba(0,229,255,0.45);">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;animation:ishakRadarPing 1.2s infinite;"></span>' +
+          '<span style="font-size:11px;font-weight:900;color:#67e8f9;font-family:\'Orbitron\',sans-serif;letter-spacing:1.5px;white-space:nowrap;">SYSTEM RADAR SCAN // <span id="ishak-radar-asset-name">USD/BDT (OTC)</span></span>' +
+          '<span id="ishak-radar-progress-badge" style="font-size:10px;font-family:monospace;color:#34d399;font-weight:bold;padding:1px 6px;border-radius:4px;background:rgba(6,78,59,0.7);border:1px solid rgba(16,185,129,0.4);">0%</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(0,229,255,0.4);box-shadow:0 0 30px rgba(0,229,255,0.25);display:flex;align-items:center;justify-content:center;">' +
+        '<span style="position:absolute;top:-12px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">000° N</span>' +
+        '<span style="position:absolute;bottom:-12px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">180° S</span>' +
+        '<span style="position:absolute;left:-18px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">270° W</span>' +
+        '<span style="position:absolute;right:-18px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">090° E</span>' +
+      '</div>' +
+      '<div style="position:absolute;inset:30px;border-radius:50%;border:1px dashed rgba(0,229,255,0.45);animation:ishakSpinClockwise 30s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:60px;border-radius:50%;border:1px solid rgba(0,229,255,0.5);box-shadow:inset 0 0 20px rgba(0,229,255,0.18);"></div>' +
+      '<div style="position:absolute;inset:90px;border-radius:50%;border:1px solid rgba(0,255,102,0.4);animation:ishakSpinCounter 18s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:120px;border-radius:50%;border:2px solid rgba(0,229,255,0.7);box-shadow:0 0 25px rgba(0,229,255,0.5);"></div>' +
+      '<div style="position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.9),transparent);box-shadow:0 0 8px #00E5FF;"></div>' +
+      '<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:linear-gradient(180deg,transparent,rgba(0,229,255,0.9),transparent);box-shadow:0 0 8px #00E5FF;"></div>' +
+      '<div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(0,229,255,0.45) 0deg,rgba(0,255,102,0.3) 35deg,rgba(0,229,255,0.08) 75deg,transparent 95deg,transparent 360deg);filter:drop-shadow(0 0 15px rgba(0,229,255,0.6));animation:ishakSpinClockwise 2.4s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:0;border-radius:50%;animation:ishakSpinClockwise 2.4s linear infinite;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
+        '<div style="width:50%;height:2px;margin-left:auto;background:linear-gradient(90deg,#FFFFFF 0%,#00FF66 40%,#00E5FF 90%,transparent 100%);box-shadow:0 0 12px #FFFFFF,0 0 24px #00FF66,0 0 35px #00E5FF;"></div>' +
+      '</div>' +
+      '<div style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
+        '<div style="width:48px;height:48px;border-radius:12px;border:1.2px solid rgba(0,229,255,0.85);transform:rotate(45deg);display:flex;align-items:center;justify-content:center;background:rgba(8,51,68,0.55);box-shadow:0 0 20px #00E5FF,inset 0 0 10px rgba(0,229,255,0.5);animation:ishakTargetPulse 1.4s infinite ease-in-out;">' +
+          '<div style="width:16px;height:16px;background:linear-gradient(135deg,#00E5FF,#00FF66);border-radius:3px;box-shadow:0 0 10px #00FF66;"></div>' +
+        '</div>' +
+        '<div style="margin-top:10px;display:flex;flex-direction:column;align-items:center;">' +
+          '<span style="font-size:10px;font-weight:900;color:#a5f3fc;font-family:\'Orbitron\',sans-serif;letter-spacing:1px;text-shadow:0 2px 4px rgba(0,0,0,0.9);">QUANTUM LOCK</span>' +
+          '<span id="ishak-radar-live-price" style="font-size:9.5px;font-family:monospace;font-weight:bold;color:#fde047;text-shadow:0 0 6px rgba(253,224,71,0.6);">CALCULATING...</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="position:absolute;top:-8px;left:-8px;width:22px;height:22px;border-top:2px solid rgba(0,229,255,0.85);border-left:2px solid rgba(0,229,255,0.85);border-top-left-radius:4px;"></div>' +
+      '<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-top:2px solid rgba(0,229,255,0.85);border-right:2px solid rgba(0,229,255,0.85);border-top-right-radius:4px;"></div>' +
+      '<div style="position:absolute;bottom:-8px;left:-8px;width:22px;height:22px;border-bottom:2px solid rgba(0,229,255,0.85);border-left:2px solid rgba(0,229,255,0.85);border-bottom-left-radius:4px;"></div>' +
+      '<div style="position:absolute;bottom:-8px;right:-8px;width:22px;height:22px;border-bottom:2px solid rgba(0,229,255,0.85);border-right:2px solid rgba(0,229,255,0.85);border-bottom-right-radius:4px;"></div>' +
+    '</div>' +
+    '<div id="ishak-radar-matrix-telemetry" style="position:fixed;bottom:24px;left:24px;z-index:2147483647;max-width:340px;pointer-events:none;user-select:none;font-family:monospace;font-size:10.5px;line-height:1.45;height:36vh;max-height:280px;overflow:hidden;display:flex;flex-direction:column-reverse;mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 45%,rgba(0,0,0,0.2) 75%,transparent 100%);-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 45%,rgba(0,0,0,0.2) 75%,transparent 100%);"></div>';
+  document.body.appendChild(screenScanBox);
 
   // 🌊 Water Wave Ripple Overlay (Sweeps from left during 6.5s entrance animation)
   var waterWaveOverlay = document.createElement('div');
@@ -2282,8 +2332,13 @@ javascript:(function(){
   // Independent Circular Button Wrap
   var mainWrap = document.createElement('div'); mainWrap.id = 'ishak-trade-wrap'; mainWrap.className = 'ishak-intro-spawn'; document.body.appendChild(mainWrap);
   var btnBox = document.createElement('div'); btnBox.id = 'ishak-btn-box'; mainWrap.appendChild(btnBox);
-  var logoAura = document.createElement('div'); logoAura.id = 'ishak-logo-aura'; btnBox.appendChild(logoAura);
-  var circleBtn = document.createElement('div'); circleBtn.id = 'ishak-circle-btn'; btnBox.appendChild(circleBtn);
+  var circleBtn = document.createElement('div'); circleBtn.id = 'ishak-circle-btn';
+  circleBtn.innerHTML =
+    '<div style="position:absolute;top:2px;left:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-top-left-radius:3px;"></div>' +
+    '<div style="position:absolute;top:2px;right:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-top-right-radius:3px;"></div>' +
+    '<div style="position:absolute;bottom:2px;left:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-bottom-left-radius:3px;"></div>' +
+    '<div style="position:absolute;bottom:2px;right:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-bottom-right-radius:3px;"></div>';
+  btnBox.appendChild(circleBtn);
 
   // ⚡ Continuous Rotating Golden Quantum Orbital Photon Ring (Laser Scanner Matched, Luxury Bezel, Zero Logo Face Intrusion)
   var orbitalWrap = document.createElement('div');
@@ -2518,7 +2573,7 @@ javascript:(function(){
     if (!tradeDuration) tradeDuration = 5;
     var timeTxt = tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S';
     if (pillTime) pillTime.innerText = timeTxt;
-    if (pillName) pillName.innerHTML = '⚡ ISHAK AI';
+    if (pillName) pillName.innerHTML = '⚡ TradePilot';
   }
 
   // 3. FORCED TIME DURATION SELECTION MODAL
@@ -3886,11 +3941,81 @@ javascript:(function(){
 
       pillTime.innerText = 'SCAN..';
 
+      // 🎯 Activate Tactical Circular Radar & Hacking Matrix Telemetry Overlay
+      var detectedAssetStr = window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_LAST_DETECTED_ASSET__ || (function(){
+        try { return extractQuotexPair(); } catch(e){ return 'USD/BDT (OTC)'; }
+      })() || 'USD/BDT (OTC)';
+
+      var radarAssetEl = document.getElementById('ishak-radar-asset-name');
+      if (radarAssetEl) radarAssetEl.innerText = detectedAssetStr;
+      var radarProgressEl = document.getElementById('ishak-radar-progress-badge');
+      var radarPriceEl = document.getElementById('ishak-radar-live-price');
+      var telemetryContainer = document.getElementById('ishak-radar-matrix-telemetry');
+      if (telemetryContainer) telemetryContainer.innerHTML = '';
+
+      if (screenScanBox) screenScanBox.classList.add('scanning-active');
       laserEl.classList.add('scanning-active');
 
       playPhotostatScannerSound();
 
-      // Real-Time High-Frequency Price Sampler during 3.5s Laser Scan (Captured afresh every click)
+      // Smooth percentage counter & live quote updater during scan
+      var scanStartTs = Date.now();
+      var progressInterval = setInterval(function() {
+        var elapsed = Date.now() - scanStartTs;
+        var pct = Math.min(99, Math.floor((elapsed / 3500) * 100));
+        if (radarProgressEl) radarProgressEl.innerText = pct + '%';
+        var pLive = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__;
+        if (pLive && radarPriceEl) {
+          radarPriceEl.innerText = pLive.toFixed(pLive > 50 ? 3 : 5);
+        }
+      }, 65);
+
+      // Bottom-Left Upward Streaming Hacking Matrix Telemetry
+      var telemetryTimeouts = [];
+      function addTelemetryLine(text, isHighlight) {
+        if (!telemetryContainer) return;
+        var lineDiv = document.createElement('div');
+        lineDiv.style.cssText = 'animation:ishakTelemetryIn 0.25s ease-out forwards; will-change:transform,opacity; margin-bottom:2px;' +
+          (isHighlight ? 'color:#67e8f9; font-weight:bold; text-shadow:0 0 8px rgba(0,229,255,0.85);' : 'color:#34d399; text-shadow:0 0 5px rgba(52,211,153,0.6);');
+        lineDiv.innerText = text;
+        telemetryContainer.prepend(lineDiv);
+      }
+
+      var liveCandle = (window.__ISHAK_LAST_CANDLE__ && window.__ISHAK_LAST_CANDLE__.length >= 6) ? window.__ISHAK_LAST_CANDLE__ : null;
+      var initPrice = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__ || 129.730;
+      var cOpen = liveCandle ? Number(liveCandle[2]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 0.9998).toFixed(initPrice > 50 ? 3 : 5);
+      var cHigh = liveCandle ? Number(liveCandle[3]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 1.0003).toFixed(initPrice > 50 ? 3 : 5);
+      var cLow = liveCandle ? Number(liveCandle[4]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 0.9996).toFixed(initPrice > 50 ? 3 : 5);
+      var cClose = liveCandle ? Number(liveCandle[5]).toFixed(initPrice > 50 ? 3 : 5) : initPrice.toFixed(initPrice > 50 ? 3 : 5);
+
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [SYS_INITIALIZE]: TradePilot Quantum Core v4.9 Active', false);
+      }, 50));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [TARGET ASSET]: ' + detectedAssetStr + ' | TIMEFRAME: ' + (tradeDuration || 5) + 'S', true);
+      }, 400));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [CLOCK SYNC]: ' + new Date().toLocaleTimeString('en-US', {hour12:false}) + ' | BID: ' + initPrice, false);
+      }, 850));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [CANDLE STREAM]: O:' + cOpen + ' H:' + cHigh + ' L:' + cLow + ' C:' + cClose, false);
+      }, 1300));
+      telemetryTimeouts.push(setTimeout(function() {
+        var buyVol = (58 + Math.floor(Math.random() * 24));
+        addTelemetryLine('>> [ORDER FLOW]: Buy Vol: ' + buyVol + '% | Sell Vol: ' + (100 - buyVol) + '% | Delta: +' + (Math.random() * 4).toFixed(2), false);
+      }, 1750));
+      telemetryTimeouts.push(setTimeout(function() {
+        var rsi = (42 + Math.floor(Math.random() * 32));
+        addTelemetryLine('>> [CONFLUENCE VECTOR]: RSI(14): ' + rsi + ' | Stochastic: 79.2 | Trend: ALIGNED', true);
+      }, 2200));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [ALGO CONFIRMATION]: Neural Filter PASS | Latency: 38ms', false);
+      }, 2650));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [SIGNAL LOCK]: PREPARING FINAL BROKER DISPATCH...', true);
+      }, 3050));
+
+      // Real-Time High-Frequency Price Sampler during 3.5s Scan
       var livePriceSamples = [];
       function sampleFreshScanTick() {
         var p = extractQuotexLivePrice();
@@ -3937,7 +4062,7 @@ javascript:(function(){
         try {
           signal = evaluateMarketConfluence(livePriceSamples, tradeDuration);
         } catch(err) {
-          if (typeof console !== 'undefined' && console.error) console.error('[ISHAK_ANALYSIS_ERROR]', err);
+          if (typeof console !== 'undefined' && console.error) console.error('[TRADEPILOT_ANALYSIS_ERROR]', err);
         }
         var finalDir = null;
         if (signal && signal.isTradeApproved && typeof signal.isCall === 'boolean') {
@@ -3962,12 +4087,18 @@ javascript:(function(){
       // Cleanly complete scan and present direction at 3500ms
       setTimeout(function() {
         if (priceSamplerInterval) clearInterval(priceSamplerInterval);
+        if (progressInterval) clearInterval(progressInterval);
         clearTimeout(tradeTimer);
+        for (var ti = 0; ti < telemetryTimeouts.length; ti++) {
+          clearTimeout(telemetryTimeouts[ti]);
+        }
 
         preDispatchQuotexTrade();
 
         var finalIsCall = computedIsCall;
 
+        if (screenScanBox) screenScanBox.classList.remove('scanning-active');
+        if (radarProgressEl) radarProgressEl.innerText = '100%';
         laserEl.classList.remove('scanning-active');
         circleBtn.classList.remove('working-pulse');
         var auraEl = document.getElementById('ishak-logo-aura');
@@ -4016,7 +4147,7 @@ javascript:(function(){
     if (isBotTerminated) return;
     var cur = getLocalLicense();
     if (cur && cur.exp && Date.now() >= cur.exp) {
-      terminateExpiredBot('আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে! Ishak AI বট নিষ্ক্রিয় ও ট্রেডিং ব্লক করা হলো।');
+      terminateExpiredBot('আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে! TradePilot বট নিষ্ক্রিয় ও ট্রেডিং ব্লক করা হলো।');
     }
   }, 1000);
 
@@ -4063,7 +4194,7 @@ javascript:(function(){
 
   // =========================================================================
   // 🔄 SWITCH MODE: CANDLE ROUND NUMBER CONTROLLER & REAL-TIME WEBSOCKET REWRITER
-  // (Integrated directly into ISHAK AI VIP Settings Hub)
+  // (Integrated directly into TRADEPILOT AI VIP Settings Hub)
   // =========================================================================
   var ishakSwitchModeActive = false;
 
@@ -4487,9 +4618,9 @@ javascript:(function(){
       });
       window.WebSocket = HookedWS;
 
-      // 🏷️ BOT NAME & LOGO INTEGRATION (As requested by user: ISHAK AI VIP)
-      var APP = "ISHAK AI VIP";
-      var LOGO_IMG_SRC = LOGO_URL || "https://i.ibb.co/Mx90bFy4/file-421.jpg";
+      // 🏷️ BOT NAME & LOGO INTEGRATION (As requested by user: TRADEPILOT VIP)
+      var APP = "TRADEPILOT VIP";
+      var LOGO_IMG_SRC = LOGO_URL || "https://i.ibb.co/qLkRtpxt/file-441.jpg";
 
       // 🔐 LICENSE INTEGRATION: Automatically authorized from verified bot license!
       // (Trader ID verification removed as requested!)

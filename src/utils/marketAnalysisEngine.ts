@@ -4,7 +4,7 @@ let lastEngineDirection: 'CALL' | 'PUT' | null = null;
 let consecutiveEngineCount = 0;
 
 /**
- * ISHAK AI VIP - PROFESSIONAL-GRADE REAL MARKET ANALYSIS & CONFLUENCE ENGINE
+ * TRADEPILOT AI VIP - PROFESSIONAL-GRADE REAL MARKET ANALYSIS & CONFLUENCE ENGINE
  * 
  * Strict Real Market Knowledge Core & Upgraded Multi-Factor Analytics:
  * 1. Market Structure:

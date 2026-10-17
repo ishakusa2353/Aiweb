@@ -1,5 +1,5 @@
-// Service Worker for Ishak AI Admin PWA (100% Live DB Sync)
-const CACHE_NAME = 'ishak-admin-v1';
+// Service Worker for TradePilot AI Admin PWA (100% Live DB Sync)
+const CACHE_NAME = 'tradepilot-admin-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

@@ -1179,24 +1179,24 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             <div className="grid grid-cols-2 gap-2 relative z-10">
               {TIME_OPTIONS.map((opt) => (
                 <button
-                  key={opt.seconds}
+                  key={opt.sec}
                   onClick={() => {
-                    setTradeDuration(opt.seconds);
+                    setTradeDuration(opt.sec);
                     setBadgeText(opt.label);
                     try {
-                      localStorage.setItem('ISHAK_TRADE_DURATION', String(opt.seconds));
+                      localStorage.setItem('ISHAK_TRADE_DURATION', String(opt.sec));
                     } catch (e) {}
                     setShowTimeModal(false);
                     showToast(`✅ Timeframe set to ${opt.label}`, false);
                   }}
                   className={`p-3 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-                    tradeDuration === opt.seconds
+                    tradeDuration === opt.sec
                       ? 'bg-gradient-to-b from-cyan-400/30 to-indigo-950/80 border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(0,229,255,0.35)]'
                       : 'bg-[#10173d]/80 border-indigo-400/20 text-gray-200 hover:border-cyan-400/40'
                   }`}
                 >
                   <span>⏱️ {opt.label}</span>
-                  {tradeDuration === opt.seconds && <span className="text-cyan-400">✓</span>}
+                  {tradeDuration === opt.sec && <span className="text-cyan-400">✓</span>}
                 </button>
               ))}
             </div>

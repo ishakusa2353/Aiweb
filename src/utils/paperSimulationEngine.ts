@@ -1,5 +1,5 @@
 /**
- * ISHAK AI VIP - PAPER & HISTORICAL SIMULATION ACCURACY ENGINE
+ * TRADEPILOT AI VIP - PAPER & HISTORICAL SIMULATION ACCURACY ENGINE
  * 
  * Strict Scientific & Backtesting Standards:
  * - Zero Look-Ahead Bias: Decisions at bar [t] strictly evaluate bar [t+1] outcome

@@ -22,7 +22,7 @@ export const SupabaseConfigView: React.FC<SupabaseConfigViewProps> = ({ supabase
 
   useEffect(() => {
     setUrl(supabaseStatus.supabaseUrl || 'https://qbazzarqiplrqqfytajz.supabase.co');
-    setSchemaSql(`-- ⚡ ISHAK AI PRO - SUPABASE LICENSE DATABASE SCHEMA
+    setSchemaSql(`-- ⚡ TRADEPILOT AI PRO - SUPABASE LICENSE DATABASE SCHEMA
 CREATE TABLE IF NOT EXISTS public.ishak_licenses (
   key TEXT PRIMARY KEY,
   active BOOLEAN NOT NULL DEFAULT true,

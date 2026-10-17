@@ -362,7 +362,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
               </span>
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              নিচে ডানে থাকা <strong className="text-cyan-400">Ishak AI</strong> বাটনটিতে একবার ক্লিক করুন মার্কেট স্ক্যান ও অটো-ক্লিকের সিগন্যাল পরীক্ষা করতে!
+              নিচে ডানে থাকা <strong className="text-cyan-400">TradePilot</strong> বাটনটিতে একবার ক্লিক করুন মার্কেট স্ক্যান ও অটো-ক্লিকের সিগন্যাল পরীক্ষা করতে!
             </p>
           </div>
         </div>

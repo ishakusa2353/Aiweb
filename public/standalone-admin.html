@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ISHAK AI PRO - Standalone Admin Panel</title>
+  <title>TRADEPILOT AI PRO - Standalone Admin Panel</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase JS Client CDN -->
@@ -40,12 +40,12 @@
   <header class="border-b border-cyan-400/35 border-t border-t-white/15 bg-gradient-to-r from-[#141d4c]/90 via-[#0e163d]/95 to-[#171f52]/90 backdrop-blur-2xl sticky top-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[0_12px_36px_rgba(2,6,23,0.85),inset_0_1px_1.5px_rgba(255,255,255,0.35)]">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-2xl overflow-hidden border-t border-t-cyan-300/80 border-b border-b-black/90 shadow-[0_6px_18px_rgba(0,229,255,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)]">
-        <img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" alt="Logo" class="w-full h-full object-cover" />
+        <img src="https://i.ibb.co/qLkRtpxt/file-441.jpg" alt="Logo" class="w-full h-full object-cover" />
       </div>
       <div>
         <div class="flex items-center gap-2">
           <h1 class="text-base sm:text-lg font-black tracking-wide text-white flex items-center gap-1.5 font-['Orbitron',sans-serif]">
-            ISHAK AI <span class="text-cyan-300 text-[10px] px-2 py-0.5 rounded-lg bg-gradient-to-b from-cyan-400/25 to-indigo-950/80 border-t border-t-cyan-300/60 border-b border-b-black/80 font-black shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)]">PRO</span>
+            TRADEPILOT AI <span class="text-cyan-300 text-[10px] px-2 py-0.5 rounded-lg bg-gradient-to-b from-cyan-400/25 to-indigo-950/80 border-t border-t-cyan-300/60 border-b border-b-black/80 font-black shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)]">PRO</span>
           </h1>
           <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/40 shadow-sm">
             STANDALONE CLIENT
@@ -73,7 +73,7 @@
     <div class="w-full max-w-md bg-gradient-to-b from-[#182356]/95 via-[#0d163c]/98 to-[#070c26] border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(2,6,23,0.9),inset_0_1px_1.5px_rgba(255,255,255,0.3)] relative overflow-hidden backdrop-blur-2xl">
       <div class="text-center space-y-2 mb-6">
         <div class="w-18 h-18 mx-auto rounded-2xl overflow-hidden border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 shadow-[0_12px_28px_rgba(0,229,255,0.35)]">
-          <img src="https://i.ibb.co/Mx90bFy4/file-421.jpg" alt="Logo" class="w-full h-full object-cover" />
+          <img src="https://i.ibb.co/qLkRtpxt/file-441.jpg" alt="Logo" class="w-full h-full object-cover" />
         </div>
         <h2 class="text-xl font-black text-white font-['Orbitron',sans-serif] tracking-wide">এডমিন প্যানেল লগইন</h2>
         <p class="text-xs text-cyan-200/70 leading-relaxed font-medium">
@@ -187,7 +187,7 @@
               id="new-key-code"
               type="text"
               required
-              placeholder="ISHAK-VIP-..."
+              placeholder="TP-VIP-..."
               class="w-full bg-[#070b22] border-t border-t-black/80 border-b border-b-cyan-400/30 border-x border-cyan-500/25 rounded-xl px-3 py-2 text-xs font-mono font-black text-emerald-400 outline-none focus:border-cyan-300 shadow-inner"
             />
           </div>
@@ -594,7 +594,7 @@
 
     function generateRandomKeyInput() {
       const token = Math.random().toString(36).substring(2, 6).toUpperCase();
-      document.getElementById('new-key-code').value = `ISHAK-VIP-30D-${token}`;
+      document.getElementById('new-key-code').value = `TP-VIP-30D-${token}`;
     }
 
     async function handleCreateKey(e) {

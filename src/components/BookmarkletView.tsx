@@ -464,7 +464,7 @@ export const BookmarkletView: React.FC = () => {
             }}
             className="px-4 py-2 rounded-xl bg-[#0B132B] border-2 border-cyan-400 text-cyan-300 font-black text-xs shadow-[0_0_12px_rgba(0,229,255,0.4)] hover:scale-105 transition cursor-grab active:cursor-grabbing shrink-0 flex items-center gap-2"
           >
-            <span>⚡ Ishak AI Pro</span>
+            <span>⚡ TradePilot AI Pro</span>
           </a>
         </div>
       </div>

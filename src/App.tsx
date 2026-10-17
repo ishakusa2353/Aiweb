@@ -247,7 +247,7 @@ export default function App() {
         </button>
       </nav>
 
-      {/* Persistent Floating Ishak AI Assistant Widget with Laser Scan & Sound */}
+      {/* Persistent Floating TradePilot AI Assistant Widget with Laser Scan & Sound */}
       <FloatingIshakWidget
         soundEnabled={soundEnabled}
         onTradeSignal={(sig) => setLastSignal(sig)}

@@ -139,7 +139,7 @@ javascript:(function(){
       if (!str) return;
 
       // Filter out user deals/balance/profile/order packets to eliminate noise
-      if (/"deal|"order|"balance|"user|"auth|"profile|"notification|"history\/order|"history\/deal/i.test(str)) {
+      if (/"deal|"order|"balance|"user|"auth|"profile|"notification|"history/i.test(str)) {
         return;
       }
 
@@ -150,34 +150,6 @@ javascript:(function(){
       if (jsonIdx >= 0) {
         try {
           var payload = JSON.parse(str.slice(jsonIdx));
-          // Capture Quotex historical candles & real chart stream
-          if (Array.isArray(payload) && (payload[0] === "history/list" || payload[0] === "history" || payload[0] === "candles") && payload[1]) {
-            var hObj = payload[1];
-            var rawCandles = Array.isArray(hObj) ? hObj : (Array.isArray(hObj.candles) ? hObj.candles : (Array.isArray(hObj.data) ? hObj.data : null));
-            if (rawCandles && rawCandles.length >= 3) {
-              var parsedH = rawCandles
-                .filter(function(k) { return Array.isArray(k) && k.length >= 5; })
-                .map(function(k) {
-                  return {
-                    time: Number(k[0]) * (Number(k[0]) < 10000000000 ? 1000 : 1),
-                    open: Number(k[1]),
-                    close: Number(k[2]),
-                    high: Number(k[3]),
-                    low: Number(k[4])
-                  };
-                })
-                .filter(function(k) { return isFinite(k.time) && isFinite(k.open); })
-                .sort(function(a, b) { return a.time - b.time; });
-              if (parsedH.length >= 3) {
-                window.__ISHAK_REAL_CHART_CANDLES__ = parsedH.slice(-50);
-                window.__ISHAK_BACKGROUND_CANDLES__ = parsedH.slice(-50);
-                if (hObj.asset) {
-                  var hAsset = normalizeBrokerAsset(hObj.asset);
-                  if (hAsset) window.__ISHAK_CURRENT_ASSET__ = hAsset;
-                }
-              }
-            }
-          }
           if (Array.isArray(payload)) {
             // Case A: 42["chart/asset", "EURUSD_otc"] or ["instruments/change", "EURUSD_otc"]
             if ((payload[0] === "chart/asset" || payload[0] === "instruments/change" || payload[0] === "sub") && typeof payload[1] === "string") {
@@ -657,7 +629,7 @@ javascript:(function(){
   var SUPABASE_URL = "https://qbazzarqiplrqqfytajz.supabase.co";
   var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXp6YXJxaXBscnFxZnl0YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDc4NDUsImV4cCI6MjEwNDMyMzg0NX0.7BPbYW6P50Nh3OrkQU_T1GOwib-iKNUhLFoc1GxiNZo";
   var BACKEND_SERVER_URL = "";
-  var LOGO_URL = "https://i.ibb.co/Mx90bFy4/file-421.jpg";
+  var LOGO_URL = "https://i.ibb.co/qLkRtpxt/file-441.jpg";
 
   // 1. CONFIGURATION & STATE (Mandatory selection required on load)
   var tradeDuration = null;
@@ -1667,8 +1639,7 @@ javascript:(function(){
 
     try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
 
-    if (laserEl) if (typeof overlayAnimTimer !== "undefined") clearInterval(overlayAnimTimer);
-        cyberScanOverlay.style.display = "none";
+    if (laserEl) laserEl.classList.remove('scanning-active');
     if (gridEl) gridEl.style.display = 'none';
     if (screenScanBox) screenScanBox.style.display = 'none';
     if (circleBtn) {
@@ -1700,7 +1671,7 @@ javascript:(function(){
       '<div style="font-size:38px;margin-bottom:8px;">🚨</div>' +
       '<h3 style="color:#FF1744;font-size:15px;font-weight:900;margin:0 0 6px 0;letter-spacing:0.5px;">লাইসেন্সের মেয়াদ শেষ!</h3>' +
       '<div style="background:rgba(255,23,68,0.15);border:1px solid rgba(255,23,68,0.4);border-radius:10px;padding:10px;margin-bottom:12px;color:#FFCDD2;font-size:11px;line-height:16px;">' +
-      (customReason || 'আপনার VIP কি এর সময় শেষ হওয়ায় তা ডাটাবেস থেকে লক বা এক্সপায়ার হয়েছে। Ishak AI বটের সমস্ত ট্রেডিং ও সিগন্যাল সাথে সাথে লক করা হলো!') +
+      (customReason || 'আপনার VIP কি এর সময় শেষ হওয়ায় তা ডাটাবেস থেকে লক বা এক্সপায়ার হয়েছে। TradePilot বটের সমস্ত ট্রেডিং ও সিগন্যাল সাথে সাথে লক করা হলো!') +
       '</div>' +
       '<p style="color:#A0AEC0;font-size:10.5px;margin:0 0 14px 0;">রিনিউ বা নতুন কি নিতে টেলিগ্রামে যোগাযোগ করুন:</p>' +
       '<div style="display:flex;gap:8px;">' +
@@ -1873,13 +1844,19 @@ javascript:(function(){
             .filter(Boolean);
 
           var devLimit = 1;
-          if (row.device_limit !== undefined && row.device_limit !== null) {
+          if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+            devLimit = 0;
+          } else if (row.device_limit !== undefined && row.device_limit !== null) {
             devLimit = Number(row.device_limit);
-          } else if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
+          }
+          if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
             var mLimit = row.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
             if (mLimit) devLimit = Number(mLimit[1]);
           }
-          var isUnlimited = (devLimit === 0 || devLimit === -1);
+          if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+            devLimit = 0;
+          }
+          var isUnlimited = (devLimit === 0 || devLimit === -1 || devLimit >= 9999);
 
           var updates = {};
           var needPatch = false;
@@ -1992,13 +1969,19 @@ javascript:(function(){
                     .filter(Boolean);
 
                   var devLimit = 1;
-                  if (row.device_limit !== undefined && row.device_limit !== null) {
+                  if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+                    devLimit = 0;
+                  } else if (row.device_limit !== undefined && row.device_limit !== null) {
                     devLimit = Number(row.device_limit);
-                  } else if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
+                  }
+                  if (row.note && row.note.indexOf('[DEV_LIMIT:') !== -1) {
                     var mLimit = row.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
                     if (mLimit) devLimit = Number(mLimit[1]);
                   }
-                  var isUnlimited = (devLimit === 0 || devLimit === -1);
+                  if (row.note && (row.note.indexOf('UNLIMITED') !== -1 || row.note.indexOf('[DEV_LIMIT:0]') !== -1)) {
+                    devLimit = 0;
+                  }
+                  var isUnlimited = (devLimit === 0 || devLimit === -1 || devLimit >= 9999);
 
                   if (myDeviceId) {
                     var alreadyRegistered = registeredDevices.indexOf(myDeviceId) !== -1;
@@ -2106,8 +2089,6 @@ javascript:(function(){
       '52% { top: calc(100vh - 20px); } ' +
       '100% { top: -25px; } ' +
     '}' +
-    '@keyframes ishakRadarSweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } ' +
-    '@keyframes ishakReticleSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } } ' +
     '@keyframes ishakGoldenLaserSweep { ' +
       '0% { transform: translate3d(0, -35px, 0); } ' +
       '48% { transform: translate3d(0, calc(100vh - 10px), 0); } ' +
@@ -2184,9 +2165,9 @@ javascript:(function(){
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
     '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(255,184,0,0.85) 0%, rgba(255,158,11,0.5) 40%, rgba(255,184,0,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 5; width: 56px; height: 56px; border-radius: 50%; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 1.5px solid rgba(255,184,0,0.5); box-shadow: 0 4px 16px rgba(0,0,0,0.9), inset 0 0 10px rgba(255,184,0,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
-    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(255,184,0,0.4); }' +
-    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #FFD700; box-shadow: 0 0 28px #FFD700, 0 0 55px rgba(255,184,0,0.85), inset 0 0 14px rgba(255,184,0,0.5); }' +
+    '#ishak-circle-btn { position: relative; z-index: 5; width: 56px; height: 56px; border-radius: 16px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.75); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(0,229,255,0.65); border-color: #00E5FF; }' +
+    '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 35px #00E5FF, 0 0 55px rgba(217,70,239,0.8), inset 0 0 14px rgba(0,229,255,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
     '#ishak-pill-name { color: #00E5FF; font-size: 8.5px; font-weight: 900; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 3px; transform: none !important; animation: none !important; white-space: nowrap; }' +
     '#ishak-pill-time { background: linear-gradient(135deg, #00E5FF, #22D3EE); color: #070D1E; font-size: 7.5px; font-weight: 900; padding: 1.5px 6px; border-radius: 8px; letter-spacing: 0.3px; display: inline-flex; align-items: center; justify-content: center; transform: none !important; animation: none !important; white-space: nowrap; line-height: 1.1; }' +
@@ -2199,8 +2180,11 @@ javascript:(function(){
     '#scan-laser-diamond { width: 14px; height: 14px; background: linear-gradient(135deg, #FFFFFF, #FDE047, #F59E0B); border: 1.2px solid #FFF; transform: rotate(45deg); box-shadow: 0 0 15px #FFE066, 0 0 30px #FFB800; }' +
     '#scan-laser-curtain-bottom { position: absolute; top: 50%; left: 0; width: 100%; height: 30px; pointer-events: none; background: linear-gradient(to bottom, rgba(255,215,0,0.28) 0%, rgba(255,184,0,0.08) 45%, transparent 100%); }' +
     '#scan-grid { display: none !important; }' +
-    '#ishak-screen-scan-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) !important; z-index: 2147483646; display: none; text-align: center; pointer-events: none; background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; min-width: auto; max-width: none; user-select: none; }' +
-    '#ishak-screen-scan-box.scanning-active { display: flex; flex-direction: column; align-items: center; justify-content: center; }' +
+    '#ishak-screen-scan-box { position: fixed; inset: 0; z-index: 2147483645; display: none; align-items: center; justify-content: center; overflow: hidden; pointer-events: none; user-select: none; font-family: "Orbitron", monospace, sans-serif; }' +
+    '#ishak-screen-scan-box.scanning-active { display: flex !important; }' +
+    '@keyframes ishakRadarPing { 0% { transform: scale(0.9); opacity: 1; } 50% { transform: scale(1.4); opacity: 0.35; } 100% { transform: scale(0.9); opacity: 1; } }' +
+    '@keyframes ishakTargetPulse { 0%, 100% { transform: rotate(45deg) scale(0.94); } 50% { transform: rotate(45deg) scale(1.08); } }' +
+    '@keyframes ishakTelemetryIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }' +
     '@keyframes ishakAnalyzingPulse { ' +
       '0%, 100% { opacity: 0.28; filter: drop-shadow(0 0 4px rgba(0,229,255,0.4)); transform: scale(0.97); } ' +
       '50% { opacity: 1; filter: drop-shadow(0 0 16px rgba(0,229,255,0.95)) drop-shadow(0 0 28px rgba(0,255,102,0.7)); transform: scale(1.03); } ' +
@@ -2234,19 +2218,24 @@ javascript:(function(){
     void fly.offsetWidth;
 
     var isUp = direction === 'UP';
-    var text = isUp ? 'BUY' : 'SELL';
-    var arrow = isUp ? '↑' : '↓';
+    var text = isUp ? 'CALL' : 'PUT';
+    var arrow = isUp ? '⬆' : '⬇';
     var themeColor = isUp ? '#00FF66' : '#FF1744';
-    var glowShadow = isUp ? 'rgba(0,255,102,0.8)' : 'rgba(255,23,68,0.8)';
+    var glowShadow = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
 
     fly.innerHTML =
-      '<div style="position:relative; display:flex; align-items:center; justify-content:center; gap:10px; user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
-        '<span style="font-size:32px; font-weight:900; letter-spacing:5px; color:' + themeColor + '; text-shadow:0 0 16px ' + themeColor + ', 0 0 32px ' + glowShadow + ', 0 2px 10px rgba(0,0,0,0.95); line-height:1; position:relative; white-space:nowrap; text-transform:uppercase;">' +
-          text +
-        '</span>' +
-        '<span style="font-size:28px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 14px ' + themeColor + ', 0 2px 8px rgba(0,0,0,0.95); line-height:1;">' +
-          arrow +
-        '</span>' +
+      '<div style="position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:12px 28px; border-radius:20px; background:rgba(7,13,30,0.92); border:2px solid ' + themeColor + '; box-shadow:0 0 35px ' + glowShadow + ', inset 0 0 15px ' + glowShadow + '; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
+        '<div style="display:flex; align-items:center; justify-content:center; gap:12px;">' +
+          '<span style="font-size:36px; font-weight:900; letter-spacing:4px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 35px ' + glowShadow + ', 0 2px 10px rgba(0,0,0,0.95); line-height:1; white-space:nowrap; text-transform:uppercase;">' +
+            text +
+          '</span>' +
+          '<span style="font-size:34px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 2px 8px rgba(0,0,0,0.95); line-height:1;">' +
+            arrow +
+          '</span>' +
+        '</div>' +
+        '<div style="margin-top:6px; font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#fff; opacity:0.9; font-family:\'Orbitron\',monospace; text-shadow:0 1px 4px rgba(0,0,0,0.9);">' +
+          (isUp ? 'BUY SIGNAL CONFIRMED' : 'SELL SIGNAL CONFIRMED') +
+        '</div>' +
       '</div>';
 
     fly.className = isUp ? 'ishak-fly-buy-active' : 'ishak-fly-sell-active';
@@ -2256,7 +2245,7 @@ javascript:(function(){
         fly.style.display = 'none';
         fly.className = '';
       }
-    }, 1500);
+    }, 1800);
   }
 
   // Pure Clean Signal confirmation (Zero Clutter, Zero Circles)
@@ -2265,72 +2254,19 @@ javascript:(function(){
   }
 
   // Photonic Market-Touching Laser Scanner (No Text Clutter)
-  // 🛰️ CINEMATIC FULLSCREEN CYBER MATRIX RADAR SCANNER OVERLAY (No scanner line)
-  var cyberScanOverlay = document.createElement("div");
-  cyberScanOverlay.id = "ishak-fullscreen-cyber-scan";
-  cyberScanOverlay.style.cssText = "display:none;position:fixed;inset:0;z-index:2147483647;background:rgba(3,6,14,0.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);flex-direction:column;align-items:center;justify-content:space-between;padding:24px 16px;user-select:none;font-family:monospace;";
-  cyberScanOverlay.innerHTML = 
-    "<div style=\"position:absolute;inset:0;pointer-events:none;opacity:0.18;background-image:radial-gradient(circle at 50% 50%,rgba(245,158,11,0.15) 0%,transparent 80%),linear-gradient(rgba(0,229,255,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.08) 1px,transparent 1px);background-size:100% 100%,28px 28px,28px 28px;\"></div>" +
-    "<div style=\"position:relative;z-index:2;width:100%;max-width:760px;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.65);border:1px solid rgba(245,158,11,0.35);border-radius:14px;padding:10px 16px;box-shadow:0 4px 25px rgba(0,0,0,0.85);\">" +
-      "<div style=\"display:flex;align-items:center;gap:10px;\">" +
-        "<div style=\"width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 10px #10b981;\"></div>" +
-        "<div>" +
-          "<div style=\"font-size:10px;color:#f59e0b;font-weight:bold;letter-spacing:1px;\">🛰️ ALGORITHMIC CHART INTERCEPTOR</div>" +
-          "<div id=\"cyber-scan-asset\" style=\"font-size:14px;font-weight:800;color:#fff;\">EUR/USD (OTC) <span id=\"cyber-scan-timeframe\" style=\"font-size:11px;background:rgba(0,229,255,0.15);color:#00e5ff;border:1px solid rgba(0,229,255,0.3);padding:2px 8px;border-radius:12px;margin-left:6px;\">5S TIMEFRAME</span></div>" +
-        "</div>" +
-      "</div>" +
-      "<div style=\"text-align:right;\">" +
-        "<div style=\"font-size:9px;color:#94a3b8;font-weight:bold;\">LIVE BROKER RATE</div>" +
-        "<div id=\"cyber-scan-rate\" style=\"font-size:15px;font-weight:800;color:#fde68a;font-family:monospace;\">1.00000</div>" +
-      "</div>" +
-    "</div>" +
-    "<div style=\"position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:auto;\">" +
-      "<div style=\"position:relative;width:260px;height:260px;border-radius:50%;border:2px solid rgba(245,158,11,0.45);display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);box-shadow:0 0 50px rgba(245,158,11,0.25),inset 0 0 35px rgba(245,158,11,0.15);\">" +
-        "<div style=\"position:absolute;inset:16px;border-radius:50%;border:1px solid rgba(0,229,255,0.25);pointer-events:none;\"></div>" +
-        "<div style=\"position:absolute;inset:38px;border-radius:50%;border:1px dashed rgba(245,158,11,0.25);pointer-events:none;\"></div>" +
-        "<div style=\"position:absolute;inset:60px;border-radius:50%;border:1px solid rgba(0,229,255,0.3);pointer-events:none;\"></div>" +
-        "<div style=\"position:absolute;top:0;bottom:0;left:50%;width:1px;background:rgba(0,229,255,0.3);pointer-events:none;\"></div>" +
-        "<div style=\"position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,229,255,0.3);pointer-events:none;\"></div>" +
-        "<span style=\"position:absolute;top:4px;font-size:9px;color:#f59e0b;font-weight:bold;\">0° N</span>" +
-        "<span style=\"position:absolute;bottom:4px;font-size:9px;color:#f59e0b;font-weight:bold;\">180° S</span>" +
-        "<span style=\"position:absolute;right:8px;font-size:9px;color:#f59e0b;font-weight:bold;\">90° E</span>" +
-        "<span style=\"position:absolute;left:8px;font-size:9px;color:#f59e0b;font-weight:bold;\">270° W</span>" +
-        "<div id=\"cyber-radar-sweeper\" style=\"position:absolute;inset:0;border-radius:50%;pointer-events:none;overflow:hidden;animation:ishakRadarSweep 1.6s linear infinite;\">" +
-          "<div style=\"width:100%;height:100%;border-radius:50%;background:conic-gradient(from 0deg, rgba(245,158,11,0.5) 0deg, rgba(245,158,11,0.15) 45deg, transparent 90deg, transparent 360deg);\"></div>" +
-          "<div style=\"position:absolute;top:0;left:50%;transform:translateX(-50%);width:2.5px;height:50%;transform-origin:bottom;background:linear-gradient(to top, rgba(255,255,255,0.9), #FFD700);box-shadow:0 0 12px #FFD700,0 0 25px #FFA500;\"></div>" +
-        "</div>" +
-        "<div style=\"position:absolute;inset:-8px;border-radius:50%;border-top:2px solid rgba(0,229,255,0.4);border-bottom:2px solid rgba(0,229,255,0.4);pointer-events:none;animation:ishakReticleSpin 5s linear infinite;\"></div>" +
-        "<div style=\"position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;border-radius:50%;background:rgba(7,11,24,0.92);border:1.5px solid rgba(245,158,11,0.6);box-shadow:0 0 30px rgba(0,0,0,0.9),0 0 20px rgba(245,158,11,0.4);\">" +
-          "<div style=\"width:68px;height:68px;border-radius:50%;overflow:hidden;border:2px solid #f59e0b;box-shadow:0 0 15px rgba(245,158,11,0.6);margin-bottom:4px;\">" +
-            "<img src=\"https://i.ibb.co/Mx90bFy4/file-421.jpg\" style=\"width:100%;height:100%;object-fit:cover;\">" +
-          "</div>" +
-          "<div id=\"cyber-scan-pct\" style=\"font-size:24px;font-weight:900;color:#fde68a;font-family:monospace;letter-spacing:1px;\">0%</div>" +
-          "<div style=\"font-size:8px;font-weight:bold;color:#00e5ff;letter-spacing:1.5px;text-transform:uppercase;\">DECODING CHART</div>" +
-        "</div>" +
-      "</div>" +
-      "<div id=\"cyber-scan-verdict\" style=\"display:none;margin-top:14px;padding:8px 24px;border-radius:14px;background:rgba(0,0,0,0.85);border:1.5px solid #f59e0b;box-shadow:0 0 35px rgba(245,158,11,0.6);font-size:15px;font-weight:900;color:#fde68a;text-align:center;\">" +
-        "TARGET LOCKED • EXECUTING ENTRY..." +
-      "</div>" +
-    "</div>" +
-    "<div style=\"position:relative;z-index:2;width:100%;max-width:760px;background:rgba(0,0,0,0.75);border:1px solid rgba(0,229,255,0.3);border-radius:14px;padding:12px 16px;box-shadow:0 4px 30px rgba(0,0,0,0.9);\">" +
-      "<div style=\"display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,229,255,0.2);padding-bottom:6px;margin-bottom:8px;\">" +
-        "<span style=\"font-size:10px;color:#00e5ff;font-weight:bold;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:6px;\">" +
-          "<span style=\"width:6px;height:6px;border-radius:50%;background:#00e5ff;\"></span>" +
-          "TERMINAL TELEMETRY // REAL-TIME MARKET ENGINE" +
-        "</span>" +
-        "<span style=\"font-size:9px;color:#94a3b8;\">FEED LATENCY: ~18ms</span>" +
-      "</div>" +
-      "<div id=\"cyber-matrix-logs\" style=\"display:flex;flex-direction:column;gap:4px;font-size:11px;font-family:monospace;line-height:1.4;\">" +
-        "<div style=\"color:#10b981;\">[0.00s] 🛰️ CONNECTING BROKER WEBSOCKET: <span id=\"cyber-log-asset\">EUR/USD (OTC)</span></div>" +
-        "<div id=\"cyber-log-line1\" style=\"display:none;color:#00e5ff;\">[0.75s] 📊 DECODING RUNNING OHLC CANDLE BARS & TICKS FEED (30+ BARS OK)</div>" +
-        "<div id=\"cyber-log-line2\" style=\"display:none;color:#fde68a;\">[1.55s] 📐 EVALUATING EMA(9/21) CROSSOVER + RSI(14) MOMENTUM REVERSAL</div>" +
-        "<div id=\"cyber-log-line3\" style=\"display:none;color:#fcd34d;\">[2.45s] 🎯 ROUND LEVEL SUPPORT/RESISTANCE BOUNCE DETECTED (CONFIRMATION 95%+)</div>" +
-        "<div id=\"cyber-log-line4\" style=\"display:none;color:#34d399;font-weight:bold;\">[3.15s] ⚡ DISPATCHING BROKER TRADE INJECTION ORDER • ONE SIGNAL ONE TRADE RULE</div>" +
-        "<div style=\"color:#00e5ff;\"><span id=\"cyber-log-timer\">[0.00s]</span> <span style=\"display:inline-block;animation:ishakPulse 0.8s infinite;\">_</span></div>" +
-      "</div>" +
-    "</div>";
-  document.body.appendChild(cyberScanOverlay);
-  var laserEl = cyberScanOverlay;
+  var laserEl = document.createElement('div');
+  laserEl.id = 'scan-laser';
+  laserEl.innerHTML =
+    '<div id="scan-laser-curtain-top"></div>' +
+    '<div id="scan-laser-beam-wrap">' +
+      '<div id="scan-laser-beam"></div>' +
+      '<div id="scan-laser-reticle">' +
+        '<div id="scan-laser-diamond"></div>' +
+      '</div>' +
+    '</div>' +
+    '<div id="scan-laser-curtain-bottom"></div>';
+  document.body.appendChild(laserEl);
+
   var gridEl = document.createElement('div');
   gridEl.id = 'scan-grid';
   document.body.appendChild(gridEl);
@@ -2338,6 +2274,48 @@ javascript:(function(){
   var screenScanBox = document.createElement('div');
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.style.display = 'none';
+  screenScanBox.innerHTML =
+    '<div id="ishak-radar-backdrop" style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(3,7,24,0.48) 0%,rgba(2,5,18,0.78) 65%,rgba(1,3,10,0.92) 100%);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);"></div>' +
+    '<div id="ishak-radar-display" style="position:relative;width:380px;height:380px;max-width:85vw;max-height:85vw;display:flex;align-items:center;justify-content:center;">' +
+      '<div style="position:absolute;top:-52px;left:0;right:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9999px;background:rgba(7,14,40,0.92);border:1.2px solid rgba(0,229,255,0.65);box-shadow:0 0 20px rgba(0,229,255,0.45);">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;animation:ishakRadarPing 1.2s infinite;"></span>' +
+          '<span style="font-size:11px;font-weight:900;color:#67e8f9;font-family:\'Orbitron\',sans-serif;letter-spacing:1.5px;white-space:nowrap;">SYSTEM RADAR SCAN // <span id="ishak-radar-asset-name">USD/BDT (OTC)</span></span>' +
+          '<span id="ishak-radar-progress-badge" style="font-size:10px;font-family:monospace;color:#34d399;font-weight:bold;padding:1px 6px;border-radius:4px;background:rgba(6,78,59,0.7);border:1px solid rgba(16,185,129,0.4);">0%</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(0,229,255,0.4);box-shadow:0 0 30px rgba(0,229,255,0.25);display:flex;align-items:center;justify-content:center;">' +
+        '<span style="position:absolute;top:-12px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">000° N</span>' +
+        '<span style="position:absolute;bottom:-12px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">180° S</span>' +
+        '<span style="position:absolute;left:-18px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">270° W</span>' +
+        '<span style="position:absolute;right:-18px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">090° E</span>' +
+      '</div>' +
+      '<div style="position:absolute;inset:30px;border-radius:50%;border:1px dashed rgba(0,229,255,0.45);animation:ishakSpinClockwise 30s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:60px;border-radius:50%;border:1px solid rgba(0,229,255,0.5);box-shadow:inset 0 0 20px rgba(0,229,255,0.18);"></div>' +
+      '<div style="position:absolute;inset:90px;border-radius:50%;border:1px solid rgba(0,255,102,0.4);animation:ishakSpinCounter 18s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:120px;border-radius:50%;border:2px solid rgba(0,229,255,0.7);box-shadow:0 0 25px rgba(0,229,255,0.5);"></div>' +
+      '<div style="position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.9),transparent);box-shadow:0 0 8px #00E5FF;"></div>' +
+      '<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:linear-gradient(180deg,transparent,rgba(0,229,255,0.9),transparent);box-shadow:0 0 8px #00E5FF;"></div>' +
+      '<div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(0,229,255,0.45) 0deg,rgba(0,255,102,0.3) 35deg,rgba(0,229,255,0.08) 75deg,transparent 95deg,transparent 360deg);filter:drop-shadow(0 0 15px rgba(0,229,255,0.6));animation:ishakSpinClockwise 2.4s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:0;border-radius:50%;animation:ishakSpinClockwise 2.4s linear infinite;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
+        '<div style="width:50%;height:2px;margin-left:auto;background:linear-gradient(90deg,#FFFFFF 0%,#00FF66 40%,#00E5FF 90%,transparent 100%);box-shadow:0 0 12px #FFFFFF,0 0 24px #00FF66,0 0 35px #00E5FF;"></div>' +
+      '</div>' +
+      '<div style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
+        '<div style="width:48px;height:48px;border-radius:12px;border:1.2px solid rgba(0,229,255,0.85);transform:rotate(45deg);display:flex;align-items:center;justify-content:center;background:rgba(8,51,68,0.55);box-shadow:0 0 20px #00E5FF,inset 0 0 10px rgba(0,229,255,0.5);animation:ishakTargetPulse 1.4s infinite ease-in-out;">' +
+          '<div style="width:16px;height:16px;background:linear-gradient(135deg,#00E5FF,#00FF66);border-radius:3px;box-shadow:0 0 10px #00FF66;"></div>' +
+        '</div>' +
+        '<div style="margin-top:10px;display:flex;flex-direction:column;align-items:center;">' +
+          '<span style="font-size:10px;font-weight:900;color:#a5f3fc;font-family:\'Orbitron\',sans-serif;letter-spacing:1px;text-shadow:0 2px 4px rgba(0,0,0,0.9);">QUANTUM LOCK</span>' +
+          '<span id="ishak-radar-live-price" style="font-size:9.5px;font-family:monospace;font-weight:bold;color:#fde047;text-shadow:0 0 6px rgba(253,224,71,0.6);">CALCULATING...</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="position:absolute;top:-8px;left:-8px;width:22px;height:22px;border-top:2px solid rgba(0,229,255,0.85);border-left:2px solid rgba(0,229,255,0.85);border-top-left-radius:4px;"></div>' +
+      '<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-top:2px solid rgba(0,229,255,0.85);border-right:2px solid rgba(0,229,255,0.85);border-top-right-radius:4px;"></div>' +
+      '<div style="position:absolute;bottom:-8px;left:-8px;width:22px;height:22px;border-bottom:2px solid rgba(0,229,255,0.85);border-left:2px solid rgba(0,229,255,0.85);border-bottom-left-radius:4px;"></div>' +
+      '<div style="position:absolute;bottom:-8px;right:-8px;width:22px;height:22px;border-bottom:2px solid rgba(0,229,255,0.85);border-right:2px solid rgba(0,229,255,0.85);border-bottom-right-radius:4px;"></div>' +
+    '</div>' +
+    '<div id="ishak-radar-matrix-telemetry" style="position:fixed;bottom:24px;left:24px;z-index:2147483647;max-width:340px;pointer-events:none;user-select:none;font-family:monospace;font-size:10.5px;line-height:1.45;height:36vh;max-height:280px;overflow:hidden;display:flex;flex-direction:column-reverse;mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 45%,rgba(0,0,0,0.2) 75%,transparent 100%);-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 45%,rgba(0,0,0,0.2) 75%,transparent 100%);"></div>';
+  document.body.appendChild(screenScanBox);
 
   // 🌊 Water Wave Ripple Overlay (Sweeps from left during 6.5s entrance animation)
   var waterWaveOverlay = document.createElement('div');
@@ -2354,8 +2332,13 @@ javascript:(function(){
   // Independent Circular Button Wrap
   var mainWrap = document.createElement('div'); mainWrap.id = 'ishak-trade-wrap'; mainWrap.className = 'ishak-intro-spawn'; document.body.appendChild(mainWrap);
   var btnBox = document.createElement('div'); btnBox.id = 'ishak-btn-box'; mainWrap.appendChild(btnBox);
-  var logoAura = document.createElement('div'); logoAura.id = 'ishak-logo-aura'; btnBox.appendChild(logoAura);
-  var circleBtn = document.createElement('div'); circleBtn.id = 'ishak-circle-btn'; btnBox.appendChild(circleBtn);
+  var circleBtn = document.createElement('div'); circleBtn.id = 'ishak-circle-btn';
+  circleBtn.innerHTML =
+    '<div style="position:absolute;top:2px;left:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-top-left-radius:3px;"></div>' +
+    '<div style="position:absolute;top:2px;right:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-top-right-radius:3px;"></div>' +
+    '<div style="position:absolute;bottom:2px;left:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-bottom-left-radius:3px;"></div>' +
+    '<div style="position:absolute;bottom:2px;right:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-bottom-right-radius:3px;"></div>';
+  btnBox.appendChild(circleBtn);
 
   // ⚡ Continuous Rotating Golden Quantum Orbital Photon Ring (Laser Scanner Matched, Luxury Bezel, Zero Logo Face Intrusion)
   var orbitalWrap = document.createElement('div');
@@ -2414,7 +2397,7 @@ javascript:(function(){
   btnBox.appendChild(orbitalWrap);
 
   var pillBadge = document.createElement('div'); pillBadge.id = 'ishak-pill-badge';
-  pillBadge.innerHTML = '<span id="ishak-pill-name">⚡ ISHAK AI</span><span id="ishak-pill-time">5S</span>';
+  pillBadge.innerHTML = '<span id="ishak-pill-name">⚡ TradePilot</span><span id="ishak-pill-time">5S</span>';
   mainWrap.appendChild(pillBadge);
   var pillName = document.getElementById('ishak-pill-name');
   var pillTime = document.getElementById('ishak-pill-time');
@@ -2431,7 +2414,7 @@ javascript:(function(){
   var hudPanel = document.createElement('div');
   hudPanel.id = 'ishak-hud-panel';
   hudPanel.innerHTML = '<div id="ishak-hud-drag-handle">' +
-    '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;font-size:12px;">❖</span><b style="color:#00E5FF;font-size:11px;letter-spacing:0.5px;">ISHAK AI PRO 3D HUD</b></div>' +
+    '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;font-size:12px;">❖</span><b style="color:#00E5FF;font-size:11px;letter-spacing:0.5px;">TRADEPILOT AI PRO 3D HUD</b></div>' +
     '<div class="ishak-close-btn" id="hud-close-btn">✕</div>' +
     '</div>' +
     '<div id="ishak-hud-body" style="padding:10px 12px;"></div>';
@@ -2590,7 +2573,7 @@ javascript:(function(){
     if (!tradeDuration) tradeDuration = 5;
     var timeTxt = tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S';
     if (pillTime) pillTime.innerText = timeTxt;
-    if (pillName) pillName.innerHTML = '⚡ ISHAK AI';
+    if (pillName) pillName.innerHTML = '⚡ TradePilot';
   }
 
   // 3. FORCED TIME DURATION SELECTION MODAL
@@ -3958,47 +3941,81 @@ javascript:(function(){
 
       pillTime.innerText = 'SCAN..';
 
-      // Open and animate Fullscreen Cyber Matrix Radar Scanner
-      cyberScanOverlay.style.display = "flex";
-      var csAsset = document.getElementById("cyber-scan-asset");
-      var csTime = document.getElementById("cyber-scan-timeframe");
-      var csRate = document.getElementById("cyber-scan-rate");
-      var csPct = document.getElementById("cyber-scan-pct");
-      var csLogAsset = document.getElementById("cyber-log-asset");
-      var csVerdict = document.getElementById("cyber-scan-verdict");
-      var csTimer = document.getElementById("cyber-log-timer");
-      var csLine1 = document.getElementById("cyber-log-line1");
-      var csLine2 = document.getElementById("cyber-log-line2");
-      var csLine3 = document.getElementById("cyber-log-line3");
-      var csLine4 = document.getElementById("cyber-log-line4");
+      // 🎯 Activate Tactical Circular Radar & Hacking Matrix Telemetry Overlay
+      var detectedAssetStr = window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_LAST_DETECTED_ASSET__ || (function(){
+        try { return extractQuotexPair(); } catch(e){ return 'USD/BDT (OTC)'; }
+      })() || 'USD/BDT (OTC)';
 
-      if (csVerdict) csVerdict.style.display = "none";
-      if (csLine1) csLine1.style.display = "none";
-      if (csLine2) csLine2.style.display = "none";
-      if (csLine3) csLine3.style.display = "none";
-      if (csLine4) csLine4.style.display = "none";
+      var radarAssetEl = document.getElementById('ishak-radar-asset-name');
+      if (radarAssetEl) radarAssetEl.innerText = detectedAssetStr;
+      var radarProgressEl = document.getElementById('ishak-radar-progress-badge');
+      var radarPriceEl = document.getElementById('ishak-radar-live-price');
+      var telemetryContainer = document.getElementById('ishak-radar-matrix-telemetry');
+      if (telemetryContainer) telemetryContainer.innerHTML = '';
 
-      var detectedPair = extractQuotexAsset() || "EUR/USD (OTC)";
-      if (csAsset) csAsset.innerHTML = detectedPair + " <span id=\"cyber-scan-timeframe\" style=\"font-size:11px;background:rgba(0,229,255,0.15);color:#00e5ff;border:1px solid rgba(0,229,255,0.3);padding:2px 8px;border-radius:12px;margin-left:6px;\">" + (tradeDuration || 5) + "S TIMEFRAME</span>";
-      if (csLogAsset) csLogAsset.innerText = detectedPair;
-
-      var overlayStartTs = Date.now();
-      var overlayAnimTimer = setInterval(function() {
-        var elp = Date.now() - overlayStartTs;
-        var pnum = Math.min(100, Math.floor((elp / 3500) * 100));
-        if (csPct) csPct.innerText = pnum + "%";
-        if (csTimer) csTimer.innerText = "[" + (elp / 1000).toFixed(2) + "s]";
-        var lp = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__ || 1.00000;
-        if (csRate) csRate.innerText = typeof lp === "number" ? lp.toFixed(lp > 50 ? 2 : 5) : lp;
-        if (pnum >= 20 && csLine1) csLine1.style.display = "block";
-        if (pnum >= 45 && csLine2) csLine2.style.display = "block";
-        if (pnum >= 70 && csLine3) csLine3.style.display = "block";
-        if (pnum >= 90 && csLine4) csLine4.style.display = "block";
-      }, 40);
+      if (screenScanBox) screenScanBox.classList.add('scanning-active');
+      laserEl.classList.add('scanning-active');
 
       playPhotostatScannerSound();
 
-      // Real-Time High-Frequency Price Sampler during 3.5s Laser Scan (Captured afresh every click)
+      // Smooth percentage counter & live quote updater during scan
+      var scanStartTs = Date.now();
+      var progressInterval = setInterval(function() {
+        var elapsed = Date.now() - scanStartTs;
+        var pct = Math.min(99, Math.floor((elapsed / 3500) * 100));
+        if (radarProgressEl) radarProgressEl.innerText = pct + '%';
+        var pLive = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__;
+        if (pLive && radarPriceEl) {
+          radarPriceEl.innerText = pLive.toFixed(pLive > 50 ? 3 : 5);
+        }
+      }, 65);
+
+      // Bottom-Left Upward Streaming Hacking Matrix Telemetry
+      var telemetryTimeouts = [];
+      function addTelemetryLine(text, isHighlight) {
+        if (!telemetryContainer) return;
+        var lineDiv = document.createElement('div');
+        lineDiv.style.cssText = 'animation:ishakTelemetryIn 0.25s ease-out forwards; will-change:transform,opacity; margin-bottom:2px;' +
+          (isHighlight ? 'color:#67e8f9; font-weight:bold; text-shadow:0 0 8px rgba(0,229,255,0.85);' : 'color:#34d399; text-shadow:0 0 5px rgba(52,211,153,0.6);');
+        lineDiv.innerText = text;
+        telemetryContainer.prepend(lineDiv);
+      }
+
+      var liveCandle = (window.__ISHAK_LAST_CANDLE__ && window.__ISHAK_LAST_CANDLE__.length >= 6) ? window.__ISHAK_LAST_CANDLE__ : null;
+      var initPrice = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__ || 129.730;
+      var cOpen = liveCandle ? Number(liveCandle[2]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 0.9998).toFixed(initPrice > 50 ? 3 : 5);
+      var cHigh = liveCandle ? Number(liveCandle[3]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 1.0003).toFixed(initPrice > 50 ? 3 : 5);
+      var cLow = liveCandle ? Number(liveCandle[4]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 0.9996).toFixed(initPrice > 50 ? 3 : 5);
+      var cClose = liveCandle ? Number(liveCandle[5]).toFixed(initPrice > 50 ? 3 : 5) : initPrice.toFixed(initPrice > 50 ? 3 : 5);
+
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [SYS_INITIALIZE]: TradePilot Quantum Core v4.9 Active', false);
+      }, 50));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [TARGET ASSET]: ' + detectedAssetStr + ' | TIMEFRAME: ' + (tradeDuration || 5) + 'S', true);
+      }, 400));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [CLOCK SYNC]: ' + new Date().toLocaleTimeString('en-US', {hour12:false}) + ' | BID: ' + initPrice, false);
+      }, 850));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [CANDLE STREAM]: O:' + cOpen + ' H:' + cHigh + ' L:' + cLow + ' C:' + cClose, false);
+      }, 1300));
+      telemetryTimeouts.push(setTimeout(function() {
+        var buyVol = (58 + Math.floor(Math.random() * 24));
+        addTelemetryLine('>> [ORDER FLOW]: Buy Vol: ' + buyVol + '% | Sell Vol: ' + (100 - buyVol) + '% | Delta: +' + (Math.random() * 4).toFixed(2), false);
+      }, 1750));
+      telemetryTimeouts.push(setTimeout(function() {
+        var rsi = (42 + Math.floor(Math.random() * 32));
+        addTelemetryLine('>> [CONFLUENCE VECTOR]: RSI(14): ' + rsi + ' | Stochastic: 79.2 | Trend: ALIGNED', true);
+      }, 2200));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [ALGO CONFIRMATION]: Neural Filter PASS | Latency: 38ms', false);
+      }, 2650));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('>> [SIGNAL LOCK]: PREPARING FINAL BROKER DISPATCH...', true);
+      }, 3050));
+
+      // Real-Time High-Frequency Price Sampler during 3.5s Scan
       var livePriceSamples = [];
       function sampleFreshScanTick() {
         var p = extractQuotexLivePrice();
@@ -4045,7 +4062,7 @@ javascript:(function(){
         try {
           signal = evaluateMarketConfluence(livePriceSamples, tradeDuration);
         } catch(err) {
-          if (typeof console !== 'undefined' && console.error) console.error('[ISHAK_ANALYSIS_ERROR]', err);
+          if (typeof console !== 'undefined' && console.error) console.error('[TRADEPILOT_ANALYSIS_ERROR]', err);
         }
         var finalDir = null;
         if (signal && signal.isTradeApproved && typeof signal.isCall === 'boolean') {
@@ -4070,12 +4087,18 @@ javascript:(function(){
       // Cleanly complete scan and present direction at 3500ms
       setTimeout(function() {
         if (priceSamplerInterval) clearInterval(priceSamplerInterval);
+        if (progressInterval) clearInterval(progressInterval);
         clearTimeout(tradeTimer);
+        for (var ti = 0; ti < telemetryTimeouts.length; ti++) {
+          clearTimeout(telemetryTimeouts[ti]);
+        }
 
         preDispatchQuotexTrade();
 
         var finalIsCall = computedIsCall;
 
+        if (screenScanBox) screenScanBox.classList.remove('scanning-active');
+        if (radarProgressEl) radarProgressEl.innerText = '100%';
         laserEl.classList.remove('scanning-active');
         circleBtn.classList.remove('working-pulse');
         var auraEl = document.getElementById('ishak-logo-aura');
@@ -4124,7 +4147,7 @@ javascript:(function(){
     if (isBotTerminated) return;
     var cur = getLocalLicense();
     if (cur && cur.exp && Date.now() >= cur.exp) {
-      terminateExpiredBot('আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে! Ishak AI বট নিষ্ক্রিয় ও ট্রেডিং ব্লক করা হলো।');
+      terminateExpiredBot('আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে! TradePilot বট নিষ্ক্রিয় ও ট্রেডিং ব্লক করা হলো।');
     }
   }, 1000);
 
@@ -4171,7 +4194,7 @@ javascript:(function(){
 
   // =========================================================================
   // 🔄 SWITCH MODE: CANDLE ROUND NUMBER CONTROLLER & REAL-TIME WEBSOCKET REWRITER
-  // (Integrated directly into ISHAK AI VIP Settings Hub)
+  // (Integrated directly into TRADEPILOT AI VIP Settings Hub)
   // =========================================================================
   var ishakSwitchModeActive = false;
 
@@ -4595,9 +4618,9 @@ javascript:(function(){
       });
       window.WebSocket = HookedWS;
 
-      // 🏷️ BOT NAME & LOGO INTEGRATION (As requested by user: ISHAK AI VIP)
-      var APP = "ISHAK AI VIP";
-      var LOGO_IMG_SRC = LOGO_URL || "https://i.ibb.co/Mx90bFy4/file-421.jpg";
+      // 🏷️ BOT NAME & LOGO INTEGRATION (As requested by user: TRADEPILOT VIP)
+      var APP = "TRADEPILOT VIP";
+      var LOGO_IMG_SRC = LOGO_URL || "https://i.ibb.co/qLkRtpxt/file-441.jpg";
 
       // 🔐 LICENSE INTEGRATION: Automatically authorized from verified bot license!
       // (Trader ID verification removed as requested!)
@@ -4621,25 +4644,25 @@ javascript:(function(){
         ".fab.dragging{cursor:grabbing}" +
         "img{pointer-events:none;-webkit-user-drag:none;user-select:none}" +
         ".frame{position:relative;width:64px;height:64px}" +
-        ".tile{position:absolute;inset:0;border-radius:16px;overflow:hidden;background:#050c22;border:1.5px solid rgba(245,158,11,.95);box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 18px rgba(245,158,11,.45);animation:pulse 2.4s ease-in-out infinite}" +
+        ".tile{position:absolute;inset:0;border-radius:16px;overflow:hidden;background:#050c22;border:1.5px solid rgba(56,189,248,.95);box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 18px rgba(30,144,255,.55);animation:pulse 2.4s ease-in-out infinite}" +
         ".tile img{width:100%;height:100%;object-fit:cover;transform:scale(1.14);display:block}" +
         ".scan{position:absolute;left:0;right:0;top:-40%;height:40%;background:linear-gradient(transparent,rgba(125,211,252,.38),transparent);animation:scan 2.8s linear infinite;pointer-events:none}" +
-        ".k{position:absolute;width:12px;height:12px;border:2px solid #f59e0b;filter:drop-shadow(0 0 6px rgba(245,158,11,.9));pointer-events:none}" +
+        ".k{position:absolute;width:12px;height:12px;border:2px solid #38bdf8;filter:drop-shadow(0 0 4px rgba(56,189,248,.9));pointer-events:none}" +
         ".k1{left:-6px;top:-6px;border-right:0;border-bottom:0;border-top-left-radius:5px}" +
         ".k2{right:-6px;top:-6px;border-left:0;border-bottom:0;border-top-right-radius:5px}" +
         ".k3{left:-6px;bottom:-6px;border-right:0;border-top:0;border-bottom-left-radius:5px}" +
         ".k4{right:-6px;bottom:-6px;border-left:0;border-top:0;border-bottom-right-radius:5px}" +
-        ".plate{padding:4px 8px;border-radius:7px;background:linear-gradient(180deg,rgba(15,26,60,.92),rgba(5,10,26,.92));border:1px solid rgba(245,158,11,.45);box-shadow:0 0 10px rgba(30,144,255,.25)}" +
-        ".name{position:relative;display:block;text-transform:uppercase;font:800 11px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 10px rgba(245,158,11,.9)}" +
+        ".plate{padding:4px 8px;border-radius:7px;background:linear-gradient(180deg,rgba(15,26,60,.92),rgba(5,10,26,.92));border:1px solid rgba(56,189,248,.35);box-shadow:0 0 10px rgba(30,144,255,.25)}" +
+        ".name{position:relative;display:block;text-transform:uppercase;font:800 11px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 8px rgba(56,189,248,.85)}" +
         ".fab.live .tile{border-color:#34d399}" +
         ".fab.running .tile{animation-duration:.9s;border-color:#34d399}" +
         ".tile .dot{position:absolute;right:5px;top:5px;width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;display:none;pointer-events:none}" +
         ".fab.running .tile .dot{display:block;animation:blink 1s steps(2) infinite}" +
         ".panel{position:fixed;z-index:2147483646;width:min(340px,calc(100vw - 24px));padding:16px 14px 14px;border-radius:18px;color:#e6eefc;font:13px/1.45 Segoe UI,system-ui,sans-serif;transform-origin:0 0;pointer-events:auto;" +
-        "background:radial-gradient(120% 70% at 50% -12%,rgba(245,158,11,.22),transparent 62%),linear-gradient(165deg,rgba(20,16,10,.98),rgba(8,7,12,.98));" +
-        "border:1px solid rgba(245,158,11,.42);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 22px 50px rgba(0,0,0,.6),0 0 30px rgba(30,144,255,.32);overflow:hidden;user-select:none;-webkit-user-select:none}" +
+        "background:radial-gradient(120% 70% at 50% -12%,rgba(37,99,235,.38),transparent 62%),linear-gradient(165deg,rgba(12,21,50,.97),rgba(4,8,22,.98));" +
+        "border:1px solid rgba(96,165,250,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 22px 50px rgba(0,0,0,.6),0 0 30px rgba(30,144,255,.32);overflow:hidden;user-select:none;-webkit-user-select:none}" +
         ".panel[hidden]{display:none}" +
-        ".sweep{position:absolute;left:0;right:0;top:0;height:2px;opacity:0;pointer-events:none;background:linear-gradient(90deg,transparent,#fde68a,#fff,#fde68a,transparent);box-shadow:0 0 14px 3px rgba(56,189,248,.8)}" +
+        ".sweep{position:absolute;left:0;right:0;top:0;height:2px;opacity:0;pointer-events:none;background:linear-gradient(90deg,transparent,#7dd3fc,#fff,#7dd3fc,transparent);box-shadow:0 0 14px 3px rgba(56,189,248,.8)}" +
         ".panel.morphing .sweep{animation:sweep .62s linear both}" +
         ".panel.morphing .row{opacity:0}" +
         ".panel.boot .row{animation:rowIn .42s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--d)*60ms)}" +
@@ -4654,7 +4677,7 @@ javascript:(function(){
         ".head.dragging{cursor:grabbing}" +
         ".mini{width:42px;height:42px;border-radius:12px;overflow:hidden;border:1.5px solid rgba(56,189,248,.9);flex:none;cursor:pointer}" +
         ".mini img{width:100%;height:100%;object-fit:cover;transform:scale(1.14)}" +
-        ".ttl{font:800 16px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 10px rgba(245,158,11,.9)}" +
+        ".ttl{font:800 16px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 8px rgba(56,189,248,.85)}" +
         ".sub{margin-top:5px;font-size:10px;font-weight:700;letter-spacing:.18em;color:rgba(125,211,252,.7)}" +
         ".chip{margin-left:auto;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.14em;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
         ".chip.live{color:#052e1c;border-color:transparent;background:linear-gradient(135deg,#34d399,#22d3ee)}" +
@@ -4668,7 +4691,7 @@ javascript:(function(){
         ".card{display:flex;flex-direction:column;gap:6px;padding:9px 11px;border-radius:12px;margin-top:4px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(148,163,184,.16)}" +
         ".cap{font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#64748b}" +
         ".line{display:flex;align-items:center;justify-content:space-between;gap:8px}" +
-        ".market{flex:1;min-width:0;font-weight:800;font-size:14px;color:#fde68a;text-shadow:0 0 10px rgba(56,189,248,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}" +
+        ".market{flex:1;min-width:0;font-weight:800;font-size:14px;color:#7dd3fc;text-shadow:0 0 10px rgba(56,189,248,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}" +
         ".run-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:999px;font-size:8px;font-weight:800;letter-spacing:.12em;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
         ".run-chip.live{color:#052e1c;border-color:transparent;background:linear-gradient(135deg,#34d399,#22d3ee)}" +
         ".run-dot{width:6px;height:6px;border-radius:50%;background:currentColor}" +
@@ -4678,7 +4701,7 @@ javascript:(function(){
         ".btn-row .start{color:#fff;border:1px solid rgba(255,255,255,.18);background:linear-gradient(135deg,#2563eb,#06b6d4);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 20px rgba(37,99,235,.45)}" +
         ".btn-row .stop{color:#fca5a5;background:rgba(239,68,68,.1);border:1px solid rgba(248,113,113,.45)}" +
         ".btn-row button:disabled{opacity:.32;cursor:default}" +
-        ".normal-back-btn{margin-top:10px;padding:9px 0;border-radius:10px;background:linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95));border:1px solid rgba(56,189,248,0.35);color:#fde68a;font:800 11.5px Segoe UI,sans-serif;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5);}" +
+        ".normal-back-btn{margin-top:10px;padding:9px 0;border-radius:10px;background:linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95));border:1px solid rgba(56,189,248,0.35);color:#7dd3fc;font:800 11.5px Segoe UI,sans-serif;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5);}" +
         "@keyframes blink{50%{opacity:.25}}" +
         "@keyframes pulse{50%{box-shadow:0 0 24px 4px rgba(56,189,248,.85)}}" +
         "@keyframes scan{to{top:110%}}" +

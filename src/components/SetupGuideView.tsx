@@ -72,7 +72,7 @@ CREATE POLICY "Allow server service full access" ON ishak_licenses FOR ALL USING
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-black uppercase">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>ISHAK AI MASTER ARCHITECTURE GUIDE</span>
+              <span>TRADEPILOT AI MASTER ARCHITECTURE GUIDE</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white">
               কী কী ইনফরমেশন লাগবে এবং কীভাবে কাজ করবেন (সম্পূর্ণ গাইড)

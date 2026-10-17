@@ -308,7 +308,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     return (
       <div
         id="minimizedPill"
-        title="ISHAK VIP Round Controller - Click to Expand"
+        title="TradePilot VIP Round Controller - Click to Expand"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,

@@ -30,7 +30,7 @@ async function startServer() {
 
   // Health check
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", service: "Ishak AI License Server", timestamp: Date.now() });
+    res.json({ status: "ok", service: "TradePilot AI License Server", timestamp: Date.now() });
   });
 
   // 1. SECURE LICENSE VERIFICATION ENDPOINT
@@ -335,7 +335,7 @@ async function startServer() {
         return res.status(404).json({
           valid: false,
           success: false,
-          reason: "❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি! সঠিক কি দিন বা @IshakVhai এ যোগাযোগ করুন।"
+          reason: "❌ এই VIP লাইসেন্স কি ডাটাবেসে পাওয়া যায়নি! সঠিক কি দিন বা TradePilot সাপোর্টে যোগাযোগ করুন।"
         });
       }
       return res.json({
@@ -548,7 +548,7 @@ async function startServer() {
     res.json({
       ...status,
       schemaSql: `-- ========================================================
--- 🛡️ ISHAK AI VIP LICENSE DATABASE SCHEMA (SUPABASE)
+-- 🛡️ TRADEPILOT AI VIP LICENSE DATABASE SCHEMA (SUPABASE)
 -- Run this entire script in Supabase -> SQL Editor -> New query -> Run
 -- ========================================================
 
@@ -711,7 +711,7 @@ ON CONFLICT (key) DO NOTHING;`
   }
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Ishak AI Supabase Server running at http://0.0.0.0:${PORT}`);
+    console.log(`🚀 TradePilot AI Supabase Server running at http://0.0.0.0:${PORT}`);
   });
 }
 

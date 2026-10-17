@@ -219,7 +219,7 @@ ${lic.trader_id ? `👤 Trader ID: ${lic.trader_id}\n` : ''}${lic.note ? `📝 N
   const openSupabaseModal = async () => {
     setShowSupabaseModal(true);
     setSupabaseUrlInput('https://qbazzarqiplrqqfytajz.supabase.co');
-    setSupabaseSqlSnippet(`-- ⚡ ISHAK AI PRO - SUPABASE LICENSE DATABASE SCHEMA
+    setSupabaseSqlSnippet(`-- ⚡ TRADEPILOT AI PRO - SUPABASE LICENSE DATABASE SCHEMA
 CREATE TABLE IF NOT EXISTS public.ishak_licenses (
   key TEXT PRIMARY KEY,
   active BOOLEAN NOT NULL DEFAULT true,
@@ -1443,7 +1443,7 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
               <textarea
                 readOnly
                 rows={5}
-                value={supabaseSqlSnippet || `-- 🛡️ ISHAK AI VIP LICENSE DATABASE SCHEMA
+                value={supabaseSqlSnippet || `-- 🛡️ TRADEPILOT AI VIP LICENSE DATABASE SCHEMA
 CREATE TABLE IF NOT EXISTS public.ishak_licenses (
   key TEXT PRIMARY KEY,
   active BOOLEAN DEFAULT true,
