@@ -107,6 +107,24 @@
   }
 }
 
+@keyframes ishakSquareDash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -257;
+  }
+}
+
+@keyframes ishakSquareGlowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.7));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 24px rgba(168, 85, 247, 0.75));
+  }
+}
+
 @keyframes ishakSuccessPop {
   0% {
     transform: scale(0.96);

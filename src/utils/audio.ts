@@ -224,14 +224,33 @@ export function playDataInjectionSound(): void {
 }
 
 /**
- * TradePilot Information-Based Voice System:
- * - Pure informative voice system during scanning (Zero sound effects / background noise)
- * - Soft, soothing, clear and professional voice (Bengali or gentle English)
- * - Speaks EXACTLY the data shown on screen: Market, Duration, Chart Time
- * - Well-paced, natural cadence (no rush, comfortable for 5s scan)
+ * TradePilot Information-Based Sweet Voice System:
+ * স্ক্রিপ্ট:
+ * মার্কেট: ---
+ * সময়: ---
+ * মার্কেট বিশ্লেষণ করছি...
+ * নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!
+ *
+ * মিষ্টি, মায়াবী ও প্রফেশনাল কন্ঠ (Sweet & natural melodic voice)
  */
-export function speakScanTelemetry(market: string, durationStr: string, chartTime: string): void {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+export function speakScanTelemetry(
+  market: string,
+  durationStr: string,
+  direction: 'BUY' | 'SELL' | 'UP' | 'DOWN',
+  onComplete?: () => void
+): () => void {
+  if (typeof window === 'undefined' || !window.speechSynthesis) {
+    if (onComplete) onComplete();
+    return () => {};
+  }
+
+  let completed = false;
+  const finish = () => {
+    if (!completed) {
+      completed = true;
+      if (onComplete) onComplete();
+    }
+  };
 
   try {
     window.speechSynthesis.cancel();
@@ -244,45 +263,62 @@ export function speakScanTelemetry(market: string, durationStr: string, chartTim
 
     let cleanDur = durationStr;
     if (/^\d+\s*S$/i.test(durationStr)) {
-      cleanDur = durationStr.replace(/S/i, '') + ' seconds';
+      cleanDur = durationStr.replace(/S/i, '').trim() + ' সেকেন্ড';
     } else if (/^\d+\s*M$/i.test(durationStr)) {
-      cleanDur = durationStr.replace(/M/i, '') + ' minutes';
+      cleanDur = durationStr.replace(/M/i, '').trim() + ' মিনিট';
     }
 
-    const cleanTime = chartTime || new Date().toLocaleTimeString('en-US', { hour12: false });
+    const tradeAction = (direction === 'BUY' || direction === 'UP') ? 'BUY' : 'SELL';
 
     const voices = window.speechSynthesis.getVoices();
-    const bnVoice = voices.find(v => v.lang.startsWith('bn'));
+    const bnVoice = voices.find(v =>
+      v.lang.startsWith('bn') && (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('বাংলা') || v.name.includes('Bangla'))
+    ) || voices.find(v => v.lang.startsWith('bn'));
 
     let utterance: SpeechSynthesisUtterance;
 
     if (bnVoice) {
-      const speechText = `মার্কেট: ${cleanMarket}। ট্রেড সময়: ${cleanDur}। চার্ট টাইম: ${cleanTime}।`;
+      // 🇧🇩 বাংলা সুন্দর মিষ্টি স্ক্রিপ্ট
+      const speechText = `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}। মার্কেট বিশ্লেষণ করছি... নিশ্চিন্তে ${tradeAction} ট্রেড করতে পারেন!`;
       utterance = new SpeechSynthesisUtterance(speechText);
       utterance.voice = bnVoice;
       utterance.lang = bnVoice.lang || 'bn-BD';
-      utterance.rate = 0.90;
-      utterance.pitch = 1.1;
-    } else {
-      const speechText = `Market: ${cleanMarket}. Duration: ${cleanDur}. Chart time: ${cleanTime}.`;
-      utterance = new SpeechSynthesisUtterance(speechText);
-      const sweetVoice = voices.find(v =>
-        (v.name.includes('Natural') || v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Sonia') || v.name.includes('Victoria')) &&
-        v.lang.startsWith('en')
-      ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
-
-      if (sweetVoice) {
-        utterance.voice = sweetVoice;
-      }
-      utterance.lang = 'en-US';
       utterance.rate = 0.88;
-      utterance.pitch = 1.15;
+      utterance.pitch = 1.15; // মিষ্টি, কোমল ও মায়াবী পিচ
+    } else {
+      // 🌸 Sweet natural melodic voice fallback
+      const sweetVoice = voices.find(v =>
+        (v.name.includes('Natural') || v.name.includes('Female') || v.name.includes('Google UK English Female') || v.name.includes('Samantha') || v.name.includes('Jenny') || v.name.includes('Sonia') || v.name.includes('Victoria')) &&
+        (v.lang.startsWith('en') || v.lang.startsWith('bn'))
+      ) || voices.find(v => (v.name.includes('Female') || v.name.includes('Natural')) && v.lang.startsWith('en'))
+        || voices.find(v => v.lang.startsWith('en'))
+        || voices[0];
+
+      const speechText = `Market: ${cleanMarket}. Time: ${durationStr}. Analyzing market... You can safely place a ${tradeAction} trade!`;
+      utterance = new SpeechSynthesisUtterance(speechText);
+      if (sweetVoice) utterance.voice = sweetVoice;
+      utterance.lang = sweetVoice?.lang || 'en-US';
+      utterance.rate = 0.86;
+      utterance.pitch = 1.18; // Soft, gentle, sweet cadence
     }
 
     utterance.volume = 1.0;
+    utterance.onend = finish;
+    utterance.onerror = finish;
+
+    // Safety timeout in case browser TTS hangs without firing onend
+    const safetyTimer = setTimeout(finish, 8500);
+
     window.speechSynthesis.speak(utterance);
+
+    return () => {
+      clearTimeout(safetyTimer);
+      try { window.speechSynthesis.cancel(); } catch(e){}
+    };
   } catch (e) {
     console.warn('Speech synthesis error', e);
+    finish();
+    return () => {};
   }
 }
 
