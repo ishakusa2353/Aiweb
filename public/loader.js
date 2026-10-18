@@ -959,6 +959,7 @@ javascript:(function(){
     try {
       // 1. Live Active Tab Direct DOM Scan
       var activeTabSelectors = [
+        "#simulator-market-select", "[data-current-market]",
         ".tab--active", ".tab-item--active", ".tabs__item--active", ".tab-item.active",
         ".tab-item.tab-item--active", ".tab--selected", ".tab-item.selected",
         "div[class*=\"tab--active\"]", "div[class*=\"tabs__item--active\"]", "div[class*=\"active-tab\"]",
@@ -972,7 +973,7 @@ javascript:(function(){
         if (el) {
           if (el.closest("#ishak-trade-wrap") || el.closest("#ishak-hud-panel") || el.closest(".ishak-dialog-modal") || el.closest("#qxzr-bookmark")) continue;
           if (el.closest("[class*=\"deal\"], [class*=\"order\"], [class*=\"history\"], [class*=\"trades\"]")) continue;
-          var txt = (el.innerText || el.textContent || el.getAttribute("data-asset") || "").trim();
+          var txt = el.tagName === "SELECT" ? el.value : el.tagName === "INPUT" ? el.value : (el.innerText || el.textContent || el.getAttribute("data-asset") || "").trim();
           var validated = normalizeBrokerAsset(txt);
           if (validated) {
             window.__ISHAK_CURRENT_ASSET__ = validated;
@@ -982,21 +983,22 @@ javascript:(function(){
         }
       }
 
-      // 2. High-Priority WebSocket & Active Background Chart Sniffer
+      // 2. Document Title match (e.g. "EUR/USD (OTC) | Quotex")
+      if (document.title) {
+        var valTitle = normalizeBrokerAsset(document.title);
+        if (valTitle) {
+          window.__ISHAK_CURRENT_ASSET__ = valTitle;
+          window.__ISHAK_LAST_DETECTED_ASSET__ = valTitle;
+          return valTitle;
+        }
+      }
+
+      // 3. High-Priority WebSocket & Active Background Chart Sniffer
       if (window.__ISHAK_CURRENT_ASSET__) {
         return window.__ISHAK_CURRENT_ASSET__;
       }
       if (window.__ISHAK_LAST_DETECTED_ASSET__) {
         return window.__ISHAK_LAST_DETECTED_ASSET__;
-      }
-
-      // 3. Document Title match (e.g. "EUR/USD (OTC) | Quotex")
-      if (document.title) {
-        var valTitle = normalizeBrokerAsset(document.title);
-        if (valTitle) {
-          window.__ISHAK_CURRENT_ASSET__ = valTitle;
-          return valTitle;
-        }
       }
 
       // 4. URL path / query (e.g. "/trade/EURUSD_otc")
@@ -1007,7 +1009,7 @@ javascript:(function(){
         return valUrl;
       }
     } catch(e){}
-    return window.__ISHAK_CURRENT_ASSET__ || "EUR/USD (OTC)";
+    return window.__ISHAK_CURRENT_ASSET__ || "USD/BDT (OTC)";
   }
 
   function extractQuotexDuration() {
@@ -2218,24 +2220,19 @@ javascript:(function(){
     void fly.offsetWidth;
 
     var isUp = direction === 'UP';
-    var text = isUp ? 'CALL' : 'PUT';
-    var arrow = isUp ? '⬆' : '⬇';
+    var text = isUp ? 'BUY' : 'SELL';
+    var arrow = isUp ? '↑' : '↓';
     var themeColor = isUp ? '#00FF66' : '#FF1744';
     var glowShadow = isUp ? 'rgba(0,255,102,0.85)' : 'rgba(255,23,68,0.85)';
 
     fly.innerHTML =
-      '<div style="position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:12px 28px; border-radius:20px; background:rgba(7,13,30,0.92); border:2px solid ' + themeColor + '; box-shadow:0 0 35px ' + glowShadow + ', inset 0 0 15px ' + glowShadow + '; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
-        '<div style="display:flex; align-items:center; justify-content:center; gap:12px;">' +
-          '<span style="font-size:36px; font-weight:900; letter-spacing:4px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 35px ' + glowShadow + ', 0 2px 10px rgba(0,0,0,0.95); line-height:1; white-space:nowrap; text-transform:uppercase;">' +
-            text +
-          '</span>' +
-          '<span style="font-size:34px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 2px 8px rgba(0,0,0,0.95); line-height:1;">' +
-            arrow +
-          '</span>' +
-        '</div>' +
-        '<div style="margin-top:6px; font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#fff; opacity:0.9; font-family:\'Orbitron\',monospace; text-shadow:0 1px 4px rgba(0,0,0,0.9);">' +
-          (isUp ? 'BUY SIGNAL CONFIRMED' : 'SELL SIGNAL CONFIRMED') +
-        '</div>' +
+      '<div style="position:relative; display:flex; align-items:center; justify-content:center; gap:12px; user-select:none; font-family:\'Syncopate\',\'Orbitron\',sans-serif;">' +
+        '<span style="font-size:42px; font-weight:900; letter-spacing:4px; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 0 40px ' + glowShadow + ', 0 2px 10px rgba(0,0,0,0.95); line-height:1; white-space:nowrap; text-transform:uppercase;">' +
+          text +
+        '</span>' +
+        '<span style="font-size:38px; font-weight:900; color:' + themeColor + '; text-shadow:0 0 20px ' + themeColor + ', 0 2px 8px rgba(0,0,0,0.95); line-height:1;">' +
+          arrow +
+        '</span>' +
       '</div>';
 
     fly.className = isUp ? 'ishak-fly-buy-active' : 'ishak-fly-sell-active';
@@ -2275,46 +2272,26 @@ javascript:(function(){
   screenScanBox.id = 'ishak-screen-scan-box';
   screenScanBox.style.display = 'none';
   screenScanBox.innerHTML =
-    '<div id="ishak-radar-backdrop" style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(3,7,24,0.48) 0%,rgba(2,5,18,0.78) 65%,rgba(1,3,10,0.92) 100%);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);"></div>' +
-    '<div id="ishak-radar-display" style="position:relative;width:380px;height:380px;max-width:85vw;max-height:85vw;display:flex;align-items:center;justify-content:center;">' +
-      '<div style="position:absolute;top:-52px;left:0;right:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
-        '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:9999px;background:rgba(7,14,40,0.92);border:1.2px solid rgba(0,229,255,0.65);box-shadow:0 0 20px rgba(0,229,255,0.45);">' +
-          '<span style="width:8px;height:8px;border-radius:50%;background:#00E5FF;box-shadow:0 0 8px #00E5FF;animation:ishakRadarPing 1.2s infinite;"></span>' +
-          '<span style="font-size:11px;font-weight:900;color:#67e8f9;font-family:\'Orbitron\',sans-serif;letter-spacing:1.5px;white-space:nowrap;">SYSTEM RADAR SCAN // <span id="ishak-radar-asset-name">USD/BDT (OTC)</span></span>' +
-          '<span id="ishak-radar-progress-badge" style="font-size:10px;font-family:monospace;color:#34d399;font-weight:bold;padding:1px 6px;border-radius:4px;background:rgba(6,78,59,0.7);border:1px solid rgba(16,185,129,0.4);">0%</span>' +
-        '</div>' +
-      '</div>' +
-      '<div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(0,229,255,0.4);box-shadow:0 0 30px rgba(0,229,255,0.25);display:flex;align-items:center;justify-content:center;">' +
-        '<span style="position:absolute;top:-12px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">000° N</span>' +
-        '<span style="position:absolute;bottom:-12px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">180° S</span>' +
-        '<span style="position:absolute;left:-18px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">270° W</span>' +
-        '<span style="position:absolute;right:-18px;font-size:9px;font-family:monospace;font-weight:900;color:#67e8f9;background:#060b22;padding:1px 4px;border-radius:3px;border:1px solid rgba(0,229,255,0.3);">090° E</span>' +
-      '</div>' +
-      '<div style="position:absolute;inset:30px;border-radius:50%;border:1px dashed rgba(0,229,255,0.45);animation:ishakSpinClockwise 30s linear infinite;"></div>' +
-      '<div style="position:absolute;inset:60px;border-radius:50%;border:1px solid rgba(0,229,255,0.5);box-shadow:inset 0 0 20px rgba(0,229,255,0.18);"></div>' +
-      '<div style="position:absolute;inset:90px;border-radius:50%;border:1px solid rgba(0,255,102,0.4);animation:ishakSpinCounter 18s linear infinite;"></div>' +
-      '<div style="position:absolute;inset:120px;border-radius:50%;border:2px solid rgba(0,229,255,0.7);box-shadow:0 0 25px rgba(0,229,255,0.5);"></div>' +
-      '<div style="position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.9),transparent);box-shadow:0 0 8px #00E5FF;"></div>' +
-      '<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:linear-gradient(180deg,transparent,rgba(0,229,255,0.9),transparent);box-shadow:0 0 8px #00E5FF;"></div>' +
-      '<div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(0,229,255,0.45) 0deg,rgba(0,255,102,0.3) 35deg,rgba(0,229,255,0.08) 75deg,transparent 95deg,transparent 360deg);filter:drop-shadow(0 0 15px rgba(0,229,255,0.6));animation:ishakSpinClockwise 2.4s linear infinite;"></div>' +
+    '<div id="ishak-radar-backdrop" style="position:absolute;inset:0;background:rgba(2,5,18,0.65);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);"></div>' +
+    '<div id="ishak-radar-display" style="position:relative;width:340px;height:340px;max-width:85vw;max-height:85vw;display:flex;align-items:center;justify-content:center;">' +
+      '<div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(0,229,255,0.4);box-shadow:0 0 35px rgba(0,229,255,0.25);"></div>' +
+      '<div style="position:absolute;inset:25px;border-radius:50%;border:1px dashed rgba(0,229,255,0.35);animation:ishakSpinClockwise 25s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:50px;border-radius:50%;border:1px solid rgba(0,229,255,0.45);box-shadow:inset 0 0 18px rgba(0,229,255,0.15);"></div>' +
+      '<div style="position:absolute;inset:75px;border-radius:50%;border:1px solid rgba(0,255,102,0.3);animation:ishakSpinCounter 15s linear infinite;"></div>' +
+      '<div style="position:absolute;inset:100px;border-radius:50%;border:2px solid rgba(0,229,255,0.6);box-shadow:0 0 25px rgba(0,229,255,0.4);"></div>' +
+      '<div style="position:absolute;left:0;right:0;top:50%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,255,0.8),transparent);box-shadow:0 0 6px #00E5FF;"></div>' +
+      '<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:linear-gradient(180deg,transparent,rgba(0,229,255,0.8),transparent);box-shadow:0 0 6px #00E5FF;"></div>' +
+      '<div style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(0,229,255,0.4) 0deg,rgba(0,255,102,0.25) 30deg,rgba(0,229,255,0.05) 70deg,transparent 90deg,transparent 360deg);filter:drop-shadow(0 0 12px rgba(0,229,255,0.5));animation:ishakSpinClockwise 2.4s linear infinite;"></div>' +
       '<div style="position:absolute;inset:0;border-radius:50%;animation:ishakSpinClockwise 2.4s linear infinite;display:flex;align-items:center;justify-content:center;pointer-events:none;">' +
-        '<div style="width:50%;height:2px;margin-left:auto;background:linear-gradient(90deg,#FFFFFF 0%,#00FF66 40%,#00E5FF 90%,transparent 100%);box-shadow:0 0 12px #FFFFFF,0 0 24px #00FF66,0 0 35px #00E5FF;"></div>' +
+        '<div style="width:50%;height:2px;margin-left:auto;background:linear-gradient(90deg,#FFFFFF 0%,#00FF66 40%,#00E5FF 90%,transparent 100%);box-shadow:0 0 10px #FFFFFF,0 0 20px #00FF66,0 0 30px #00E5FF;"></div>' +
       '</div>' +
-      '<div style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;">' +
-        '<div style="width:48px;height:48px;border-radius:12px;border:1.2px solid rgba(0,229,255,0.85);transform:rotate(45deg);display:flex;align-items:center;justify-content:center;background:rgba(8,51,68,0.55);box-shadow:0 0 20px #00E5FF,inset 0 0 10px rgba(0,229,255,0.5);animation:ishakTargetPulse 1.4s infinite ease-in-out;">' +
-          '<div style="width:16px;height:16px;background:linear-gradient(135deg,#00E5FF,#00FF66);border-radius:3px;box-shadow:0 0 10px #00FF66;"></div>' +
-        '</div>' +
-        '<div style="margin-top:10px;display:flex;flex-direction:column;align-items:center;">' +
-          '<span style="font-size:10px;font-weight:900;color:#a5f3fc;font-family:\'Orbitron\',sans-serif;letter-spacing:1px;text-shadow:0 2px 4px rgba(0,0,0,0.9);">QUANTUM LOCK</span>' +
-          '<span id="ishak-radar-live-price" style="font-size:9.5px;font-family:monospace;font-weight:bold;color:#fde047;text-shadow:0 0 6px rgba(253,224,71,0.6);">CALCULATING...</span>' +
+      '<div style="relative;z-index:10;display:flex;align-items:center;justify-content:center;">' +
+        '<div style="width:40px;height:40px;border-radius:10px;border:1.2px solid rgba(0,229,255,0.85);transform:rotate(45deg);display:flex;align-items:center;justify-content:center;background:rgba(8,51,68,0.4);box-shadow:0 0 18px #00E5FF,inset 0 0 10px rgba(0,229,255,0.4);animation:ishakTargetPulse 1.4s infinite ease-in-out;">' +
+          '<div style="width:14px;height:14px;background:linear-gradient(135deg,#00E5FF,#00FF66);border-radius:3px;box-shadow:0 0 10px #00FF66;"></div>' +
         '</div>' +
       '</div>' +
-      '<div style="position:absolute;top:-8px;left:-8px;width:22px;height:22px;border-top:2px solid rgba(0,229,255,0.85);border-left:2px solid rgba(0,229,255,0.85);border-top-left-radius:4px;"></div>' +
-      '<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-top:2px solid rgba(0,229,255,0.85);border-right:2px solid rgba(0,229,255,0.85);border-top-right-radius:4px;"></div>' +
-      '<div style="position:absolute;bottom:-8px;left:-8px;width:22px;height:22px;border-bottom:2px solid rgba(0,229,255,0.85);border-left:2px solid rgba(0,229,255,0.85);border-bottom-left-radius:4px;"></div>' +
-      '<div style="position:absolute;bottom:-8px;right:-8px;width:22px;height:22px;border-bottom:2px solid rgba(0,229,255,0.85);border-right:2px solid rgba(0,229,255,0.85);border-bottom-right-radius:4px;"></div>' +
     '</div>' +
-    '<div id="ishak-radar-matrix-telemetry" style="position:fixed;bottom:24px;left:24px;z-index:2147483647;max-width:340px;pointer-events:none;user-select:none;font-family:monospace;font-size:10.5px;line-height:1.45;height:36vh;max-height:280px;overflow:hidden;display:flex;flex-direction:column-reverse;mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 45%,rgba(0,0,0,0.2) 75%,transparent 100%);-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 45%,rgba(0,0,0,0.2) 75%,transparent 100%);"></div>';
+    '<div id="ishak-radar-matrix-telemetry" style="position:fixed;bottom:20px;left:20px;z-index:2147483647;max-width:280px;pointer-events:none;user-select:none;font-family:monospace;font-size:10.5px;line-height:1.45;height:32vh;max-height:240px;overflow:hidden;display:flex;flex-direction:column-reverse;mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 50%,rgba(0,0,0,0.15) 85%,transparent 100%);-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 50%,rgba(0,0,0,0.15) 85%,transparent 100%);"></div>';
   document.body.appendChild(screenScanBox);
 
   // 🌊 Water Wave Ripple Overlay (Sweeps from left during 6.5s entrance animation)
@@ -2340,59 +2317,24 @@ javascript:(function(){
     '<div style="position:absolute;bottom:2px;right:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-bottom-right-radius:3px;"></div>';
   btnBox.appendChild(circleBtn);
 
-  // ⚡ Continuous Rotating Golden Quantum Orbital Photon Ring (Laser Scanner Matched, Luxury Bezel, Zero Logo Face Intrusion)
+  // 🔲 Modern Square Border Beam Animation (Matching the Square Logo)
   var orbitalWrap = document.createElement('div');
   orbitalWrap.id = 'ishak-orbital-wrap';
   orbitalWrap.innerHTML =
-    '<svg class="ishak-orbital-svg" viewBox="0 0 64 64">' +
+    '<svg class="ishak-orbital-svg" viewBox="0 0 64 64" fill="none">' +
       '<defs>' +
-        '<linearGradient id="ishakGoldBeamCW" x1="0%" y1="0%" x2="100%" y2="100%">' +
-          '<stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>' +
-          '<stop offset="20%" stop-color="#FFE066" stop-opacity="0.95"/>' +
-          '<stop offset="50%" stop-color="#FFD700" stop-opacity="0.85"/>' +
-          '<stop offset="80%" stop-color="#FF9E00" stop-opacity="0.3"/>' +
-          '<stop offset="100%" stop-color="#FF9E00" stop-opacity="0"/>' +
+        '<linearGradient id="ishakSquareGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
+          '<stop offset="0%" stop-color="#00E5FF" stop-opacity="1"/>' +
+          '<stop offset="35%" stop-color="#A855F7" stop-opacity="0.85"/>' +
+          '<stop offset="70%" stop-color="#00FF66" stop-opacity="0.6"/>' +
+          '<stop offset="100%" stop-color="transparent" stop-opacity="0"/>' +
         '</linearGradient>' +
-        '<linearGradient id="ishakGoldBeamCCW" x1="100%" y1="0%" x2="0%" y2="100%">' +
-          '<stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>' +
-          '<stop offset="30%" stop-color="#FFD700" stop-opacity="0.9"/>' +
-          '<stop offset="70%" stop-color="#FFA000" stop-opacity="0.35"/>' +
-          '<stop offset="100%" stop-color="#FFB800" stop-opacity="0"/>' +
-        '</linearGradient>' +
-        '<filter id="ishakGoldBloom" x="-30%" y="-30%" width="160%" height="160%">' +
-          '<feDropShadow dx="0" dy="0" stdDeviation="1.5" flood-color="#FFD700" flood-opacity="0.95"/>' +
-          '<feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#FF9E00" flood-opacity="0.75"/>' +
+        '<filter id="ishakSquareGlow" x="-20%" y="-20%" width="140%" height="140%">' +
+          '<feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#00E5FF" flood-opacity="0.95"/>' +
         '</filter>' +
       '</defs>' +
-      '<!-- Subtle Golden Bezel Orbit Guide -->' +
-      '<circle cx="32" cy="32" r="29.5" fill="none" stroke="rgba(255, 215, 0, 0.22)" stroke-width="1"/>' +
-      '<!-- Precision Luxury Chrono Ticks along the outer rim (Strictly r=28.4 to r=29.6) -->' +
-      '<g stroke="rgba(255, 224, 102, 0.45)" stroke-width="0.75">' +
-        '<line x1="32" y1="2.4" x2="32" y2="3.8"/>' +
-        '<line x1="45.8" y1="6.1" x2="45.1" y2="7.4"/>' +
-        '<line x1="56.9" y1="17.2" x2="55.6" y2="17.9"/>' +
-        '<line x1="61.6" y1="32" x2="60.2" y2="32"/>' +
-        '<line x1="56.9" y1="46.8" x2="55.6" y2="46.1"/>' +
-        '<line x1="45.8" y1="57.9" x2="45.1" y2="56.6"/>' +
-        '<line x1="32" y1="61.6" x2="32" y2="60.2"/>' +
-        '<line x1="18.2" y1="57.9" x2="18.9" y2="56.6"/>' +
-        '<line x1="7.1" y1="46.8" x2="8.4" y2="46.1"/>' +
-        '<line x1="2.4" y1="32" x2="3.8" y2="32"/>' +
-        '<line x1="7.1" y1="17.2" x2="8.4" y2="17.9"/>' +
-        '<line x1="18.2" y1="6.1" x2="18.9" y2="7.4"/>' +
-      '</g>' +
-      '<!-- Primary Golden Plasma Arc with Traveling Comet Head (Clockwise, 3.6s) -->' +
-      '<g class="ishak-orbit-spin-cw" filter="url(#ishakGoldBloom)">' +
-        '<circle cx="32" cy="32" r="29.5" fill="none" stroke="url(#ishakGoldBeamCW)" stroke-width="2" stroke-linecap="round" stroke-dasharray="65 120"/>' +
-        '<circle cx="32" cy="2.5" r="1.8" fill="#FFFFFF"/>' +
-        '<circle cx="32" cy="2.5" r="3.2" fill="none" stroke="#FFE066" stroke-width="0.8" opacity="0.85"/>' +
-      '</g>' +
-      '<!-- Secondary Rapid Counter-Orbital Laser Streak with Diamond Photon (Counter-Clockwise, 2.4s) -->' +
-      '<g class="ishak-orbit-spin-ccw" filter="url(#ishakGoldBloom)">' +
-        '<circle cx="32" cy="32" r="28.4" fill="none" stroke="url(#ishakGoldBeamCCW)" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="45 140"/>' +
-        '<polygon points="32,60.4 33.6,62 32,63.6 30.4,62" fill="#FFE066"/>' +
-        '<circle cx="3.6" cy="32" r="1.2" fill="#FFFFFF"/>' +
-      '</g>' +
+      '<rect x="3" y="3" width="58" height="58" rx="16" ry="16" stroke="rgba(0,229,255,0.25)" stroke-width="1.5"/>' +
+      '<rect x="3" y="3" width="58" height="58" rx="16" ry="16" stroke="url(#ishakSquareGrad)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="55 160" style="animation:ishakSquareDash 3.2s linear infinite;" filter="url(#ishakSquareGlow)"/>' +
     '</svg>';
   btnBox.appendChild(orbitalWrap);
 
@@ -2414,7 +2356,7 @@ javascript:(function(){
   var hudPanel = document.createElement('div');
   hudPanel.id = 'ishak-hud-panel';
   hudPanel.innerHTML = '<div id="ishak-hud-drag-handle">' +
-    '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;font-size:12px;">❖</span><b style="color:#00E5FF;font-size:11px;letter-spacing:0.5px;">TRADEPILOT AI PRO 3D HUD</b></div>' +
+    '<div style="display:flex;align-items:center;gap:6px;"><span style="color:#00E5FF;font-size:12px;">❖</span><b style="color:#00E5FF;font-size:11px;letter-spacing:0.5px;">TRADEPILOT HUD</b></div>' +
     '<div class="ishak-close-btn" id="hud-close-btn">✕</div>' +
     '</div>' +
     '<div id="ishak-hud-body" style="padding:10px 12px;"></div>';
@@ -3941,36 +3883,67 @@ javascript:(function(){
 
       pillTime.innerText = 'SCAN..';
 
-      // 🎯 Activate Tactical Circular Radar & Hacking Matrix Telemetry Overlay
-      var detectedAssetStr = window.__ISHAK_CURRENT_ASSET__ || window.__ISHAK_LAST_DETECTED_ASSET__ || (function(){
-        try { return extractQuotexPair(); } catch(e){ return 'USD/BDT (OTC)'; }
-      })() || 'USD/BDT (OTC)';
+      // 🎯 Activate Minimalist Round Radar & Clean Telemetry Overlay
+      var detectedAssetStr = (function(){
+        try { return extractQuotexPair(); } catch(e){ return window.__ISHAK_CURRENT_ASSET__ || 'USD/BDT (OTC)'; }
+      })() || window.__ISHAK_CURRENT_ASSET__ || 'USD/BDT (OTC)';
 
-      var radarAssetEl = document.getElementById('ishak-radar-asset-name');
-      if (radarAssetEl) radarAssetEl.innerText = detectedAssetStr;
-      var radarProgressEl = document.getElementById('ishak-radar-progress-badge');
-      var radarPriceEl = document.getElementById('ishak-radar-live-price');
+      var durationStr = (tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : (tradeDuration || 5) + 'S');
+      var chartTimeStr = new Date().toLocaleTimeString('en-US', { hour12: false });
+
       var telemetryContainer = document.getElementById('ishak-radar-matrix-telemetry');
       if (telemetryContainer) telemetryContainer.innerHTML = '';
 
       if (screenScanBox) screenScanBox.classList.add('scanning-active');
       laserEl.classList.add('scanning-active');
 
-      playPhotostatScannerSound();
+      // 🔊 Information-Based Voice System during scan (Zero background SFX/noise)
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        try {
+          window.speechSynthesis.cancel();
+          var cleanMarket = detectedAssetStr.replace(/[\/\-_]/g, ' ').replace(/[()]/g, '').trim();
+          var cleanDur = (tradeDuration || 5) + ' seconds';
+          var voices = window.speechSynthesis.getVoices();
+          var bnVoice = null;
+          for (var vi = 0; vi < voices.length; vi++) {
+            if (voices[vi].lang && voices[vi].lang.indexOf('bn') === 0) {
+              bnVoice = voices[vi];
+              break;
+            }
+          }
+          var utt;
+          if (bnVoice) {
+            utt = new SpeechSynthesisUtterance('মার্কেট: ' + cleanMarket + '। ট্রেড সময়: ' + cleanDur + '। চার্ট টাইম: ' + chartTimeStr + '।');
+            utt.voice = bnVoice;
+            utt.rate = 0.90;
+            utt.pitch = 1.1;
+          } else {
+            utt = new SpeechSynthesisUtterance('Market: ' + cleanMarket + '. Duration: ' + cleanDur + '. Chart time: ' + chartTimeStr + '.');
+            var sweetVoice = null;
+            for (var vi = 0; vi < voices.length; vi++) {
+              var vname = voices[vi].name || '';
+              if ((vname.indexOf('Female') >= 0 || vname.indexOf('Natural') >= 0 || vname.indexOf('Google') >= 0 || vname.indexOf('Samantha') >= 0 || vname.indexOf('Zira') >= 0) && voices[vi].lang && voices[vi].lang.indexOf('en') === 0) {
+                sweetVoice = voices[vi];
+                break;
+              }
+            }
+            if (sweetVoice) utt.voice = sweetVoice;
+            utt.rate = 0.88;
+            utt.pitch = 1.15;
+          }
+          utt.volume = 1.0;
+          window.speechSynthesis.speak(utt);
+        } catch(e){}
+      }
 
-      // Smooth percentage counter & live quote updater during scan
+      // Smooth percentage counter
       var scanStartTs = Date.now();
       var progressInterval = setInterval(function() {
         var elapsed = Date.now() - scanStartTs;
-        var pct = Math.min(99, Math.floor((elapsed / 3500) * 100));
-        if (radarProgressEl) radarProgressEl.innerText = pct + '%';
-        var pLive = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__;
-        if (pLive && radarPriceEl) {
-          radarPriceEl.innerText = pLive.toFixed(pLive > 50 ? 3 : 5);
-        }
+        var pct = Math.min(99, Math.floor((elapsed / 5000) * 100));
       }, 65);
 
-      // Bottom-Left Upward Streaming Hacking Matrix Telemetry
+      // Bottom-Left Upward Streaming Telemetry (Strictly left-bound, clean essential info)
       var telemetryTimeouts = [];
       function addTelemetryLine(text, isHighlight) {
         if (!telemetryContainer) return;
@@ -3983,39 +3956,31 @@ javascript:(function(){
 
       var liveCandle = (window.__ISHAK_LAST_CANDLE__ && window.__ISHAK_LAST_CANDLE__.length >= 6) ? window.__ISHAK_LAST_CANDLE__ : null;
       var initPrice = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__ || 129.730;
-      var cOpen = liveCandle ? Number(liveCandle[2]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 0.9998).toFixed(initPrice > 50 ? 3 : 5);
-      var cHigh = liveCandle ? Number(liveCandle[3]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 1.0003).toFixed(initPrice > 50 ? 3 : 5);
-      var cLow = liveCandle ? Number(liveCandle[4]).toFixed(initPrice > 50 ? 3 : 5) : (initPrice * 0.9996).toFixed(initPrice > 50 ? 3 : 5);
-      var cClose = liveCandle ? Number(liveCandle[5]).toFixed(initPrice > 50 ? 3 : 5) : initPrice.toFixed(initPrice > 50 ? 3 : 5);
+      var cTrend = liveCandle ? (Number(liveCandle[5]) >= Number(liveCandle[2]) ? 'Bullish ▲' : 'Bearish ▼') : 'Analyzing';
 
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('>> [SYS_INITIALIZE]: TradePilot Quantum Core v4.9 Active', false);
+        addTelemetryLine('Market: ' + detectedAssetStr, true);
       }, 50));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('>> [TARGET ASSET]: ' + detectedAssetStr + ' | TIMEFRAME: ' + (tradeDuration || 5) + 'S', true);
-      }, 400));
+        addTelemetryLine('Trade Duration: ' + durationStr, true);
+      }, 350));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('>> [CLOCK SYNC]: ' + new Date().toLocaleTimeString('en-US', {hour12:false}) + ' | BID: ' + initPrice, false);
-      }, 850));
+        addTelemetryLine('Chart Time: ' + chartTimeStr, false);
+      }, 750));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('>> [CANDLE STREAM]: O:' + cOpen + ' H:' + cHigh + ' L:' + cLow + ' C:' + cClose, false);
-      }, 1300));
+        addTelemetryLine('Live Quote: ' + (initPrice > 50 ? initPrice.toFixed(3) : initPrice.toFixed(5)), false);
+      }, 1200));
       telemetryTimeouts.push(setTimeout(function() {
-        var buyVol = (58 + Math.floor(Math.random() * 24));
-        addTelemetryLine('>> [ORDER FLOW]: Buy Vol: ' + buyVol + '% | Sell Vol: ' + (100 - buyVol) + '% | Delta: +' + (Math.random() * 4).toFixed(2), false);
-      }, 1750));
+        addTelemetryLine('Candle Trend: ' + cTrend, false);
+      }, 1700));
       telemetryTimeouts.push(setTimeout(function() {
-        var rsi = (42 + Math.floor(Math.random() * 32));
-        addTelemetryLine('>> [CONFLUENCE VECTOR]: RSI(14): ' + rsi + ' | Stochastic: 79.2 | Trend: ALIGNED', true);
-      }, 2200));
+        addTelemetryLine('Analyzing Market Flow...', false);
+      }, 2300));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('>> [ALGO CONFIRMATION]: Neural Filter PASS | Latency: 38ms', false);
-      }, 2650));
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('>> [SIGNAL LOCK]: PREPARING FINAL BROKER DISPATCH...', true);
-      }, 3050));
+        addTelemetryLine('Confirming Signal Entry...', true);
+      }, 3200));
 
-      // Real-Time High-Frequency Price Sampler during 3.5s Scan
+      // Real-Time High-Frequency Price Sampler during 5s Scan
       var livePriceSamples = [];
       function sampleFreshScanTick() {
         var p = extractQuotexLivePrice();
@@ -4036,7 +4001,7 @@ javascript:(function(){
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();
 
-      // ⚡ PRE-EVALUATE AND DISPATCH TRADE AT 2600MS TO ABSORB BROKER LATENCY
+      // ⚡ PRE-EVALUATE AND DISPATCH TRADE AT 4100MS TO ABSORB BROKER LATENCY
       var brokerTradeDispatched = false;
       var computedSignal = null;
       var computedIsCall = null;
@@ -4075,16 +4040,16 @@ javascript:(function(){
         computedSignal = signal;
         computedIsCall = isCall;
 
-        // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 2600MS ONLY IF DIRECTION IS VALID & CONFIRMED
+        // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 4100MS ONLY IF DIRECTION IS VALID & CONFIRMED
         if (isCall !== null && typeof isCall === 'boolean') {
           executeQuotexTrade(isCall, signalId);
         }
       }
 
-      // ⚡ Fired at 2600ms (~900ms before scan completion to absorb broker network delay)
-      var tradeTimer = setTimeout(preDispatchQuotexTrade, 2600);
+      // ⚡ Fired at 4100ms (~900ms before scan completion to absorb broker network delay)
+      var tradeTimer = setTimeout(preDispatchQuotexTrade, 4100);
 
-      // Cleanly complete scan and present direction at 3500ms
+      // Cleanly complete scan and present direction at 5000ms
       setTimeout(function() {
         if (priceSamplerInterval) clearInterval(priceSamplerInterval);
         if (progressInterval) clearInterval(progressInterval);
@@ -4092,13 +4057,15 @@ javascript:(function(){
         for (var ti = 0; ti < telemetryTimeouts.length; ti++) {
           clearTimeout(telemetryTimeouts[ti]);
         }
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+          try { window.speechSynthesis.cancel(); } catch(e){}
+        }
 
         preDispatchQuotexTrade();
 
         var finalIsCall = computedIsCall;
 
         if (screenScanBox) screenScanBox.classList.remove('scanning-active');
-        if (radarProgressEl) radarProgressEl.innerText = '100%';
         laserEl.classList.remove('scanning-active');
         circleBtn.classList.remove('working-pulse');
         var auraEl = document.getElementById('ishak-logo-aura');
@@ -4137,7 +4104,7 @@ javascript:(function(){
             }
           }, nextWaitMs);
         }
-      }, 3500);
+      }, 5000);
     });
   }
 
