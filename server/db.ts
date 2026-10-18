@@ -575,7 +575,7 @@ class LicenseDatabase {
 
     const randStr = Math.random().toString(36).substring(2, 8).toUpperCase();
     const durTag = cleanDuration.toUpperCase().replace(/\s+/g, '');
-    const key = `ISHAK-VIP-${durTag}-${randStr}`;
+    const key = `TP-VIP-${durTag}-${randStr}`;
 
     const record: LicenseRecord = {
       key,

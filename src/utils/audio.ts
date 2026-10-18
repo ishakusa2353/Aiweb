@@ -222,3 +222,74 @@ export function playDataInjectionSound(): void {
     console.warn('Audio playback error', e);
   }
 }
+
+/**
+ * TradePilot Information-Based Voice System:
+ * - Pure informative voice system during scanning (Zero sound effects / background noise)
+ * - Soft, soothing, clear and professional voice (Bengali or gentle English)
+ * - Speaks EXACTLY the data shown on screen: Market, Duration, Chart Time
+ * - Well-paced, natural cadence (no rush, comfortable for 5s scan)
+ */
+export function speakScanTelemetry(market: string, durationStr: string, chartTime: string): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+  try {
+    window.speechSynthesis.cancel();
+
+    const cleanMarket = market
+      .replace(/[\/\-_]/g, ' ')
+      .replace(/[()]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    let cleanDur = durationStr;
+    if (/^\d+\s*S$/i.test(durationStr)) {
+      cleanDur = durationStr.replace(/S/i, '') + ' seconds';
+    } else if (/^\d+\s*M$/i.test(durationStr)) {
+      cleanDur = durationStr.replace(/M/i, '') + ' minutes';
+    }
+
+    const cleanTime = chartTime || new Date().toLocaleTimeString('en-US', { hour12: false });
+
+    const voices = window.speechSynthesis.getVoices();
+    const bnVoice = voices.find(v => v.lang.startsWith('bn'));
+
+    let utterance: SpeechSynthesisUtterance;
+
+    if (bnVoice) {
+      const speechText = `মার্কেট: ${cleanMarket}। ট্রেড সময়: ${cleanDur}। চার্ট টাইম: ${cleanTime}।`;
+      utterance = new SpeechSynthesisUtterance(speechText);
+      utterance.voice = bnVoice;
+      utterance.lang = bnVoice.lang || 'bn-BD';
+      utterance.rate = 0.90;
+      utterance.pitch = 1.1;
+    } else {
+      const speechText = `Market: ${cleanMarket}. Duration: ${cleanDur}. Chart time: ${cleanTime}.`;
+      utterance = new SpeechSynthesisUtterance(speechText);
+      const sweetVoice = voices.find(v =>
+        (v.name.includes('Natural') || v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Sonia') || v.name.includes('Victoria')) &&
+        v.lang.startsWith('en')
+      ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
+
+      if (sweetVoice) {
+        utterance.voice = sweetVoice;
+      }
+      utterance.lang = 'en-US';
+      utterance.rate = 0.88;
+      utterance.pitch = 1.15;
+    }
+
+    utterance.volume = 1.0;
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.warn('Speech synthesis error', e);
+  }
+}
+
+export function stopSpeechSynthesis(): void {
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+  }
+}

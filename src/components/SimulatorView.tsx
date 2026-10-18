@@ -346,6 +346,42 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
     };
   }, []);
 
+  const changeMarket = (newMarket: string) => {
+    setMarket(newMarket);
+    let basePrice = 129.730;
+    if (newMarket.includes('AUD/CHF')) basePrice = 0.5742;
+    else if (newMarket.includes('EUR/USD')) basePrice = 1.0845;
+    else if (newMarket.includes('USD/JPY')) basePrice = 154.20;
+    else if (newMarket.includes('GBP/USD')) basePrice = 1.2930;
+    else if (newMarket.includes('USD/BDT')) basePrice = 129.730;
+    else if (newMarket.includes('USD/INR')) basePrice = 84.150;
+    else if (newMarket.includes('AUD/CAD')) basePrice = 0.8920;
+
+    const initial: Candle[] = [];
+    const now = Date.now();
+    const tf = 5000;
+    for (let i = 24; i >= 0; i--) {
+      const candleTime = now - i * tf;
+      const variation = Math.sin(i * 0.7) * (basePrice * 0.0004);
+      const open = parseFloat((basePrice + variation - 0.00015).toFixed(basePrice > 50 ? 3 : 5));
+      const close = parseFloat((basePrice + variation + 0.00015).toFixed(basePrice > 50 ? 3 : 5));
+      const high = parseFloat((Math.max(open, close) + 0.0002).toFixed(basePrice > 50 ? 3 : 5));
+      const low = parseFloat((Math.min(open, close) - 0.0002).toFixed(basePrice > 50 ? 3 : 5));
+      initial.push({ time: candleTime, open, high, low, close });
+    }
+    const current = initial[initial.length - 1].close;
+    setCandles(initial);
+    setLivePrice(current);
+    syncSimulatorToBackgroundStream(current, initial, newMarket);
+    if (typeof window !== 'undefined') {
+      window.__ISHAK_CURRENT_ASSET__ = newMarket;
+      window.__ISHAK_LAST_DETECTED_ASSET__ = newMarket;
+      window.__ISHAK_LAST_WS_PRICE__ = current;
+      window.__ISHAK_BACKGROUND_CANDLES__ = initial;
+      window.dispatchEvent(new CustomEvent('market_changed', { detail: { market: newMarket, price: current } }));
+    }
+  };
+
   return (
     <div id="simulator-view" className="space-y-4">
       {/* Simulation Info Card */}
@@ -383,14 +419,41 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ lastSignal }) => {
         <div className="lg:col-span-3 bg-[#0B132B] border border-cyan-500/20 rounded-2xl p-4 flex flex-col justify-between shadow-xl min-h-[440px]">
           {/* Chart Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center flex-wrap gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-white font-black text-sm tracking-wide current-asset">
-                {market}
-              </span>
+              <select
+                id="simulator-market-select"
+                data-current-market={market}
+                value={market}
+                onChange={(e) => changeMarket(e.target.value)}
+                className="bg-slate-900 border border-cyan-500/50 text-cyan-300 font-black text-xs sm:text-sm rounded-lg px-2.5 py-1 outline-none cursor-pointer focus:border-cyan-300 transition"
+              >
+                <option value="USD/BDT (OTC)">USD/BDT (OTC)</option>
+                <option value="AUD/CHF (OTC)">AUD/CHF (OTC)</option>
+                <option value="EUR/USD (OTC)">EUR/USD (OTC)</option>
+                <option value="USD/INR (OTC)">USD/INR (OTC)</option>
+                <option value="AUD/CAD (OTC)">AUD/CAD (OTC)</option>
+                <option value="EUR/USD">EUR/USD</option>
+                <option value="GBP/USD">GBP/USD</option>
+                <option value="USD/JPY">USD/JPY</option>
+              </select>
               <span className="text-xs bg-cyan-950/80 text-cyan-400 font-bold px-2 py-0.5 rounded border border-cyan-500/30">
                 +{payout}%
               </span>
+              <div className="hidden sm:flex items-center gap-1 ml-2">
+                {['USD/BDT (OTC)', 'EUR/USD (OTC)', 'GBP/USD'].map((pm) => (
+                  <button
+                    key={pm}
+                    type="button"
+                    onClick={() => changeMarket(pm)}
+                    className={`px-2 py-0.5 text-[10px] rounded font-bold transition ${
+                      market === pm ? 'bg-cyan-500 text-black font-extrabold' : 'bg-slate-800/80 text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    {pm.replace(' (OTC)', '')}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center gap-3">

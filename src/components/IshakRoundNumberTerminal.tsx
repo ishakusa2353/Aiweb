@@ -308,7 +308,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     return (
       <div
         id="minimizedPill"
-        title="TradePilot VIP Round Controller - Click to Expand"
+        title="TradePilot Round Controller - Click to Expand"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
@@ -357,7 +357,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         />
         <img
           src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
-          alt="TradePilot VIP Logo"
+          alt="TradePilot Logo"
           style={{
             width: '100%',
             height: '100%',
@@ -521,7 +521,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           >
             <img
               src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
-              alt="TradePilot VIP Logo"
+              alt="TradePilot Logo"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
@@ -535,7 +535,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 letterSpacing: '0.5px',
               }}
             >
-              TRADEPILOT VIP TRADER
+              TRADEPILOT TRADER
             </span>
             <span
               style={{

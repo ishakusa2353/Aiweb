@@ -63,20 +63,20 @@ export function normalizeAssetString(raw?: string | null): string | null {
 export function detectActiveBackgroundAsset(): string {
   if (typeof window === 'undefined') return 'USD/BDT (OTC)';
 
-  if (window.__ISHAK_CURRENT_ASSET__) {
-    return window.__ISHAK_CURRENT_ASSET__;
-  }
-  if (window.__ISHAK_LAST_DETECTED_ASSET__) {
-    return window.__ISHAK_LAST_DETECTED_ASSET__;
-  }
-
   try {
     const selectors = [
-      '.tab--active', '.tab-item--active', '.tabs__item--active', '.tab-item.active',
-      '[data-test="active-asset"]', '[data-test="asset-name"]',
-      '.header-sub__asset-name', '.header-sub__asset',
-      '.trading-chart__asset', '.current-asset',
-      '#simulator-market-select', '[data-current-market]'
+      '#simulator-market-select',
+      '.current-asset',
+      '[data-current-market]',
+      '.tab--active',
+      '.tab-item--active',
+      '.tabs__item--active',
+      '.tab-item.active',
+      '[data-test="active-asset"]',
+      '[data-test="asset-name"]',
+      '.header-sub__asset-name',
+      '.header-sub__asset',
+      '.trading-chart__asset'
     ];
     for (const sel of selectors) {
       const el = document.querySelector(sel);
@@ -88,7 +88,13 @@ export function detectActiveBackgroundAsset(): string {
           : (el.textContent || '');
         const norm = normalizeAssetString(txt);
         if (norm) {
-          window.__ISHAK_CURRENT_ASSET__ = norm;
+          if (norm !== window.__ISHAK_CURRENT_ASSET__) {
+            window.__ISHAK_CURRENT_ASSET__ = norm;
+            window.__ISHAK_LAST_DETECTED_ASSET__ = norm;
+            if (window.__ISHAK_MARKET_STREAM__) {
+              window.__ISHAK_MARKET_STREAM__.currentPair = norm;
+            }
+          }
           return norm;
         }
       }
@@ -97,11 +103,21 @@ export function detectActiveBackgroundAsset(): string {
     if (document.title) {
       const normTitle = normalizeAssetString(document.title);
       if (normTitle) {
-        window.__ISHAK_CURRENT_ASSET__ = normTitle;
+        if (normTitle !== window.__ISHAK_CURRENT_ASSET__) {
+          window.__ISHAK_CURRENT_ASSET__ = normTitle;
+          window.__ISHAK_LAST_DETECTED_ASSET__ = normTitle;
+        }
         return normTitle;
       }
     }
   } catch (e) {}
+
+  if (window.__ISHAK_CURRENT_ASSET__) {
+    return window.__ISHAK_CURRENT_ASSET__;
+  }
+  if (window.__ISHAK_LAST_DETECTED_ASSET__) {
+    return window.__ISHAK_LAST_DETECTED_ASSET__;
+  }
 
   return 'USD/BDT (OTC)';
 }

@@ -327,8 +327,14 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
       }
     }
 
+    const rand1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const rand2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const rand3 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const timeTk = Date.now().toString(36).substring(3, 7).toUpperCase();
+    const generatedKey = customKey.trim().toUpperCase() || `TP-${selectedTier.toUpperCase()}-${rand1}-${rand2}-${rand3}-${timeTk}`;
+
     const payload: any = {
-      key: customKey.trim() || undefined,
+      key: generatedKey,
       tier: selectedTier,
       duration: finalDuration,
       deviceLimit: finalDeviceLimit,
@@ -345,11 +351,6 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
     setIsSubmitting(false);
 
     if (success) {
-      const rand1 = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const rand2 = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const rand3 = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const timeTk = Date.now().toString(36).substring(3, 7).toUpperCase();
-      const generatedKey = customKey.trim().toUpperCase() || `TP-${selectedTier.toUpperCase()}-${rand1}-${rand2}-${rand3}-${timeTk}`;
       const genTraderId = traderId.trim() || undefined;
       const genNote = finalNote || undefined;
 
@@ -357,9 +358,9 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
       setTraderId('');
       setNote('');
       setShowCreateModal(false);
-      showActionToast('✅ নতুন VIP লাইসেন্স তৈরি হয়েছে! কাস্টমার ডেলিভারি মেসেজ প্রস্তুত।');
+      showActionToast('✅ নতুন লাইসেন্স তৈরি হয়েছে! কাস্টমার ডেলিভারি মেসেজ প্রস্তুত।');
 
-      // Auto-open Customer Delivery Modal
+      // Auto-open Customer Delivery Modal with the exact generated TP- key
       setDeliveryLicense({
         key: generatedKey,
         tier: selectedTier,

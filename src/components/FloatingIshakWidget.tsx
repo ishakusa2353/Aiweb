@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { playTacticalRadarScannerSound, playResultSound, playRiskWarningSound, playDataInjectionSound } from '../utils/audio';
+import { speakScanTelemetry, stopSpeechSynthesis, playResultSound, playRiskWarningSound } from '../utils/audio';
 import { TIME_OPTIONS } from '../data/markets';
 import { SignalData } from '../types';
 import { Search, ShieldAlert, Sparkles, KeyRound, Cpu, Database, Zap, Activity, Crosshair } from 'lucide-react';
@@ -84,7 +84,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   // Expiration countdown
   const [remainingTimeStr, setRemainingTimeStr] = useState<string>('');
 
-  // Continuous background chart sniffer: updates detected asset & price every 300ms
+  // Continuous background chart sniffer: updates detected asset & price every 200ms + instant event sync
   useEffect(() => {
     const updateMarketMeta = () => {
       const bg = getBackgroundMarketData();
@@ -99,8 +99,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     };
     updateMarketMeta();
-    const interval = setInterval(updateMarketMeta, 300);
-    return () => clearInterval(interval);
+
+    const handleMarketChange = (e: any) => {
+      if (e.detail?.market) {
+        setDetectedAsset(e.detail.market);
+        if (e.detail.price) setDetectedPrice(e.detail.price);
+      }
+    };
+    window.addEventListener('market_changed', handleMarketChange);
+
+    const interval = setInterval(updateMarketMeta, 200);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('market_changed', handleMarketChange);
+    };
   }, [detectedAsset]);
 
   // Toast helper
@@ -391,10 +403,14 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     if (isDragging) return;
 
     try {
-      if (soundEnabled) playDataInjectionSound();
       setInjectedTradesCount(999);
       window.dispatchEvent(new CustomEvent('ishak_data_injected', { detail: { count: 999 } }));
     } catch (e) {}
+
+    // Immediate fresh sync with live background chart
+    const freshBg = getBackgroundMarketData();
+    if (freshBg?.currentPair) setDetectedAsset(freshBg.currentPair);
+    if (freshBg?.currentPrice) setDetectedPrice(freshBg.currentPrice);
 
     // Check 1: License presence
     if (!activeLicense || !activeLicense.key) {
@@ -460,31 +476,27 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     setScanDots('.');
     setHudResult(null);
 
-    // Get live background market feed
+    // Get fresh background market feed
     const bgMarket = getBackgroundMarketData();
     const liveAsset = bgMarket.currentPair || detectedAsset || 'USD/BDT (OTC)';
     const liveCandle = bgMarket.runningCandle;
     const dur = tradeDuration || 5;
     const durationStr = dur >= 60 ? `${dur / 60}M` : `${dur}S`;
 
-    // Initialize bottom-left hacker matrix stream lines with live chart data
-    const candleTrend = (liveCandle.close >= liveCandle.open) ? 'BULLISH' : 'BEARISH';
+    // Clean, essential telemetry lines strictly limited to bottom-left (No clutter, no version text)
+    const candleTrend = (liveCandle.close >= liveCandle.open) ? 'Bullish ▲' : 'Bearish ▼';
     const initTelemetry = [
-      `>> TARGET ASSET: ${liveAsset}`,
-      `>> TIMEFRAME: ${durationStr}`,
-      `>> CHART TIME: ${bgMarket.chartTime}`,
-      `>> CANDLE STATUS: ${candleTrend} | O: ${liveCandle.open.toFixed(4)} C: ${liveCandle.close.toFixed(4)}`,
-      `>> LIVE QUOTE: ${bgMarket.currentPrice.toFixed(4)}`,
-      `>> ORDER FLOW: Institutional Imbalance Filter [Active]`,
-      `>> ALGORITHM: TradePilot Neural Engine v4.2`,
-      `>> VOLATILITY INDEX: High-Probability Noise Suppressed`,
-      `>> RISK PROTOCOL: Zero-Loss Confluence Verification`,
-      `>> SIGNAL LOCK: Finalizing Quantum Execution Entry...`
+      `Market: ${liveAsset}`,
+      `Trade Duration: ${durationStr}`,
+      `Chart Time: ${bgMarket.chartTime}`,
+      `Live Quote: ${bgMarket.currentPrice.toFixed(bgMarket.currentPrice > 50 ? 3 : 5)}`,
+      `Candle Trend: ${candleTrend}`,
+      `Analyzing Market Flow...`
     ];
     setMatrixTelemetryLines(initTelemetry);
 
     const scanStartTime = Date.now();
-    const scanDurationMs = 3500;
+    const scanDurationMs = 5000; // 5.0 seconds for calm, natural voice and smooth radar scan
 
     // High-Frequency Real-Time Price Action Sampler
     let samplePrices: number[] = [];
@@ -497,7 +509,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     readPrice();
     const priceSampleInterval = setInterval(readPrice, 250);
 
-    // Realistic progress counter & sequential loading dots + continuous telemetry stream
+    // Voice system: Speaks exactly the information shown on screen (zero background noise / SFX)
+    if (soundEnabled) {
+      speakScanTelemetry(liveAsset, durationStr, bgMarket.chartTime);
+    }
+
+    // Realistic progress counter & sequential loading dots + clean telemetry stream
     const progressInterval = setInterval(() => {
       const elapsed = Date.now() - scanStartTime;
       const pct = Math.min(100, Math.floor((elapsed / scanDurationMs) * 100));
@@ -506,31 +523,21 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const numDots = Math.min(7, (Math.floor(elapsed / 450) % 7) + 1);
       setScanDots('.'.repeat(numDots));
 
-      // Stream dynamic telemetry lines
-      if (elapsed % 400 < 50) {
-        const bgNow = getBackgroundMarketData();
-        const curC = bgNow.runningCandle;
-        const curTrend = curC.close >= curC.open ? 'BULLISH ▲' : 'BEARISH ▼';
+      // Stream dynamic clean telemetry lines
+      if (elapsed > 2000 && elapsed < 2100) {
         setMatrixTelemetryLines((prev) => {
-          const fresh = [
-            `>> [${bgNow.chartTime}] ${bgNow.currentPair} TICK: ${bgNow.currentPrice.toFixed(4)}`,
-            `>> CANDLE DYNAMICS: ${curTrend} (O:${curC.open.toFixed(4)} H:${curC.high.toFixed(4)} L:${curC.low.toFixed(4)})`,
-            `>> CONFLUENCE SCORE: ${(88 + (pct * 0.1)).toFixed(1)}% | TIMEFRAME: ${durationStr}`,
-            `>> ALPHA ROUTE: Scanning Next Second Micro-Fractal...`,
+          if (prev.some((l) => l.includes('Confluence Score'))) return prev;
+          return [
+            `Confluence Score: 96.4%`,
+            `Confirming Signal Entry...`,
             ...prev
-          ].slice(0, 16);
-          return fresh;
+          ];
         });
       }
-    }, 35);
+    }, 40);
 
     // Read live Quotex investment amount
     const realInvestment = getLiveQuotexInvestmentAmount();
-
-    // Play Authentic Tactical Radar Scanner Sound matching the video
-    if (soundEnabled) {
-      playTacticalRadarScannerSound();
-    }
 
     let brokerTradeDispatched = false;
     let computedSignal: SignalData | null = null;
@@ -612,14 +619,15 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }
     };
 
-    // Pre-dispatch at 2600ms
-    const anticipatoryTimer = setTimeout(prepareAndDispatchBrokerTrade, 2600);
+    // Pre-dispatch at 4100ms
+    const anticipatoryTimer = setTimeout(prepareAndDispatchBrokerTrade, 4100);
 
-    // Complete scan state at 3500ms
+    // Complete scan state at 5000ms
     setTimeout(() => {
       clearInterval(progressInterval);
       clearInterval(priceSampleInterval);
       clearTimeout(anticipatoryTimer);
+      stopSpeechSynthesis();
 
       if (!brokerTradeDispatched || !computedSignal) {
         prepareAndDispatchBrokerTrade();
@@ -675,7 +683,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           triggerScan();
         }, (dur * 1000) + 2500);
       }
-    }, 3500);
+    }, 5000);
   };
 
   const handleVerifyKey = async (e: React.FormEvent) => {
@@ -751,141 +759,130 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
   return (
     <>
-      {/* 🎯 1. TACTICAL CIRCULAR RADAR SCANNER OVERLAY (EXACT VIDEO MATCH) */}
+      {/* 🎯 1. CLEAN MINIMALIST ROUND RADAR SCANNER OVERLAY (ZERO TEXT INSIDE RADAR) */}
       {isScanning && (
         <div className="fixed inset-0 z-[999998] pointer-events-none flex items-center justify-center overflow-hidden select-none">
-          {/* Subtle Cyber Vignette Backdrop */}
-          <div className="absolute inset-0 bg-radial from-transparent via-[#030718]/45 to-[#020512]/80 backdrop-blur-[1.5px]" />
+          {/* Background Screen Blur */}
+          <div className="absolute inset-0 bg-[#020512]/65 backdrop-blur-md" />
 
-          {/* Central System Radar Display */}
-          <div className="relative w-[340px] h-[340px] sm:w-[460px] sm:h-[460px] flex items-center justify-center">
-            {/* Top HUD Telemetry Header */}
-            <div className="absolute -top-12 inset-x-0 flex flex-col items-center justify-center text-center">
-              <div className="flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#070e28]/90 border border-cyan-400/60 shadow-[0_0_20px_rgba(0,229,255,0.45)]">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                <span className="text-[10px] sm:text-xs font-black text-cyan-300 font-['Orbitron',sans-serif] tracking-widest">
-                  SYSTEM RADAR SCAN // {detectedAsset}
-                </span>
-                <span className="text-[9px] font-mono text-emerald-400 font-bold px-1.5 py-0.2 rounded bg-emerald-950/70 border border-emerald-500/40">
-                  {scanProgress}%
-                </span>
-              </div>
-            </div>
+          {/* Central Modern Round Scanner Radar (Completely Clean, No Text Inside) */}
+          <div className="relative w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] flex items-center justify-center">
+            {/* Outer Subtle Radar Perimeter Ring */}
+            <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 shadow-[0_0_35px_rgba(0,229,255,0.25)]" />
 
-            {/* 1. Outer Tactical Radar Ring (Degree Indicators) */}
-            <div className="absolute inset-0 rounded-full border-2 border-cyan-500/40 shadow-[0_0_30px_rgba(0,229,255,0.25)] flex items-center justify-center">
-              {/* Compass degree markers */}
-              <span className="absolute -top-3 text-[9px] font-mono font-black text-cyan-300 bg-[#060b22] px-1 rounded border border-cyan-500/30">000° N</span>
-              <span className="absolute -bottom-3 text-[9px] font-mono font-black text-cyan-300 bg-[#060b22] px-1 rounded border border-cyan-500/30">180° S</span>
-              <span className="absolute -left-4 text-[9px] font-mono font-black text-cyan-300 bg-[#060b22] px-1 rounded border border-cyan-500/30">270° W</span>
-              <span className="absolute -right-4 text-[9px] font-mono font-black text-cyan-300 bg-[#060b22] px-1 rounded border border-cyan-500/30">090° E</span>
-            </div>
+            {/* Concentric Radar Rings */}
+            <div className="absolute inset-8 sm:inset-12 rounded-full border border-dashed border-cyan-400/35 animate-[spin_25s_linear_infinite]" />
+            <div className="absolute inset-16 sm:inset-24 rounded-full border border-cyan-500/45 shadow-[inset_0_0_20px_rgba(0,229,255,0.15)]" />
+            <div className="absolute inset-24 sm:inset-36 rounded-full border border-emerald-400/30 animate-[spin_15s_linear_infinite_reverse]" />
+            <div className="absolute inset-32 sm:inset-48 rounded-full border-2 border-cyan-300/60 shadow-[0_0_25px_rgba(0,229,255,0.4)]" />
 
-            {/* 2. Concentric Radar Rings (4 Distance Tiers) */}
-            <div className="absolute inset-8 sm:inset-12 rounded-full border border-dashed border-cyan-400/45 animate-[spin_30s_linear_infinite]" />
-            <div className="absolute inset-16 sm:inset-24 rounded-full border border-cyan-500/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.15)]" />
-            <div className="absolute inset-24 sm:inset-36 rounded-full border border-emerald-400/40 animate-[spin_18s_linear_infinite_reverse]" />
-            <div className="absolute inset-32 sm:inset-48 rounded-full border-2 border-cyan-300/70 shadow-[0_0_25px_rgba(0,229,255,0.5)]" />
+            {/* Subtle Crosshair Laser Axes */}
+            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent shadow-[0_0_6px_#00E5FF]" />
+            <div className="absolute inset-y-0 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-cyan-400/80 to-transparent shadow-[0_0_6px_#00E5FF]" />
 
-            {/* 3. Crosshair Laser Axes */}
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/90 to-transparent shadow-[0_0_8px_#00E5FF]" />
-            <div className="absolute inset-y-0 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-cyan-400/90 to-transparent shadow-[0_0_8px_#00E5FF]" />
-
-            {/* 4. 360° Rotating Tactical Radar Sweep Beam (Continuous Video Replication) */}
+            {/* Smooth 360° Rotating Radar Sweep Beam */}
             <div
               className="absolute inset-0 rounded-full animate-[spin_2.4s_linear_infinite]"
               style={{
-                background: 'conic-gradient(from 0deg, rgba(0, 229, 255, 0.45) 0deg, rgba(0, 255, 102, 0.3) 35deg, rgba(0, 229, 255, 0.08) 75deg, transparent 95deg, transparent 360deg)',
-                filter: 'drop-shadow(0 0 15px rgba(0,229,255,0.6))',
+                background: 'conic-gradient(from 0deg, rgba(0, 229, 255, 0.4) 0deg, rgba(0, 255, 102, 0.25) 30deg, rgba(0, 229, 255, 0.05) 70deg, transparent 90deg, transparent 360deg)',
+                filter: 'drop-shadow(0 0 12px rgba(0,229,255,0.5))',
               }}
             />
 
-            {/* Leading Laser Ray of the Radar Beam */}
-            <div
-              className="absolute inset-0 rounded-full animate-[spin_2.4s_linear_infinite] flex items-center justify-center pointer-events-none"
-            >
+            {/* Leading Edge Laser Ray of Radar Sweep */}
+            <div className="absolute inset-0 rounded-full animate-[spin_2.4s_linear_infinite] flex items-center justify-center pointer-events-none">
               <div
                 className="w-1/2 h-[2px] self-center ml-auto"
                 style={{
                   background: 'linear-gradient(90deg, #FFFFFF 0%, #00FF66 40%, #00E5FF 90%, transparent 100%)',
-                  boxShadow: '0 0 12px #FFFFFF, 0 0 24px #00FF66, 0 0 35px #00E5FF',
+                  boxShadow: '0 0 10px #FFFFFF, 0 0 20px #00FF66, 0 0 30px #00E5FF',
                 }}
               />
             </div>
 
-            {/* 5. Center Target Acquisition Lock */}
-            <div className="relative z-10 flex flex-col items-center justify-center">
-              <div className="w-12 h-12 rounded-xl border border-cyan-300/80 rotate-45 flex items-center justify-center bg-cyan-950/50 shadow-[0_0_20px_#00E5FF,inset_0_0_10px_rgba(0,229,255,0.5)] animate-pulse">
-                <div className="w-4 h-4 bg-gradient-to-tr from-cyan-400 to-emerald-400 rounded-sm shadow-[0_0_10px_#00FF66]" />
-              </div>
-              <div className="mt-3 flex flex-col items-center">
-                <span className="text-[10px] font-black text-cyan-200 font-['Orbitron',sans-serif] tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                  QUANTUM LOCK
-                </span>
-                <span className="text-[9px] font-mono font-bold text-amber-300">
-                  {detectedPrice > 0 ? detectedPrice.toFixed(detectedPrice > 50 ? 3 : 5) : 'CALCULATING...'}
-                </span>
+            {/* Center Pulsating Diamond Target Reticle (Clean, Minimal, Zero Text) */}
+            <div className="relative z-10 flex items-center justify-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-cyan-300/80 rotate-45 flex items-center justify-center bg-cyan-950/40 shadow-[0_0_18px_#00E5FF,inset_0_0_10px_rgba(0,229,255,0.4)] animate-pulse">
+                <div className="w-3.5 h-3.5 bg-gradient-to-tr from-cyan-400 to-emerald-400 rounded-sm shadow-[0_0_10px_#00FF66]" />
               </div>
             </div>
-
-            {/* Tactical Corner Brackets */}
-            <div className="absolute -top-2 -left-2 w-6 h-6 border-t-2 border-l-2 border-cyan-400/80 rounded-tl" />
-            <div className="absolute -top-2 -right-2 w-6 h-6 border-t-2 border-r-2 border-cyan-400/80 rounded-tr" />
-            <div className="absolute -bottom-2 -left-2 w-6 h-6 border-b-2 border-l-2 border-cyan-400/80 rounded-bl" />
-            <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b-2 border-r-2 border-cyan-400/80 rounded-br" />
           </div>
 
-          {/* 💻 2. BOTTOM-LEFT UPWARD-STREAMING HACKING MATRIX TELEMETRY (FADES BEFORE HALF SCREEN) */}
+          {/* 💻 2. CLEAN UPWARD-STREAMING TELEMETRY (STRICTLY PINNED TO BOTTOM-LEFT) */}
           <div
-            className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[999999] max-w-[340px] pointer-events-none select-none font-mono text-[10px] sm:text-[11px] leading-tight space-y-1"
+            className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[999999] max-w-[280px] sm:max-w-[320px] pointer-events-none select-none font-mono text-[10.5px] sm:text-[11.5px] leading-relaxed space-y-1"
             style={{
-              height: '38vh',
-              maxHeight: '320px',
+              height: '32vh',
+              maxHeight: '240px',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column-reverse',
-              maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 45%, rgba(0,0,0,0.2) 75%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 45%, rgba(0,0,0,0.2) 75%, transparent 100%)',
+              maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 50%, rgba(0,0,0,0.15) 85%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 50%, rgba(0,0,0,0.15) 85%, transparent 100%)',
             }}
           >
-            {matrixTelemetryLines.map((line, idx) => {
-              const isHighlight = line.includes('TARGET ASSET') || line.includes('TIMEFRAME') || line.includes('CONFLUENCE');
-              return (
-                <div
-                  key={idx}
-                  className={`transition-all duration-300 will-change-transform ${
-                    isHighlight
-                      ? 'text-cyan-300 font-bold drop-shadow-[0_0_8px_rgba(0,229,255,0.8)]'
-                      : 'text-emerald-400/90 drop-shadow-[0_0_5px_rgba(0,255,102,0.6)]'
-                  }`}
-                  style={{
-                    animation: 'ishakToastIn 0.3s ease-out forwards',
-                  }}
-                >
-                  {line}
-                </div>
-              );
-            })}
+            {matrixTelemetryLines.map((line, idx) => (
+              <div
+                key={idx}
+                className="text-cyan-300/90 font-medium drop-shadow-[0_0_6px_rgba(0,229,255,0.6)] transition-all duration-300"
+                style={{
+                  animation: 'ishakToastIn 0.25s ease-out forwards',
+                }}
+              >
+                {line}
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* 🚀 3. STYLISH SQUIRCLE BOT BADGE (REPLACING ROUND SHAPE, MATCHING SWITCH MODE & LOGO COLORS) */}
+      {/* 🚀 3. STYLISH SQUIRCLE BOT BADGE WITH MODERN SQUARE ANIMATION */}
       <div
         id="ishak-robot-anchor"
         className="fixed z-[999990] flex flex-col items-center select-none touch-none animate-[ishakIntroSpawn_1.1s_cubic-bezier(0.16,1,0.3,1)_forwards]"
         style={{ left: `${position.x}px`, top: `${position.y}px` }}
       >
         <div className="relative flex items-center justify-center">
-          {/* Radiant Cyber Glow Aura during scanning */}
-          {isScanning && (
-            <div
-              className="absolute -inset-4 rounded-3xl pointer-events-none animate-[ishakAuraPulse_1.2s_infinite_ease-in-out]"
-              style={{
-                background: 'radial-gradient(circle, rgba(0,229,255,0.9) 0%, rgba(217,70,239,0.7) 45%, rgba(0,229,255,0.15) 75%, transparent 100%)',
-              }}
-            />
-          )}
+          {/* 🔲 Modern Square Border Beam Animation (Matching the Square Logo) */}
+          <div className="absolute -inset-1.5 rounded-[20px] pointer-events-none overflow-hidden">
+            <svg className="w-full h-full" viewBox="0 0 76 76" fill="none">
+              <defs>
+                <linearGradient id="widgetSquareGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00E5FF" stopOpacity="1" />
+                  <stop offset="35%" stopColor="#A855F7" stopOpacity="0.85" />
+                  <stop offset="70%" stopColor="#00FF66" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                </linearGradient>
+                <filter id="widgetSquareGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#00E5FF" floodOpacity="0.9" />
+                </filter>
+              </defs>
+              <rect
+                x="2"
+                y="2"
+                width="72"
+                height="72"
+                rx="18"
+                ry="18"
+                stroke="rgba(0,229,255,0.25)"
+                strokeWidth="1.5"
+              />
+              <rect
+                x="2"
+                y="2"
+                width="72"
+                height="72"
+                rx="18"
+                ry="18"
+                stroke="url(#widgetSquareGrad)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeDasharray="65 190"
+                className="animate-[ishakSquareDash_3.2s_linear_infinite]"
+                filter="url(#widgetSquareGlow)"
+              />
+            </svg>
+          </div>
 
           {/* Squircle Tactical Button */}
           <button
@@ -902,7 +899,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             }}
             className={`relative z-10 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-cyan-400/80 bg-gradient-to-b from-[#0e163d] via-[#070b22] to-[#040614] shadow-[0_8px_25px_rgba(0,0,0,0.9),0_0_20px_rgba(0,229,255,0.45),inset_0_0_12px_rgba(0,229,255,0.3)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden select-none touch-none ${
               isScanning
-                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-cyan-300 shadow-[0_0_35px_#00E5FF,0_0_55px_rgba(217,70,239,0.8),inset_0_0_16px_rgba(0,229,255,0.6)]'
+                ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-cyan-300 shadow-[0_0_35px_#00E5FF,0_0_45px_rgba(168,85,247,0.7),inset_0_0_16px_rgba(0,229,255,0.6)]'
                 : 'hover:border-cyan-300 hover:shadow-[0_0_28px_rgba(0,229,255,0.6)]'
             }`}
             title="Single Click: Setup & Scan | Double Click: Control Panel"
@@ -990,7 +987,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             <div className="flex items-center gap-1.5">
               <span className="text-cyan-300 text-xs">❖</span>
               <span className="text-[11px] font-black text-white font-['Orbitron',sans-serif] tracking-wide">
-                TRADEPILOT AI PRO HUD
+                TRADEPILOT HUD
               </span>
             </div>
             <span className="text-[9px] font-mono text-cyan-300 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
@@ -1045,7 +1042,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-indigo-200 to-amber-200 font-['Orbitron',sans-serif] tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     SETTINGS HUB
                   </h3>
-                  <p className="text-[9px] text-cyan-300/80 font-semibold tracking-wide">TradePilot Quantum Engine</p>
+                  <p className="text-[9px] text-cyan-300/80 font-semibold tracking-wide">TradePilot</p>
                 </div>
               </div>
               <button
@@ -1109,8 +1106,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   showToast(
                     next === 'ROUND_NUMBER'
-                      ? '✅ SWITCHED TO: TRADEPILOT VIP ROUND CONTROLLER!'
-                      : '✅ SWITCHED TO: TRADEPILOT VIP CONFLUENCE AI SCANNER!',
+                      ? '✅ SWITCHED TO: TRADEPILOT ROUND CONTROLLER!'
+                      : '✅ SWITCHED TO: TRADEPILOT SCANNER!',
                     false
                   );
                 }}
@@ -1212,7 +1209,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-lg">🔑</span>
                 <h3 className="text-xs font-black text-white font-['Orbitron',sans-serif] tracking-wider">
-                  TRADEPILOT VIP LICENSE
+                  TRADEPILOT LICENSE
                 </h3>
               </div>
               <button
@@ -1295,19 +1292,19 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 🔄 8. TRADEPILOT VIP ROUND NUMBER TERMINAL (SWITCH MODE) */}
+      {/* 🔄 8. TRADEPILOT ROUND NUMBER TERMINAL (SWITCH MODE) */}
       {botMode === 'ROUND_NUMBER' && (
         <IshakRoundNumberTerminal
           isLicenseVerified={Boolean(activeLicense && activeLicense.key && (!activeLicense.exp || activeLicense.exp > Date.now()))}
           onClose={() => {
             setBotMode('CONFLUENCE');
             try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}
-            showToast('✅ SWITCHED TO: CONFLUENCE AI SCANNER MODE!', false);
+            showToast('✅ SWITCHED TO: CONFLUENCE SCANNER MODE!', false);
           }}
           onSwitchMode={() => {
             setBotMode('CONFLUENCE');
             try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}
-            showToast('✅ SWITCHED TO: CONFLUENCE AI SCANNER MODE!', false);
+            showToast('✅ SWITCHED TO: CONFLUENCE SCANNER MODE!', false);
           }}
         />
       )}

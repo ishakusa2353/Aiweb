@@ -415,5 +415,31 @@
   }
 }
 
+@keyframes ishakSquareDash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -255;
+  }
+}
 
+@keyframes ishakSquareDashReverse {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 255;
+  }
+}
 
+@keyframes ishakSquareAura {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.45), 0 0 30px rgba(99, 102, 241, 0.25);
+    border-color: rgba(0, 229, 255, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(0, 229, 255, 0.85), 0 0 45px rgba(168, 85, 247, 0.6), inset 0 0 12px rgba(0, 229, 255, 0.4);
+    border-color: rgba(168, 85, 247, 0.9);
+  }
+}

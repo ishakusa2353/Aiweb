@@ -585,8 +585,8 @@ CREATE POLICY "Allow server service full access"
 -- 5. Insert initial master keys safely (will not error if already exists)
 INSERT INTO public.ishak_licenses (key, active, tier, duration, exp, created_at, note)
 VALUES 
-  ('ISHAK-VIP-PRO-2025', true, 'VIP', '30d', NULL, EXTRACT(EPOCH FROM NOW()) * 1000, 'Master VIP Key'),
-  ('ISHAK-LIFETIME-DEMO', true, 'LIFETIME', 'lifetime', NULL, EXTRACT(EPOCH FROM NOW()) * 1000, 'Lifetime Key')
+  ('TP-VIP-PRO-2025', true, 'VIP', '30d', NULL, EXTRACT(EPOCH FROM NOW()) * 1000, 'Master VIP Key'),
+  ('TP-LIFETIME-DEMO', true, 'LIFETIME', 'lifetime', NULL, EXTRACT(EPOCH FROM NOW()) * 1000, 'Lifetime Key')
 ON CONFLICT (key) DO NOTHING;`
     });
   });
