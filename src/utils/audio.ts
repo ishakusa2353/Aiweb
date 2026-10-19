@@ -223,6 +223,21 @@ export function playDataInjectionSound(): void {
   }
 }
 
+// Pre-cache voices and handle async voice loading across all browsers
+let cachedVoices: SpeechSynthesisVoice[] = [];
+if (typeof window !== 'undefined' && window.speechSynthesis) {
+  const loadVoices = () => {
+    try {
+      const v = window.speechSynthesis.getVoices();
+      if (v && v.length > 0) cachedVoices = v;
+    } catch (e) {}
+  };
+  loadVoices();
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+}
+
 /**
  * TradePilot Information-Based Sweet Voice System:
  * স্ক্রিপ্ট:
@@ -231,7 +246,7 @@ export function playDataInjectionSound(): void {
  * মার্কেট বিশ্লেষণ করছি...
  * নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!
  *
- * মিষ্টি, মায়াবী ও প্রফেশনাল কন্ঠ (Sweet & natural melodic voice)
+ * মিষ্টি, মায়াবী ও পরিমার্জিত কন্ঠ (Sweet & natural melodic voice, slightly faster pace)
  */
 export function speakScanTelemetry(
   market: string,
@@ -248,11 +263,18 @@ export function speakScanTelemetry(
   const finish = () => {
     if (!completed) {
       completed = true;
+      if (typeof window !== 'undefined') {
+        (window as any).__ACTIVE_TTS__ = null;
+      }
       if (onComplete) onComplete();
     }
   };
 
   try {
+    // Unstick Chromium TTS if paused
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
     window.speechSynthesis.cancel();
 
     const cleanMarket = market
@@ -270,50 +292,94 @@ export function speakScanTelemetry(
 
     const tradeAction = (direction === 'BUY' || direction === 'UP') ? 'BUY' : 'SELL';
 
-    const voices = window.speechSynthesis.getVoices();
-    const bnVoice = voices.find(v =>
-      v.lang.startsWith('bn') && (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('বাংলা') || v.name.includes('Bangla'))
-    ) || voices.find(v => v.lang.startsWith('bn'));
-
-    let utterance: SpeechSynthesisUtterance;
-
-    if (bnVoice) {
-      // 🇧🇩 বাংলা সুন্দর মিষ্টি স্ক্রিপ্ট
-      const speechText = `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}। মার্কেট বিশ্লেষণ করছি... নিশ্চিন্তে ${tradeAction} ট্রেড করতে পারেন!`;
-      utterance = new SpeechSynthesisUtterance(speechText);
-      utterance.voice = bnVoice;
-      utterance.lang = bnVoice.lang || 'bn-BD';
-      utterance.rate = 0.88;
-      utterance.pitch = 1.15; // মিষ্টি, কোমল ও মায়াবী পিচ
-    } else {
-      // 🌸 Sweet natural melodic voice fallback
-      const sweetVoice = voices.find(v =>
-        (v.name.includes('Natural') || v.name.includes('Female') || v.name.includes('Google UK English Female') || v.name.includes('Samantha') || v.name.includes('Jenny') || v.name.includes('Sonia') || v.name.includes('Victoria')) &&
-        (v.lang.startsWith('en') || v.lang.startsWith('bn'))
-      ) || voices.find(v => (v.name.includes('Female') || v.name.includes('Natural')) && v.lang.startsWith('en'))
-        || voices.find(v => v.lang.startsWith('en'))
-        || voices[0];
-
-      const speechText = `Market: ${cleanMarket}. Time: ${durationStr}. Analyzing market... You can safely place a ${tradeAction} trade!`;
-      utterance = new SpeechSynthesisUtterance(speechText);
-      if (sweetVoice) utterance.voice = sweetVoice;
-      utterance.lang = sweetVoice?.lang || 'en-US';
-      utterance.rate = 0.86;
-      utterance.pitch = 1.18; // Soft, gentle, sweet cadence
+    // Get latest voices
+    let voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) {
+      try {
+        voices = window.speechSynthesis.getVoices();
+      } catch (e) {}
     }
 
+    // 🇧🇩 বাংলা মিষ্টি, মায়াবী ও পরিমার্জিত কন্ঠ (একটু স্পিডি, স্পষ্ট ও মিষ্টি সুরেলা)
+    const speechText = `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}। মার্কেট বিশ্লেষণ করছি... নিশ্চিন্তে ${tradeAction} ট্রেড করতে পারেন!`;
+    const utterance = new SpeechSynthesisUtterance(speechText);
+
+    // 1. First priority: Bengali voices (Bangla / Bangladesh / India)
+    const bnVoice = voices.find(v =>
+      v.lang.startsWith('bn') && (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('বাংলা') || v.name.includes('Bangla') || v.name.includes('Neural'))
+    ) || voices.find(v => v.lang.startsWith('bn'));
+
+    // 2. High-quality sweet natural melodic female voice fallback
+    const sweetVoice = voices.find(v =>
+      (v.name.includes('Google UK English Female') || v.name.includes('Natural') || v.name.includes('Jenny') || v.name.includes('Sonia') || v.name.includes('Aria') || v.name.includes('Samantha') || v.name.includes('Victoria')) &&
+      !v.name.includes('Desktop')
+    ) || voices.find(v => (v.name.includes('Female') || v.name.includes('Natural')))
+      || voices[0];
+
+    const chosenVoice = bnVoice || sweetVoice;
+    if (chosenVoice) {
+      utterance.voice = chosenVoice;
+      utterance.lang = chosenVoice.lang && chosenVoice.lang.startsWith('bn') ? chosenVoice.lang : 'bn-BD';
+    } else {
+      utterance.lang = 'bn-BD';
+    }
+
+    utterance.rate = 1.12; // একটু স্পিডে ও পরিমার্জিত
+    utterance.pitch = 1.16; // মিষ্টি, কোমল ও মায়াবী পিচ
     utterance.volume = 1.0;
-    utterance.onend = finish;
-    utterance.onerror = finish;
 
-    // Safety timeout in case browser TTS hangs without firing onend
-    const safetyTimer = setTimeout(finish, 8500);
+    let ttsKeepAlive: any = null;
+    const cleanupKeepAlive = () => {
+      if (ttsKeepAlive) {
+        clearInterval(ttsKeepAlive);
+        ttsKeepAlive = null;
+      }
+    };
 
+    utterance.onend = () => {
+      cleanupKeepAlive();
+      finish();
+    };
+    utterance.onerror = () => {
+      cleanupKeepAlive();
+      finish();
+    };
+
+    // Prevent Chromium garbage collection bug by anchoring to window
+    (window as any).__ACTIVE_TTS__ = utterance;
+
+    // Speak
     window.speechSynthesis.speak(utterance);
 
+    // Chrome TTS Keepalive: prevents Chrome from pausing TTS midway
+    ttsKeepAlive = setInterval(() => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        if (window.speechSynthesis.speaking && !completed) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        } else {
+          cleanupKeepAlive();
+        }
+      }
+    }, 2000);
+
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
+    // Safety timeout (16s) to ensure the scan never hangs indefinitely if user device audio is completely blocked
+    const maxSafetyTimer = setTimeout(() => {
+      cleanupKeepAlive();
+      finish();
+    }, 16000);
+
     return () => {
-      clearTimeout(safetyTimer);
-      try { window.speechSynthesis.cancel(); } catch(e){}
+      clearTimeout(maxSafetyTimer);
+      cleanupKeepAlive();
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+      (window as any).__ACTIVE_TTS__ = null;
     };
   } catch (e) {
     console.warn('Speech synthesis error', e);

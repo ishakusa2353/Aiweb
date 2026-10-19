@@ -660,18 +660,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
     // Voice system: Speaks exactly the information shown on screen with sweet, natural voice
     // Trade is placed and scan completes ONLY when voice finishes speaking!
+    let stopSpeech: (() => void) | null = null;
     if (soundEnabled) {
-      speakScanTelemetry(liveAsset, durationStr, signalDir, () => {
-        // Delay slightly after voice finishes so the user absorbs the instruction
-        setTimeout(finalizeScan, 400);
+      stopSpeech = speakScanTelemetry(liveAsset, durationStr, signalDir, () => {
+        // Voice has finished completely! Finalize scan and execute trade
+        setTimeout(finalizeScan, 300);
       });
     }
 
-    // Safety timeout ensuring scan completes comfortably even if TTS is unavailable or blocked
-    const fallbackTimer = setTimeout(finalizeScan, scanDurationMs);
+    // Safety timeout ensuring scan completes comfortably even if TTS is unavailable or blocked on device
+    const fallbackTimer = setTimeout(finalizeScan, soundEnabled ? 16000 : 5000);
 
     return () => {
       clearTimeout(fallbackTimer);
+      if (stopSpeech) stopSpeech();
       clearInterval(progressInterval);
       clearInterval(priceSampleInterval);
     };
@@ -834,43 +836,57 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         style={{ left: `${position.x}px`, top: `${position.y}px` }}
       >
         <div className="relative flex items-center justify-center">
-          {/* 🔲 Modern Square Border Beam Animation (Matching the Square Logo) */}
-          <div className="absolute -inset-1.5 rounded-[20px] pointer-events-none overflow-hidden">
-            <svg className="w-full h-full" viewBox="0 0 76 76" fill="none">
+          {/* 🔲 Continuous Running Square Border Beam Animation (CSS Keyframes + Orbital Ring - Never Freezes) */}
+          <div className="absolute -inset-2.5 rounded-[22px] pointer-events-none flex items-center justify-center">
+            {/* Spinning Neon Beam Ring */}
+            <div className="absolute inset-0 rounded-[22px] pointer-events-none animate-[ishakSpinCW_3.2s_linear_infinite] opacity-80"
+              style={{
+                background: 'conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%)',
+                mask: 'radial-gradient(circle, transparent 65%, black 66%)',
+                WebkitMask: 'radial-gradient(circle, transparent 65%, black 66%)',
+                filter: 'drop-shadow(0 0 8px #00E5FF)',
+              }}
+            />
+            {/* Traveling Square Perimeter Beam SVG */}
+            <svg className="w-full h-full relative z-1" viewBox="0 0 76 76" fill="none">
               <defs>
                 <linearGradient id="widgetSquareGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#00E5FF" stopOpacity="1" />
-                  <stop offset="35%" stopColor="#A855F7" stopOpacity="0.85" />
-                  <stop offset="70%" stopColor="#00FF66" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+                  <stop offset="35%" stopColor="#A855F7" stopOpacity="0.9" />
+                  <stop offset="70%" stopColor="#FF2E54" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#00FF66" stopOpacity="0.5" />
                 </linearGradient>
                 <filter id="widgetSquareGlow" x="-20%" y="-20%" width="140%" height="140%">
                   <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#00E5FF" floodOpacity="0.9" />
                 </filter>
               </defs>
               <rect
-                x="2"
-                y="2"
-                width="72"
-                height="72"
+                x="3"
+                y="3"
+                width="70"
+                height="70"
                 rx="18"
                 ry="18"
                 stroke="rgba(0,229,255,0.25)"
                 strokeWidth="1.5"
               />
               <rect
-                x="2"
-                y="2"
-                width="72"
-                height="72"
+                x="3"
+                y="3"
+                width="70"
+                height="70"
                 rx="18"
                 ry="18"
+                pathLength="100"
                 stroke="url(#widgetSquareGrad)"
-                strokeWidth="2.5"
+                strokeWidth="3"
                 strokeLinecap="round"
-                strokeDasharray="65 190"
-                className="animate-[ishakSquareDash_3.2s_linear_infinite]"
+                strokeDasharray="28 72"
                 filter="url(#widgetSquareGlow)"
+                style={{
+                  strokeDashoffset: 0,
+                  animation: 'ishakSquareDash 2.4s linear infinite',
+                }}
               />
             </svg>
           </div>
@@ -908,21 +924,26 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             <div className="absolute top-0.5 right-0.5 w-2 h-2 border-t-2 border-r-2 border-cyan-300 pointer-events-none" />
             <div className="absolute bottom-0.5 left-0.5 w-2 h-2 border-b-2 border-l-2 border-cyan-300 pointer-events-none" />
             <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b-2 border-r-2 border-cyan-300 pointer-events-none" />
+
+            {/* 🎯 Inner Holographic Status Overlay inside Logo Button (Scanning / Verifying) */}
+            {(isScanning || verifying) && (
+              <div className="absolute inset-0 z-20 bg-[#030617]/88 backdrop-blur-[2px] flex flex-col items-center justify-center pointer-events-none rounded-xl">
+                <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-1" />
+                <span className="text-[7.5px] font-black font-['Orbitron',sans-serif] tracking-wider uppercase text-cyan-300 drop-shadow-[0_0_6px_#00E5FF]">
+                  {verifying ? 'VERIFYING' : 'SCANNING'}
+                </span>
+              </div>
+            )}
           </button>
         </div>
 
-        {/* Small 3D Pill Badge: TradePilot + Timeframe */}
+        {/* 🌟 1. Simple Brand Name: Trade (Sky Blue) + Pilot (Red) - ZERO Background / NO Pill */}
         <div
           onClick={() => setShowHub(true)}
-          className="mt-1 px-2.5 py-0.5 rounded-full bg-[#070D1E]/95 border border-cyan-400/80 flex items-center gap-1.5 shadow-lg shadow-black/90 cursor-pointer hover:border-cyan-300 transition-colors select-none font-['Orbitron',sans-serif]"
+          className="mt-1.5 cursor-pointer select-none font-['Orbitron',sans-serif] text-[11px] font-black tracking-wide flex items-center justify-center leading-none transition-transform hover:scale-105"
         >
-          <span className="text-cyan-300 text-[8.5px] font-black tracking-tight select-none whitespace-nowrap flex items-center gap-1">
-            <span>⚡</span>
-            <span>TradePilot</span>
-          </span>
-          <span className="bg-gradient-to-r from-cyan-400 to-teal-300 text-[#070D1E] text-[7.5px] font-black px-1.5 py-0.5 rounded-full whitespace-nowrap leading-none shadow-[0_0_8px_rgba(0,229,255,0.4)]">
-            {badgeText}
-          </span>
+          <span className="text-[#00E5FF] drop-shadow-[0_0_8px_rgba(0,229,255,0.85)]">Trade</span>
+          <span className="text-[#FF2E54] drop-shadow-[0_0_8px_rgba(255,46,84,0.85)]">Pilot</span>
         </div>
       </div>
 
@@ -1097,29 +1118,29 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   showToast(
                     next === 'ROUND_NUMBER'
-                      ? '✅ SWITCHED TO: TRADEPILOT ROUND CONTROLLER!'
-                      : '✅ SWITCHED TO: TRADEPILOT SCANNER!',
+                      ? '⚡ SWITCHED TO: TP VEX MODE!'
+                      : '✅ SWITCHED TO: TRADEPILOT CONFLUENCE MODE!',
                     false
                   );
                 }}
                 className={`w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${
                   botMode === 'ROUND_NUMBER'
-                    ? 'border-t border-t-amber-400/90 shadow-[0_6px_22px_rgba(245,158,11,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                    ? 'border-t border-t-rose-400/90 shadow-[0_6px_22px_rgba(244,63,94,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
                     : 'border-t border-t-cyan-300/40 hover:border-t-cyan-300/80'
                 }`}
               >
                 <span className="text-gray-100 font-semibold flex items-center gap-2">
-                  <span className="text-base group-hover:scale-110 transition-transform">🔄</span>
-                  <span>SWITCH MODE</span>
+                  <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
+                  <span className="tracking-wide font-['Orbitron',sans-serif] text-[11px]">TP Vex Mode</span>
                 </span>
                 <b
                   className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
                     botMode === 'ROUND_NUMBER'
-                      ? 'text-amber-300 bg-gradient-to-b from-amber-400/25 to-amber-950/70 border-t-amber-300/70'
+                      ? 'text-rose-300 bg-gradient-to-b from-rose-500/30 to-rose-950/80 border-t-rose-400/70'
                       : 'text-cyan-300 bg-gradient-to-b from-cyan-400/20 to-indigo-950/70 border-t-cyan-300/60'
                   }`}
                 >
-                  {botMode === 'ROUND_NUMBER' ? '🎯 ROUND' : '🧠 CONFLUENCE'}
+                  {botMode === 'ROUND_NUMBER' ? '⚡ VEX ON' : 'STANDBY'}
                 </b>
               </button>
 
@@ -1283,19 +1304,19 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* 🔄 8. TRADEPILOT ROUND NUMBER TERMINAL (SWITCH MODE) */}
+      {/* 🔄 8. TRADEPILOT VEX MODE (FORMER SWITCH MODE) */}
       {botMode === 'ROUND_NUMBER' && (
         <IshakRoundNumberTerminal
           isLicenseVerified={Boolean(activeLicense && activeLicense.key && (!activeLicense.exp || activeLicense.exp > Date.now()))}
           onClose={() => {
             setBotMode('CONFLUENCE');
             try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}
-            showToast('✅ SWITCHED TO: CONFLUENCE SCANNER MODE!', false);
+            showToast('✅ SWITCHED TO: TRADEPILOT CONFLUENCE MODE!', false);
           }}
           onSwitchMode={() => {
             setBotMode('CONFLUENCE');
             try { localStorage.setItem('ishak_active_mode', 'CONFLUENCE'); } catch (e) {}
-            showToast('✅ SWITCHED TO: CONFLUENCE SCANNER MODE!', false);
+            showToast('✅ SWITCHED TO: TRADEPILOT CONFLUENCE MODE!', false);
           }}
         />
       )}

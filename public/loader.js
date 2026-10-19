@@ -2156,12 +2156,12 @@ javascript:(function(){
       '68% { transform: translate(-50%, calc(-50% + 18px)); opacity: 1; filter: blur(0px); } ' +
       '100% { transform: translate(-50%, calc(-50% + 75px)); opacity: 0; filter: blur(6px); } ' +
     '}' +
-    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 72px; height: 72px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; border-radius: 50%; }' +
-    '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; }' +
-    '@keyframes ishakOrbitSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
-    '@keyframes ishakOrbitSpinCCW { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }' +
-    '.ishak-orbit-spin-cw { transform-origin: 32px 32px; animation: ishakOrbitSpinCW 3.6s linear infinite; }' +
-    '.ishak-orbit-spin-ccw { transform-origin: 32px 32px; animation: ishakOrbitSpinCCW 2.4s linear infinite; }' +
+    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 72px; height: 72px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; display: flex; align-items: center; justify-content: center; }' +
+    '#ishak-orbital-glow-ring { position: absolute; inset: -3px; border-radius: 20px; pointer-events: none; animation: ishakSpinCW 3.2s linear infinite; background: conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%); mask: radial-gradient(circle, transparent 63%, black 64%); -webkit-mask: radial-gradient(circle, transparent 63%, black 64%); filter: drop-shadow(0 0 8px #00E5FF); }' +
+    '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; position: relative; z-index: 2; }' +
+    '@keyframes ishakSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
+    '@keyframes ishakSquareDash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }' +
+    '.ishak-orbital-beam { animation: ishakSquareDash 2.4s linear infinite !important; }' +
     '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
     '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn6s 6.5s cubic-bezier(0.16, 1, 0.22, 1) forwards; }' +
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
@@ -2314,39 +2314,45 @@ javascript:(function(){
     '<div style="position:absolute;top:2px;left:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-top-left-radius:3px;"></div>' +
     '<div style="position:absolute;top:2px;right:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-top-right-radius:3px;"></div>' +
     '<div style="position:absolute;bottom:2px;left:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-bottom-left-radius:3px;"></div>' +
-    '<div style="position:absolute;bottom:2px;right:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-bottom-right-radius:3px;"></div>';
+    '<div style="position:absolute;bottom:2px;right:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-bottom-right-radius:3px;"></div>' +
+    '<div id="ishak-inner-status" style="position:absolute;inset:0;z-index:25;background:rgba(3,6,23,0.88);backdrop-filter:blur(2px);border-radius:14px;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">' +
+      '<div style="width:14px;height:14px;border:2px solid #00E5FF;border-top-color:transparent;border-radius:50%;animation:ishakSpinClockwise 0.75s linear infinite;margin-bottom:3px;"></div>' +
+      '<span id="ishak-inner-status-text" style="font-family:\'Orbitron\',sans-serif;font-size:7.5px;font-weight:900;letter-spacing:0.8px;color:#00E5FF;text-shadow:0 0 6px #00E5FF;text-transform:uppercase;">SCAN</span>' +
+    '</div>';
   btnBox.appendChild(circleBtn);
 
-  // 🔲 Modern Square Border Beam Animation (Matching the Square Logo)
+  // 🔲 Continuous Running Square Border Beam Animation (Native SVG + Rotating Glow Ring - Never Freezes)
   var orbitalWrap = document.createElement('div');
   orbitalWrap.id = 'ishak-orbital-wrap';
   orbitalWrap.innerHTML =
+    '<div id="ishak-orbital-glow-ring"></div>' +
     '<svg class="ishak-orbital-svg" viewBox="0 0 64 64" fill="none">' +
       '<defs>' +
         '<linearGradient id="ishakSquareGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
           '<stop offset="0%" stop-color="#00E5FF" stop-opacity="1"/>' +
-          '<stop offset="35%" stop-color="#A855F7" stop-opacity="0.85"/>' +
-          '<stop offset="70%" stop-color="#00FF66" stop-opacity="0.6"/>' +
-          '<stop offset="100%" stop-color="transparent" stop-opacity="0"/>' +
+          '<stop offset="35%" stop-color="#A855F7" stop-opacity="0.9"/>' +
+          '<stop offset="70%" stop-color="#FF2E54" stop-opacity="0.8"/>' +
+          '<stop offset="100%" stop-color="#00FF66" stop-opacity="0.5"/>' +
         '</linearGradient>' +
         '<filter id="ishakSquareGlow" x="-20%" y="-20%" width="140%" height="140%">' +
           '<feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#00E5FF" flood-opacity="0.95"/>' +
         '</filter>' +
       '</defs>' +
       '<rect x="3" y="3" width="58" height="58" rx="16" ry="16" stroke="rgba(0,229,255,0.25)" stroke-width="1.5"/>' +
-      '<rect x="3" y="3" width="58" height="58" rx="16" ry="16" stroke="url(#ishakSquareGrad)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="55 160" style="animation:ishakSquareDash 3.2s linear infinite;" filter="url(#ishakSquareGlow)"/>' +
+      '<rect class="ishak-orbital-beam" x="3" y="3" width="58" height="58" rx="16" ry="16" pathLength="100" stroke="url(#ishakSquareGrad)" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="28 72" filter="url(#ishakSquareGlow)" style="stroke-dashoffset:0; animation:ishakSquareDash 2.4s linear infinite;"></rect>' +
     '</svg>';
   btnBox.appendChild(orbitalWrap);
 
-  var pillBadge = document.createElement('div'); pillBadge.id = 'ishak-pill-badge';
-  pillBadge.innerHTML = '<span id="ishak-pill-name">⚡ TradePilot</span><span id="ishak-pill-time">5S</span>';
-  mainWrap.appendChild(pillBadge);
-  var pillName = document.getElementById('ishak-pill-name');
-  var pillTime = document.getElementById('ishak-pill-time');
-  pillBadge.onclick = function(e) {
+  // 🌟 1. Simple Brand Name: Trade (Sky Blue) + Pilot (Red) - ZERO Background / NO Pill
+  var brandNameEl = document.createElement('div');
+  brandNameEl.id = 'ishak-brand-name';
+  brandNameEl.style.cssText = 'margin-top:6px; cursor:pointer; user-select:none; font-family:"Orbitron",sans-serif; font-size:11px; font-weight:900; letter-spacing:0.5px; display:flex; align-items:center; justify-content:center; line-height:1; background:transparent; border:none; box-shadow:none; padding:0;';
+  brandNameEl.innerHTML = '<span style="color:#00E5FF; text-shadow:0 0 8px rgba(0,229,255,0.85);">Trade</span><span style="color:#FF2E54; text-shadow:0 0 8px rgba(255,46,84,0.85);">Pilot</span>';
+  brandNameEl.onclick = function(e) {
     e.stopPropagation();
     showSettingsHub();
   };
+  mainWrap.appendChild(brandNameEl);
 
   function updateInjectBadge() {
     // Hidden from normal screen as requested by user; accessible in Settings Hub & on bot click
@@ -2683,8 +2689,15 @@ javascript:(function(){
       }
       var submitBtn = document.getElementById('k-submit-btn');
       submitBtn.innerText = 'Verifying...';
+      var innerStat = document.getElementById('ishak-inner-status');
+      var innerStatTxt = document.getElementById('ishak-inner-status-text');
+      if (innerStat && innerStatTxt) {
+        innerStatTxt.innerText = 'VERIFYING';
+        innerStat.style.display = 'flex';
+      }
 
       verifyLicenseStatus(val, '').then(function(result) {
+        if (innerStat) innerStat.style.display = 'none';
         if (result && result.valid) {
           saveLocalLicense(val, result.exp, result.duration, '', result.tier);
           inputEl.value = '✅ VIP UNLOCKED!';
@@ -2764,8 +2777,8 @@ javascript:(function(){
       '<button id="hub-btn-autopilot" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.8)' : 'rgba(0,229,255,0.4)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🤖 Auto-Pilot Continuous</span><b style="color:' + (autoPilotMode ? '#00FF66' : '#FFD600') + ';background:' + (autoPilotMode ? 'rgba(0,255,102,0.2)' : 'rgba(255,214,0,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.6)' : 'rgba(255,214,0,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-switch-mode" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
-      '<span style="display:flex;align-items:center;gap:6px;">🔄 Switch Mode</span><b style="color:#00E5FF;background:rgba(0,229,255,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;font-size:10px;">ROUND CTRL ⚡</b>' +
+      '<button id="hub-btn-switch-mode" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(255,46,84,0.6);border-bottom:2px solid #000;border-left:1px solid rgba(255,46,84,0.25);border-right:1px solid rgba(255,46,84,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
+      '<span style="display:flex;align-items:center;gap:6px;">⚡ TP Vex Mode</span><b style="color:#FF2E54;background:rgba(255,46,84,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(255,46,84,0.6);border-bottom:1px solid #000;font-size:10px;">VEX CORE ⚡</b>' +
       '</button>' +
       '<button id="hub-btn-license" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🔑 VIP License Key</span><b style="color:#00E5FF;background:rgba(0,229,255,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;font-size:10px;">' + (local && local.key ? local.key.substring(0, 10) + '..' : 'Verify 🔓') + '</b>' +
@@ -3881,7 +3894,13 @@ javascript:(function(){
       var auraEl = document.getElementById('ishak-logo-aura');
       if (auraEl) auraEl.classList.add('aura-active');
 
-      pillTime.innerText = 'SCAN..';
+      // Inner status banner inside squircle button
+      var innerStat = document.getElementById('ishak-inner-status');
+      var innerStatTxt = document.getElementById('ishak-inner-status-text');
+      if (innerStat) {
+        if (innerStatTxt) innerStatTxt.innerText = 'SCANNING';
+        innerStat.style.display = 'flex';
+      }
 
       // 🎯 Activate Minimalist Round Radar & Clean Telemetry Overlay
       var detectedAssetStr = (function(){
@@ -3897,50 +3916,120 @@ javascript:(function(){
       if (screenScanBox) screenScanBox.classList.add('scanning-active');
       laserEl.classList.add('scanning-active');
 
-      // 🔊 Information-Based Voice System during scan (Zero background SFX/noise)
+      // Pre-evaluate market confluence to decide direction for speech
+      var earlySignal = null;
+      try {
+        earlySignal = evaluateMarketConfluence([], tradeDuration);
+      } catch(e){}
+      var determinedIsCall = (earlySignal && typeof earlySignal.isCall === 'boolean') ? earlySignal.isCall : true;
+      var tradeAction = determinedIsCall ? 'BUY' : 'SELL';
+
+      var cleanMarket = detectedAssetStr.replace(/[\/\-_]/g, ' ').replace(/[()]/g, '').trim();
+      var cleanDur = (tradeDuration || 5) + ' সেকেন্ড';
+
+      // 🔊 Information-Based Sweet Voice System during scan (Zero background noise, sweet melodic voice, slightly faster rate)
+      var voiceFinished = false;
+      var ttsKeepAliveTimer = null;
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         try {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
           window.speechSynthesis.cancel();
-          var cleanMarket = detectedAssetStr.replace(/[\/\-_]/g, ' ').replace(/[()]/g, '').trim();
-          var cleanDur = (tradeDuration || 5) + ' seconds';
+
+          // 🇧🇩 বাংলা মিষ্টি, মায়াবী ও পরিমার্জিত স্ক্রিপ্ট
+          var speechText = 'মার্কেট: ' + cleanMarket + '। সময়: ' + cleanDur + '। মার্কেট বিশ্লেষণ করছি... নিশ্চিন্তে ' + tradeAction + ' ট্রেড করতে পারেন!';
+          var utt = new SpeechSynthesisUtterance(speechText);
+
           var voices = window.speechSynthesis.getVoices();
           var bnVoice = null;
           for (var vi = 0; vi < voices.length; vi++) {
-            if (voices[vi].lang && voices[vi].lang.indexOf('bn') === 0) {
+            var vname = voices[vi].name || '';
+            var vlang = voices[vi].lang || '';
+            if (vlang.indexOf('bn') === 0 && (vname.indexOf('Female') >= 0 || vname.indexOf('Natural') >= 0 || vname.indexOf('Google') >= 0 || vname.indexOf('বাংলা') >= 0 || vname.indexOf('Bangla') >= 0 || vname.indexOf('Neural') >= 0)) {
               bnVoice = voices[vi];
               break;
             }
           }
-          var utt;
-          if (bnVoice) {
-            utt = new SpeechSynthesisUtterance('মার্কেট: ' + cleanMarket + '। ট্রেড সময়: ' + cleanDur + '। চার্ট টাইম: ' + chartTimeStr + '।');
-            utt.voice = bnVoice;
-            utt.rate = 0.90;
-            utt.pitch = 1.1;
-          } else {
-            utt = new SpeechSynthesisUtterance('Market: ' + cleanMarket + '. Duration: ' + cleanDur + '. Chart time: ' + chartTimeStr + '.');
-            var sweetVoice = null;
-            for (var vi = 0; vi < voices.length; vi++) {
-              var vname = voices[vi].name || '';
-              if ((vname.indexOf('Female') >= 0 || vname.indexOf('Natural') >= 0 || vname.indexOf('Google') >= 0 || vname.indexOf('Samantha') >= 0 || vname.indexOf('Zira') >= 0) && voices[vi].lang && voices[vi].lang.indexOf('en') === 0) {
-                sweetVoice = voices[vi];
+          if (!bnVoice) {
+            for (var vi2 = 0; vi2 < voices.length; vi2++) {
+              if (voices[vi2].lang && voices[vi2].lang.indexOf('bn') === 0) {
+                bnVoice = voices[vi2];
                 break;
               }
             }
-            if (sweetVoice) utt.voice = sweetVoice;
-            utt.rate = 0.88;
-            utt.pitch = 1.15;
           }
+          var sweetVoice = null;
+          for (var vi3 = 0; vi3 < voices.length; vi3++) {
+            var vn = voices[vi3].name || '';
+            if ((vn.indexOf('Google UK English Female') >= 0 || vn.indexOf('Natural') >= 0 || vn.indexOf('Samantha') >= 0 || vn.indexOf('Jenny') >= 0 || vn.indexOf('Sonia') >= 0 || vn.indexOf('Aria') >= 0 || vn.indexOf('Victoria') >= 0) && vn.indexOf('Desktop') < 0) {
+              sweetVoice = voices[vi3];
+              break;
+            }
+          }
+          if (!sweetVoice) {
+            for (var vi4 = 0; vi4 < voices.length; vi4++) {
+              if ((voices[vi4].name || '').indexOf('Female') >= 0) {
+                sweetVoice = voices[vi4];
+                break;
+              }
+            }
+          }
+
+          var chosenV = bnVoice || sweetVoice;
+          if (chosenV) {
+            utt.voice = chosenV;
+            utt.lang = (chosenV.lang && chosenV.lang.indexOf('bn') === 0) ? chosenV.lang : 'bn-BD';
+          } else {
+            utt.lang = 'bn-BD';
+          }
+
+          utt.rate = 1.12; // একটু স্পিডে ও পরিমার্জিত
+          utt.pitch = 1.16; // মিষ্টি ও মায়াবী পিচ
           utt.volume = 1.0;
+
+          ttsKeepAliveTimer = setInterval(function() {
+            if (!voiceFinished && window.speechSynthesis.speaking) {
+              window.speechSynthesis.pause();
+              window.speechSynthesis.resume();
+            } else {
+              if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
+            }
+          }, 2000);
+
+          utt.onend = function() {
+            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
+            voiceFinished = true;
+            // Delay slightly so the user absorbs the instruction completely
+            setTimeout(finalizeScan, 300);
+          };
+          utt.onerror = function() {
+            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
+            voiceFinished = true;
+            setTimeout(finalizeScan, 300);
+          };
+
+          window.__ISHAK_TTS_UTT__ = utt;
           window.speechSynthesis.speak(utt);
-        } catch(e){}
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+        } catch(e){
+          if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
+          voiceFinished = true;
+          setTimeout(finalizeScan, 300);
+        }
+      } else {
+        voiceFinished = true;
+        setTimeout(finalizeScan, 5000);
       }
 
       // Smooth percentage counter
       var scanStartTs = Date.now();
+      var scanTotalMs = 7200;
       var progressInterval = setInterval(function() {
         var elapsed = Date.now() - scanStartTs;
-        var pct = Math.min(99, Math.floor((elapsed / 5000) * 100));
+        var pct = Math.min(99, Math.floor((elapsed / scanTotalMs) * 100));
       }, 65);
 
       // Bottom-Left Upward Streaming Telemetry (Strictly left-bound, clean essential info)
@@ -3959,28 +4048,25 @@ javascript:(function(){
       var cTrend = liveCandle ? (Number(liveCandle[5]) >= Number(liveCandle[2]) ? 'Bullish ▲' : 'Bearish ▼') : 'Analyzing';
 
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Market: ' + detectedAssetStr, true);
+        addTelemetryLine('মার্কেট: ' + detectedAssetStr, true);
       }, 50));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Trade Duration: ' + durationStr, true);
+        addTelemetryLine('সময়: ' + durationStr, true);
       }, 350));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Chart Time: ' + chartTimeStr, false);
-      }, 750));
+        addTelemetryLine('মার্কেট বিশ্লেষণ করছি...', false);
+      }, 800));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Live Quote: ' + (initPrice > 50 ? initPrice.toFixed(3) : initPrice.toFixed(5)), false);
-      }, 1200));
+        addTelemetryLine('লাইভ কোট: ' + (initPrice > 50 ? initPrice.toFixed(3) : initPrice.toFixed(5)), false);
+      }, 1500));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Candle Trend: ' + cTrend, false);
-      }, 1700));
+        addTelemetryLine('ক্যান্ডেল ট্রেন্ড: ' + cTrend, false);
+      }, 2200));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Analyzing Market Flow...', false);
-      }, 2300));
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Confirming Signal Entry...', true);
-      }, 3200));
+        addTelemetryLine('নিশ্চিন্তে ' + tradeAction + ' ট্রেড করুন!', true);
+      }, 3400));
 
-      // Real-Time High-Frequency Price Sampler during 5s Scan
+      // Real-Time High-Frequency Price Sampler
       var livePriceSamples = [];
       function sampleFreshScanTick() {
         var p = extractQuotexLivePrice();
@@ -4001,16 +4087,18 @@ javascript:(function(){
       var realInvestment = getLiveQuotexInvestment();
       var realPayout = getLiveQuotexPayout();
 
-      // ⚡ PRE-EVALUATE AND DISPATCH TRADE AT 4100MS TO ABSORB BROKER LATENCY
-      var brokerTradeDispatched = false;
-      var computedSignal = null;
-      var computedIsCall = null;
-
-      function preDispatchQuotexTrade() {
-        if (brokerTradeDispatched) return;
-        brokerTradeDispatched = true;
+      // Finalize scan & execute trade ONLY when voice completes!
+      var scanCompleted = false;
+      function finalizeScan() {
+        if (scanCompleted) return;
+        scanCompleted = true;
 
         if (priceSamplerInterval) clearInterval(priceSamplerInterval);
+        if (progressInterval) clearInterval(progressInterval);
+        for (var ti = 0; ti < telemetryTimeouts.length; ti++) {
+          clearTimeout(telemetryTimeouts[ti]);
+        }
+
         var pFinal = extractQuotexLivePrice();
         if (pFinal) livePriceSamples.push(pFinal);
 
@@ -4021,7 +4109,6 @@ javascript:(function(){
           return;
         }
 
-        var liveExecutionTime = new Date().toLocaleTimeString('en-US', { hour12: true });
         var signalId = 'SIG_' + Date.now() + '_' + (Date.now().toString(36) + performance.now().toFixed(0)).substring(2, 8).toUpperCase();
         var signal = null;
         try {
@@ -4029,73 +4116,32 @@ javascript:(function(){
         } catch(err) {
           if (typeof console !== 'undefined' && console.error) console.error('[TRADEPILOT_ANALYSIS_ERROR]', err);
         }
-        var finalDir = null;
-        if (signal && signal.isTradeApproved && typeof signal.isCall === 'boolean') {
-          finalDir = signal.isCall;
-        } else if (signal && signal.found && typeof signal.isCall === 'boolean') {
-          finalDir = signal.isCall;
+        var finalDir = (signal && typeof signal.isCall === 'boolean') ? signal.isCall : determinedIsCall;
+
+        // ⚡ EXECUTE QUOTEX AUTO TRADE ONLY AFTER VOICE COMPLETES!
+        if (finalDir !== null && typeof finalDir === 'boolean') {
+          executeQuotexTrade(finalDir, signalId);
         }
 
-        var isCall = finalDir;
-        computedSignal = signal;
-        computedIsCall = isCall;
-
-        // ⚡ 1. PRE-DISPATCH LIVE AUTO TRADE AT 4100MS ONLY IF DIRECTION IS VALID & CONFIRMED
-        if (isCall !== null && typeof isCall === 'boolean') {
-          executeQuotexTrade(isCall, signalId);
-        }
-      }
-
-      // ⚡ Fired at 4100ms (~900ms before scan completion to absorb broker network delay)
-      var tradeTimer = setTimeout(preDispatchQuotexTrade, 4100);
-
-      // Cleanly complete scan and present direction at 5000ms
-      setTimeout(function() {
-        if (priceSamplerInterval) clearInterval(priceSamplerInterval);
-        if (progressInterval) clearInterval(progressInterval);
-        clearTimeout(tradeTimer);
-        for (var ti = 0; ti < telemetryTimeouts.length; ti++) {
-          clearTimeout(telemetryTimeouts[ti]);
-        }
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-          try { window.speechSynthesis.cancel(); } catch(e){}
-        }
-
-        preDispatchQuotexTrade();
-
-        var finalIsCall = computedIsCall;
-
+        // Close radar & overlays
         if (screenScanBox) screenScanBox.classList.remove('scanning-active');
         laserEl.classList.remove('scanning-active');
         circleBtn.classList.remove('working-pulse');
-        var auraEl = document.getElementById('ishak-logo-aura');
-        if (auraEl) auraEl.classList.remove('aura-active');
+        var auraEl2 = document.getElementById('ishak-logo-aura');
+        if (auraEl2) auraEl2.classList.remove('aura-active');
+        if (innerStat) innerStat.style.display = 'none';
         isScanning = false;
         updateBadgeLabel();
 
-        // ⚡ SIMULTANEOUSLY SHOW FLY SIGNAL DIRECTION & HIGHLIGHT TARGET CANDLE ONLY IF VALID DIRECTION
-        if (typeof finalIsCall === 'boolean') {
-          showFlySignalAnimation(finalIsCall ? 'UP' : 'DOWN');
-          highlightRunningCandleTarget(finalIsCall ? 'UP' : 'DOWN');
-          if (pillTime) {
-            pillTime.innerText = finalIsCall ? 'CALL ⬆' : 'PUT ⬇';
-            pillTime.style.color = finalIsCall ? '#00FF66' : '#FF1744';
-            setTimeout(function() {
-              updateBadgeLabel();
-              if (pillTime) pillTime.style.color = '';
-            }, 3000);
-          }
-
-          // ⚡ SIMULTANEOUSLY PLAY CONFIRMATION AUDIO
-          playResultSound(finalIsCall);
-        } else {
-          if (pillTime) pillTime.innerText = 'NO SIG ⏸';
+        // Present BUY/SELL Signal without any background frame
+        if (typeof finalDir === 'boolean') {
+          showFlySignalAnimation(finalDir ? 'UP' : 'DOWN');
+          highlightRunningCandleTarget(finalDir ? 'UP' : 'DOWN');
         }
 
         if (hudPanel) hudPanel.style.display = 'none';
 
         if (autoPilotMode) {
-          pillTime.innerText = 'AUTO 🤖';
           if (autoPilotTimer) clearTimeout(autoPilotTimer);
           var nextWaitMs = ((tradeDuration || 60) * 1000) + 3000;
           autoPilotTimer = setTimeout(function() {
@@ -4104,7 +4150,10 @@ javascript:(function(){
             }
           }, nextWaitMs);
         }
-      }, 5000);
+      }
+
+      // Safety fallback timer ensuring scan finishes if speech synthesis is completely blocked on device
+      setTimeout(finalizeScan, 16000);
     });
   }
 
@@ -4585,12 +4634,11 @@ javascript:(function(){
       });
       window.WebSocket = HookedWS;
 
-      // 🏷️ BOT NAME & LOGO INTEGRATION (As requested by user: TRADEPILOT VIP)
-      var APP = "TRADEPILOT VIP";
+      // 🏷️ BOT NAME & LOGO INTEGRATION: TP Vex Mode / TradePilot Vex
+      var APP = "TradePilot Vex";
       var LOGO_IMG_SRC = LOGO_URL || "https://i.ibb.co/qLkRtpxt/file-441.jpg";
 
       // 🔐 LICENSE INTEGRATION: Automatically authorized from verified bot license!
-      // (Trader ID verification removed as requested!)
       var access = { traderId: (getLocalLicense() && getLocalLicense().traderId) || "VIP", expiresAt: "2099-01-01" };
       var UI_ROUND_KEY = "qxzr_round_ui";
       var uiRound = { fakeTarget: "", fakeSeconds: 5 };
@@ -4603,102 +4651,64 @@ javascript:(function(){
         "<style>" +
         ":host{all:initial}" +
         "*{box-sizing:border-box}" +
-        ".fab{position:fixed;z-index:2147483647;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:grab;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;pointer-events:auto}" +
-        ".fab.away .frame,.fab.away .plate{opacity:0;visibility:hidden;pointer-events:none}" +
-        ".fab.away{pointer-events:auto}" +
-        ".fab.pop .frame{animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}" +
-        ".fab.pop .plate{animation:rowIn .45s .12s cubic-bezier(.2,.8,.2,1) both}" +
+        ".fab{position:fixed;z-index:2147483647;display:flex;flex-direction:column;align-items:center;cursor:grab;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;pointer-events:auto}" +
+        ".fab.away{opacity:0;visibility:hidden;pointer-events:none}" +
         ".fab.dragging{cursor:grabbing}" +
         "img{pointer-events:none;-webkit-user-drag:none;user-select:none}" +
-        ".frame{position:relative;width:64px;height:64px}" +
-        ".tile{position:absolute;inset:0;border-radius:16px;overflow:hidden;background:#050c22;border:1.5px solid rgba(56,189,248,.95);box-shadow:0 10px 26px rgba(0,0,0,.55),0 0 18px rgba(30,144,255,.55);animation:pulse 2.4s ease-in-out infinite}" +
-        ".tile img{width:100%;height:100%;object-fit:cover;transform:scale(1.14);display:block}" +
-        ".scan{position:absolute;left:0;right:0;top:-40%;height:40%;background:linear-gradient(transparent,rgba(125,211,252,.38),transparent);animation:scan 2.8s linear infinite;pointer-events:none}" +
-        ".k{position:absolute;width:12px;height:12px;border:2px solid #38bdf8;filter:drop-shadow(0 0 4px rgba(56,189,248,.9));pointer-events:none}" +
-        ".k1{left:-6px;top:-6px;border-right:0;border-bottom:0;border-top-left-radius:5px}" +
-        ".k2{right:-6px;top:-6px;border-left:0;border-bottom:0;border-top-right-radius:5px}" +
-        ".k3{left:-6px;bottom:-6px;border-right:0;border-top:0;border-bottom-left-radius:5px}" +
-        ".k4{right:-6px;bottom:-6px;border-left:0;border-top:0;border-bottom-right-radius:5px}" +
-        ".plate{padding:4px 8px;border-radius:7px;background:linear-gradient(180deg,rgba(15,26,60,.92),rgba(5,10,26,.92));border:1px solid rgba(56,189,248,.35);box-shadow:0 0 10px rgba(30,144,255,.25)}" +
-        ".name{position:relative;display:block;text-transform:uppercase;font:800 11px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 8px rgba(56,189,248,.85)}" +
-        ".fab.live .tile{border-color:#34d399}" +
-        ".fab.running .tile{animation-duration:.9s;border-color:#34d399}" +
-        ".tile .dot{position:absolute;right:5px;top:5px;width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;display:none;pointer-events:none}" +
-        ".fab.running .tile .dot{display:block;animation:blink 1s steps(2) infinite}" +
-        ".panel{position:fixed;z-index:2147483646;width:min(340px,calc(100vw - 24px));padding:16px 14px 14px;border-radius:18px;color:#e6eefc;font:13px/1.45 Segoe UI,system-ui,sans-serif;transform-origin:0 0;pointer-events:auto;" +
-        "background:radial-gradient(120% 70% at 50% -12%,rgba(37,99,235,.38),transparent 62%),linear-gradient(165deg,rgba(12,21,50,.97),rgba(4,8,22,.98));" +
-        "border:1px solid rgba(96,165,250,.38);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 22px 50px rgba(0,0,0,.6),0 0 30px rgba(30,144,255,.32);overflow:hidden;user-select:none;-webkit-user-select:none}" +
+        ".vex-crest{position:relative;width:56px;height:56px;border-radius:18px;overflow:hidden;background:#050c22;border:2px solid #00e5ff;box-shadow:0 10px 28px rgba(0,0,0,.9),0 0 20px rgba(0,229,255,.45);transition:all .25s;display:flex;align-items:center;justify-content:center}" +
+        ".vex-crest img{width:100%;height:100%;object-fit:cover;display:block}" +
+        ".vex-crest .dot{position:absolute;right:5px;top:5px;width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;pointer-events:none}" +
+        ".fab.running .vex-crest{border-color:#ff2e54;box-shadow:0 10px 28px rgba(0,0,0,.9),0 0 28px #ff2e54;animation:pulse 1.2s ease-in-out infinite}" +
+        ".fab.running .vex-crest .dot{background:#ff2e54;box-shadow:0 0 10px #ff2e54;animation:blink 1s steps(2) infinite}" +
+        ".vex-tag{margin-top:4px;padding:2px 7px;border-radius:999px;background:linear-gradient(90deg,#00e5ff,#0088cc);color:#020617;font:900 8px monospace;letter-spacing:.8px;box-shadow:0 0 8px rgba(0,229,255,.6);text-transform:uppercase}" +
+        ".fab.running .vex-tag{background:linear-gradient(90deg,#ff2e54,#ff5e7e);color:#fff;box-shadow:0 0 8px #ff2e54}" +
+        ".panel{position:fixed;z-index:2147483646;width:min(320px,calc(100vw - 20px));padding:14px;border-radius:20px;color:#e6eefc;font:12px/1.4 system-ui,-apple-system,sans-serif;transform-origin:0 0;pointer-events:auto;" +
+        "background:linear-gradient(165deg,rgba(8,14,36,.98) 0%,rgba(4,7,20,.99) 100%);border:1.5px solid rgba(0,229,255,.4);box-shadow:0 25px 60px rgba(0,0,0,.95),0 0 35px rgba(0,229,255,.25);overflow:hidden;user-select:none;-webkit-user-select:none}" +
         ".panel[hidden]{display:none}" +
-        ".sweep{position:absolute;left:0;right:0;top:0;height:2px;opacity:0;pointer-events:none;background:linear-gradient(90deg,transparent,#7dd3fc,#fff,#7dd3fc,transparent);box-shadow:0 0 14px 3px rgba(56,189,248,.8)}" +
-        ".panel.morphing .sweep{animation:sweep .62s linear both}" +
-        ".panel.morphing .row{opacity:0}" +
-        ".panel.boot .row{animation:rowIn .42s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--d)*60ms)}" +
-        ".row{position:relative}" +
-        ".grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(96,165,250,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,.07) 1px,transparent 1px);background-size:16px 16px;-webkit-mask-image:linear-gradient(#000,transparent 85%);mask-image:linear-gradient(#000,transparent 85%)}" +
-        ".pk{position:absolute;width:14px;height:14px;border:2px solid rgba(56,189,248,.85);pointer-events:none}" +
-        ".pk1{left:8px;top:8px;border-right:0;border-bottom:0}" +
-        ".pk2{right:8px;top:8px;border-left:0;border-bottom:0}" +
-        ".pk3{left:8px;bottom:8px;border-right:0;border-top:0}" +
-        ".pk4{right:8px;bottom:8px;border-left:0;border-top:0}" +
-        ".head{position:relative;display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:grab;touch-action:none}" +
+        ".top-strip{height:2px;width:calc(100% + 28px);margin:-14px -14px 12px;background:linear-gradient(90deg,#00e5ff,#a855f7,#ff2e54);box-shadow:0 0 10px #00e5ff}" +
+        ".head{display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:grab;touch-action:none;padding-bottom:10px;border-bottom:1px solid rgba(0,229,255,.18)}" +
         ".head.dragging{cursor:grabbing}" +
-        ".mini{width:42px;height:42px;border-radius:12px;overflow:hidden;border:1.5px solid rgba(56,189,248,.9);flex:none;cursor:pointer}" +
-        ".mini img{width:100%;height:100%;object-fit:cover;transform:scale(1.14)}" +
-        ".ttl{font:800 16px/1 Segoe UI,system-ui,sans-serif;letter-spacing:.12em;color:#e6f4ff;text-shadow:0 0 8px rgba(56,189,248,.85)}" +
-        ".sub{margin-top:5px;font-size:10px;font-weight:700;letter-spacing:.18em;color:rgba(125,211,252,.7)}" +
-        ".chip{margin-left:auto;padding:4px 8px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.14em;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
+        ".mini{width:34px;height:34px;border-radius:10px;overflow:hidden;border:1.5px solid #00e5ff;box-shadow:0 0 10px rgba(0,229,255,.4);flex:none;cursor:pointer}" +
+        ".mini img{width:100%;height:100%;object-fit:cover}" +
+        ".ttl{font:900 13px/1 'Orbitron',sans-serif;letter-spacing:.5px;display:flex;align-items:center;gap:5px}" +
+        ".ttl-t{color:#00e5ff;text-shadow:0 0 8px rgba(0,229,255,.8)}" +
+        ".ttl-p{color:#ff2e54;text-shadow:0 0 8px rgba(255,46,84,.8)}" +
+        ".ttl-v{font-size:8.5px;font-weight:900;padding:1px 5px;border-radius:5px;background:linear-gradient(135deg,#ff2e54,#8b0029);color:#fff;letter-spacing:.5px;font-family:monospace;box-shadow:0 0 8px rgba(255,46,84,.5)}" +
+        ".sub{margin-top:3px;font-size:8px;font-weight:800;letter-spacing:.8px;color:#94a3b8;text-transform:uppercase}" +
+        ".head-ctrls{margin-left:auto;display:flex;align-items:center;gap:5px}" +
+        ".std-btn{padding:4px 8px;border-radius:7px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.35);color:#00e5ff;font:800 8.5px monospace;cursor:pointer}" +
+        ".chip{padding:3px 6px;border-radius:999px;font-size:8px;font-weight:800;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
         ".chip.live{color:#052e1c;border-color:transparent;background:linear-gradient(135deg,#34d399,#22d3ee)}" +
-        "p{position:relative;margin:0}" +
-        ".hint{color:#8ea0bf}" +
-        "label{position:relative;display:block;margin:10px 0 6px;color:#8ea0bf;font-size:11px;font-weight:700;letter-spacing:.08em}" +
-        "input{position:relative;width:100%;color:#e6eefc;font:16px Segoe UI,system-ui,sans-serif;letter-spacing:.14em;text-align:center;padding:11px 12px;border-radius:10px;background:rgba(2,6,23,.65);border:1px solid rgba(96,165,250,.24);outline:none}" +
-        "input:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.18)}" +
-        "button,.link{position:relative;display:flex;align-items:center;justify-content:center;width:100%;margin-top:10px;padding:11px 0;border-radius:12px;border:1px solid rgba(255,255,255,.18);color:#fff;background:linear-gradient(135deg,#2563eb,#06b6d4);font:800 13px Segoe UI,system-ui,sans-serif;letter-spacing:.06em;text-decoration:none;cursor:pointer}" +
-        "button:disabled{opacity:.45;cursor:wait}" +
-        ".card{display:flex;flex-direction:column;gap:6px;padding:9px 11px;border-radius:12px;margin-top:4px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(148,163,184,.16)}" +
-        ".cap{font-size:8.5px;font-weight:700;letter-spacing:.2em;color:#64748b}" +
-        ".line{display:flex;align-items:center;justify-content:space-between;gap:8px}" +
-        ".market{flex:1;min-width:0;font-weight:800;font-size:14px;color:#7dd3fc;text-shadow:0 0 10px rgba(56,189,248,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}" +
-        ".run-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:999px;font-size:8px;font-weight:800;letter-spacing:.12em;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
-        ".run-chip.live{color:#052e1c;border-color:transparent;background:linear-gradient(135deg,#34d399,#22d3ee)}" +
-        ".run-dot{width:6px;height:6px;border-radius:50%;background:currentColor}" +
-        "input.round-in{text-align:left;font-size:13px;letter-spacing:normal;font-variant-numeric:tabular-nums;padding:8px 10px}" +
-        ".btn-row{display:flex;gap:8px;margin-top:14px}" +
-        ".btn-row button{flex:1;margin-top:0;font:800 12.5px Segoe UI,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}" +
-        ".btn-row .start{color:#fff;border:1px solid rgba(255,255,255,.18);background:linear-gradient(135deg,#2563eb,#06b6d4);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 20px rgba(37,99,235,.45)}" +
-        ".btn-row .stop{color:#fca5a5;background:rgba(239,68,68,.1);border:1px solid rgba(248,113,113,.45)}" +
-        ".btn-row button:disabled{opacity:.32;cursor:default}" +
-        ".normal-back-btn{margin-top:10px;padding:9px 0;border-radius:10px;background:linear-gradient(180deg,rgba(15,23,42,0.9),rgba(2,6,23,0.95));border:1px solid rgba(56,189,248,0.35);color:#7dd3fc;font:800 11.5px Segoe UI,sans-serif;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.5);}" +
+        ".min-btn{width:22px;height:22px;border-radius:7px;background:rgba(15,23,42,.8);border:1px solid rgba(255,255,255,.12);color:#94a3b8;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}" +
+        ".hud-card{background:rgba(4,9,24,.85);border:1px solid rgba(0,229,255,.25);border-radius:12px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}" +
+        ".hud-lbl{font-size:7.5px;color:#64748b;font-weight:800;letter-spacing:.8px;text-transform:uppercase}" +
+        ".hud-asset{font-size:12px;font-weight:900;color:#00e5ff;text-shadow:0 0 10px rgba(0,229,255,.4)}" +
+        ".hud-quote{font-size:12px;font-weight:800;color:#fff;font-family:monospace}" +
+        ".mod-hdr{display:flex;justify-content:space-between;align-items:center;margin:6px 0 3px}" +
+        ".mod-lbl{font-size:8.5px;font-weight:800;color:#94a3b8;letter-spacing:.6px;text-transform:uppercase}" +
+        ".auto-btn{font-size:8px;color:#00e5ff;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);border-radius:6px;padding:2px 6px;cursor:pointer;font-weight:700}" +
+        ".step-row{display:flex;gap:4px}" +
+        ".step-btn{width:32px;background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#94a3b8;font-weight:900;font-size:13px;cursor:pointer}" +
+        ".step-in{flex:1;background:#040715;border:1.5px solid rgba(0,229,255,.35);border-radius:8px;padding:7px 10px;color:#fff;font-size:13px;font-weight:800;font-family:monospace;text-align:center;outline:none}" +
+        ".chips-row{display:flex;gap:4px;margin-top:3px}" +
+        ".chip-btn{flex:1;padding:5px 0;text-align:center;background:rgba(11,18,38,.85);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;font-size:9px;font-weight:900;cursor:pointer;font-family:monospace;transition:all .15s}" +
+        ".chip-btn.active{background:linear-gradient(135deg,#00e5ff,#0088cc);border-color:#00e5ff;color:#040818}" +
+        ".prog-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-top:4px}" +
+        ".prog-fill{height:100%;background:linear-gradient(90deg,#ff2e54,#00e5ff);transition:width 1s linear}" +
+        ".action-btn-main{width:100%;margin-top:10px;padding:11px 0;border-radius:10px;border:none;font-weight:900;font-size:11.5px;cursor:pointer;letter-spacing:.8px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .15s}" +
+        ".action-btn-start{background:linear-gradient(135deg,#00e5ff 0%,#0284c7 100%);color:#030718;box-shadow:0 6px 20px rgba(0,229,255,.45)}" +
+        ".action-btn-stop{background:linear-gradient(135deg,rgba(255,46,84,.25),rgba(139,0,41,.4));color:#fff;border:1.5px solid #ff2e54;box-shadow:0 0 20px rgba(255,46,84,.5)}" +
+        ".back-std-link{margin-top:8px;padding:7px 0;border-radius:8px;background:rgba(15,23,42,.7);border:1px solid rgba(0,229,255,.25);color:#7dd3fc;font:800 10px system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;text-align:center;width:100%}" +
         "@keyframes blink{50%{opacity:.25}}" +
-        "@keyframes pulse{50%{box-shadow:0 0 24px 4px rgba(56,189,248,.85)}}" +
-        "@keyframes scan{to{top:110%}}" +
-        "@keyframes sweep{0%{top:0;opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}" +
-        "@keyframes pop{0%{transform:scale(.2) rotate(-8deg);opacity:0;filter:brightness(2.2)}60%{transform:scale(1.12) rotate(2deg);opacity:1}100%{transform:none;filter:none}}" +
-        "@keyframes rowIn{0%{opacity:0;transform:translateY(7px);filter:blur(3px)}45%{opacity:1;transform:translateX(-3px);filter:none}65%{transform:translateX(2px)}100%{opacity:1;transform:none}}" +
-        "@media (max-width:480px){" +
-        ".panel{width:min(248px,calc(100vw - 20px));padding:10px 10px 10px;border-radius:14px;font-size:11px;line-height:1.35}" +
-        ".head{gap:8px;margin-bottom:6px}" +
-        ".mini{width:34px;height:34px;border-radius:10px}" +
-        ".ttl{font-size:13px}" +
-        ".sub{margin-top:3px;font-size:8px;letter-spacing:.14em}" +
-        ".chip{padding:3px 6px;font-size:8px}" +
-        "label{margin:6px 0 4px;font-size:10px}" +
-        "input{padding:8px 10px;font-size:14px}" +
-        "input.round-in{padding:7px 8px;font-size:12px}" +
-        ".card{padding:7px 9px;gap:4px;margin-top:0}" +
-        ".market{font-size:12px}" +
-        ".cap{font-size:7.5px}" +
-        ".btn-row{margin-top:10px;gap:6px}" +
-        ".btn-row button{padding:8px 0;font-size:11px}" +
-        "button,.link{padding:9px 0;font-size:12px;margin-top:8px}" +
-        "}" +
+        "@keyframes pulse{50%{box-shadow:0 0 24px 4px rgba(255,46,84,.85)}}" +
         "</style>" +
         '<div class="fab" title="' + APP + '">' +
-        '<div class="frame"><div class="tile"><img alt="" draggable="false"><i class="scan"></i><i class="dot"></i></div><i class="k k1"></i><i class="k k2"></i><i class="k k3"></i><i class="k k4"></i></div>' +
-        '<div class="plate"><span class="name">' + APP + "</span></div></div>" +
+        '<div class="vex-crest"><img alt="" draggable="false"><i class="dot"></i></div>' +
+        '<div class="vex-tag"><span>TP VEX</span></div></div>' +
         '<div class="panel" hidden>' +
-        '<div class="grid"></div><i class="sweep"></i><i class="pk pk1"></i><i class="pk pk2"></i><i class="pk pk3"></i><i class="pk pk4"></i>' +
-        '<div class="head row" style="--d:0"><div class="mini" title="ছোট করুন"><img alt="" draggable="false"></div><div><div class="ttl">' + APP + '</div><div class="sub">ROUND CONTROL · CORE</div></div><span class="chip">IDLE</span></div>' +
+        '<div class="top-strip"></div>' +
+        '<div class="head row" style="--d:0"><div class="mini" title="Minimize"><img alt="" draggable="false"></div><div><div class="ttl"><span class="ttl-t">Trade</span><span class="ttl-p">Pilot</span> <span class="ttl-v">VEX</span></div><div class="sub">TP VEX CONTROL ENGINE</div></div>' +
+        '<div class="head-ctrls"><button class="std-btn" type="button" title="Back to Standard TradePilot">↩ STD</button><span class="chip">IDLE</span><button class="min-btn" type="button" title="Minimize">—</button></div></div>' +
         '<div class="body"></div></div>';
 
       var $ = function (sel) { return root.querySelector(sel); };
@@ -4826,103 +4836,160 @@ javascript:(function(){
 
       function updateRoundBtns(toolEls) {
         if (!toolEls) return;
-        toolEls.start.disabled = fakeRunning;
-        toolEls.stop.disabled = !fakeRunning;
         fab.classList.toggle("running", !!access && fakeRunning);
-        if (toolEls.runChip) toolEls.runChip.classList.toggle("live", fakeRunning);
-        if (toolEls.runChipText) toolEls.runChipText.textContent = fakeRunning ? "LIVE" : "IDLE";
+        if (toolEls.actionBtn) {
+          if (fakeRunning) {
+            toolEls.actionBtn.textContent = "⏹ STOP & REVERT PRICE";
+            toolEls.actionBtn.className = "action-btn-main action-btn-stop";
+          } else {
+            toolEls.actionBtn.textContent = "⚡ START VEX TRAVEL";
+            toolEls.actionBtn.className = "action-btn-main action-btn-start";
+          }
+        }
       }
 
       function renderActive() {
         clear(body);
         setLive(true);
         var sub = $(".sub");
-        if (sub) sub.textContent = "ROUND CONTROL · CORE";
+        if (sub) sub.textContent = "TP VEX CONTROL ENGINE";
 
-        var card = el("div", "card");
-        var line1 = el("div", "line");
-        line1.appendChild(el("span", "cap", "MARKET"));
-        var runChip = el("span", "run-chip");
-        runChip.appendChild(el("i", "run-dot"));
-        var runChipText = el("b", "run-chip-t", "IDLE");
-        runChip.appendChild(runChipText);
-        line1.appendChild(runChip);
-        card.appendChild(line1);
-        var line2 = el("div", "line");
-        var market = el("div", "market", state.asset ? fmtAsset(state.asset) : "Waiting for data…");
-        line2.appendChild(market);
-        card.appendChild(line2);
-        body.appendChild(card);
+        // 1. HUD Card: Market Asset & Live Quote
+        var hudCard = el("div", "hud-card");
+        var hudLeft = el("div", "");
+        hudLeft.appendChild(el("div", "hud-lbl", "MARKET ASSET"));
+        var marketEl = el("div", "hud-asset", state.asset ? fmtAsset(state.asset) : (extractQuotexPair() || "USD/BDT (OTC)"));
+        hudLeft.appendChild(marketEl);
+        hudCard.appendChild(hudLeft);
 
-        body.appendChild(el("label", "", "Round নম্বর"));
-        var fTarget = el("input", "round-in f-target");
+        var hudRight = el("div", "");
+        hudRight.style.textAlign = "right";
+        hudRight.appendChild(el("div", "hud-lbl", "● LIVE QUOTE"));
+        var curP = state.lastTick ? state.lastTick.price : (extractQuotexLivePrice() || 122.348);
+        var quoteEl = el("div", "hud-quote", curP > 50 ? curP.toFixed(curP > 500 ? 2 : 3) : curP.toFixed(5));
+        hudRight.appendChild(quoteEl);
+        hudCard.appendChild(hudRight);
+        body.appendChild(hudCard);
+
+        // 2. Target Round Number Stepper Module
+        var targetHdr = el("div", "mod-hdr");
+        targetHdr.appendChild(el("span", "mod-lbl", "TARGET ROUND PRICE"));
+        var autoBtn = el("button", "auto-btn", "🎯 Auto Snap");
+        autoBtn.type = "button";
+        targetHdr.appendChild(autoBtn);
+        body.appendChild(targetHdr);
+
+        var stepRow = el("div", "step-row");
+        var minusBtn = el("button", "step-btn", "–");
+        minusBtn.type = "button";
+        var fTarget = el("input", "step-in f-target");
         fTarget.type = "number";
         fTarget.step = "any";
-        fTarget.placeholder = "যেমন 1.2345";
+        fTarget.placeholder = "e.g. " + (curP > 50 ? curP.toFixed(2) : curP.toFixed(4));
         fTarget.value = uiRound.fakeTarget == null ? "" : String(uiRound.fakeTarget);
-        body.appendChild(fTarget);
+        var plusBtn = el("button", "step-btn", "+");
+        plusBtn.type = "button";
 
-        body.appendChild(el("label", "", "সময় (সেকেন্ড)"));
-        var fSec = el("input", "round-in f-sec");
-        fSec.type = "number";
-        fSec.step = "1";
-        fSec.min = "1";
-        fSec.placeholder = "5";
-        fSec.value = uiRound.fakeSeconds == null ? "" : String(uiRound.fakeSeconds);
-        body.appendChild(fSec);
+        stepRow.appendChild(minusBtn);
+        stepRow.appendChild(fTarget);
+        stepRow.appendChild(plusBtn);
+        body.appendChild(stepRow);
 
-        var btns = el("div", "btn-row");
-        var startBtn = el("button", "start", "Start");
-        startBtn.type = "button";
-        var stopBtn = el("button", "stop", "Stop");
-        stopBtn.type = "button";
-        btns.appendChild(startBtn);
-        btns.appendChild(stopBtn);
-        body.appendChild(btns);
+        // 3. Duration & Chip Selectors
+        var durHdr = el("div", "mod-hdr");
+        durHdr.appendChild(el("span", "mod-lbl", "DURATION (SECONDS)"));
+        var timerDisplay = el("span", "mod-lbl", "[" + (uiRound.fakeSeconds || 5) + "s READY]");
+        timerDisplay.style.color = "#00e5ff";
+        durHdr.appendChild(timerDisplay);
+        body.appendChild(durHdr);
 
-        // Option to switch back to normal bot mode
-        var backBtn = el("button", "normal-back-btn", "↩ Back to Normal Bot");
+        var chipsRow = el("div", "chips-row");
+        var chipSecs = [5, 6, 10, 15, 30, 60];
+        var chipBtns = [];
+        chipSecs.forEach(function(sec) {
+          var cb = el("button", "chip-btn" + (Number(uiRound.fakeSeconds) === sec ? " active" : ""), sec + "s");
+          cb.type = "button";
+          cb.onclick = function() {
+            uiRound.fakeSeconds = sec;
+            saveRoundUi();
+            chipBtns.forEach(function(b) { b.classList.remove("active"); });
+            cb.classList.add("active");
+            timerDisplay.textContent = "[" + sec + "s READY]";
+            if (fakeRunning) fake.seconds = sec;
+          };
+          chipBtns.push(cb);
+          chipsRow.appendChild(cb);
+        });
+        body.appendChild(chipsRow);
+
+        // 4. Main Tactical Action Button
+        var actionBtn = el("button", "action-btn-main action-btn-start", "⚡ START VEX TRAVEL");
+        actionBtn.type = "button";
+        body.appendChild(actionBtn);
+
+        // 5. Back to Standard TradePilot Link
+        var backBtn = el("button", "back-std-link", "↩ RETURN TO TRADEPILOT");
         backBtn.type = "button";
         body.appendChild(backBtn);
 
         var toolEls = {
-          market: market,
+          market: marketEl,
+          quote: quoteEl,
           fTarget: fTarget,
-          fSec: fSec,
-          start: startBtn,
-          stop: stopBtn,
-          runChip: runChip,
-          runChipText: runChipText,
+          actionBtn: actionBtn,
         };
         body._qxToolEls = toolEls;
+
+        // Auto snap logic
+        autoBtn.onclick = function() {
+          var p = state.lastTick ? state.lastTick.price : (extractQuotexLivePrice() || 122.348);
+          var snapped = p > 50 ? (Math.round(p * 2) / 2).toFixed(2) : (Math.round(p * 1000) / 1000).toFixed(4);
+          fTarget.value = snapped;
+          uiRound.fakeTarget = snapped;
+          saveRoundUi();
+        };
+
+        minusBtn.onclick = function() {
+          var val = parseFloat(fTarget.value) || (state.lastTick ? state.lastTick.price : 122.348);
+          var step = val > 50 ? 0.1 : 0.001;
+          var newVal = Math.max(0.0001, val - step);
+          fTarget.value = val > 50 ? newVal.toFixed(2) : newVal.toFixed(4);
+          uiRound.fakeTarget = fTarget.value;
+          saveRoundUi();
+          if (fakeRunning) startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+        };
+
+        plusBtn.onclick = function() {
+          var val = parseFloat(fTarget.value) || (state.lastTick ? state.lastTick.price : 122.348);
+          var step = val > 50 ? 0.1 : 0.001;
+          var newVal = val + step;
+          fTarget.value = val > 50 ? newVal.toFixed(2) : newVal.toFixed(4);
+          uiRound.fakeTarget = fTarget.value;
+          saveRoundUi();
+          if (fakeRunning) startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+        };
 
         fTarget.addEventListener("input", function () {
           uiRound.fakeTarget = fTarget.value;
           saveRoundUi();
           if (fakeRunning) startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
         });
-        fSec.addEventListener("input", function () {
-          uiRound.fakeSeconds = fSec.value;
-          saveRoundUi();
-          if (fakeRunning) fake.seconds = Math.max(0.2, Number(uiRound.fakeSeconds) || 5);
-        });
-        startBtn.addEventListener("click", function () {
-          if (fakeRunning) return;
-          var t = Number(uiRound.fakeTarget);
-          if (!uiRound.fakeTarget || !isFinite(t)) {
-            fTarget.focus();
-            return;
+
+        actionBtn.addEventListener("click", function () {
+          if (!fakeRunning) {
+            var t = Number(uiRound.fakeTarget);
+            if (!uiRound.fakeTarget || !isFinite(t)) {
+              autoBtn.click();
+            }
+            fakeRunning = true;
+            startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+          } else {
+            fakeRunning = false;
+            stopFake();
           }
-          fakeRunning = true;
-          startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
           updateRoundBtns(toolEls);
         });
-        stopBtn.addEventListener("click", function () {
-          if (!fakeRunning) return;
-          fakeRunning = false;
-          stopFake();
-          updateRoundBtns(toolEls);
-        });
+
         backBtn.addEventListener("click", function() {
           closePanel();
           switchToNormalBotMode();

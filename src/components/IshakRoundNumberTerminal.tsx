@@ -23,7 +23,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
     const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
     const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-    const termW = winW <= 600 ? 236 : 304;
+    const termW = winW <= 600 ? 250 : 310;
     return {
       x: Math.max(10, Math.min(winW - termW - 10, 20)),
       y: Math.max(12, Math.min(winH - 460, 60)),
@@ -61,7 +61,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     const handleResize = () => {
       const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
       const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-      const termW = winW <= 600 ? 236 : 304;
+      const termW = winW <= 600 ? 250 : 310;
       const maxX = Math.max(6, winW - termW - 6);
       const maxY = Math.max(6, winH - 100);
       setPosition((prev) => ({
@@ -112,6 +112,15 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     setInputError(false);
   };
 
+  // Quick adjust round price by delta
+  const adjustRoundPrice = (delta: number) => {
+    const base = parseFloat(roundPriceInput) || currentPrice;
+    const decimals = currentPrice > 50 ? (currentPrice > 500 ? 2 : 3) : 5;
+    const nextVal = Math.max(0, base + delta);
+    setRoundPriceInput(nextVal.toFixed(decimals));
+    setInputError(false);
+  };
+
   // Dragging event handlers (bounded strictly to viewport)
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
@@ -143,8 +152,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       const dy = e.clientY - dragRef.current.startY;
       const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
       const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-      const curW = isMinimized ? 48 : (winW <= 600 ? 236 : 304);
-      const curH = isMinimized ? 48 : 390;
+      const curW = isMinimized ? 52 : (winW <= 600 ? 250 : 310);
+      const curH = isMinimized ? 52 : 400;
       const maxX = Math.max(6, winW - curW - 6);
       const maxY = Math.max(6, winH - curH - 6);
 
@@ -161,8 +170,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       const dy = t.clientY - dragRef.current.startY;
       const winW = typeof window !== 'undefined' ? window.innerWidth : 360;
       const winH = typeof window !== 'undefined' ? window.innerHeight : 640;
-      const curW = isMinimized ? 48 : (winW <= 600 ? 236 : 304);
-      const curH = isMinimized ? 48 : 390;
+      const curW = isMinimized ? 52 : (winW <= 600 ? 250 : 310);
+      const curH = isMinimized ? 52 : 400;
       const maxX = Math.max(6, winW - curW - 6);
       const maxY = Math.max(6, winH - curH - 6);
 
@@ -200,7 +209,6 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
   /**
    * START BUTTON:
-   * "switch mode এ নাম্বার বসিয়ে start দিলে ওই নাম্বার পর্যন্ত ক্যান্ডেল যাবে"
    * Moves the candle smoothly from currentPrice to targetPrice over 1.5 seconds travel time,
    * then holds at target price until duration expires!
    */
@@ -220,12 +228,12 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
     setInputError(false);
     setIsRunning(true);
-    setStatusText(`● ACTIVE: TARGET ${target.toFixed(target > 50 ? 2 : 4)}`);
+    setStatusText(`● VEX ACTIVE: ${target.toFixed(target > 50 ? 2 : 4)}`);
     setInterceptsCount(0);
     setProgressPercent(100);
     setCountdown(duration);
 
-    // Smooth candle animation loop (1.5s travel time towards the target round number)
+    // Smooth sinusoidal travel time towards the target price
     const travelTimeMs = 1500;
     if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
     
@@ -233,25 +241,21 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       const elapsed = Date.now() - startTimeRef.current;
       const progress = Math.min(1.0, elapsed / travelTimeMs);
       
-      // Smooth sinusoidal easing
       const eased = progress < 0.5
         ? 2 * progress * progress
         : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
       let simulatedPrice = startP + (target - startP) * eased;
 
-      // Realistic minor micro-jitter when holding at target level
       if (progress >= 1.0) {
         const jitter = (Math.random() - 0.5) * (target > 50 ? 0.02 : 0.00004);
         simulatedPrice = target + jitter;
       }
 
-      // Inject simulated price directly into background market stream
       setSimulatedMarketPrice(simulatedPrice);
       setCurrentPrice(simulatedPrice);
     }, 40);
 
-    // Visual countdown & progress track loop
     let remaining = duration;
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
 
@@ -262,18 +266,16 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       setProgressPercent(pct);
 
       if (remaining <= 0) {
-        handleStop(); // Auto-stop when duration finishes
+        handleStop();
       }
     }, 1000);
   };
 
   /**
    * STOP BUTTON:
-   * "আবার stop করলে আগের জায়গায় আসবে!! বাস এইটুকু কাজ! স্ক্যান বা ট্রেড প্লেস ওইটা switch mode এ চাই না!!"
    * Immediately stops candle simulation and reverts price back to original place!
    */
   const handleStop = () => {
-    // Clear intervals
     if (animationIntervalRef.current) {
       clearInterval(animationIntervalRef.current);
       animationIntervalRef.current = null;
@@ -283,9 +285,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       countdownIntervalRef.current = null;
     }
 
-    // Revert price back to original starting place!
     const originalPrice = startPriceRef.current;
-    setSimulatedMarketPrice(null); // Clears override
+    setSimulatedMarketPrice(null);
     setCurrentPrice(originalPrice);
 
     setIsRunning(false);
@@ -303,73 +304,70 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     };
   }, []);
 
-  // 1. MINIMIZED STATE: Floating Cyber Pill with Radar Ring
+  // 1. MINIMIZED STATE: Futuristic Glowing Squircle VEX Crest (NEW UNIQUE STYLE)
   if (isMinimized) {
     return (
       <div
         id="minimizedPill"
-        title="TradePilot Round Controller - Click to Expand"
+        title="TradePilot Vex - Tap to Expand"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
           position: 'fixed',
           zIndex: 2147483647,
-          width: '46px',
-          height: '46px',
-          borderRadius: '50%',
-          backgroundColor: '#060913',
-          boxShadow: '0 10px 28px rgba(0,0,0,0.9), 0 0 20px rgba(14,165,233,0.5)',
+          width: '54px',
+          height: '54px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #090e24 0%, #030612 100%)',
+          boxShadow: isRunning
+            ? '0 10px 30px rgba(0,0,0,0.95), 0 0 25px #ff2e54, inset 0 0 12px rgba(255,46,84,0.4)'
+            : '0 10px 30px rgba(0,0,0,0.95), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25)',
           cursor: 'pointer',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '1.5px solid #38bdf8',
+          border: `2px solid ${isRunning ? '#ff2e54' : '#00e5ff'}`,
           touchAction: 'none',
+          userSelect: 'none',
+          transition: 'all 0.25s',
         }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         onClick={() => setIsMinimized(false)}
       >
-        {/* Animated Dashed Radar Ring */}
+        {/* Glowing Corner Notches */}
+        <div style={{ position: 'relative', width: '28px', height: '28px', borderRadius: '8px', overflow: 'hidden' }}>
+          <img
+            src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
+            alt="TradePilot Vex"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
+
+        {/* Micro VEX Pill Indicator */}
         <div
           style={{
-            position: 'absolute',
-            inset: '-4px',
-            borderRadius: '50%',
-            border: '1.5px dashed rgba(56, 189, 248, 0.45)',
-            animation: 'spin 8s linear infinite',
-            pointerEvents: 'none',
+            marginTop: '2px',
+            fontSize: '7.5px',
+            fontWeight: 900,
+            letterSpacing: '0.8px',
+            padding: '1px 5px',
+            borderRadius: '999px',
+            background: isRunning ? 'linear-gradient(90deg, #ff2e54, #ff5e7e)' : 'linear-gradient(90deg, #00e5ff, #0099ff)',
+            color: '#050a18',
+            fontFamily: 'monospace',
+            textTransform: 'uppercase',
+            boxShadow: isRunning ? '0 0 8px #ff2e54' : '0 0 8px #00e5ff',
           }}
-        />
-        {/* Beacon Status Dot */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '1px',
-            right: '1px',
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: isRunning ? '#10b981' : '#38bdf8',
-            border: '2px solid #060913',
-            boxShadow: `0 0 8px ${isRunning ? '#10b981' : '#38bdf8'}`,
-          }}
-        />
-        <img
-          src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
-          alt="TradePilot Logo"
-          style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: '12px',
-            objectFit: 'cover',
-          }}
-        />
+        >
+          {isRunning ? 'ACTIVE' : 'VEX'}
+        </div>
       </div>
     );
   }
 
-  // 2. EXPANDED CYBER HACKER HUD MATRIX TERMINAL (EXACT IMAGE 2 REPLICA)
+  // 2. EXPANDED STATE: Complete Redesigned Dark Obsidian Glass & Neon VEX Terminal
   return (
     <div
       id="appCard"
@@ -378,279 +376,172 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         top: `${position.y}px`,
         position: 'fixed',
         zIndex: 2147483647,
-        width: '304px',
+        width: '310px',
         maxWidth: 'calc(100vw - 16px)',
         maxHeight: 'calc(100vh - 20px)',
-        backgroundColor: '#060913',
-        backgroundImage: `
-          radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.22) 0%, transparent 75%),
-          linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px)
-        `,
-        backgroundSize: '100% 100%, 18px 18px, 18px 18px',
-        border: `1px solid ${isRunning ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)'}`,
-        borderRadius: '14px',
+        background: 'linear-gradient(165deg, rgba(8, 14, 36, 0.98) 0%, rgba(4, 7, 20, 0.99) 100%)',
+        border: `1.5px solid ${isRunning ? '#ff2e54' : 'rgba(0, 229, 255, 0.4)'}`,
+        borderRadius: '20px',
         boxShadow: isRunning
-          ? '0 20px 48px rgba(0, 0, 0, 0.9), 0 0 35px rgba(56, 189, 248, 0.45)'
-          : '0 20px 48px rgba(0, 0, 0, 0.9), 0 0 24px rgba(14, 165, 233, 0.2)',
+          ? '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 40px rgba(255, 46, 84, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15)'
+          : '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(0, 229, 255, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
         color: '#e2e8f0',
-        fontSize: '13px',
+        fontSize: '12px',
         overflow: 'hidden',
         touchAction: 'none',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        transition: 'border-color 0.25s, box-shadow 0.25s',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         userSelect: 'none',
-        fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
-      {/* HUD Corner Brackets */}
-      <span
-        style={{
-          position: 'absolute',
-          top: '-1px',
-          left: '-1px',
-          width: '14px',
-          height: '14px',
-          borderTop: '2px solid #38bdf8',
-          borderLeft: '2px solid #38bdf8',
-          borderTopLeftRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      />
-      <span
-        style={{
-          position: 'absolute',
-          top: '-1px',
-          right: '-1px',
-          width: '14px',
-          height: '14px',
-          borderTop: '2px solid #38bdf8',
-          borderRight: '2px solid #38bdf8',
-          borderTopRightRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      />
-      <span
-        style={{
-          position: 'absolute',
-          bottom: '-1px',
-          left: '-1px',
-          width: '14px',
-          height: '14px',
-          borderBottom: '2px solid #38bdf8',
-          borderLeft: '2px solid #38bdf8',
-          borderBottomLeftRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      />
-      <span
-        style={{
-          position: 'absolute',
-          bottom: '-1px',
-          right: '-1px',
-          width: '14px',
-          height: '14px',
-          borderBottom: '2px solid #38bdf8',
-          borderRight: '2px solid #38bdf8',
-          borderBottomRightRadius: '12px',
-          filter: 'drop-shadow(0 0 6px #38bdf8)',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      />
-
-      {/* Luminous Radar Scanline */}
+      {/* Top Cyber Accent Strip */}
       <div
         style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
           height: '2px',
-          background: 'linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent)',
-          boxShadow: '0 0 12px rgba(56, 189, 248, 0.8)',
-          opacity: 0.35,
-          pointerEvents: 'none',
-          zIndex: 2,
+          background: isRunning
+            ? 'linear-gradient(90deg, #ff2e54, #ff8fa3, #ff2e54)'
+            : 'linear-gradient(90deg, #00e5ff, #a855f7, #00e5ff)',
+          boxShadow: isRunning ? '0 0 10px #ff2e54' : '0 0 10px #00e5ff',
         }}
       />
 
-      {/* HEADER (Draggable Handle) */}
+      {/* HEADER: Draggable Grip Handle */}
       <div
         id="panelHeader"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{
-          padding: '10px 12px',
+          padding: '12px 14px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           cursor: isDragging ? 'grabbing' : 'grab',
-          background: 'rgba(11, 17, 30, 0.92)',
-          borderBottom: '1px solid rgba(56, 189, 248, 0.22)',
-          position: 'relative',
-          zIndex: 3,
+          background: 'rgba(6, 11, 28, 0.9)',
+          borderBottom: '1px solid rgba(0, 229, 255, 0.18)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Logo Frame (Tap to minimize) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+          {/* Logo Crest (Tap to Minimize) */}
           <div
-            id="headerLogo"
-            title="Tap to minimize"
             onClick={() => setIsMinimized(true)}
+            title="Tap to minimize"
             style={{
               width: '32px',
               height: '32px',
-              borderRadius: '9px',
-              border: '1.5px solid #d946ef',
-              boxShadow: '0 0 10px rgba(217, 70, 239, 0.5)',
+              borderRadius: '10px',
+              border: '1.5px solid #00e5ff',
+              boxShadow: '0 0 12px rgba(0,229,255,0.4)',
               overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#050811',
-              flexShrink: 0,
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             <img
               src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
-              alt="TradePilot Logo"
+              alt="TradePilot Vex"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-            <span
-              style={{
-                fontWeight: 800,
-                fontSize: '12px',
-                color: '#f8fafc',
-                letterSpacing: '0.5px',
-              }}
-            >
-              TRADEPILOT TRADER
-            </span>
-            <span
-              style={{
-                fontSize: '8px',
-                fontWeight: 700,
-                color: '#38bdf8',
-                letterSpacing: '0.7px',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Redesigned Brand Header: TradePilot Vex */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontWeight: 900, fontSize: '13px', letterSpacing: '0.5px', fontFamily: '"Orbitron", sans-serif' }}>
+                <span style={{ color: '#00e5ff', textShadow: '0 0 8px rgba(0,229,255,0.8)' }}>Trade</span>
+                <span style={{ color: '#ff2e54', textShadow: '0 0 8px rgba(255,46,84,0.8)' }}>Pilot</span>
+              </span>
               <span
                 style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  backgroundColor: '#10b981',
-                  boxShadow: '0 0 8px #10b981',
-                  display: 'inline-block',
+                  fontSize: '9px',
+                  fontWeight: 900,
+                  padding: '1px 5px',
+                  borderRadius: '5px',
+                  background: 'linear-gradient(135deg, #ff2e54, #8b0029)',
+                  color: '#ffffff',
+                  letterSpacing: '0.5px',
+                  fontFamily: 'monospace',
+                  boxShadow: '0 0 8px rgba(255,46,84,0.5)',
                 }}
-              />
-              ROUND TERMINAL FREE BOT
+              >
+                VEX
+              </span>
+            </div>
+            <span style={{ fontSize: '8.5px', color: '#94a3b8', letterSpacing: '0.8px', textTransform: 'uppercase', marginTop: '1px' }}>
+              TP VEX CONTROL ENGINE
             </span>
           </div>
         </div>
 
-        {/* Header Right Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {/* Mode Switch Button */}
+        {/* Header Right Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Mode Return Button */}
           {onSwitchMode && (
             <button
               onClick={onSwitchMode}
-              title="Switch back to Confluence Scanner Mode"
+              type="button"
+              title="Return to Standard TradePilot"
               style={{
-                padding: '3px 6px',
-                borderRadius: '5px',
-                background: 'rgba(56, 189, 248, 0.15)',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                color: '#38bdf8',
-                fontSize: '8px',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                background: 'rgba(0, 229, 255, 0.12)',
+                border: '1px solid rgba(0, 229, 255, 0.35)',
+                color: '#00e5ff',
+                fontSize: '8.5px',
                 fontWeight: 800,
                 cursor: 'pointer',
+                fontFamily: 'monospace',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '3px',
               }}
             >
-              <span>🔄</span> MODE
+              <span>↩</span> STD
             </button>
           )}
 
-          {/* Key Status Icon */}
-          <div
-            id="btnKeyStatus"
-            title="VIP License: Active"
-            style={{
-              width: '22px',
-              height: '22px',
-              borderRadius: '5px',
-              background: 'rgba(18, 25, 42, 0.85)',
-              border: '1px solid rgba(16, 185, 129, 0.5)',
-              color: '#10b981',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '10px',
-            }}
-          >
-            🔑
-          </div>
-
-          {/* Minimize Header Action */}
+          {/* Minimize Button */}
           <button
-            id="btnMinimizeHeader"
-            title="Minimize"
             onClick={() => setIsMinimized(true)}
+            type="button"
+            title="Minimize"
             style={{
-              width: '22px',
-              height: '22px',
-              borderRadius: '5px',
-              background: 'rgba(18, 25, 42, 0.85)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
+              width: '24px',
+              height: '24px',
+              borderRadius: '8px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
               color: '#94a3b8',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '10px',
-              fontWeight: 'bold',
             }}
           >
             —
           </button>
 
-          {/* Close Header Action */}
+          {/* Close Button */}
           {onClose && (
             <button
-              id="btnCloseHeader"
               onClick={onClose}
-              title="Close Terminal"
+              type="button"
+              title="Close"
               style={{
-                width: '22px',
-                height: '22px',
-                borderRadius: '5px',
-                background: 'rgba(239, 68, 68, 0.2)',
-                border: '1px solid rgba(239, 68, 68, 0.5)',
-                color: '#f87171',
+                width: '24px',
+                height: '24px',
+                borderRadius: '8px',
+                background: 'rgba(255, 46, 84, 0.2)',
+                border: '1px solid rgba(255, 46, 84, 0.5)',
+                color: '#ff8fa3',
+                fontSize: '10px',
+                fontWeight: 900,
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer',
-                fontSize: '9px',
-                fontWeight: 'bold',
               }}
             >
               ✕
@@ -659,230 +550,158 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         </div>
       </div>
 
-      {/* BODY */}
-      <div
-        style={{
-          padding: '10px 12px 12px 12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          position: 'relative',
-          zIndex: 3,
-        }}
-      >
-        {/* MARKET STRIP WITH ECG PULSE WAVE */}
+      {/* BODY CONTENT: Restructured layout & colors */}
+      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* 1. Market & Live Price Bar */}
         <div
-          id="marketStrip"
           style={{
-            background: 'rgba(10, 15, 27, 0.9)',
-            border: '1px solid rgba(56, 189, 248, 0.28)',
-            borderRadius: '8px',
-            padding: '7px 9px',
+            background: 'rgba(4, 9, 24, 0.85)',
+            border: '1px solid rgba(0, 229, 255, 0.25)',
+            borderRadius: '12px',
+            padding: '8px 10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            position: 'relative',
-            overflow: 'hidden',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span
-              style={{
-                fontSize: '7.5px',
-                fontWeight: 700,
-                color: '#64748b',
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-              }}
-            >
-              <span style={{ color: '#38bdf8' }}>⚡</span> MARKET ASSET
+            <span style={{ fontSize: '7.5px', color: '#64748b', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+              MARKET ASSET
             </span>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-              <span
-                id="marketPair"
-                style={{
-                  fontWeight: 800,
-                  fontSize: '12px',
-                  color: '#38bdf8',
-                  letterSpacing: '0.3px',
-                  textShadow: '0 0 10px rgba(56, 189, 248, 0.4)',
-                }}
-              >
-                {activePair}
-              </span>
-              <span
-                id="marketLivePrice"
-                style={{ fontSize: '10.5px', color: '#cbd5e1', fontFamily: 'monospace' }}
-              >
-                {currentPrice.toFixed(currentPrice > 50 ? (currentPrice > 500 ? 2 : 3) : 5)}
-              </span>
-            </div>
+            <span style={{ fontSize: '13px', fontWeight: 900, color: '#00e5ff', letterSpacing: '0.2px', textShadow: '0 0 10px rgba(0,229,255,0.4)' }}>
+              {activePair}
+            </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
-            <div
-              style={{
-                fontSize: '7.5px',
-                fontWeight: 800,
-                color: '#10b981',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                padding: '1px 5px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-              }}
-            >
-              ● LIVE
-            </div>
-            {/* ECG Pulse Wave SVG */}
-            <div style={{ height: '10px', display: 'flex', alignItems: 'center' }}>
-              <svg width="34" height="10" viewBox="0 0 42 14" fill="none">
-                <path
-                  d="M1 7H11L14 1L18 13L22 4L25 9L28 7H41"
-                  stroke="#38bdf8"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
+            <span style={{ fontSize: '7.5px', color: '#10b981', fontWeight: 900, letterSpacing: '0.5px' }}>
+              ● LIVE QUOTE
+            </span>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+              {currentPrice.toFixed(currentPrice > 50 ? (currentPrice > 500 ? 2 : 3) : 5)}
+            </span>
           </div>
         </div>
 
-        {/* FIELD 1: ROUND NUMBER INPUT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {/* 2. Target Round Number Input with Quick Adjust Stepper */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span
-              style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                color: '#94a3b8',
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-              }}
-            >
-              ROUND NUMBER
+            <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+              TARGET ROUND PRICE
             </span>
             <button
               onClick={suggestNearestRoundPrice}
               type="button"
               style={{
-                fontSize: '8px',
-                color: '#38bdf8',
-                background: 'rgba(56, 189, 248, 0.1)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                borderRadius: '4px',
-                padding: '1px 4px',
+                fontSize: '8.5px',
+                color: '#00e5ff',
+                background: 'rgba(0, 229, 255, 0.12)',
+                border: '1px solid rgba(0, 229, 255, 0.3)',
+                borderRadius: '6px',
+                padding: '2px 6px',
                 cursor: 'pointer',
+                fontWeight: 700,
               }}
             >
               🎯 Auto Snap
             </button>
           </div>
-          <input
-            id="inputPrice"
-            type="number"
-            step="any"
-            value={roundPriceInput}
-            onChange={(e) => {
-              setRoundPriceInput(e.target.value);
-              setInputError(false);
-            }}
-            placeholder="Enter Round Price (e.g. 52.9900)"
-            style={{
-              width: '100%',
-              background: '#070b14',
-              border: `1px solid ${inputError ? '#ef4444' : 'rgba(56, 189, 248, 0.25)'}`,
-              borderRadius: '7px',
-              padding: '7px 9px',
-              color: '#ffffff',
-              fontSize: '12px',
-              fontWeight: 600,
-              fontFamily: 'ui-monospace, monospace',
-              outline: 'none',
-              boxSizing: 'border-box',
-              boxShadow: inputError ? '0 0 10px rgba(239, 68, 68, 0.35)' : 'none',
-            }}
-          />
+
+          {/* Stepper + Input */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              onClick={() => adjustRoundPrice(currentPrice > 50 ? -0.1 : -0.001)}
+              type="button"
+              style={{
+                width: '32px',
+                background: 'rgba(15, 23, 42, 0.9)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                color: '#94a3b8',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              -
+            </button>
+
+            <input
+              id="inputPrice"
+              type="number"
+              step="any"
+              value={roundPriceInput}
+              onChange={(e) => {
+                setRoundPriceInput(e.target.value);
+                setInputError(false);
+              }}
+              placeholder={`e.g. ${(currentPrice || 122.500).toFixed(currentPrice > 50 ? 2 : 4)}`}
+              style={{
+                flex: 1,
+                background: '#040715',
+                border: `1.5px solid ${inputError ? '#ff2e54' : 'rgba(0, 229, 255, 0.35)'}`,
+                borderRadius: '8px',
+                padding: '8px 10px',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 800,
+                fontFamily: 'monospace',
+                textAlign: 'center',
+                outline: 'none',
+                boxShadow: inputError ? '0 0 12px rgba(255,46,84,0.45)' : 'none',
+              }}
+            />
+
+            <button
+              onClick={() => adjustRoundPrice(currentPrice > 50 ? 0.1 : 0.001)}
+              type="button"
+              style={{
+                width: '32px',
+                background: 'rgba(15, 23, 42, 0.9)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                color: '#94a3b8',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              +
+            </button>
+          </div>
         </div>
 
-        {/* FIELD 2: TIME (SECOND) & PRESET CHIPS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {/* 3. Duration & Chip Selectors */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span
-              style={{
-                fontSize: '9px',
-                fontWeight: 700,
-                color: '#94a3b8',
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-              }}
-            >
-              TIME (SECOND)
+            <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+              DURATION (SECONDS)
             </span>
-            <span
-              id="countdownText"
-              style={{
-                fontSize: '9.5px',
-                fontWeight: 800,
-                color: countdown > 0 ? '#10b981' : '#38bdf8',
-              }}
-            >
-              {countdown > 0 ? `[${String(countdown).padStart(2, '0')}s]` : '[READY]'}
+            <span style={{ fontSize: '10px', fontWeight: 900, color: countdown > 0 ? '#ff2e54' : '#00e5ff', fontFamily: 'monospace' }}>
+              {countdown > 0 ? `[00:${String(countdown).padStart(2, '0')}]` : `[${durationInput}s READY]`}
             </span>
           </div>
 
-          <input
-            id="inputDuration"
-            type="number"
-            min="1"
-            max="3600"
-            value={durationInput}
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10) || 6;
-              setDurationInput(val);
-              setSelectedChip(val);
-            }}
-            placeholder="Enter Seconds (default: 6)"
-            style={{
-              width: '100%',
-              background: '#070b14',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              borderRadius: '7px',
-              padding: '6px 9px',
-              color: '#ffffff',
-              fontSize: '11.5px',
-              fontWeight: 600,
-              fontFamily: 'ui-monospace, monospace',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
-          />
-
-          {/* Preset Chips Row */}
-          <div style={{ display: 'flex', gap: '3px', marginTop: '2px' }}>
-            {[5, 6, 10, 15, 30].map((sec) => (
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {[5, 6, 10, 15, 30, 60].map((sec) => (
               <button
                 key={sec}
                 type="button"
                 onClick={() => handleSelectChip(sec)}
                 style={{
                   flex: 1,
-                  padding: '3px 0',
+                  padding: '5px 0',
                   textAlign: 'center',
-                  background: selectedChip === sec ? '#0284c7' : 'rgba(16, 22, 36, 0.9)',
-                  border: `1px solid ${selectedChip === sec ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
-                  color: selectedChip === sec ? '#ffffff' : '#94a3b8',
-                  borderRadius: '4px',
-                  fontSize: '9px',
-                  fontWeight: 700,
+                  background: selectedChip === sec
+                    ? 'linear-gradient(135deg, #00e5ff, #0088cc)'
+                    : 'rgba(11, 18, 38, 0.85)',
+                  border: `1px solid ${selectedChip === sec ? '#00e5ff' : 'rgba(255, 255, 255, 0.1)'}`,
+                  color: selectedChip === sec ? '#040818' : '#94a3b8',
+                  borderRadius: '6px',
+                  fontSize: '9.5px',
+                  fontWeight: 900,
                   cursor: 'pointer',
-                  boxShadow: selectedChip === sec ? '0 0 8px rgba(56, 189, 248, 0.45)' : 'none',
+                  fontFamily: 'monospace',
                   transition: 'all 0.15s',
                 }}
               >
@@ -891,135 +710,93 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             ))}
           </div>
 
-          {/* Progress Track & Fill */}
-          <div
-            id="progressTrack"
-            style={{
-              height: '3px',
-              background: '#121828',
-              borderRadius: '2px',
-              overflow: 'hidden',
-              marginTop: '3px',
-              display: isRunning ? 'block' : 'none',
-            }}
-          >
-            <div
-              id="progressFill"
+          {/* Progress Indicator when Running */}
+          {isRunning && (
+            <div style={{ height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${progressPercent}%`,
+                  background: 'linear-gradient(90deg, #ff2e54, #00e5ff)',
+                  transition: 'width 1s linear',
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 4. Action Buttons: Restructured Tactical Control */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+          {!isRunning ? (
+            <button
+              id="btnStart"
+              type="button"
+              onClick={handleStart}
               style={{
-                height: '100%',
-                width: `${progressPercent}%`,
-                background: 'linear-gradient(90deg, #0284c7, #38bdf8)',
-                transition: 'width 1s linear',
+                flex: 1,
+                padding: '11px 0',
+                borderRadius: '10px',
+                border: 'none',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                letterSpacing: '0.8px',
+                textTransform: 'uppercase',
+                background: 'linear-gradient(135deg, #00e5ff 0%, #0284c7 100%)',
+                color: '#030718',
+                boxShadow: '0 6px 20px rgba(0, 229, 255, 0.45)',
+                fontFamily: '"Orbitron", sans-serif',
+                transition: 'all 0.15s',
               }}
-            />
-          </div>
+            >
+              ⚡ START VEX TRAVEL
+            </button>
+          ) : (
+            <button
+              id="btnStop"
+              type="button"
+              onClick={handleStop}
+              style={{
+                flex: 1,
+                padding: '11px 0',
+                borderRadius: '10px',
+                border: '1.5px solid #ff2e54',
+                fontWeight: 900,
+                fontSize: '12px',
+                cursor: 'pointer',
+                letterSpacing: '0.8px',
+                textTransform: 'uppercase',
+                background: 'linear-gradient(135deg, rgba(255, 46, 84, 0.25), rgba(139, 0, 41, 0.4))',
+                color: '#ffffff',
+                boxShadow: '0 0 20px rgba(255, 46, 84, 0.5)',
+                fontFamily: '"Orbitron", sans-serif',
+                transition: 'all 0.15s',
+              }}
+            >
+              ⏹ STOP & REVERT PRICE
+            </button>
+          )}
         </div>
 
-        {/* BUTTON ROW: START & STOP */}
-        <div style={{ display: 'flex', gap: '7px', marginTop: '2px' }}>
-          <button
-            id="btnStart"
-            type="button"
-            onClick={handleStart}
-            disabled={isRunning}
-            style={{
-              flex: 1,
-              padding: '8px 0',
-              borderRadius: '7px',
-              border: 'none',
-              fontWeight: 800,
-              fontSize: '11px',
-              cursor: isRunning ? 'not-allowed' : 'pointer',
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
-              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-              color: '#ffffff',
-              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.4)',
-              opacity: isRunning ? 0.4 : 1,
-              transition: 'all 0.18s',
-            }}
-          >
-            START
-          </button>
-
-          <button
-            id="btnStop"
-            type="button"
-            onClick={handleStop}
-            disabled={!isRunning}
-            style={{
-              flex: 1,
-              padding: '8px 0',
-              borderRadius: '7px',
-              border: '1px solid rgba(239, 68, 68, 0.65)',
-              fontWeight: 800,
-              fontSize: '11px',
-              cursor: !isRunning ? 'not-allowed' : 'pointer',
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
-              background: 'rgba(239, 68, 68, 0.1)',
-              color: '#f87171',
-              opacity: !isRunning ? 0.4 : 1,
-              transition: 'all 0.18s',
-            }}
-          >
-            STOP
-          </button>
-        </div>
-
-        {/* FOOTER */}
+        {/* 5. Footer Strip */}
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            borderTop: '1px solid rgba(56, 189, 248, 0.18)',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '9px',
+            fontWeight: 700,
+            color: '#64748b',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
             paddingTop: '6px',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '9px',
-              fontWeight: 700,
-              color: '#64748b',
-            }}
-          >
-            <span
-              id="statusText"
-              style={{
-                color: isRunning ? '#38bdf8' : '#94a3b8',
-              }}
-            >
-              {statusText}
-            </span>
-            <span
-              id="ticksCount"
-              style={{ color: '#38bdf8' }}
-            >
-              INTERCEPTS: {interceptsCount}
-            </span>
-          </div>
-
-          <div
-            id="footerMinimizePrompt"
-            onClick={() => setIsMinimized(true)}
-            title="Click to Minimize Terminal"
-            style={{
-              fontSize: '8px',
-              fontWeight: 700,
-              color: '#64748b',
-              letterSpacing: '1px',
-              textTransform: 'uppercase',
-              textAlign: 'center',
-              cursor: 'pointer',
-              padding: '2px 0',
-            }}
-          >
-            [ ❖ TAP LOGO OR HERE TO MINIMIZE ❖ ]
-          </div>
+          <span style={{ color: isRunning ? '#ff2e54' : '#00e5ff', fontWeight: 800 }}>
+            {statusText}
+          </span>
+          <span style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
+            INTERCEPTS: {interceptsCount}
+          </span>
         </div>
       </div>
     </div>
