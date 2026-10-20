@@ -307,9 +307,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
   // 1. MINIMIZED STATE: Futuristic Glowing Squircle VEX Crest (NEW UNIQUE STYLE)
   if (isMinimized) {
     return (
-      <button
+      <div
         id="minimizedPill"
-        type="button"
         title="TradePilot Vex - Tap to Expand"
         style={{
           left: `${position.x}px`,
@@ -332,18 +331,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           touchAction: 'none',
           userSelect: 'none',
           transition: 'all 0.25s',
-          padding: 0,
-          outline: 'none',
         }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsMinimized(false);
-        }}
+        onClick={() => setIsMinimized(false)}
       >
         {/* Glowing Corner Notches */}
-        <div style={{ position: 'relative', width: '28px', height: '28px', borderRadius: '8px', overflow: 'hidden', pointerEvents: 'none' }}>
+        <div style={{ position: 'relative', width: '28px', height: '28px', borderRadius: '8px', overflow: 'hidden' }}>
           <img
             src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
             alt="TradePilot Vex"
@@ -365,12 +359,11 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             fontFamily: 'monospace',
             textTransform: 'uppercase',
             boxShadow: isRunning ? '0 0 8px #ff2e54' : '0 0 8px #00e5ff',
-            pointerEvents: 'none',
           }}
         >
           {isRunning ? 'ACTIVE' : 'VEX'}
         </div>
-      </button>
+      </div>
     );
   }
 
@@ -430,14 +423,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
           {/* Logo Crest (Tap to Minimize) */}
-          <button
-            type="button"
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMinimized(true);
-            }}
+          <div
+            onClick={() => setIsMinimized(true)}
             title="Tap to minimize"
             style={{
               width: '32px',
@@ -448,9 +435,6 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               overflow: 'hidden',
               cursor: 'pointer',
               flexShrink: 0,
-              padding: 0,
-              background: 'transparent',
-              outline: 'none',
             }}
           >
             <img
@@ -458,7 +442,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               alt="TradePilot Vex"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
-          </button>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {/* Redesigned Brand Header: TradePilot Vex */}
@@ -490,25 +474,18 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         </div>
 
         {/* Header Right Controls */}
-        <div
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* Mode Return Button */}
           {onSwitchMode && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSwitchMode();
-              }}
+              onClick={onSwitchMode}
               type="button"
-              title="Return to Main TradePilot Bot"
+              title="Return to Standard TradePilot"
               style={{
                 padding: '4px 8px',
                 borderRadius: '8px',
-                background: 'rgba(0, 229, 255, 0.15)',
-                border: '1px solid rgba(0, 229, 255, 0.45)',
+                background: 'rgba(0, 229, 255, 0.12)',
+                border: '1px solid rgba(0, 229, 255, 0.35)',
                 color: '#00e5ff',
                 fontSize: '8.5px',
                 fontWeight: 800,
@@ -519,16 +496,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 gap: '3px',
               }}
             >
-              <span>↩</span> Return Bot
+              <span>↩</span> STD
             </button>
           )}
 
           {/* Minimize Button */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMinimized(true);
-            }}
+            onClick={() => setIsMinimized(true)}
             type="button"
             title="Minimize"
             style={{
@@ -536,7 +510,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               height: '24px',
               borderRadius: '8px',
               background: 'rgba(15, 23, 42, 0.8)',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
               color: '#94a3b8',
               fontSize: '11px',
               fontWeight: 800,
@@ -552,10 +526,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           {/* Close Button */}
           {onClose && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
+              onClick={onClose}
               type="button"
               title="Close"
               style={{
@@ -700,22 +671,62 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           </div>
         </div>
 
-        {/* Progress Indicator when Running */}
-        {isRunning && (
-          <div style={{ height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${progressPercent}%`,
-                background: 'linear-gradient(90deg, #ff2e54, #00e5ff)',
-                transition: 'width 1s linear',
-              }}
-            />
+        {/* 3. Duration & Chip Selectors */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+              DURATION (SECONDS)
+            </span>
+            <span style={{ fontSize: '10px', fontWeight: 900, color: countdown > 0 ? '#ff2e54' : '#00e5ff', fontFamily: 'monospace' }}>
+              {countdown > 0 ? `[00:${String(countdown).padStart(2, '0')}]` : `[${durationInput}s READY]`}
+            </span>
           </div>
-        )}
 
-        {/* 3. Action Buttons: Restructured Tactical Control */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {[5, 6, 10, 15, 30, 60].map((sec) => (
+              <button
+                key={sec}
+                type="button"
+                onClick={() => handleSelectChip(sec)}
+                style={{
+                  flex: 1,
+                  padding: '5px 0',
+                  textAlign: 'center',
+                  background: selectedChip === sec
+                    ? 'linear-gradient(135deg, #00e5ff, #0088cc)'
+                    : 'rgba(11, 18, 38, 0.85)',
+                  border: `1px solid ${selectedChip === sec ? '#00e5ff' : 'rgba(255, 255, 255, 0.1)'}`,
+                  color: selectedChip === sec ? '#040818' : '#94a3b8',
+                  borderRadius: '6px',
+                  fontSize: '9.5px',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {sec}s
+              </button>
+            ))}
+          </div>
+
+          {/* Progress Indicator when Running */}
+          {isRunning && (
+            <div style={{ height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${progressPercent}%`,
+                  background: 'linear-gradient(90deg, #ff2e54, #00e5ff)',
+                  transition: 'width 1s linear',
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 4. Action Buttons: Restructured Tactical Control */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
           {!isRunning ? (
             <button
               id="btnStart"
@@ -766,38 +777,6 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
             </button>
           )}
         </div>
-
-        {/* 4. Return to Main TradePilot Bot */}
-        {onSwitchMode && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSwitchMode();
-            }}
-            style={{
-              width: '100%',
-              padding: '8px 0',
-              borderRadius: '8px',
-              background: 'rgba(15, 23, 42, 0.75)',
-              border: '1px solid rgba(0, 229, 255, 0.3)',
-              color: '#7dd3fc',
-              fontSize: '10px',
-              fontWeight: 800,
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '5px',
-              transition: 'all 0.15s',
-            }}
-          >
-            <span>↩</span> RETURN TO TRADEPILOT MAIN BOT
-          </button>
-        )}
 
         {/* 5. Footer Strip */}
         <div
