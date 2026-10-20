@@ -242,11 +242,68 @@ if (typeof window !== 'undefined' && window.speechSynthesis) {
  * TradePilot Information-Based Sweet Voice System:
  * স্ক্রিপ্ট:
  * মার্কেট: ---
- * সময়: ---
- * মার্কেট বিশ্লেষণ করছি...
- * নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!
- *
- * মিষ্টি, মায়াবী ও পরিমার্জিত কন্ঠ (Sweet & natural melodic voice, slightly faster pace)
+/**
+ * Futuristic Market Analysis Sound Synthesizer:
+ * Plays during the 2 - 2.5 second pause while AI analyzes market confluence
+ */
+export function playMarketAnalysisPulseSound(): void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const dur = 2.2;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    osc.type = 'sine';
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(450, t);
+    filter.frequency.exponentialRampToValueAtTime(1400, t + 0.9);
+    filter.frequency.exponentialRampToValueAtTime(600, t + 1.8);
+
+    // Harmonic cyber frequencies
+    osc.frequency.setValueAtTime(320, t);
+    osc.frequency.linearRampToValueAtTime(580, t + 0.6);
+    osc.frequency.linearRampToValueAtTime(440, t + 1.2);
+    osc.frequency.linearRampToValueAtTime(880, t + 1.8);
+    osc.frequency.linearRampToValueAtTime(520, t + dur);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.25, t + 0.15);
+    gain.gain.setValueAtTime(0.25, t + dur - 0.2);
+    gain.gain.linearRampToValueAtTime(0.001, t + dur);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur);
+
+    // High-tech Sonar Chime Pings during the analysis pause
+    [0.15, 0.85, 1.55].forEach((offset) => {
+      const pOsc = ctx.createOscillator();
+      const pGain = ctx.createGain();
+      pOsc.type = 'triangle';
+      pOsc.frequency.setValueAtTime(1250, t + offset);
+      pOsc.frequency.exponentialRampToValueAtTime(680, t + offset + 0.22);
+      pGain.gain.setValueAtTime(0.18, t + offset);
+      pGain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.22);
+      pOsc.connect(pGain);
+      pGain.connect(ctx.destination);
+      pOsc.start(t + offset);
+      pOsc.stop(t + offset + 0.23);
+    });
+  } catch (e) {}
+}
+
+/**
+ * TradePilot Information-Based Sweet Voice System:
+ * 1. Announces: মার্কেট: ---। সময়: ---। মার্কেট এনালাইসিস করছি...
+ * 2. Pauses 2.2 seconds & plays futuristic market analysis sound
+ * 3. Announces: নিশ্চিন্তে BUY/SELL ট্রেড নিতে পারেন!
+ * 4. Finishes and immediately dispatches trade!
  */
 export function speakScanTelemetry(
   market: string,
@@ -260,9 +317,24 @@ export function speakScanTelemetry(
   }
 
   let completed = false;
+  let pauseTimer: any = null;
+  let ttsKeepAlive: any = null;
+
+  const cleanupKeepAlive = () => {
+    if (ttsKeepAlive) {
+      clearInterval(ttsKeepAlive);
+      ttsKeepAlive = null;
+    }
+  };
+
   const finish = () => {
     if (!completed) {
       completed = true;
+      cleanupKeepAlive();
+      if (pauseTimer) {
+        clearTimeout(pauseTimer);
+        pauseTimer = null;
+      }
       if (typeof window !== 'undefined') {
         (window as any).__ACTIVE_TTS__ = null;
       }
@@ -271,7 +343,6 @@ export function speakScanTelemetry(
   };
 
   try {
-    // Unstick Chromium TTS if paused
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
@@ -300,16 +371,11 @@ export function speakScanTelemetry(
       } catch (e) {}
     }
 
-    // 🇧🇩 বাংলা মিষ্টি, মায়াবী ও পরিমার্জিত কন্ঠ (একটু স্পিডি, স্পষ্ট ও মিষ্টি সুরেলা)
-    const speechText = `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}। মার্কেট বিশ্লেষণ করছি... নিশ্চিন্তে ${tradeAction} ট্রেড করতে পারেন!`;
-    const utterance = new SpeechSynthesisUtterance(speechText);
-
-    // 1. First priority: Bengali voices (Bangla / Bangladesh / India)
+    // 1. Natural melodic voice lookup (prioritizes modern neural / non-robotic voices)
     const bnVoice = voices.find(v =>
       v.lang.startsWith('bn') && (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('বাংলা') || v.name.includes('Bangla') || v.name.includes('Neural'))
     ) || voices.find(v => v.lang.startsWith('bn'));
 
-    // 2. High-quality sweet natural melodic female voice fallback
     const sweetVoice = voices.find(v =>
       (v.name.includes('Google UK English Female') || v.name.includes('Natural') || v.name.includes('Jenny') || v.name.includes('Sonia') || v.name.includes('Aria') || v.name.includes('Samantha') || v.name.includes('Victoria')) &&
       !v.name.includes('Desktop')
@@ -317,64 +383,90 @@ export function speakScanTelemetry(
       || voices[0];
 
     const chosenVoice = bnVoice || sweetVoice;
+
+    // Phase 1: Market Announcement & Analysis Start
+    const textPart1 = `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}। মার্কেট এনালাইসিস করছি...`;
+    const utt1 = new SpeechSynthesisUtterance(textPart1);
+
     if (chosenVoice) {
-      utterance.voice = chosenVoice;
-      utterance.lang = chosenVoice.lang && chosenVoice.lang.startsWith('bn') ? chosenVoice.lang : 'bn-BD';
+      utt1.voice = chosenVoice;
+      utt1.lang = chosenVoice.lang && chosenVoice.lang.startsWith('bn') ? chosenVoice.lang : 'bn-BD';
     } else {
-      utterance.lang = 'bn-BD';
+      utt1.lang = 'bn-BD';
     }
+    utt1.rate = 1.12;
+    utt1.pitch = 1.16;
+    utt1.volume = 1.0;
 
-    utterance.rate = 1.12; // একটু স্পিডে ও পরিমার্জিত
-    utterance.pitch = 1.16; // মিষ্টি, কোমল ও মায়াবী পিচ
-    utterance.volume = 1.0;
+    // Phase 2: Decision Announcement
+    const textPart2 = `নিশ্চিন্তে ${tradeAction} ট্রেড নিতে পারেন!`;
+    const utt2 = new SpeechSynthesisUtterance(textPart2);
+    if (chosenVoice) {
+      utt2.voice = chosenVoice;
+      utt2.lang = chosenVoice.lang && chosenVoice.lang.startsWith('bn') ? chosenVoice.lang : 'bn-BD';
+    } else {
+      utt2.lang = 'bn-BD';
+    }
+    utt2.rate = 1.12;
+    utt2.pitch = 1.16;
+    utt2.volume = 1.0;
 
-    let ttsKeepAlive: any = null;
-    const cleanupKeepAlive = () => {
-      if (ttsKeepAlive) {
-        clearInterval(ttsKeepAlive);
-        ttsKeepAlive = null;
-      }
+    utt1.onend = () => {
+      // 2.2-Second Analysis Wait + Analysis Sound Effect
+      playMarketAnalysisPulseSound();
+      pauseTimer = setTimeout(() => {
+        if (completed) return;
+        (window as any).__ACTIVE_TTS__ = utt2;
+        window.speechSynthesis.speak(utt2);
+      }, 2200);
     };
 
-    utterance.onend = () => {
-      cleanupKeepAlive();
+    utt1.onerror = () => {
+      // Fallback if part 1 errors
+      playMarketAnalysisPulseSound();
+      pauseTimer = setTimeout(() => {
+        if (completed) return;
+        (window as any).__ACTIVE_TTS__ = utt2;
+        window.speechSynthesis.speak(utt2);
+      }, 1500);
+    };
+
+    utt2.onend = () => {
       finish();
     };
-    utterance.onerror = () => {
-      cleanupKeepAlive();
+
+    utt2.onerror = () => {
       finish();
     };
 
-    // Prevent Chromium garbage collection bug by anchoring to window
-    (window as any).__ACTIVE_TTS__ = utterance;
-
-    // Speak
-    window.speechSynthesis.speak(utterance);
-
-    // Chrome TTS Keepalive: prevents Chrome from pausing TTS midway
+    // Keepalive to prevent Chrome from pausing TTS
     ttsKeepAlive = setInterval(() => {
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         if (window.speechSynthesis.speaking && !completed) {
           window.speechSynthesis.pause();
           window.speechSynthesis.resume();
-        } else {
+        } else if (completed) {
           cleanupKeepAlive();
         }
       }
     }, 2000);
 
+    // Prevent Chromium garbage collection
+    (window as any).__ACTIVE_TTS__ = utt1;
+    window.speechSynthesis.speak(utt1);
+
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
 
-    // Safety timeout (16s) to ensure the scan never hangs indefinitely if user device audio is completely blocked
+    // Generous safety timer
     const maxSafetyTimer = setTimeout(() => {
-      cleanupKeepAlive();
       finish();
-    }, 16000);
+    }, 18000);
 
     return () => {
       clearTimeout(maxSafetyTimer);
+      if (pauseTimer) clearTimeout(pauseTimer);
       cleanupKeepAlive();
       try {
         window.speechSynthesis.cancel();

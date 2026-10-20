@@ -1642,13 +1642,36 @@ export function evaluateMarketData(
       downFactors.push(`5S Upper Wick Rejection (Sellers Rejected High) [+35]`);
     }
 
-    // 4. Active Bar Direction (Close vs Open) - Balanced, no directional bias
+    // 4. Active Bar Direction (Close vs Open) + Timeframe Horizon Persistence Validation
     if (currentPrice > currentCandle.open) {
-      buyScore += 30;
-      upFactors.push(`5S Active Bar Bullish Close > Open [+30]`);
+      buyScore += 25;
+      upFactors.push(`5S Active Bar Bullish Close > Open [+25]`);
     } else if (currentPrice < currentCandle.open) {
-      sellScore += 30;
-      downFactors.push(`5S Active Bar Bearish Close < Open [+30]`);
+      sellScore += 25;
+      downFactors.push(`5S Active Bar Bearish Close < Open [+25]`);
+    }
+
+    // 🌟 4B. 5-SECOND FORWARD HOLDING HORIZON (Evaluates if price will sustain above/below entry for full 5 seconds)
+    const callProb = pricePath.callPathProbability;
+    const putProb = pricePath.putPathProbability;
+    const expTerminal = pricePath.expectedTerminalPrice;
+
+    if (callProb >= 0.52 && expTerminal > entryPrice) {
+      buyScore += 38;
+      upFactors.push(`5S Timeframe Horizon: Price path modeled to hold ABOVE entry price for full 5s duration (+38)`);
+    } else if (putProb >= 0.52 && expTerminal < entryPrice) {
+      sellScore += 38;
+      downFactors.push(`5S Timeframe Horizon: Price path modeled to hold BELOW entry price for full 5s duration (+38)`);
+    }
+
+    // 🛡️ 4C. WICK EXHAUSTION & REVERSAL DEFENSE (Prevents buying at peak of green candle that reverses in 5s)
+    if (currentPrice > currentCandle.open && (runningCandleObj.upperWick >= candleRange * 0.32 || pricePath.midPathPullbackRisk === 'HIGH')) {
+      sellScore += 28;
+      downFactors.push(`5S Wick Rejection Defense: Green candle upper exhaustion suggests imminent pullback below entry [+28]`);
+    }
+    if (currentPrice < currentCandle.open && (runningCandleObj.lowerWick >= candleRange * 0.32 || pricePath.midPathPullbackRisk === 'HIGH')) {
+      buyScore += 28;
+      upFactors.push(`5S Wick Absorption Defense: Red candle lower absorption suggests imminent bounce above entry [+28]`);
     }
 
     // 5. RSI Extreme Boundaries (Exhaustion & Mean Reversion only)

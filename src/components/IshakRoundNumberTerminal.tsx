@@ -38,8 +38,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
   const [activePair, setActivePair] = useState<string>('USD/BDT (OTC)');
   const [currentPrice, setCurrentPrice] = useState<number>(122.348);
   const [roundPriceInput, setRoundPriceInput] = useState<string>('');
-  const [durationInput, setDurationInput] = useState<number>(6);
-  const [selectedChip, setSelectedChip] = useState<number>(6);
+  const [durationInput, setDurationInput] = useState<number>(5);
+  const [selectedChip, setSelectedChip] = useState<number>(5);
 
   // Simulation runtime state
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -220,7 +220,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       return;
     }
 
-    const duration = durationInput || 6;
+    const duration = durationInput || 5;
     const startP = currentPrice > 0 ? currentPrice : target;
     startPriceRef.current = startP;
     targetPriceRef.current = target;
@@ -304,7 +304,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     };
   }, []);
 
-  // 1. MINIMIZED STATE: Futuristic Glowing Squircle VEX Crest (NEW UNIQUE STYLE)
+  // 1. MINIMIZED STATE: Futuristic Glowing Squircle VEX Crest with Running Orbital Animation
   if (isMinimized) {
     return (
       <div
@@ -317,57 +317,86 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           zIndex: 2147483647,
           width: '54px',
           height: '54px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #090e24 0%, #030612 100%)',
-          boxShadow: isRunning
-            ? '0 10px 30px rgba(0,0,0,0.95), 0 0 25px #ff2e54, inset 0 0 12px rgba(255,46,84,0.4)'
-            : '0 10px 30px rgba(0,0,0,0.95), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25)',
-          cursor: 'pointer',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          border: `2px solid ${isRunning ? '#ff2e54' : '#00e5ff'}`,
           touchAction: 'none',
           userSelect: 'none',
-          transition: 'all 0.25s',
         }}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
-        onClick={() => setIsMinimized(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsMinimized(false);
+        }}
       >
-        {/* Glowing Corner Notches */}
-        <div style={{ position: 'relative', width: '28px', height: '28px', borderRadius: '8px', overflow: 'hidden' }}>
-          <img
-            src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
-            alt="TradePilot Vex"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        {/* Continuous Square Orbital Beam Animation */}
+        <div className="absolute -inset-1.5 rounded-[18px] pointer-events-none flex items-center justify-center">
+          <div
+            className="absolute inset-0 rounded-[18px] pointer-events-none animate-[ishakSpinCW_3.2s_linear_infinite] opacity-80"
+            style={{
+              background: isRunning
+                ? 'conic-gradient(from 0deg, transparent 0%, rgba(255,46,84,0.9) 30%, transparent 60%, rgba(255,100,130,0.8) 80%, transparent 100%)'
+                : 'conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%)',
+              mask: 'radial-gradient(circle, transparent 65%, black 66%)',
+              WebkitMask: 'radial-gradient(circle, transparent 65%, black 66%)',
+              filter: `drop-shadow(0 0 8px ${isRunning ? '#ff2e54' : '#00E5FF'})`,
+            }}
           />
         </div>
 
-        {/* Micro VEX Pill Indicator */}
+        {/* Squircle Crest */}
         <div
           style={{
-            marginTop: '2px',
-            fontSize: '7.5px',
-            fontWeight: 900,
-            letterSpacing: '0.8px',
-            padding: '1px 5px',
-            borderRadius: '999px',
-            background: isRunning ? 'linear-gradient(90deg, #ff2e54, #ff5e7e)' : 'linear-gradient(90deg, #00e5ff, #0099ff)',
-            color: '#050a18',
-            fontFamily: 'monospace',
-            textTransform: 'uppercase',
-            boxShadow: isRunning ? '0 0 8px #ff2e54' : '0 0 8px #00e5ff',
+            position: 'relative',
+            zIndex: 10,
+            width: '48px',
+            height: '48px',
+            borderRadius: '15px',
+            background: 'linear-gradient(135deg, #090e24 0%, #030612 100%)',
+            boxShadow: isRunning
+              ? '0 10px 30px rgba(0,0,0,0.95), 0 0 25px #ff2e54, inset 0 0 12px rgba(255,46,84,0.4)'
+              : '0 10px 30px rgba(0,0,0,0.95), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25)',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: `2px solid ${isRunning ? '#ff2e54' : '#00e5ff'}`,
+            transition: 'all 0.25s',
           }}
         >
-          {isRunning ? 'ACTIVE' : 'VEX'}
+          <div style={{ position: 'relative', width: '26px', height: '26px', borderRadius: '7px', overflow: 'hidden' }}>
+            <img
+              src="https://i.ibb.co/qLkRtpxt/file-441.jpg"
+              alt="TradePilot Vex"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+
+          <div
+            style={{
+              marginTop: '1.5px',
+              fontSize: '7px',
+              fontWeight: 900,
+              letterSpacing: '0.6px',
+              padding: '0.5px 4px',
+              borderRadius: '999px',
+              background: isRunning ? 'linear-gradient(90deg, #ff2e54, #ff5e7e)' : 'linear-gradient(90deg, #00e5ff, #0099ff)',
+              color: '#050a18',
+              fontFamily: 'monospace',
+              textTransform: 'uppercase',
+              boxShadow: isRunning ? '0 0 8px #ff2e54' : '0 0 8px #00e5ff',
+            }}
+          >
+            {isRunning ? 'ACTIVE' : 'VEX'}
+          </div>
         </div>
       </div>
     );
   }
 
-  // 2. EXPANDED STATE: Complete Redesigned Dark Obsidian Glass & Neon VEX Terminal
+  // 2. EXPANDED STATE: Slimmer, Handier Obsidian Glass & Neon VEX Terminal (265px)
   return (
     <div
       id="appCard"
@@ -376,17 +405,17 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         top: `${position.y}px`,
         position: 'fixed',
         zIndex: 2147483647,
-        width: '310px',
+        width: '265px',
         maxWidth: 'calc(100vw - 16px)',
         maxHeight: 'calc(100vh - 20px)',
         background: 'linear-gradient(165deg, rgba(8, 14, 36, 0.98) 0%, rgba(4, 7, 20, 0.99) 100%)',
         border: `1.5px solid ${isRunning ? '#ff2e54' : 'rgba(0, 229, 255, 0.4)'}`,
-        borderRadius: '20px',
+        borderRadius: '16px',
         boxShadow: isRunning
-          ? '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 40px rgba(255, 46, 84, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15)'
-          : '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(0, 229, 255, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
+          ? '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(255, 46, 84, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15)'
+          : '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 30px rgba(0, 229, 255, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
         color: '#e2e8f0',
-        fontSize: '12px',
+        fontSize: '11.5px',
         overflow: 'hidden',
         touchAction: 'none',
         backdropFilter: 'blur(16px)',
@@ -412,7 +441,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{
-          padding: '12px 14px',
+          padding: '10px 12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -421,17 +450,20 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           borderBottom: '1px solid rgba(0, 229, 255, 0.18)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Logo Crest (Tap to Minimize) */}
           <div
-            onClick={() => setIsMinimized(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMinimized(true);
+            }}
             title="Tap to minimize"
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
+              width: '28px',
+              height: '28px',
+              borderRadius: '9px',
               border: '1.5px solid #00e5ff',
-              boxShadow: '0 0 12px rgba(0,229,255,0.4)',
+              boxShadow: '0 0 10px rgba(0,229,255,0.4)',
               overflow: 'hidden',
               cursor: 'pointer',
               flexShrink: 0,
@@ -446,17 +478,17 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {/* Redesigned Brand Header: TradePilot Vex */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ fontWeight: 900, fontSize: '13px', letterSpacing: '0.5px', fontFamily: '"Orbitron", sans-serif' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontWeight: 900, fontSize: '12px', letterSpacing: '0.4px', fontFamily: '"Orbitron", sans-serif' }}>
                 <span style={{ color: '#00e5ff', textShadow: '0 0 8px rgba(0,229,255,0.8)' }}>Trade</span>
                 <span style={{ color: '#ff2e54', textShadow: '0 0 8px rgba(255,46,84,0.8)' }}>Pilot</span>
               </span>
               <span
                 style={{
-                  fontSize: '9px',
+                  fontSize: '8px',
                   fontWeight: 900,
-                  padding: '1px 5px',
-                  borderRadius: '5px',
+                  padding: '1px 4px',
+                  borderRadius: '4px',
                   background: 'linear-gradient(135deg, #ff2e54, #8b0029)',
                   color: '#ffffff',
                   letterSpacing: '0.5px',
@@ -467,48 +499,54 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 VEX
               </span>
             </div>
-            <span style={{ fontSize: '8.5px', color: '#94a3b8', letterSpacing: '0.8px', textTransform: 'uppercase', marginTop: '1px' }}>
+            <span style={{ fontSize: '7.5px', color: '#94a3b8', letterSpacing: '0.6px', textTransform: 'uppercase', marginTop: '1px' }}>
               TP VEX CONTROL ENGINE
             </span>
           </div>
         </div>
 
         {/* Header Right Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Mode Return Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          {/* Mode Return Button (Return Bot) */}
           {onSwitchMode && (
             <button
-              onClick={onSwitchMode}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSwitchMode();
+              }}
               type="button"
-              title="Return to Standard TradePilot"
+              title="Return to Standard TradePilot Bot"
               style={{
-                padding: '4px 8px',
-                borderRadius: '8px',
+                padding: '4px 7px',
+                borderRadius: '7px',
                 background: 'rgba(0, 229, 255, 0.12)',
                 border: '1px solid rgba(0, 229, 255, 0.35)',
                 color: '#00e5ff',
-                fontSize: '8.5px',
+                fontSize: '8px',
                 fontWeight: 800,
                 cursor: 'pointer',
                 fontFamily: 'monospace',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '2px',
               }}
             >
-              <span>↩</span> STD
+              <span>↩</span> BOT
             </button>
           )}
 
           {/* Minimize Button */}
           <button
-            onClick={() => setIsMinimized(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMinimized(true);
+            }}
             type="button"
             title="Minimize"
             style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '8px',
+              width: '22px',
+              height: '22px',
+              borderRadius: '7px',
               background: 'rgba(15, 23, 42, 0.8)',
               border: '1px solid rgba(255, 255, 255, 0.12)',
               color: '#94a3b8',
@@ -526,13 +564,16 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           {/* Close Button */}
           {onClose && (
             <button
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
               type="button"
               title="Close"
               style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '8px',
+                width: '22px',
+                height: '22px',
+                borderRadius: '7px',
                 background: 'rgba(255, 46, 84, 0.2)',
                 border: '1px solid rgba(255, 46, 84, 0.5)',
                 color: '#ff8fa3',
@@ -551,7 +592,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       </div>
 
       {/* BODY CONTENT: Restructured layout & colors */}
-      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {/* 1. Market & Live Price Bar */}
         <div
           style={{
@@ -683,7 +724,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           </div>
 
           <div style={{ display: 'flex', gap: '4px' }}>
-            {[5, 6, 10, 15, 30, 60].map((sec) => (
+            {[5, 10, 15, 30, 60].map((sec) => (
               <button
                 key={sec}
                 type="button"

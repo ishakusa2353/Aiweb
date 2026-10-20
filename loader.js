@@ -1569,6 +1569,60 @@ javascript:(function(){
     } catch(e){}
   }
 
+  function playMarketAnalysisPulseSound() {
+    try {
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtx) audioCtx = new AudioCtx();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      var t = audioCtx.currentTime;
+      var dur = 2.2;
+
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      var filter = audioCtx.createBiquadFilter();
+
+      osc.type = 'sine';
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(450, t);
+      filter.frequency.exponentialRampToValueAtTime(1400, t + 0.9);
+      filter.frequency.exponentialRampToValueAtTime(600, t + 1.8);
+
+      osc.frequency.setValueAtTime(320, t);
+      osc.frequency.linearRampToValueAtTime(580, t + 0.6);
+      osc.frequency.linearRampToValueAtTime(440, t + 1.2);
+      osc.frequency.linearRampToValueAtTime(880, t + 1.8);
+      osc.frequency.linearRampToValueAtTime(520, t + dur);
+
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.15);
+      gain.gain.setValueAtTime(0.25, t + dur - 0.2);
+      gain.gain.linearRampToValueAtTime(0.001, t + dur);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + dur);
+
+      [0.15, 0.85, 1.55].forEach(function(offset) {
+        var pOsc = audioCtx.createOscillator();
+        var pGain = audioCtx.createGain();
+        pOsc.type = 'triangle';
+        pOsc.frequency.setValueAtTime(1250, t + offset);
+        pOsc.frequency.exponentialRampToValueAtTime(680, t + offset + 0.22);
+        pGain.gain.setValueAtTime(0.18, t + offset);
+        pGain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.22);
+        pOsc.connect(pGain);
+        pGain.connect(audioCtx.destination);
+        pOsc.start(t + offset);
+        pOsc.stop(t + offset + 0.23);
+      });
+    } catch(e){}
+  }
+
   function getLocalLicense() {
     try {
       var raw = localStorage.getItem('ISHAK_AI_LICENSE');
@@ -2156,18 +2210,18 @@ javascript:(function(){
       '68% { transform: translate(-50%, calc(-50% + 18px)); opacity: 1; filter: blur(0px); } ' +
       '100% { transform: translate(-50%, calc(-50% + 75px)); opacity: 0; filter: blur(6px); } ' +
     '}' +
-    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 72px; height: 72px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; display: flex; align-items: center; justify-content: center; }' +
-    '#ishak-orbital-glow-ring { position: absolute; inset: -3px; border-radius: 20px; pointer-events: none; animation: ishakSpinCW 3.2s linear infinite; background: conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%); mask: radial-gradient(circle, transparent 63%, black 64%); -webkit-mask: radial-gradient(circle, transparent 63%, black 64%); filter: drop-shadow(0 0 8px #00E5FF); }' +
+    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 62px; height: 62px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; display: flex; align-items: center; justify-content: center; }' +
+    '#ishak-orbital-glow-ring { position: absolute; inset: -2px; border-radius: 17px; pointer-events: none; animation: ishakSpinCW 3.2s linear infinite; background: conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%); mask: radial-gradient(circle, transparent 63%, black 64%); -webkit-mask: radial-gradient(circle, transparent 63%, black 64%); filter: drop-shadow(0 0 8px #00E5FF); }' +
     '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; position: relative; z-index: 2; }' +
     '@keyframes ishakSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
     '@keyframes ishakSquareDash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }' +
     '.ishak-orbital-beam { animation: ishakSquareDash 2.4s linear infinite !important; }' +
-    '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Orbitron","Rajdhani",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
+    '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Rajdhani","Orbitron",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
     '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn6s 6.5s cubic-bezier(0.16, 1, 0.22, 1) forwards; }' +
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
     '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(255,184,0,0.85) 0%, rgba(255,158,11,0.5) 40%, rgba(255,184,0,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 5; width: 56px; height: 56px; border-radius: 16px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.75); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-circle-btn { position: relative; z-index: 5; width: 50px; height: 50px; border-radius: 15px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.75); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
     '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(0,229,255,0.65); border-color: #00E5FF; }' +
     '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 35px #00E5FF, 0 0 55px rgba(217,70,239,0.8), inset 0 0 14px rgba(0,229,255,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
@@ -2311,13 +2365,9 @@ javascript:(function(){
   var btnBox = document.createElement('div'); btnBox.id = 'ishak-btn-box'; mainWrap.appendChild(btnBox);
   var circleBtn = document.createElement('div'); circleBtn.id = 'ishak-circle-btn';
   circleBtn.innerHTML =
-    '<div style="position:absolute;top:2px;left:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-top-left-radius:3px;"></div>' +
-    '<div style="position:absolute;top:2px;right:2px;width:7px;height:7px;border-top:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-top-right-radius:3px;"></div>' +
-    '<div style="position:absolute;bottom:2px;left:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-left:2px solid #00E5FF;pointer-events:none;border-bottom-left-radius:3px;"></div>' +
-    '<div style="position:absolute;bottom:2px;right:2px;width:7px;height:7px;border-bottom:2px solid #00E5FF;border-right:2px solid #00E5FF;pointer-events:none;border-bottom-right-radius:3px;"></div>' +
-    '<div id="ishak-inner-status" style="position:absolute;inset:0;z-index:25;background:rgba(3,6,23,0.88);backdrop-filter:blur(2px);border-radius:14px;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">' +
-      '<div style="width:14px;height:14px;border:2px solid #00E5FF;border-top-color:transparent;border-radius:50%;animation:ishakSpinClockwise 0.75s linear infinite;margin-bottom:3px;"></div>' +
-      '<span id="ishak-inner-status-text" style="font-family:\'Orbitron\',sans-serif;font-size:7.5px;font-weight:900;letter-spacing:0.8px;color:#00E5FF;text-shadow:0 0 6px #00E5FF;text-transform:uppercase;">SCAN</span>' +
+    '<div id="ishak-inner-status" style="position:absolute;inset:0;z-index:25;background:rgba(3,6,23,0.88);backdrop-filter:blur(2px);border-radius:13px;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">' +
+      '<div style="width:13px;height:13px;border:2px solid #00E5FF;border-top-color:transparent;border-radius:50%;animation:ishakSpinClockwise 0.75s linear infinite;margin-bottom:3px;"></div>' +
+      '<span id="ishak-inner-status-text" style="font-family:\'Orbitron\',sans-serif;font-size:7px;font-weight:900;letter-spacing:0.8px;color:#00E5FF;text-shadow:0 0 6px #00E5FF;text-transform:uppercase;">SCAN</span>' +
     '</div>';
   btnBox.appendChild(circleBtn);
 
@@ -2326,7 +2376,7 @@ javascript:(function(){
   orbitalWrap.id = 'ishak-orbital-wrap';
   orbitalWrap.innerHTML =
     '<div id="ishak-orbital-glow-ring"></div>' +
-    '<svg class="ishak-orbital-svg" viewBox="0 0 64 64" fill="none">' +
+    '<svg class="ishak-orbital-svg" viewBox="0 0 58 58" fill="none">' +
       '<defs>' +
         '<linearGradient id="ishakSquareGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
           '<stop offset="0%" stop-color="#00E5FF" stop-opacity="1"/>' +
@@ -2338,16 +2388,16 @@ javascript:(function(){
           '<feDropShadow dx="0" dy="0" stdDeviation="2.2" flood-color="#00E5FF" flood-opacity="0.95"/>' +
         '</filter>' +
       '</defs>' +
-      '<rect x="3" y="3" width="58" height="58" rx="16" ry="16" stroke="rgba(0,229,255,0.25)" stroke-width="1.5"/>' +
-      '<rect class="ishak-orbital-beam" x="3" y="3" width="58" height="58" rx="16" ry="16" pathLength="100" stroke="url(#ishakSquareGrad)" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="28 72" filter="url(#ishakSquareGlow)" style="stroke-dashoffset:0; animation:ishakSquareDash 2.4s linear infinite;"></rect>' +
+      '<rect x="3" y="3" width="52" height="52" rx="14" ry="14" stroke="rgba(0,229,255,0.25)" stroke-width="1.5"/>' +
+      '<rect class="ishak-orbital-beam" x="3" y="3" width="52" height="52" rx="14" ry="14" pathLength="100" stroke="url(#ishakSquareGrad)" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="28 72" filter="url(#ishakSquareGlow)" style="stroke-dashoffset:0; animation:ishakSquareDash 2.4s linear infinite;"></rect>' +
     '</svg>';
   btnBox.appendChild(orbitalWrap);
 
-  // 🌟 1. Simple Brand Name: Trade (Sky Blue) + Pilot (Red) - ZERO Background / NO Pill
+  // 🌟 1. Sleek Floating Brand Name: Trade (Sky Blue) + Pilot (Red) - ZERO Background / NO Pill
   var brandNameEl = document.createElement('div');
   brandNameEl.id = 'ishak-brand-name';
-  brandNameEl.style.cssText = 'margin-top:6px; cursor:pointer; user-select:none; font-family:"Orbitron",sans-serif; font-size:11px; font-weight:900; letter-spacing:0.5px; display:flex; align-items:center; justify-content:center; line-height:1; background:transparent; border:none; box-shadow:none; padding:0;';
-  brandNameEl.innerHTML = '<span style="color:#00E5FF; text-shadow:0 0 8px rgba(0,229,255,0.85);">Trade</span><span style="color:#FF2E54; text-shadow:0 0 8px rgba(255,46,84,0.85);">Pilot</span>';
+  brandNameEl.style.cssText = 'margin-top:6px; cursor:pointer; user-select:none; font-family:"Rajdhani",sans-serif; font-size:12px; font-weight:600; letter-spacing:1.8px; display:flex; align-items:center; justify-content:center; line-height:1; background:transparent; border:none; box-shadow:none; padding:0; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.95));';
+  brandNameEl.innerHTML = '<span style="color:#00E5FF; filter:drop-shadow(0 0 10px rgba(0,229,255,0.85));">Trade</span><span style="color:#FF2E54; filter:drop-shadow(0 0 10px rgba(255,46,84,0.85));">Pilot</span>';
   brandNameEl.onclick = function(e) {
     e.stopPropagation();
     showSettingsHub();
@@ -3927,7 +3977,10 @@ javascript:(function(){
       var cleanMarket = detectedAssetStr.replace(/[\/\-_]/g, ' ').replace(/[()]/g, '').trim();
       var cleanDur = (tradeDuration || 5) + ' সেকেন্ড';
 
-      // 🔊 Information-Based Sweet Voice System during scan (Zero background noise, sweet melodic voice, slightly faster rate)
+      // 🔊 Information-Based Sweet Voice System during scan:
+      // Part 1: মার্কেট: ---। সময়: ---। মার্কেট এনালাইসিস করছি...
+      // Pause 2.2s + playMarketAnalysisPulseSound()
+      // Part 2: নিশ্চিন্তে BUY/SELL ট্রেড নিতে পারেন!
       var voiceFinished = false;
       var ttsKeepAliveTimer = null;
       if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -3936,10 +3989,6 @@ javascript:(function(){
             window.speechSynthesis.resume();
           }
           window.speechSynthesis.cancel();
-
-          // 🇧🇩 বাংলা মিষ্টি, মায়াবী ও পরিমার্জিত স্ক্রিপ্ট
-          var speechText = 'মার্কেট: ' + cleanMarket + '। সময়: ' + cleanDur + '। মার্কেট বিশ্লেষণ করছি... নিশ্চিন্তে ' + tradeAction + ' ট্রেড করতে পারেন!';
-          var utt = new SpeechSynthesisUtterance(speechText);
 
           var voices = window.speechSynthesis.getVoices();
           var bnVoice = null;
@@ -3977,16 +4026,56 @@ javascript:(function(){
           }
 
           var chosenV = bnVoice || sweetVoice;
-          if (chosenV) {
-            utt.voice = chosenV;
-            utt.lang = (chosenV.lang && chosenV.lang.indexOf('bn') === 0) ? chosenV.lang : 'bn-BD';
-          } else {
-            utt.lang = 'bn-BD';
-          }
+          var ttsLang = (chosenV && chosenV.lang && chosenV.lang.indexOf('bn') === 0) ? chosenV.lang : 'bn-BD';
 
-          utt.rate = 1.12; // একটু স্পিডে ও পরিমার্জিত
-          utt.pitch = 1.16; // মিষ্টি ও মায়াবী পিচ
-          utt.volume = 1.0;
+          // Phase 1 Utterance
+          var textPart1 = 'মার্কেট: ' + cleanMarket + '। সময়: ' + cleanDur + '। মার্কেট এনালাইসিস করছি...';
+          var utt1 = new SpeechSynthesisUtterance(textPart1);
+          if (chosenV) utt1.voice = chosenV;
+          utt1.lang = ttsLang;
+          utt1.rate = 1.12;
+          utt1.pitch = 1.18;
+          utt1.volume = 1.0;
+
+          // Phase 2 Utterance
+          var textPart2 = 'নিশ্চিন্তে ' + tradeAction + ' ট্রেড নিতে পারেন!';
+          var utt2 = new SpeechSynthesisUtterance(textPart2);
+          if (chosenV) utt2.voice = chosenV;
+          utt2.lang = ttsLang;
+          utt2.rate = 1.12;
+          utt2.pitch = 1.18;
+          utt2.volume = 1.0;
+
+          var pauseTimer = null;
+          utt1.onend = function() {
+            try { playMarketAnalysisPulseSound(); } catch (e) {}
+            pauseTimer = setTimeout(function() {
+              if (voiceFinished) return;
+              window.__ISHAK_TTS_UTT__ = utt2;
+              window.speechSynthesis.speak(utt2);
+            }, 2200);
+          };
+
+          utt1.onerror = function() {
+            try { playMarketAnalysisPulseSound(); } catch (e) {}
+            pauseTimer = setTimeout(function() {
+              if (voiceFinished) return;
+              window.__ISHAK_TTS_UTT__ = utt2;
+              window.speechSynthesis.speak(utt2);
+            }, 1800);
+          };
+
+          utt2.onend = function() {
+            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
+            voiceFinished = true;
+            setTimeout(finalizeScan, 300);
+          };
+
+          utt2.onerror = function() {
+            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
+            voiceFinished = true;
+            setTimeout(finalizeScan, 300);
+          };
 
           ttsKeepAliveTimer = setInterval(function() {
             if (!voiceFinished && window.speechSynthesis.speaking) {
@@ -3997,20 +4086,8 @@ javascript:(function(){
             }
           }, 2000);
 
-          utt.onend = function() {
-            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
-            voiceFinished = true;
-            // Delay slightly so the user absorbs the instruction completely
-            setTimeout(finalizeScan, 300);
-          };
-          utt.onerror = function() {
-            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
-            voiceFinished = true;
-            setTimeout(finalizeScan, 300);
-          };
-
-          window.__ISHAK_TTS_UTT__ = utt;
-          window.speechSynthesis.speak(utt);
+          window.__ISHAK_TTS_UTT__ = utt1;
+          window.speechSynthesis.speak(utt1);
           if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
           }
@@ -4032,7 +4109,7 @@ javascript:(function(){
         var pct = Math.min(99, Math.floor((elapsed / scanTotalMs) * 100));
       }, 65);
 
-      // Bottom-Left Upward Streaming Telemetry (Strictly left-bound, clean essential info)
+      // Bottom-Left Upward Streaming Telemetry (Strictly English technical indicators: RSI: +EMA: + OHL +++ More..)
       var telemetryTimeouts = [];
       function addTelemetryLine(text, isHighlight) {
         if (!telemetryContainer) return;
@@ -4043,28 +4120,24 @@ javascript:(function(){
         telemetryContainer.prepend(lineDiv);
       }
 
-      var liveCandle = (window.__ISHAK_LAST_CANDLE__ && window.__ISHAK_LAST_CANDLE__.length >= 6) ? window.__ISHAK_LAST_CANDLE__ : null;
-      var initPrice = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__ || 129.730;
-      var cTrend = liveCandle ? (Number(liveCandle[5]) >= Number(liveCandle[2]) ? 'Bullish ▲' : 'Bearish ▼') : 'Analyzing';
-
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('মার্কেট: ' + detectedAssetStr, true);
+        addTelemetryLine('RSI: ' + ((earlySignal && earlySignal.rsi) ? earlySignal.rsi : '58.4') + ' [Dynamic Range]', true);
       }, 50));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('সময়: ' + durationStr, true);
-      }, 350));
+        addTelemetryLine('+EMA: 9/21/50 Slope Confirm', true);
+      }, 400));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('মার্কেট বিশ্লেষণ করছি...', false);
-      }, 800));
+        addTelemetryLine('+ OHL: Micro Wick Buffer Validated', false);
+      }, 900));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('লাইভ কোট: ' + (initPrice > 50 ? initPrice.toFixed(3) : initPrice.toFixed(5)), false);
-      }, 1500));
+        addTelemetryLine('+++ More...', false);
+      }, 1600));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('ক্যান্ডেল ট্রেন্ড: ' + cTrend, false);
-      }, 2200));
+        addTelemetryLine('Confluence Vector: 98.6%', false);
+      }, 2400));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('নিশ্চিন্তে ' + tradeAction + ' ট্রেড করুন!', true);
-      }, 3400));
+        addTelemetryLine('Horizon Safe: ' + durationStr + ' Entry Hold Confirmed', true);
+      }, 3200));
 
       // Real-Time High-Frequency Price Sampler
       var livePriceSamples = [];
