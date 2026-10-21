@@ -371,18 +371,34 @@ export function speakScanTelemetry(
       } catch (e) {}
     }
 
-    // 1. Natural melodic voice lookup (prioritizes modern neural / non-robotic voices)
-    const bnVoice = voices.find(v =>
-      v.lang.startsWith('bn') && (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('বাংলা') || v.name.includes('Bangla') || v.name.includes('Neural'))
-    ) || voices.find(v => v.lang.startsWith('bn'));
+    // NEVER use robotic default Bengali voice (avoid Desktop, default, eSpeak, harsh speech)
+    // Manually select a sweet, enchanting, melodic female voice (মেয়ের মায়াবী কন্ঠ)
+    const isRobotic = (name: string) => /desktop|espeak|offline|robotic/i.test(name);
 
-    const sweetVoice = voices.find(v =>
-      (v.name.includes('Google UK English Female') || v.name.includes('Natural') || v.name.includes('Jenny') || v.name.includes('Sonia') || v.name.includes('Aria') || v.name.includes('Samantha') || v.name.includes('Victoria')) &&
-      !v.name.includes('Desktop')
-    ) || voices.find(v => (v.name.includes('Female') || v.name.includes('Natural')))
+    // 1. High-grade neural / natural female Bengali voice
+    const bnFemaleVoice = voices.find(v =>
+      v.lang.startsWith('bn') &&
+      !isRobotic(v.name) &&
+      (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Wavenet') || (v.name.includes('Google') && !v.name.includes('Desktop')))
+    );
+
+    // 2. High-grade sweet melodic female natural voices (Jenny, Sonia, Aria, Samantha, Google UK English Female, Victoria)
+    const sweetFemaleVoice = voices.find(v =>
+      !isRobotic(v.name) &&
+      (v.name.includes('Google UK English Female') ||
+       v.name.includes('Jenny') ||
+       v.name.includes('Sonia') ||
+       v.name.includes('Aria') ||
+       v.name.includes('Samantha') ||
+       v.name.includes('Victoria') ||
+       v.name.includes('Karen') ||
+       v.name.includes('Tessa') ||
+       (v.name.includes('Female') && v.name.includes('Natural')))
+    ) || voices.find(v => !isRobotic(v.name) && v.name.includes('Female'))
+      || voices.find(v => !isRobotic(v.name) && v.name.includes('Natural'))
       || voices[0];
 
-    const chosenVoice = bnVoice || sweetVoice;
+    const chosenVoice = bnFemaleVoice || sweetFemaleVoice;
 
     // Phase 1: Market Announcement & Analysis Start
     const textPart1 = `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}। মার্কেট এনালাইসিস করছি...`;
@@ -394,8 +410,8 @@ export function speakScanTelemetry(
     } else {
       utt1.lang = 'bn-BD';
     }
-    utt1.rate = 1.12;
-    utt1.pitch = 1.16;
+    utt1.rate = 1.08;
+    utt1.pitch = 1.22;
     utt1.volume = 1.0;
 
     // Phase 2: Decision Announcement
@@ -407,8 +423,8 @@ export function speakScanTelemetry(
     } else {
       utt2.lang = 'bn-BD';
     }
-    utt2.rate = 1.12;
-    utt2.pitch = 1.16;
+    utt2.rate = 1.08;
+    utt2.pitch = 1.22;
     utt2.volume = 1.0;
 
     utt1.onend = () => {

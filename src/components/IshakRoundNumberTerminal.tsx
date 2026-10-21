@@ -123,7 +123,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
   // Dragging event handlers (bounded strictly to viewport)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input') || (e.target as HTMLElement).closest('.interactive-ctrl')) return;
     setIsDragging(true);
     dragRef.current = {
       startX: e.clientX,
@@ -134,7 +134,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input')) return;
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('input') || (e.target as HTMLElement).closest('.interactive-ctrl')) return;
     const t = e.touches[0];
     setIsDragging(true);
     dragRef.current = {
@@ -343,6 +343,48 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               filter: `drop-shadow(0 0 8px ${isRunning ? '#ff2e54' : '#00E5FF'})`,
             }}
           />
+          {/* Traveling Square Perimeter Beam SVG */}
+          <svg className="w-full h-full relative z-1" viewBox="0 0 66 66" fill="none">
+            <defs>
+              <linearGradient id="vexSquareGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={isRunning ? '#ff2e54' : '#00E5FF'} stopOpacity="1" />
+                <stop offset="35%" stopColor="#A855F7" stopOpacity="0.9" />
+                <stop offset="70%" stopColor={isRunning ? '#ff5e7e' : '#FF2E54'} stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#00FF66" stopOpacity="0.5" />
+              </linearGradient>
+              <filter id="vexSquareGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="0" stdDeviation="2.2" floodColor={isRunning ? '#ff2e54' : '#00E5FF'} floodOpacity="0.9" />
+              </filter>
+            </defs>
+            <rect
+              x="3"
+              y="3"
+              width="60"
+              height="60"
+              rx="16"
+              ry="16"
+              stroke={isRunning ? 'rgba(255,46,84,0.25)' : 'rgba(0,229,255,0.25)'}
+              strokeWidth="1.5"
+            />
+            <rect
+              x="3"
+              y="3"
+              width="60"
+              height="60"
+              rx="16"
+              ry="16"
+              pathLength="100"
+              stroke="url(#vexSquareGrad)"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+              strokeDasharray="28 72"
+              filter="url(#vexSquareGlow)"
+              style={{
+                strokeDashoffset: 0,
+                animation: 'ishakSquareDash 2.4s linear infinite',
+              }}
+            />
+          </svg>
         </div>
 
         {/* Squircle Crest */}
@@ -453,6 +495,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Logo Crest (Tap to Minimize) */}
           <div
+            className="interactive-ctrl"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               setIsMinimized(true);
@@ -510,6 +556,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           {/* Mode Return Button (Return Bot) */}
           {onSwitchMode && (
             <button
+              className="interactive-ctrl"
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 onSwitchMode();
@@ -537,6 +587,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
           {/* Minimize Button */}
           <button
+            className="interactive-ctrl"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               setIsMinimized(true);
@@ -564,6 +618,10 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           {/* Close Button */}
           {onClose && (
             <button
+              className="interactive-ctrl"
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 onClose();

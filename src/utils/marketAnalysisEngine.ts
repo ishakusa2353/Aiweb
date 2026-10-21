@@ -1777,6 +1777,27 @@ export function evaluateMarketData(
       downFactors.push('10S/15S EMA Stack 5<9<13 [+12]');
     }
 
+    // 🌟 Timeframe Forward Holding Horizon & Wick Exhaustion Defense (10S / 15S)
+    const callProb10 = pricePath.callPathProbability;
+    const putProb10 = pricePath.putPathProbability;
+    const expTerminal10 = pricePath.expectedTerminalPrice;
+    if (callProb10 >= 0.52 && expTerminal10 > entryPrice) {
+      buyScore += 35;
+      upFactors.push(`${timeframeSec}S Timeframe Horizon: Price path modeled to hold ABOVE entry price (+35)`);
+    } else if (putProb10 >= 0.52 && expTerminal10 < entryPrice) {
+      sellScore += 35;
+      downFactors.push(`${timeframeSec}S Timeframe Horizon: Price path modeled to hold BELOW entry price (+35)`);
+    }
+
+    if (currentPrice > currentCandle.open && (runningCandleObj.upperWick >= candleRange * 0.30 || pricePath.midPathPullbackRisk === 'HIGH')) {
+      sellScore += 26;
+      downFactors.push(`${timeframeSec}S Wick Rejection Defense: Upper exhaustion indicates imminent pullback [+26]`);
+    }
+    if (currentPrice < currentCandle.open && (runningCandleObj.lowerWick >= candleRange * 0.30 || pricePath.midPathPullbackRisk === 'HIGH')) {
+      buyScore += 26;
+      upFactors.push(`${timeframeSec}S Wick Absorption Defense: Lower absorption indicates imminent bounce [+26]`);
+    }
+
     // Light Macro Context (Context tailwind only)
     if (isMacroBull) {
       buyScore += 8;
