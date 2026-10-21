@@ -20,6 +20,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   // Squircle Cyber Badge Position (Independent & Clamped to screen)
   const [position, setPosition] = useState({ x: window.innerWidth - 105, y: window.innerHeight - 155 });
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragDistanceRef = useRef(0);
   const dragStartRef = useRef<{ startX: number; startY: number; initX: number; initY: number } | null>(null);
 
   // Independent 3D HUD Banner Position
@@ -229,10 +231,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Dragging event handlers for Bot Button
+  // Dragging event handlers for Bot Button (Distinguishes clicks from genuine drags)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button')?.id !== 'btn-ishak-logo') return;
-    setIsDragging(false);
+    if ((e.target as HTMLElement).closest('#btn-ishak-logo') === null) return;
+    dragDistanceRef.current = 0;
+    isDraggingRef.current = false;
     dragStartRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -243,26 +246,38 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       if (!dragStartRef.current) return;
       const dx = moveEvt.clientX - dragStartRef.current.startX;
       const dy = moveEvt.clientY - dragStartRef.current.startY;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      const dist = Math.hypot(dx, dy);
+      dragDistanceRef.current = dist;
+      if (dist > 8) {
+        isDraggingRef.current = true;
         setIsDragging(true);
+        setPosition(clampWidgetPosition(dragStartRef.current.initX + dx, dragStartRef.current.initY + dy));
       }
-      setPosition(clampWidgetPosition(dragStartRef.current.initX + dx, dragStartRef.current.initY + dy));
     };
     const onMouseUp = () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
-      setTimeout(() => {
+      if (dragDistanceRef.current <= 8) {
+        isDraggingRef.current = false;
         setIsDragging(false);
         dragStartRef.current = null;
-      }, 50);
+      } else {
+        setTimeout(() => {
+          isDraggingRef.current = false;
+          setIsDragging(false);
+          dragStartRef.current = null;
+          dragDistanceRef.current = 0;
+        }, 150);
+      }
     };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('button')?.id !== 'btn-ishak-logo') return;
-    setIsDragging(false);
+    if ((e.target as HTMLElement).closest('#btn-ishak-logo') === null) return;
+    dragDistanceRef.current = 0;
+    isDraggingRef.current = false;
     const touch = e.touches[0];
     dragStartRef.current = {
       startX: touch.clientX,
@@ -275,18 +290,29 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const t = moveEvt.touches[0];
       const dx = t.clientX - dragStartRef.current.startX;
       const dy = t.clientY - dragStartRef.current.startY;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      const dist = Math.hypot(dx, dy);
+      dragDistanceRef.current = dist;
+      if (dist > 8) {
+        isDraggingRef.current = true;
         setIsDragging(true);
+        setPosition(clampWidgetPosition(dragStartRef.current.initX + dx, dragStartRef.current.initY + dy));
       }
-      setPosition(clampWidgetPosition(dragStartRef.current.initX + dx, dragStartRef.current.initY + dy));
     };
     const onTouchEnd = () => {
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', onTouchEnd);
-      setTimeout(() => {
+      if (dragDistanceRef.current <= 8) {
+        isDraggingRef.current = false;
         setIsDragging(false);
         dragStartRef.current = null;
-      }, 50);
+      } else {
+        setTimeout(() => {
+          isDraggingRef.current = false;
+          setIsDragging(false);
+          dragStartRef.current = null;
+          dragDistanceRef.current = 0;
+        }, 150);
+      }
     };
     window.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('touchend', onTouchEnd);
@@ -400,7 +426,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
   // Primary Single Click Handler: Setup & Instant Scan
   const triggerScan = async () => {
-    if (isDragging) return;
+    if (isScanning) return;
 
     try {
       setInjectedTradesCount(999);
@@ -870,13 +896,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             onTouchStart={handleTouchStart}
             onClick={(e) => {
               e.stopPropagation();
-              if (!isDragging) triggerScan();
+              if (isDraggingRef.current || dragDistanceRef.current > 8) {
+                return;
+              }
+              triggerScan();
             }}
             onDoubleClick={(e) => {
               e.stopPropagation();
               setShowHub(true);
             }}
-            className={`relative z-10 w-[50px] h-[50px] sm:w-[54px] sm:h-[54px] rounded-2xl border-2 border-cyan-400/80 bg-gradient-to-b from-[#0e163d] via-[#070b22] to-[#040614] shadow-[0_8px_25px_rgba(0,0,0,0.9),0_0_20px_rgba(0,229,255,0.45),inset_0_0_12px_rgba(0,229,255,0.3)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden select-none touch-none ${
+            className={`relative z-10 w-[50px] h-[50px] sm:w-[54px] sm:h-[54px] rounded-2xl border-2 border-cyan-400/80 bg-gradient-to-b from-[#0e163d] via-[#070b22] to-[#040614] shadow-[0_8px_25px_rgba(0,0,0,0.9),0_0_20px_rgba(0,229,255,0.45),inset_0_0_12px_rgba(0,229,255,0.3)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden select-none touch-manipulation ${
               isScanning
                 ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-cyan-300 shadow-[0_0_35px_#00E5FF,0_0_45px_rgba(168,85,247,0.7),inset_0_0_16px_rgba(0,229,255,0.6)]'
                 : 'hover:border-cyan-300 hover:shadow-[0_0_28px_rgba(0,229,255,0.6)]'
@@ -903,10 +932,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           </button>
         </div>
 
-        {/* 🌟 1. Sleek Floating Brand Name (Thin/Refined Font, Zero Box, Zero Border, Floats into 3D) */}
+        {/* 🌟 1. Sleek Floating Brand Name with subtle dark shape for maximum crisp visibility */}
         <div
           onClick={() => setShowHub(true)}
-          className="mt-1.5 cursor-pointer select-none font-['Rajdhani',sans-serif] text-[12px] font-semibold tracking-[0.16em] flex items-center justify-center leading-none transition-transform hover:scale-105 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
+          className="mt-1.5 cursor-pointer select-none font-['Rajdhani',sans-serif] text-[12px] font-semibold tracking-[0.16em] flex items-center justify-center leading-none transition-transform hover:scale-105 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/12 shadow-[0_4px_14px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.15)] filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
           style={{ textRendering: 'optimizeLegibility' }}
         >
           <span className="text-[#00E5FF] drop-shadow-[0_0_10px_rgba(0,229,255,0.85)]">Trade</span>

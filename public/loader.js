@@ -2210,18 +2210,19 @@ javascript:(function(){
       '68% { transform: translate(-50%, calc(-50% + 18px)); opacity: 1; filter: blur(0px); } ' +
       '100% { transform: translate(-50%, calc(-50% + 75px)); opacity: 0; filter: blur(6px); } ' +
     '}' +
-    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 62px; height: 62px; transform: translate(-50%, -50%); pointer-events: none; z-index: 6; display: flex; align-items: center; justify-content: center; }' +
-    '#ishak-orbital-glow-ring { position: absolute; inset: -2px; border-radius: 17px; pointer-events: none; animation: ishakSpinCW 3.2s linear infinite; background: conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%); mask: radial-gradient(circle, transparent 63%, black 64%); -webkit-mask: radial-gradient(circle, transparent 63%, black 64%); filter: drop-shadow(0 0 8px #00E5FF); }' +
-    '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; position: relative; z-index: 2; }' +
+    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 62px; height: 62px; transform: translate(-50%, -50%); pointer-events: none !important; z-index: 1 !important; display: flex; align-items: center; justify-content: center; }' +
+    '#ishak-orbital-wrap *, .ishak-orbital-svg, .ishak-orbital-svg * { pointer-events: none !important; }' +
+    '#ishak-orbital-glow-ring { position: absolute; inset: -2px; border-radius: 17px; pointer-events: none !important; animation: ishakSpinCW 3.2s linear infinite; background: conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%); mask: radial-gradient(circle, transparent 63%, black 64%); -webkit-mask: radial-gradient(circle, transparent 63%, black 64%); filter: drop-shadow(0 0 8px #00E5FF); }' +
+    '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; position: relative; z-index: 2; pointer-events: none !important; }' +
     '@keyframes ishakSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
     '@keyframes ishakSquareDash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }' +
-    '.ishak-orbital-beam { animation: ishakSquareDash 2.4s linear infinite !important; }' +
+    '.ishak-orbital-beam { animation: ishakSquareDash 2.4s linear infinite !important; pointer-events: none !important; }' +
     '#ishak-trade-wrap { position: fixed; bottom: 30px; right: 30px; z-index: 2147483647; display: flex; flex-direction: column; align-items: center; touch-action: none; user-select: none; font-family: "Rajdhani","Orbitron",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }' +
     '#ishak-trade-wrap.ishak-intro-spawn { animation: ishakIntroSpawn6s 6.5s cubic-bezier(0.16, 1, 0.22, 1) forwards; }' +
-    '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; }' +
+    '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
     '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(255,184,0,0.85) 0%, rgba(255,158,11,0.5) 40%, rgba(255,184,0,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 5; width: 50px; height: 50px; border-radius: 15px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.75); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25); cursor: pointer; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }' +
+    '#ishak-circle-btn { position: relative; z-index: 10 !important; width: 50px; height: 50px; border-radius: 15px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.75); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25); cursor: pointer !important; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); touch-action: manipulation; }' +
     '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(0,229,255,0.65); border-color: #00E5FF; }' +
     '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 35px #00E5FF, 0 0 55px rgba(217,70,239,0.8), inset 0 0 14px rgba(0,229,255,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
@@ -2393,10 +2394,10 @@ javascript:(function(){
     '</svg>';
   btnBox.appendChild(orbitalWrap);
 
-  // 🌟 1. Sleek Floating Brand Name: Trade (Sky Blue) + Pilot (Red) - ZERO Background / NO Pill
+  // 🌟 1. Sleek Floating Brand Name with elegant dark shape (Makes name float clearly and distinctly against any chart)
   var brandNameEl = document.createElement('div');
   brandNameEl.id = 'ishak-brand-name';
-  brandNameEl.style.cssText = 'margin-top:6px; cursor:pointer; user-select:none; font-family:"Rajdhani",sans-serif; font-size:12px; font-weight:600; letter-spacing:1.8px; display:flex; align-items:center; justify-content:center; line-height:1; background:transparent; border:none; box-shadow:none; padding:0; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.95));';
+  brandNameEl.style.cssText = 'margin-top:6px; cursor:pointer; user-select:none; font-family:"Rajdhani",sans-serif; font-size:12px; font-weight:600; letter-spacing:1.8px; display:flex; align-items:center; justify-content:center; line-height:1; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:9999px; padding:2.5px 9px; border:1px solid rgba(255,255,255,0.14); box-shadow:0 4px 14px rgba(0,0,0,0.85), inset 0 1px 1px rgba(255,255,255,0.15); filter:drop-shadow(0 2px 4px rgba(0,0,0,0.95)); transition:transform 0.2s, background 0.2s, border-color 0.2s;';
   brandNameEl.innerHTML = '<span style="color:#00E5FF; filter:drop-shadow(0 0 10px rgba(0,229,255,0.85));">Trade</span><span style="color:#FF2E54; filter:drop-shadow(0 0 10px rgba(255,46,84,0.85));">Pilot</span>';
   brandNameEl.onclick = function(e) {
     e.stopPropagation();
@@ -4266,11 +4267,13 @@ javascript:(function(){
   checkMaintenanceStatus();
   setInterval(checkMaintenanceStatus, 10000);
 
-  // Click & Double click handles
-  circleBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
+  // Click & Double click handles (Single click instant serial scan execution)
+  function handleMainBotClick(e) {
+    if (e) {
+      try { e.stopPropagation(); } catch (err) {}
+    }
     stopAndClearIntroSound();
-    if (isDragging) return;
+    if (dragMoved || isDragging) return;
 
     if (isMaintenanceModeActive) {
       showMaintenanceModal();
@@ -4278,6 +4281,16 @@ javascript:(function(){
     }
 
     triggerScanAndTrade();
+  }
+
+  circleBtn.addEventListener('click', handleMainBotClick);
+  btnBox.addEventListener('click', handleMainBotClick);
+
+  // Fallback for touch devices or Quotex wrappers where mouse events may be swallowed
+  circleBtn.addEventListener('touchend', function(e) {
+    if (!dragMoved && !isDragging) {
+      handleMainBotClick(e);
+    }
   });
 
   circleBtn.addEventListener('dblclick', function(e) {
