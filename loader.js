@@ -2419,12 +2419,34 @@ javascript:(function(){
     '<div id="ishak-hud-body" style="padding:10px 12px;"></div>';
   document.body.appendChild(hudPanel);
 
-  document.getElementById('hud-close-btn').onclick = function(e) {
-    e.stopPropagation(); hudPanel.style.display = 'none';
-  };
+  var hudCloseBtn = document.getElementById('hud-close-btn');
+  if (hudCloseBtn) {
+    hudCloseBtn.onclick = function(e) {
+      e.stopPropagation(); hudPanel.style.display = 'none';
+    };
+  }
 
-  // 🖱️ + 📱 DRAGGABLE LOGO (STRICT SCREEN VIEWPORT BOUNDARY CLAMPING)
-  var isDragging = false, startX, startY, initX, initY;
+  // 🖱️ + 📱 UNBLOCKABLE DRAG & INSTANT SINGLE CLICK FOR QUOTEX PLATFORM
+  var isDragging = false, startX = 0, startY = 0, initX = 0, initY = 0;
+  var dragMoved = false;
+  var pointerDownTime = 0;
+  var lastScanTriggerTs = 0;
+
+  function triggerMainBotScan(e) {
+    if (e) {
+      try { e.stopPropagation(); } catch(err){}
+    }
+    var now = Date.now();
+    if (now - lastScanTriggerTs < 700) return; // Prevent double trigger between pointerup/click
+    lastScanTriggerTs = now;
+
+    stopAndClearIntroSound();
+    if (isMaintenanceModeActive) {
+      showMaintenanceModal();
+      return;
+    }
+    triggerScanAndTrade();
+  }
 
   function clampBotPosition(x, y) {
     var pad = 6;
@@ -2440,55 +2462,27 @@ javascript:(function(){
     };
   }
 
-  var dragMoved = false;
-  circleBtn.addEventListener('mousedown', function(e) {
-    dragMoved = false;
-    isDragging = false;
-    startX = e.clientX;
-    startY = e.clientY;
-    initX = mainWrap.offsetLeft;
-    initY = mainWrap.offsetTop;
-    function onMove(ev) {
-      if (Math.abs(ev.clientX - startX) > 8 || Math.abs(ev.clientY - startY) > 8) {
-        dragMoved = true;
-        isDragging = true;
-        var targetX = initX + ev.clientX - startX;
-        var targetY = initY + ev.clientY - startY;
-        var clamped = clampBotPosition(targetX, targetY);
-        mainWrap.style.left = clamped.x + 'px';
-        mainWrap.style.top = clamped.y + 'px';
-        mainWrap.style.bottom = 'auto';
-        mainWrap.style.right = 'auto';
-      }
-    }
-    function onUp() {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      if (!dragMoved) {
-        isDragging = false;
-      } else {
-        setTimeout(function() { isDragging = false; }, 50);
-      }
-    }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  });
+  function onBotPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    try { e.stopPropagation(); } catch(err){}
 
-  circleBtn.addEventListener('touchstart', function(e) {
+    pointerDownTime = Date.now();
     dragMoved = false;
     isDragging = false;
-    var t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
+    startX = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || 0;
+    startY = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
     initX = mainWrap.offsetLeft;
     initY = mainWrap.offsetTop;
-    function onTouchMove(ev) {
-      var tc = ev.touches[0];
-      if (Math.abs(tc.clientX - startX) > 8 || Math.abs(tc.clientY - startY) > 8) {
+
+    function onPointerMove(ev) {
+      var curX = ev.clientX || (ev.touches && ev.touches[0] && ev.touches[0].clientX) || startX;
+      var curY = ev.clientY || (ev.touches && ev.touches[0] && ev.touches[0].clientY) || startY;
+      var dist = Math.hypot(curX - startX, curY - startY);
+      if (dist > 8) {
         dragMoved = true;
         isDragging = true;
-        var targetX = initX + tc.clientX - startX;
-        var targetY = initY + tc.clientY - startY;
+        var targetX = initX + curX - startX;
+        var targetY = initY + curY - startY;
         var clamped = clampBotPosition(targetX, targetY);
         mainWrap.style.left = clamped.x + 'px';
         mainWrap.style.top = clamped.y + 'px';
@@ -2496,18 +2490,57 @@ javascript:(function(){
         mainWrap.style.right = 'auto';
       }
     }
-    function onTouchEnd() {
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend', onTouchEnd);
-      if (!dragMoved) {
+
+    function onPointerUp(ev) {
+      document.removeEventListener('mousemove', onPointerMove, true);
+      document.removeEventListener('mouseup', onPointerUp, true);
+      document.removeEventListener('touchmove', onPointerMove, true);
+      document.removeEventListener('touchend', onPointerUp, true);
+
+      var endX = ev.clientX || (ev.changedTouches && ev.changedTouches[0] && ev.changedTouches[0].clientX) || startX;
+      var endY = ev.clientY || (ev.changedTouches && ev.changedTouches[0] && ev.changedTouches[0].clientY) || startY;
+      var dist = Math.hypot(endX - startX, endY - startY);
+      var duration = Date.now() - pointerDownTime;
+
+      try { ev.stopPropagation(); } catch(err){}
+
+      if (!dragMoved && dist <= 8 && duration < 900) {
+        // Pure single click or tap! Triggers immediately even if Quotex chart suppressed synthetic click!
         isDragging = false;
+        triggerMainBotScan(ev);
       } else {
-        setTimeout(function() { isDragging = false; }, 50);
+        setTimeout(function() {
+          isDragging = false;
+          dragMoved = false;
+        }, 150);
       }
     }
-    document.addEventListener('touchmove', onTouchMove, { passive: true });
-    document.addEventListener('touchend', onTouchEnd);
-  }, { passive: true });
+
+    document.addEventListener('mousemove', onPointerMove, true);
+    document.addEventListener('mouseup', onPointerUp, true);
+    document.addEventListener('touchmove', onPointerMove, { capture: true, passive: false });
+    document.addEventListener('touchend', onPointerUp, { capture: true, passive: false });
+  }
+
+  // Intercept at capture phase so Quotex cannot prevent default
+  circleBtn.addEventListener('mousedown', onBotPointerDown, true);
+  circleBtn.addEventListener('touchstart', onBotPointerDown, { capture: true, passive: false });
+  btnBox.addEventListener('mousedown', onBotPointerDown, true);
+  btnBox.addEventListener('touchstart', onBotPointerDown, { capture: true, passive: false });
+
+  // Standard click fallback insurance
+  circleBtn.addEventListener('click', function(e) {
+    try { e.stopPropagation(); } catch(err){}
+    if (!dragMoved && !isDragging) {
+      triggerMainBotScan(e);
+    }
+  }, true);
+  btnBox.addEventListener('click', function(e) {
+    try { e.stopPropagation(); } catch(err){}
+    if (!dragMoved && !isDragging) {
+      triggerMainBotScan(e);
+    }
+  }, true);
 
   // Auto-snap inside screen on window resize
   window.addEventListener('resize', function() {
@@ -2549,43 +2582,51 @@ javascript:(function(){
   }
 
   var hudDragHandle = document.getElementById('ishak-hud-drag-handle');
-  hudDragHandle.addEventListener('mousedown', function(e) {
-    if (e.target.id === 'hud-close-btn') return;
-    startHudDrag(e.clientX, e.clientY);
-    function onHudMove(ev) {
-      moveHudDrag(ev.clientX, ev.clientY);
-    }
-    function onHudUp() {
-      document.removeEventListener('mousemove', onHudMove);
-      document.removeEventListener('mouseup', onHudUp);
-    }
-    document.addEventListener('mousemove', onHudMove);
-    document.addEventListener('mouseup', onHudUp);
-  });
+  if (hudDragHandle) {
+    hudDragHandle.addEventListener('mousedown', function(e) {
+      if (e.target.id === 'hud-close-btn') return;
+      startHudDrag(e.clientX, e.clientY);
+      function onHudMove(ev) {
+        moveHudDrag(ev.clientX, ev.clientY);
+      }
+      function onHudUp() {
+        document.removeEventListener('mousemove', onHudMove);
+        document.removeEventListener('mouseup', onHudUp);
+      }
+      document.addEventListener('mousemove', onHudMove);
+      document.addEventListener('mouseup', onHudUp);
+    });
+  }
 
-  hudDragHandle.addEventListener('touchstart', function(e) {
-    if (e.target.id === 'hud-close-btn') return;
-    var t = e.touches[0];
-    startHudDrag(t.clientX, t.clientY);
-    function onHudTouchMove(ev) {
-      var tc = ev.touches[0];
-      moveHudDrag(tc.clientX, tc.clientY);
-    }
-    function onHudTouchEnd() {
-      document.removeEventListener('touchmove', onHudTouchMove);
-      document.removeEventListener('touchend', onHudTouchEnd);
-    }
-    document.addEventListener('touchmove', onHudTouchMove);
-    document.addEventListener('touchend', onHudTouchEnd);
-  }, { passive: true });
+  if (hudDragHandle) {
+    hudDragHandle.addEventListener('touchstart', function(e) {
+      if (e.target.id === 'hud-close-btn') return;
+      var t = e.touches[0];
+      startHudDrag(t.clientX, t.clientY);
+      function onHudTouchMove(ev) {
+        var tc = ev.touches[0];
+        moveHudDrag(tc.clientX, tc.clientY);
+      }
+      function onHudTouchEnd() {
+        document.removeEventListener('touchmove', onHudTouchMove);
+        document.removeEventListener('touchend', onHudTouchEnd);
+      }
+      document.addEventListener('touchmove', onHudTouchMove);
+      document.addEventListener('touchend', onHudTouchEnd);
+    }, { passive: true });
+  }
 
   function updateBadgeLabel() {
-    var detectedDur = extractQuotexDuration();
-    if (detectedDur) tradeDuration = detectedDur;
-    if (!tradeDuration) tradeDuration = 5;
-    var timeTxt = tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S';
-    if (pillTime) pillTime.innerText = timeTxt;
-    if (pillName) pillName.innerHTML = '⚡ TradePilot';
+    try {
+      var detectedDur = extractQuotexDuration();
+      if (detectedDur) tradeDuration = detectedDur;
+      if (!tradeDuration) tradeDuration = 5;
+      var timeTxt = tradeDuration >= 60 ? (tradeDuration / 60) + 'M' : tradeDuration + 'S';
+      var pt = document.getElementById('ishak-pill-time');
+      if (pt) pt.innerText = timeTxt;
+      var pn = document.getElementById('ishak-pill-name');
+      if (pn) pn.innerHTML = '⚡ TradePilot';
+    } catch(err){}
   }
 
   // 3. FORCED TIME DURATION SELECTION MODAL
@@ -2864,8 +2905,11 @@ javascript:(function(){
       e.stopPropagation();
       autoPilotMode = !autoPilotMode;
       if (autoPilotMode) {
-        pillTime.innerText = 'AUTO 🤖';
-        pillTime.style.color = '#00FF66';
+        var ptAuto = document.getElementById('ishak-pill-time');
+        if (ptAuto) {
+          ptAuto.innerText = 'AUTO 🤖';
+          ptAuto.style.color = '#00FF66';
+        }
         hub.remove();
         triggerScanAndTrade();
       } else {
@@ -3913,8 +3957,9 @@ javascript:(function(){
 
   // 7. CLICK TRIGGER WITH MANDATORY PRE-SCAN LIVE DATABASE LICENSE VERIFICATION
   function triggerScanAndTrade() {
-    stopAndClearIntroSound();
-    if (isScanning) return;
+    try {
+      stopAndClearIntroSound();
+      if (isScanning) return;
 
     // Detect duration from screen or default 5s
     var onScreenDuration = extractQuotexDuration();
@@ -4251,6 +4296,9 @@ javascript:(function(){
 
       // Safety fallback timer ensuring scan finishes if speech synthesis is completely blocked on device
       setTimeout(finalizeScan, 16000);
+    } catch(err) {
+      console.error('[TradePilot] Scan trigger error:', err);
+    }
   }
 
   // 💓 CONTINUOUS EXPIRY & MAINTENANCE HEARTBEAT
@@ -4267,36 +4315,11 @@ javascript:(function(){
   checkMaintenanceStatus();
   setInterval(checkMaintenanceStatus, 10000);
 
-  // Click & Double click handles (Single click instant serial scan execution)
-  function handleMainBotClick(e) {
-    if (e) {
-      try { e.stopPropagation(); } catch (err) {}
-    }
-    stopAndClearIntroSound();
-    if (dragMoved || isDragging) return;
-
-    if (isMaintenanceModeActive) {
-      showMaintenanceModal();
-      return;
-    }
-
-    triggerScanAndTrade();
-  }
-
-  circleBtn.addEventListener('click', handleMainBotClick);
-  btnBox.addEventListener('click', handleMainBotClick);
-
-  // Fallback for touch devices or Quotex wrappers where mouse events may be swallowed
-  circleBtn.addEventListener('touchend', function(e) {
-    if (!dragMoved && !isDragging) {
-      handleMainBotClick(e);
-    }
-  });
-
+  // Double click handle for settings hub
   circleBtn.addEventListener('dblclick', function(e) {
     e.stopPropagation();
     showSettingsHub();
-  });
+  }, true);
 
   // BOT LOADED: Logo enters with top drop-down animation first (4s relaxing glide with water wave).
   // Clicking the logo opens Market Select -> Time Select options!
