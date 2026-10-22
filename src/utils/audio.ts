@@ -399,32 +399,37 @@ export function speakScanTelemetry(
       || voices[0];
 
     const chosenVoice = bnFemaleVoice || sweetFemaleVoice;
+    const hasRealBengali = !!bnFemaleVoice;
 
     // Phase 1: Market Announcement & Analysis Start
-    const textPart1 = `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}। মার্কেট এনালাইসিস করছি...`;
+    const textPart1 = hasRealBengali
+      ? `মার্কেট এনালাইসিস করছি`
+      : `Market analysis korchi`;
     const utt1 = new SpeechSynthesisUtterance(textPart1);
 
     if (chosenVoice) {
       utt1.voice = chosenVoice;
-      utt1.lang = chosenVoice.lang && chosenVoice.lang.startsWith('bn') ? chosenVoice.lang : 'bn-BD';
+      utt1.lang = hasRealBengali ? (chosenVoice.lang || 'bn-BD') : (chosenVoice.lang || 'en-US');
     } else {
-      utt1.lang = 'bn-BD';
+      utt1.lang = 'en-US';
     }
-    utt1.rate = 1.08;
-    utt1.pitch = 1.22;
+    utt1.rate = 1.05;
+    utt1.pitch = 1.25;
     utt1.volume = 1.0;
 
     // Phase 2: Decision Announcement
-    const textPart2 = `নিশ্চিন্তে ${tradeAction} ট্রেড নিতে পারেন!`;
+    const textPart2 = hasRealBengali
+      ? `নিশ্চিন্তে ${tradeAction} ট্রেড নিতে পারেন!`
+      : `Nischinte ${tradeAction} trade nite paren!`;
     const utt2 = new SpeechSynthesisUtterance(textPart2);
     if (chosenVoice) {
       utt2.voice = chosenVoice;
-      utt2.lang = chosenVoice.lang && chosenVoice.lang.startsWith('bn') ? chosenVoice.lang : 'bn-BD';
+      utt2.lang = hasRealBengali ? (chosenVoice.lang || 'bn-BD') : (chosenVoice.lang || 'en-US');
     } else {
-      utt2.lang = 'bn-BD';
+      utt2.lang = 'en-US';
     }
-    utt2.rate = 1.08;
-    utt2.pitch = 1.22;
+    utt2.rate = 1.05;
+    utt2.pitch = 1.25;
     utt2.volume = 1.0;
 
     utt1.onend = () => {
@@ -438,13 +443,20 @@ export function speakScanTelemetry(
     };
 
     utt1.onerror = () => {
-      // Fallback if part 1 errors
+      // Fallback if Bengali failed on device: retry with phonetic sweet voice
       playMarketAnalysisPulseSound();
       pauseTimer = setTimeout(() => {
         if (completed) return;
-        (window as any).__ACTIVE_TTS__ = utt2;
-        window.speechSynthesis.speak(utt2);
-      }, 1500);
+        const fallbackUtt2 = new SpeechSynthesisUtterance(`Nischinte ${tradeAction} trade nite paren!`);
+        if (sweetFemaleVoice) fallbackUtt2.voice = sweetFemaleVoice;
+        fallbackUtt2.lang = (sweetFemaleVoice && sweetFemaleVoice.lang) || 'en-US';
+        fallbackUtt2.pitch = 1.25;
+        fallbackUtt2.rate = 1.05;
+        fallbackUtt2.onend = finish;
+        fallbackUtt2.onerror = finish;
+        (window as any).__ACTIVE_TTS__ = fallbackUtt2;
+        window.speechSynthesis.speak(fallbackUtt2);
+      }, 2200);
     };
 
     utt2.onend = () => {

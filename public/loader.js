@@ -643,6 +643,19 @@ javascript:(function(){
   var autoTradeEnabled = true; // Auto-click Quotex CALL/PUT button (Default: ON)
   var autoPilotMode = false; // Continuous auto-trading loop
   var autoPilotTimer = null;
+  var cachedTtsVoices = [];
+  function populateCachedVoices() {
+    try {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        var v = window.speechSynthesis.getVoices();
+        if (v && v.length) cachedTtsVoices = v;
+      }
+    } catch(e){}
+  }
+  populateCachedVoices();
+  if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = populateCachedVoices;
+  }
   window.__ISHAK_LAST_DIRECTION__ = window.__ISHAK_LAST_DIRECTION__ || null;
   window.__ISHAK_CONSECUTIVE_DIR_COUNT__ = window.__ISHAK_CONSECUTIVE_DIR_COUNT__ || 0;
 
@@ -2346,7 +2359,7 @@ javascript:(function(){
         '</div>' +
       '</div>' +
     '</div>' +
-    '<div id="ishak-radar-matrix-telemetry" style="position:fixed;bottom:20px;left:20px;z-index:2147483647;max-width:280px;pointer-events:none;user-select:none;font-family:monospace;font-size:10.5px;line-height:1.45;height:32vh;max-height:240px;overflow:hidden;display:flex;flex-direction:column-reverse;mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 50%,rgba(0,0,0,0.15) 85%,transparent 100%);-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 50%,rgba(0,0,0,0.15) 85%,transparent 100%);"></div>';
+    '<div id="ishak-radar-matrix-telemetry" style="position:fixed;bottom:24px;left:20px;z-index:2147483647;max-width:280px;pointer-events:none;user-select:none;font-family:monospace;font-size:11px;line-height:1.45;height:32vh;max-height:240px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 70%,rgba(0,0,0,0.2) 90%,transparent 100%);-webkit-mask-image:linear-gradient(to top,rgba(0,0,0,1) 0%,rgba(0,0,0,0.9) 70%,rgba(0,0,0,0.2) 90%,transparent 100%);"></div>';
   document.body.appendChild(screenScanBox);
 
   // 🌊 Water Wave Ripple Overlay (Sweeps from left during 6.5s entrance animation)
@@ -4053,9 +4066,9 @@ javascript:(function(){
       var cleanDur = (tradeDuration || 5) + ' সেকেন্ড';
 
       // 🔊 Information-Based Sweet Voice System during scan:
-      // Part 1: মার্কেট: ---। সময়: ---। মার্কেট এনালাইসিস করছি...
+      // Part 1: Market Announcement (মার্কেট এনালাইসিস করছি / Market analysis korchi)
       // Pause 2.2s + playMarketAnalysisPulseSound()
-      // Part 2: নিশ্চিন্তে BUY/SELL ট্রেড নিতে পারেন!
+      // Part 2: Decision Announcement (নিশ্চিন্তে BUY/SELL ট্রেড নিতে পারেন! / Nischinte BUY/SELL trade nite paren!)
       var voiceFinished = false;
       var ttsKeepAliveTimer = null;
       if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -4063,10 +4076,15 @@ javascript:(function(){
           if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
           }
-          window.speechSynthesis.cancel();
 
           var isRobotic = function(n) { return /desktop|espeak|offline|robotic/i.test(n || ''); };
-          var voices = window.speechSynthesis.getVoices();
+          var voices = (cachedTtsVoices && cachedTtsVoices.length > 0) ? cachedTtsVoices : window.speechSynthesis.getVoices();
+          if (!voices || !voices.length) {
+            try { voices = window.speechSynthesis.getVoices(); } catch(err){}
+          }
+          if (!voices) voices = [];
+
+          // 1. Check for genuine natural Bengali female voice
           var bnVoice = null;
           for (var vi = 0; vi < voices.length; vi++) {
             var vname = voices[vi].name || '';
@@ -4076,10 +4094,20 @@ javascript:(function(){
               break;
             }
           }
+          if (!bnVoice) {
+            for (var vi2 = 0; vi2 < voices.length; vi2++) {
+              if ((voices[vi2].lang || '').indexOf('bn') === 0 && !isRobotic(voices[vi2].name || '')) {
+                bnVoice = voices[vi2];
+                break;
+              }
+            }
+          }
+
+          // 2. Sweet natural female voice for universal Android mobile playback
           var sweetVoice = null;
           for (var vi3 = 0; vi3 < voices.length; vi3++) {
             var vn = voices[vi3].name || '';
-            if (!isRobotic(vn) && (vn.indexOf('Google UK English Female') >= 0 || vn.indexOf('Natural') >= 0 || vn.indexOf('Samantha') >= 0 || vn.indexOf('Jenny') >= 0 || vn.indexOf('Sonia') >= 0 || vn.indexOf('Aria') >= 0 || vn.indexOf('Victoria') >= 0 || vn.indexOf('Karen') >= 0 || vn.indexOf('Tessa') >= 0)) {
+            if (!isRobotic(vn) && (vn.indexOf('Google UK English Female') >= 0 || vn.indexOf('Jenny') >= 0 || vn.indexOf('Sonia') >= 0 || vn.indexOf('Aria') >= 0 || vn.indexOf('Samantha') >= 0 || vn.indexOf('Victoria') >= 0 || vn.indexOf('Karen') >= 0 || vn.indexOf('Tessa') >= 0 || (vn.indexOf('Female') >= 0 && vn.indexOf('Natural') >= 0))) {
               sweetVoice = voices[vi3];
               break;
             }
@@ -4092,29 +4120,41 @@ javascript:(function(){
               }
             }
           }
+          if (!sweetVoice && voices.length > 0) {
+            sweetVoice = voices[0];
+          }
 
+          var hasRealBengali = !!bnVoice;
           var chosenV = bnVoice || sweetVoice;
-          var ttsLang = (chosenV && chosenV.lang && chosenV.lang.indexOf('bn') === 0) ? chosenV.lang : 'bn-BD';
+          var chosenLang = hasRealBengali ? (chosenV.lang || 'bn-BD') : ((chosenV && chosenV.lang) ? chosenV.lang : 'en-US');
 
-          // Phase 1 Utterance
-          var textPart1 = 'মার্কেট: ' + cleanMarket + '। সময়: ' + cleanDur + '। মার্কেট এনালাইসিস করছি...';
+          // Part 1 Utterance
+          var textPart1 = hasRealBengali ? 'মার্কেট এনালাইসিস করছি' : 'Market analysis korchi';
           var utt1 = new SpeechSynthesisUtterance(textPart1);
           if (chosenV) utt1.voice = chosenV;
-          utt1.lang = ttsLang;
-          utt1.rate = 1.08;
-          utt1.pitch = 1.22;
+          utt1.lang = chosenLang;
+          utt1.rate = 1.0;
+          utt1.pitch = 1.25;
           utt1.volume = 1.0;
 
-          // Phase 2 Utterance
-          var textPart2 = 'নিশ্চিন্তে ' + tradeAction + ' ট্রেড নিতে পারেন!';
+          // Part 2 Utterance
+          var textPart2 = hasRealBengali ? ('নিশ্চিন্তে ' + tradeAction + ' ট্রেড নিতে পারেন!') : ('Nischinte ' + tradeAction + ' trade nite paren!');
           var utt2 = new SpeechSynthesisUtterance(textPart2);
           if (chosenV) utt2.voice = chosenV;
-          utt2.lang = ttsLang;
-          utt2.rate = 1.08;
-          utt2.pitch = 1.22;
+          utt2.lang = chosenLang;
+          utt2.rate = 1.0;
+          utt2.pitch = 1.25;
           utt2.volume = 1.0;
 
           var pauseTimer = null;
+          var finishVoice = function() {
+            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
+            if (!voiceFinished) {
+              voiceFinished = true;
+              setTimeout(finalizeScan, 300);
+            }
+          };
+
           utt1.onend = function() {
             try { playMarketAnalysisPulseSound(); } catch (e) {}
             pauseTimer = setTimeout(function() {
@@ -4125,25 +4165,25 @@ javascript:(function(){
           };
 
           utt1.onerror = function() {
+            // If Bengali voice fails on device, fallback cleanly to sweet phonetic voice
             try { playMarketAnalysisPulseSound(); } catch (e) {}
             pauseTimer = setTimeout(function() {
               if (voiceFinished) return;
-              window.__ISHAK_TTS_UTT__ = utt2;
-              window.speechSynthesis.speak(utt2);
-            }, 1800);
+              var fallbackUtt2 = new SpeechSynthesisUtterance('Nischinte ' + tradeAction + ' trade nite paren!');
+              if (sweetVoice) fallbackUtt2.voice = sweetVoice;
+              fallbackUtt2.lang = (sweetVoice && sweetVoice.lang) || 'en-US';
+              fallbackUtt2.rate = 1.0;
+              fallbackUtt2.pitch = 1.25;
+              fallbackUtt2.volume = 1.0;
+              fallbackUtt2.onend = finishVoice;
+              fallbackUtt2.onerror = finishVoice;
+              window.__ISHAK_TTS_UTT__ = fallbackUtt2;
+              window.speechSynthesis.speak(fallbackUtt2);
+            }, 2200);
           };
 
-          utt2.onend = function() {
-            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
-            voiceFinished = true;
-            setTimeout(finalizeScan, 300);
-          };
-
-          utt2.onerror = function() {
-            if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
-            voiceFinished = true;
-            setTimeout(finalizeScan, 300);
-          };
+          utt2.onend = finishVoice;
+          utt2.onerror = finishVoice;
 
           ttsKeepAliveTimer = setInterval(function() {
             if (!voiceFinished && window.speechSynthesis.speaking) {
@@ -4177,35 +4217,29 @@ javascript:(function(){
         var pct = Math.min(99, Math.floor((elapsed / scanTotalMs) * 100));
       }, 65);
 
-      // Bottom-Left Upward Streaming Telemetry (Strictly English technical indicators: RSI: +EMA: + OHL +++ More..)
+      // Bottom-Left Telemetry (Strictly English technical indicators: RSI: +EMA: + OHL +++ More..)
       var telemetryTimeouts = [];
       function addTelemetryLine(text, isHighlight) {
         if (!telemetryContainer) return;
         var lineDiv = document.createElement('div');
-        lineDiv.style.cssText = 'animation:ishakTelemetryIn 0.25s ease-out forwards; will-change:transform,opacity; margin-bottom:2px;' +
-          (isHighlight ? 'color:#67e8f9; font-weight:bold; text-shadow:0 0 8px rgba(0,229,255,0.85);' : 'color:#34d399; text-shadow:0 0 5px rgba(52,211,153,0.6);');
+        lineDiv.style.cssText = 'animation:ishakTelemetryIn 0.25s ease-out forwards; will-change:transform,opacity; margin-bottom:3px; font-family:"Rajdhani",monospace,sans-serif; font-size:12px; font-weight:700; letter-spacing:0.8px;' +
+          (isHighlight ? 'color:#00E5FF; text-shadow:0 0 10px rgba(0,229,255,0.95);' : 'color:#00FF66; text-shadow:0 0 8px rgba(0,255,102,0.85);');
         lineDiv.innerText = text;
-        telemetryContainer.prepend(lineDiv);
+        telemetryContainer.appendChild(lineDiv);
       }
 
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('RSI: ' + ((earlySignal && earlySignal.rsi) ? earlySignal.rsi : '58.4') + ' [Dynamic Range]', true);
+        addTelemetryLine('RSI: +', true);
       }, 50));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('+EMA: 9/21/50 Slope Confirm', true);
-      }, 400));
+        addTelemetryLine('+EMA: +', true);
+      }, 450));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('+ OHL: Micro Wick Buffer Validated', false);
-      }, 900));
+        addTelemetryLine('+ OHL', false);
+      }, 950));
       telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('+++ More...', false);
-      }, 1600));
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Confluence Vector: 98.6%', false);
-      }, 2400));
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('Horizon Safe: ' + durationStr + ' Entry Hold Confirmed', true);
-      }, 3200));
+        addTelemetryLine('+++ More..', false);
+      }, 1500));
 
       // Real-Time High-Frequency Price Sampler
       var livePriceSamples = [];

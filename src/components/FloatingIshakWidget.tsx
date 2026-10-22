@@ -493,15 +493,12 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       : (liveCandle.close >= liveCandle.open);
     const signalDir: 'BUY' | 'SELL' = determinedIsCall ? 'BUY' : 'SELL';
 
-    // 🎯 Clean, high-tech English telemetry strictly matching: "RSI: +EMA: + OHL +++ More.." (NO Bengali text on screen!)
-    const rsiVal = initialAnalysis.indicators?.rsi14 ? initialAnalysis.indicators.rsi14.toFixed(1) : '58.4';
+    // 🎯 Clean telemetry strictly matching: "RSI: +EMA: + OHL +++ More.." (Zero extra words)
     const initTelemetry = [
-      `RSI: ${rsiVal} [Dynamic Range]`,
-      `+EMA: 9/21/50 Slope Confirm`,
-      `+ OHL: Micro Wick Buffer Validated`,
-      `+++ More...`,
-      `Confluence Vector: 98.6%`,
-      `Horizon Safe: ${durationStr} Entry Hold Confirmed`
+      'RSI: +',
+      '+EMA: +',
+      '+ OHL',
+      '+++ More..'
     ];
     setMatrixTelemetryLines(initTelemetry);
 
@@ -519,7 +516,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     readPrice();
     const priceSampleInterval = setInterval(readPrice, 200);
 
-    // Realistic progress counter & sequential loading dots + upward telemetry stream
+    // Realistic progress counter & sequential loading dots
     const progressInterval = setInterval(() => {
       const elapsed = Date.now() - scanStartTime;
       const pct = Math.min(99, Math.floor((elapsed / scanDurationMs) * 100));
@@ -527,18 +524,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       const numDots = Math.min(7, (Math.floor(elapsed / 450) % 7) + 1);
       setScanDots('.'.repeat(numDots));
-
-      // Stream extra technical telemetry lines as speech progresses (Pure English tech metrics, zero Bengali text)
-      if (elapsed > 2800 && elapsed < 2900) {
-        setMatrixTelemetryLines((prev) => {
-          if (prev.some((l) => l.includes('Vector Micro'))) return prev;
-          return [
-            `Vector Micro: Kinetic Slope +0.00042`,
-            `Liquidity Buffer: Solid (No Wick Trap)`,
-            ...prev
-          ];
-        });
-      }
     }, 40);
 
     // Read live Quotex investment amount
