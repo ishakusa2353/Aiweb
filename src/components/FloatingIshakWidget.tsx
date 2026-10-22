@@ -692,16 +692,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       setFlySignal(finalIsCall ? 'UP' : 'DOWN');
       setBadgeText(finalIsCall ? 'BUY ⬆' : 'SELL ⬇');
+      if (soundEnabled) {
+        playResultSound(finalIsCall);
+      }
       setTimeout(() => {
         setFlySignal(null);
         setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
       }, 2500);
     };
 
-    // 🔊 Synchronized 3-Stage Sweet Voice System:
-    // Stage 1: মার্কেট: ... সময়: ... (Immediate on click)
-    // Stage 2: 'মার্কেট এনালাইসিস করছি' (Analysing Market stage + pulse chime sound)
-    // Stage 3: 'নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!' (Final direction announcement -> Trade execution)
+    // 🔊 100% Web Audio Synthesizer Soundscape (Pure matching audio, Zero Voice):
     let stopSpeech: (() => void) | null = null;
     if (soundEnabled) {
       stopSpeech = speakScanTelemetry(liveAsset, durationStr, signalDir, {
@@ -712,13 +712,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           triggerConfirmEntry();
         },
         onComplete: () => {
-          setTimeout(finalizeScan, 200);
+          setTimeout(finalizeScan, 150);
         }
       });
     }
 
-    // Safety timeout ensuring scan completes smoothly even if TTS is unavailable or blocked on device
-    const fallbackTimer = setTimeout(finalizeScan, soundEnabled ? 8000 : 4200);
+    // Safety timeout ensuring scan completes crisply at 3.5s
+    const fallbackTimer = setTimeout(finalizeScan, 3500);
 
     return () => {
       clearTimeout(fallbackTimer);

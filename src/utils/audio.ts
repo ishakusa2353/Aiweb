@@ -299,16 +299,192 @@ export function playMarketAnalysisPulseSound(): void {
 }
 
 /**
- * TradePilot Information-Based Sweet Voice System:
- * 1. Announces: মার্কেট: ---। সময়: ---। মার্কেট এনালাইসিস করছি...
- * 2. Pauses 2.2 seconds & plays futuristic market analysis sound
- * 3. Announces: নিশ্চিন্তে BUY/SELL ট্রেড নিতে পারেন!
- * 4. Finishes and immediately dispatches trade!
+ * Master Tactical Radar & Scanning Interface Soundscape:
+ * 100% Web Audio Synthesizer, Perfectly Matched to the UI from start to finish:
+ * - Sub-bass rotating radar resonance
+ * - Frequency-swept conical laser sweep
+ * - Real-time micro telemetry data packet chirps
+ * - Deep harmonic cyber sonar analysis pings
+ * - Ascending signal entry lock chime
+ * - Zero voice glitches, 100% reliable on every device
+ */
+export function playScanSoundscape(totalDuration: number = 3.4): () => void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return () => {};
+    const t = ctx.currentTime;
+    const dur = totalDuration;
+
+    // Master Limiter / Compressor for loud, clean, non-clipping audio
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(1.0, t);
+    
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-10, t);
+    compressor.knee.setValueAtTime(4, t);
+    compressor.ratio.setValueAtTime(4, t);
+    compressor.attack.setValueAtTime(0.002, t);
+    compressor.release.setValueAtTime(0.1, t);
+    
+    masterGain.connect(compressor);
+    compressor.connect(ctx.destination);
+
+    const activeNodes: (AudioNode & { stop?: (when?: number) => void })[] = [];
+
+    // 1. Radar Rotary Drone (Continuous sub-bass humming that pulses with the spinning ring)
+    const subOsc = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(54, t);
+    subOsc.frequency.exponentialRampToValueAtTime(78, t + dur * 0.4);
+    subOsc.frequency.exponentialRampToValueAtTime(48, t + dur);
+
+    subGain.gain.setValueAtTime(0.001, t);
+    subGain.gain.linearRampToValueAtTime(0.35, t + 0.15);
+    subGain.gain.setValueAtTime(0.35, t + dur - 0.2);
+    subGain.gain.linearRampToValueAtTime(0.001, t + dur);
+
+    subOsc.connect(subGain);
+    subGain.connect(masterGain);
+    subOsc.start(t);
+    subOsc.stop(t + dur);
+    activeNodes.push(subOsc);
+
+    // 2. Conical Laser Sweep (Resonant sweeping bandpass filter on warm sawtooth)
+    const sweepOsc = ctx.createOscillator();
+    const sweepFilter = ctx.createBiquadFilter();
+    const sweepGain = ctx.createGain();
+
+    sweepOsc.type = 'sawtooth';
+    sweepFilter.type = 'bandpass';
+    sweepFilter.frequency.setValueAtTime(580, t);
+    sweepFilter.Q.setValueAtTime(5.0, t);
+
+    // Multi-stage radar rotation sweep
+    sweepOsc.frequency.setValueAtTime(220, t);
+    sweepOsc.frequency.linearRampToValueAtTime(440, t + 0.8);
+    sweepOsc.frequency.linearRampToValueAtTime(290, t + 1.6);
+    sweepOsc.frequency.linearRampToValueAtTime(520, t + 2.4);
+    sweepOsc.frequency.linearRampToValueAtTime(320, t + dur);
+
+    sweepFilter.frequency.linearRampToValueAtTime(1200, t + 0.8);
+    sweepFilter.frequency.linearRampToValueAtTime(650, t + 1.6);
+    sweepFilter.frequency.linearRampToValueAtTime(1400, t + 2.4);
+    sweepFilter.frequency.linearRampToValueAtTime(700, t + dur);
+
+    sweepGain.gain.setValueAtTime(0.001, t);
+    sweepGain.gain.linearRampToValueAtTime(0.24, t + 0.1);
+    sweepGain.gain.setValueAtTime(0.24, t + dur - 0.15);
+    sweepGain.gain.linearRampToValueAtTime(0.001, t + dur);
+
+    sweepOsc.connect(sweepFilter);
+    sweepFilter.connect(sweepGain);
+    sweepGain.connect(masterGain);
+    sweepOsc.start(t);
+    sweepOsc.stop(t + dur);
+    activeNodes.push(sweepOsc);
+
+    // 3. Telemetry Click Chirps (Micro data packet arrivals for the 4 initial lines)
+    const telemetryTimes = [0.05, 0.22, 0.45, 0.70];
+    telemetryTimes.forEach((timeOffset, idx) => {
+      const freq = 1400 + idx * 150;
+      const tOsc = ctx.createOscillator();
+      const tGain = ctx.createGain();
+      tOsc.type = 'triangle';
+      tOsc.frequency.setValueAtTime(freq, t + timeOffset);
+      tOsc.frequency.exponentialRampToValueAtTime(freq * 0.7, t + timeOffset + 0.08);
+
+      tGain.gain.setValueAtTime(0.001, t + timeOffset);
+      tGain.gain.linearRampToValueAtTime(0.22, t + timeOffset + 0.01);
+      tGain.gain.exponentialRampToValueAtTime(0.001, t + timeOffset + 0.09);
+
+      tOsc.connect(tGain);
+      tGain.connect(masterGain);
+      tOsc.start(t + timeOffset);
+      tOsc.stop(t + timeOffset + 0.1);
+      activeNodes.push(tOsc);
+    });
+
+    // 4. Analysing Market Deep Sonar Pings & Resonant Chimes (At 1.0s, 1.45s, 1.9s, 2.35s)
+    const analysisTimes = [1.0, 1.45, 1.9, 2.35];
+    analysisTimes.forEach((timeOffset, idx) => {
+      const pOsc = ctx.createOscillator();
+      const pGain = ctx.createGain();
+      pOsc.type = 'sine';
+      const startF = 1850 + idx * 100;
+      const endF = 750 + idx * 40;
+      pOsc.frequency.setValueAtTime(startF, t + timeOffset);
+      pOsc.frequency.exponentialRampToValueAtTime(endF, t + timeOffset + 0.28);
+
+      pGain.gain.setValueAtTime(0.001, t + timeOffset);
+      pGain.gain.linearRampToValueAtTime(0.35, t + timeOffset + 0.02);
+      pGain.gain.exponentialRampToValueAtTime(0.0001, t + timeOffset + 0.35);
+
+      pOsc.connect(pGain);
+      pGain.connect(masterGain);
+      pOsc.start(t + timeOffset);
+      pOsc.stop(t + timeOffset + 0.38);
+      activeNodes.push(pOsc);
+
+      // Micro computational chirp
+      const cOsc = ctx.createOscillator();
+      const cGain = ctx.createGain();
+      cOsc.type = 'triangle';
+      cOsc.frequency.setValueAtTime(startF * 1.4, t + timeOffset + 0.03);
+      cOsc.frequency.exponentialRampToValueAtTime(startF * 0.9, t + timeOffset + 0.12);
+      cGain.gain.setValueAtTime(0.001, t + timeOffset + 0.03);
+      cGain.gain.linearRampToValueAtTime(0.18, t + timeOffset + 0.04);
+      cGain.gain.exponentialRampToValueAtTime(0.0001, t + timeOffset + 0.14);
+
+      cOsc.connect(cGain);
+      cGain.connect(masterGain);
+      cOsc.start(t + timeOffset + 0.03);
+      cOsc.stop(t + timeOffset + 0.15);
+      activeNodes.push(cOsc);
+    });
+
+    // 5. Signal Lock & Entry Confirmation Chimes (At 2.7s - 3.0s)
+    [2.7, 2.85, 3.0].forEach((timeOffset, idx) => {
+      const lockOsc = ctx.createOscillator();
+      const lockGain = ctx.createGain();
+      lockOsc.type = 'sine';
+      const lockFreq = [880, 1320, 1760][idx];
+      lockOsc.frequency.setValueAtTime(lockFreq, t + timeOffset);
+
+      lockGain.gain.setValueAtTime(0.001, t + timeOffset);
+      lockGain.gain.linearRampToValueAtTime(0.28, t + timeOffset + 0.02);
+      lockGain.gain.exponentialRampToValueAtTime(0.0001, t + timeOffset + 0.28);
+
+      lockOsc.connect(lockGain);
+      lockGain.connect(masterGain);
+      lockOsc.start(t + timeOffset);
+      lockOsc.stop(t + timeOffset + 0.3);
+      activeNodes.push(lockOsc);
+    });
+
+    return () => {
+      try {
+        masterGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        setTimeout(() => {
+          activeNodes.forEach(node => {
+            try { if (node.stop) node.stop(); } catch(e){}
+          });
+        }, 60);
+      } catch (e) {}
+    };
+  } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * Backward-compatible wrapper running the 100% synchronized Web Audio soundscape
+ * without any TTS voice errors or delays.
  */
 export function speakScanTelemetry(
-  market: string,
-  durationStr: string,
-  direction: 'BUY' | 'SELL' | 'UP' | 'DOWN',
+  _market: string,
+  _durationStr: string,
+  _direction: 'BUY' | 'SELL' | 'UP' | 'DOWN',
   callbacksOrComplete?: {
     onMarketAnnounced?: () => void;
     onAnalysisAnnounced?: () => void;
@@ -319,213 +495,28 @@ export function speakScanTelemetry(
     ? { onComplete: callbacksOrComplete }
     : (callbacksOrComplete || {});
 
-  if (typeof window === 'undefined' || !window.speechSynthesis) {
+  const stopSound = playScanSoundscape(3.3);
+
+  const t1 = setTimeout(() => {
     if (callbacks.onMarketAnnounced) callbacks.onMarketAnnounced();
+  }, 950);
+
+  const t2 = setTimeout(() => {
     if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
+  }, 2600);
+
+  const t3 = setTimeout(() => {
     if (callbacks.onComplete) callbacks.onComplete();
-    return () => {};
-  }
-
-  let completed = false;
-  let ttsKeepAlive: any = null;
-
-  const cleanupKeepAlive = () => {
-    if (ttsKeepAlive) {
-      clearInterval(ttsKeepAlive);
-      ttsKeepAlive = null;
-    }
-  };
-
-  const finish = () => {
-    if (!completed) {
-      completed = true;
-      cleanupKeepAlive();
-      if (typeof window !== 'undefined') {
-        (window as any).__ACTIVE_TTS__ = null;
-      }
-      if (callbacks.onComplete) callbacks.onComplete();
-    }
-  };
-
-  try {
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
-
-    const cleanMarket = market
-      .replace(/[\/\-_]/g, ' ')
-      .replace(/[()]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    let cleanDur = durationStr;
-    if (/^\d+\s*S$/i.test(durationStr)) {
-      cleanDur = durationStr.replace(/S/i, '').trim() + ' সেকেন্ড';
-    } else if (/^\d+\s*M$/i.test(durationStr)) {
-      cleanDur = durationStr.replace(/M/i, '').trim() + ' মিনিট';
-    }
-
-    const tradeAction = (direction === 'BUY' || direction === 'UP') ? 'BUY' : 'SELL';
-
-    // Get available voices
-    let voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) {
-      try {
-        voices = window.speechSynthesis.getVoices();
-      } catch (e) {}
-    }
-    if (!voices) voices = [];
-
-    const isRobotic = (name: string) => /desktop|espeak|offline|robotic/i.test(name);
-
-    // 1. Natural female Bengali voice
-    const bnFemaleVoice = voices.find(v =>
-      v.lang.startsWith('bn') &&
-      !isRobotic(v.name) &&
-      (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Wavenet') || (v.name.includes('Google') && !v.name.includes('Desktop')))
-    ) || voices.find(v => v.lang.startsWith('bn') && !isRobotic(v.name));
-
-    // 2. Sweet natural female voice for universal mobile fallback
-    const sweetFemaleVoice = voices.find(v =>
-      !isRobotic(v.name) &&
-      (v.name.includes('Google UK English Female') ||
-       v.name.includes('Jenny') ||
-       v.name.includes('Sonia') ||
-       v.name.includes('Aria') ||
-       v.name.includes('Samantha') ||
-       v.name.includes('Victoria') ||
-       v.name.includes('Karen') ||
-       v.name.includes('Tessa') ||
-       (v.name.includes('Female') && v.name.includes('Natural')))
-    ) || voices.find(v => !isRobotic(v.name) && v.name.includes('Female'))
-      || voices.find(v => !isRobotic(v.name) && v.name.includes('Natural'))
-      || voices[0];
-
-    const hasRealBengali = !!bnFemaleVoice;
-    const chosenVoice = bnFemaleVoice || sweetFemaleVoice;
-    const chosenLang = hasRealBengali ? (chosenVoice?.lang || 'bn-BD') : (chosenVoice?.lang || 'en-US');
-
-    // ⚡ Voice Speed: 1.35x (1.3X/1.4X fast & energetic scan completion)
-    const voiceRate = 1.35;
-    const voicePitch = 1.22;
-
-    // Stage 1 Utterance: মার্কেট ও সময় ঘোষণা (Starts IMMEDIATELY with scanning)
-    const text1 = hasRealBengali
-      ? `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}।`
-      : `Market: ${cleanMarket}. Somoy: ${cleanDur}.`;
-    const utt1 = new SpeechSynthesisUtterance(text1);
-    if (chosenVoice) utt1.voice = chosenVoice;
-    utt1.lang = chosenLang;
-    utt1.rate = voiceRate;
-    utt1.pitch = voicePitch;
-    utt1.volume = 1.0;
-
-    // Stage 2 Utterance: 'মার্কেট এনালাইসিস করছি'
-    const text2 = hasRealBengali
-      ? `মার্কেট এনালাইসিস করছি`
-      : `Market analysis korchi`;
-    const utt2 = new SpeechSynthesisUtterance(text2);
-    if (chosenVoice) utt2.voice = chosenVoice;
-    utt2.lang = chosenLang;
-    utt2.rate = voiceRate;
-    utt2.pitch = voicePitch;
-    utt2.volume = 1.0;
-
-    // Stage 3 Utterance: 'নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!'
-    const text3 = hasRealBengali
-      ? `নিশ্চিন্তে ${tradeAction} ট্রেড করতে পারেন!`
-      : `Nischinte ${tradeAction} trade korte paren!`;
-    const utt3 = new SpeechSynthesisUtterance(text3);
-    if (chosenVoice) utt3.voice = chosenVoice;
-    utt3.lang = chosenLang;
-    utt3.rate = voiceRate;
-    utt3.pitch = voicePitch;
-    utt3.volume = 1.0;
-
-    const playStage3 = () => {
-      if (completed) return;
-      (window as any).__ACTIVE_TTS__ = utt3;
-      window.speechSynthesis.speak(utt3);
-    };
-
-    const playStage2 = () => {
-      if (completed) return;
-      if (callbacks.onMarketAnnounced) callbacks.onMarketAnnounced();
-      playMarketAnalysisPulseSound();
-      (window as any).__ACTIVE_TTS__ = utt2;
-      window.speechSynthesis.speak(utt2);
-    };
-
-    utt1.onend = () => {
-      setTimeout(playStage2, 100);
-    };
-
-    utt1.onerror = () => {
-      // Fallback if Bengali failed on mobile: immediately continue sequence
-      setTimeout(playStage2, 100);
-    };
-
-    utt2.onend = () => {
-      if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
-      setTimeout(playStage3, 200);
-    };
-
-    utt2.onerror = () => {
-      if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
-      setTimeout(playStage3, 200);
-    };
-
-    utt3.onend = () => {
-      finish();
-    };
-
-    utt3.onerror = () => {
-      finish();
-    };
-
-    // Keepalive to prevent Chrome from pausing TTS
-    ttsKeepAlive = setInterval(() => {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        if (window.speechSynthesis.speaking && !completed) {
-          window.speechSynthesis.pause();
-          window.speechSynthesis.resume();
-        } else if (completed) {
-          cleanupKeepAlive();
-        }
-      }
-    }, 1500);
-
-    // Speak Stage 1 IMMEDIATELY
-    (window as any).__ACTIVE_TTS__ = utt1;
-    window.speechSynthesis.speak(utt1);
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
-  } catch (e) {
-    if (callbacks.onMarketAnnounced) callbacks.onMarketAnnounced();
-    if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
-    finish();
-  }
-
-  // Generous safety timer
-  const maxSafetyTimer = setTimeout(() => {
-    finish();
-  }, 12000);
+  }, 3300);
 
   return () => {
-    clearTimeout(maxSafetyTimer);
-    cleanupKeepAlive();
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {}
-    (window as any).__ACTIVE_TTS__ = null;
+    clearTimeout(t1);
+    clearTimeout(t2);
+    clearTimeout(t3);
+    stopSound();
   };
 }
 
 export function stopSpeechSynthesis(): void {
-  if (typeof window !== 'undefined' && window.speechSynthesis) {
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {}
-  }
+  // Voice completely removed as requested
 }
