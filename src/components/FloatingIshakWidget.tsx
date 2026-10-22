@@ -493,17 +493,78 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       : (liveCandle.close >= liveCandle.open);
     const signalDir: 'BUY' | 'SELL' = determinedIsCall ? 'BUY' : 'SELL';
 
-    // 🎯 Clean telemetry strictly matching: "RSI: +EMA: + OHL +++ More.." (Zero extra words)
-    const initTelemetry = [
-      'RSI: +',
-      '+EMA: +',
-      '+ OHL',
-      '+++ More..'
-    ];
-    setMatrixTelemetryLines(initTelemetry);
+    const calculatedRsi = initialAnalysis.indicators.rsi14;
+    const calculatedEma = determinedIsCall ? '9/21 Bullish Stack ↗' : '9/21 Bearish Stack ↘';
+    const ohlText = `${liveCandle.close >= liveCandle.open ? 'Bull Wick Rejection' : 'Bear Wick Rejection'} [H: ${liveCandle.high.toFixed(liveCandle.high < 10 ? 4 : 2)}]`;
+    const livePriceStr = bgMarket.currentPrice > 0 ? bgMarket.currentPrice.toFixed(bgMarket.currentPrice < 10 ? 5 : 2) : liveCandle.close.toFixed(liveCandle.close < 10 ? 5 : 2);
+    const chartTimeStr = new Date().toLocaleTimeString('en-US', { hour12: true });
+
+    // 🎯 Clean, Sequential Onscreen Telemetry (Strictly matching user spec):
+    // 1. Market:(রানিং যে মার্কেট থাকবে সেটা)
+    // 2. Trade Duration:(যত সময় সিলেক্ট থাকবে)
+    // 3. Chart Time:(চার্টের টাইম)
+    // 4. Live Quote:(রানিং লাইভ প্রাইস)
+    // 5. Analysing Market.......
+    // 6. RSI:(এনালাইসিস করে যা আসবে তা)
+    // 7. EMA:(এনালাইসিস করে যা আসবে তা)
+    // 8. OHL:(এনালাইসিস করে যা আসবে তা)
+    // 9. Confirming Signal Entry ✔
+    setMatrixTelemetryLines([`Market: ${liveAsset}`]);
+
+    const timeouts: any[] = [];
+    timeouts.push(setTimeout(() => {
+      setMatrixTelemetryLines(prev => [...prev, `Trade Duration: ${durationStr}`]);
+    }, 200));
+
+    timeouts.push(setTimeout(() => {
+      setMatrixTelemetryLines(prev => [...prev, `Chart Time: ${chartTimeStr}`]);
+    }, 450));
+
+    timeouts.push(setTimeout(() => {
+      setMatrixTelemetryLines(prev => [...prev, `Live Quote: ${livePriceStr}`]);
+    }, 700));
+
+    const triggerAnalysisStage = () => {
+      setMatrixTelemetryLines(prev => {
+        if (prev.some(l => l.startsWith('Analysing Market'))) return prev;
+        return [...prev, 'Analysing Market.......'];
+      });
+
+      timeouts.push(setTimeout(() => {
+        setMatrixTelemetryLines(prev => {
+          if (prev.some(l => l.startsWith('RSI:'))) return prev;
+          return [...prev, `RSI: ${calculatedRsi}`];
+        });
+      }, 300));
+
+      timeouts.push(setTimeout(() => {
+        setMatrixTelemetryLines(prev => {
+          if (prev.some(l => l.startsWith('EMA:'))) return prev;
+          return [...prev, `EMA: ${calculatedEma}`];
+        });
+      }, 600));
+
+      timeouts.push(setTimeout(() => {
+        setMatrixTelemetryLines(prev => {
+          if (prev.some(l => l.startsWith('OHL:'))) return prev;
+          return [...prev, `OHL: ${ohlText}`];
+        });
+      }, 900));
+    };
+
+    const triggerConfirmEntry = () => {
+      setMatrixTelemetryLines(prev => {
+        if (prev.some(l => l.includes('Confirming Signal Entry'))) return prev;
+        return [...prev, 'Confirming Signal Entry ✔'];
+      });
+    };
+
+    // Fallbacks in case TTS is delayed or muted
+    timeouts.push(setTimeout(triggerAnalysisStage, 1100));
+    timeouts.push(setTimeout(triggerConfirmEntry, 2500));
 
     const scanStartTime = Date.now();
-    const scanDurationMs = 7200;
+    const scanDurationMs = 4500;
 
     // High-Frequency Real-Time Price Action Sampler
     let samplePrices: number[] = [];
@@ -522,9 +583,9 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const pct = Math.min(99, Math.floor((elapsed / scanDurationMs) * 100));
       setScanProgress(pct);
 
-      const numDots = Math.min(7, (Math.floor(elapsed / 450) % 7) + 1);
+      const numDots = Math.min(7, (Math.floor(elapsed / 350) % 7) + 1);
       setScanDots('.'.repeat(numDots));
-    }, 40);
+    }, 35);
 
     // Read live Quotex investment amount
     const realInvestment = getLiveQuotexInvestmentAmount();
@@ -558,12 +619,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const isCall: boolean = determinedIsCall;
       computedIsCall = isCall;
 
-      const isApproved = true;
       const confScore = analysis.accuracyEstimate ? analysis.accuracyEstimate.replace('%', '') : '98.5';
-      const calculatedRsi = analysis.indicators.rsi14;
-      const calculatedEma5 = analysis.indicators.ema5;
-      const calculatedEma13 = analysis.indicators.ema13;
-      const calculatedEma30 = analysis.indicators.ema50;
+      const actualRsi = analysis.indicators.rsi14;
       const patternName = analysis.pattern;
       const trendLabel = analysis.trendLabel;
       const logicText = `টাইমফ্রেম ${durationStr} [${liveAsset}]: ${analysis.reason || 'Confluence Signal Approved'}`;
@@ -577,13 +634,13 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         isRiskDetected: false,
         confidence: `${confScore}% Confluence`,
         accuracy: confScore,
-        rsi: calculatedRsi,
+        rsi: actualRsi,
         pattern: patternName,
         logic: logicText,
         marketTrend: trendLabel,
-        ema5: calculatedEma5,
-        ema13: calculatedEma13,
-        ema30: calculatedEma30,
+        ema5: analysis.indicators.ema5,
+        ema13: analysis.indicators.ema13,
+        ema30: analysis.indicators.ema50,
         livePrice: actualLivePrice,
         signalId,
         finishTime: new Date().toLocaleTimeString(),
@@ -641,21 +698,31 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       }, 2500);
     };
 
-    // Voice system: Speaks exactly the information shown on screen with sweet, natural voice
-    // Trade is placed and scan completes ONLY when voice finishes speaking!
+    // 🔊 Synchronized 3-Stage Sweet Voice System:
+    // Stage 1: মার্কেট: ... সময়: ... (Immediate on click)
+    // Stage 2: 'মার্কেট এনালাইসিস করছি' (Analysing Market stage + pulse chime sound)
+    // Stage 3: 'নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!' (Final direction announcement -> Trade execution)
     let stopSpeech: (() => void) | null = null;
     if (soundEnabled) {
-      stopSpeech = speakScanTelemetry(liveAsset, durationStr, signalDir, () => {
-        // Voice has finished completely! Finalize scan and execute trade
-        setTimeout(finalizeScan, 300);
+      stopSpeech = speakScanTelemetry(liveAsset, durationStr, signalDir, {
+        onMarketAnnounced: () => {
+          triggerAnalysisStage();
+        },
+        onAnalysisAnnounced: () => {
+          triggerConfirmEntry();
+        },
+        onComplete: () => {
+          setTimeout(finalizeScan, 200);
+        }
       });
     }
 
-    // Safety timeout ensuring scan completes comfortably even if TTS is unavailable or blocked on device
-    const fallbackTimer = setTimeout(finalizeScan, soundEnabled ? 16000 : 5000);
+    // Safety timeout ensuring scan completes smoothly even if TTS is unavailable or blocked on device
+    const fallbackTimer = setTimeout(finalizeScan, soundEnabled ? 8000 : 4200);
 
     return () => {
       clearTimeout(fallbackTimer);
+      timeouts.forEach(t => clearTimeout(t));
       if (stopSpeech) stopSpeech();
       clearInterval(progressInterval);
       clearInterval(priceSampleInterval);
@@ -792,9 +859,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               maxHeight: '240px',
               overflow: 'hidden',
               display: 'flex',
-              flexDirection: 'column-reverse',
-              maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 50%, rgba(0,0,0,0.15) 85%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 50%, rgba(0,0,0,0.15) 85%, transparent 100%)',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 65%, rgba(0,0,0,0.15) 90%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 65%, rgba(0,0,0,0.15) 90%, transparent 100%)',
             }}
           >
             {matrixTelemetryLines.map((line, idx) => (

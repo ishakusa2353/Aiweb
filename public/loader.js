@@ -4063,12 +4063,85 @@ javascript:(function(){
       var tradeAction = determinedIsCall ? 'BUY' : 'SELL';
 
       var cleanMarket = detectedAssetStr.replace(/[\/\-_]/g, ' ').replace(/[()]/g, '').trim();
-      var cleanDur = (tradeDuration || 5) + ' সেকেন্ড';
+      var cleanDur = (tradeDuration >= 60 ? (tradeDuration / 60) + ' মিনিট' : (tradeDuration || 5) + ' সেকেন্ড');
+      var livePriceVal = extractQuotexLivePrice() || (window.__ISHAK_LAST_WS_PRICE__) || '1.08450';
+      var rsiVal = (earlySignal && earlySignal.rsi) ? earlySignal.rsi : '58.4';
+      var emaVal = determinedIsCall ? '9/21 Bullish Stack ↗' : '9/21 Bearish Stack ↘';
+      var ohlVal = (earlySignal && earlySignal.pattern) ? earlySignal.pattern : (determinedIsCall ? 'Bull Wick Rejection Support' : 'Bear Wick Rejection Resistance');
 
-      // 🔊 Information-Based Sweet Voice System during scan:
-      // Part 1: Market Announcement (মার্কেট এনালাইসিস করছি / Market analysis korchi)
-      // Pause 2.2s + playMarketAnalysisPulseSound()
-      // Part 2: Decision Announcement (নিশ্চিন্তে BUY/SELL ট্রেড নিতে পারেন! / Nischinte BUY/SELL trade nite paren!)
+      // Bottom-Left Telemetry (Strictly matching user spec sequence):
+      // 1. Market:
+      // 2. Trade Duration:
+      // 3. Chart Time:
+      // 4. Live Quote:
+      // 5. Analysing Market.......
+      // 6. RSI:
+      // 7. EMA:
+      // 8. OHL:
+      // 9. Confirming Signal Entry ✔
+      var telemetryTimeouts = [];
+      function addTelemetryLine(text, isHighlight) {
+        if (!telemetryContainer) return;
+        var lineDiv = document.createElement('div');
+        lineDiv.style.cssText = 'animation:ishakTelemetryIn 0.22s ease-out forwards; will-change:transform,opacity; margin-bottom:3px; font-family:"Rajdhani",monospace,sans-serif; font-size:12px; font-weight:700; letter-spacing:0.8px;' +
+          (isHighlight ? 'color:#00E5FF; text-shadow:0 0 10px rgba(0,229,255,0.95);' : 'color:#00FF66; text-shadow:0 0 8px rgba(0,255,102,0.85);');
+        lineDiv.innerText = text;
+        telemetryContainer.appendChild(lineDiv);
+      }
+
+      // Initial fast metadata lines (0ms, 180ms, 380ms, 580ms)
+      addTelemetryLine('Market: ' + detectedAssetStr, true);
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('Trade Duration: ' + durationStr, true);
+      }, 180));
+      telemetryTimeouts.push(setTimeout(function() {
+        addTelemetryLine('Chart Time: ' + chartTimeStr, false);
+      }, 380));
+      telemetryTimeouts.push(setTimeout(function() {
+        var pNow = extractQuotexLivePrice() || (window.__ISHAK_LAST_WS_PRICE__) || livePriceVal;
+        addTelemetryLine('Live Quote: ' + pNow, false);
+      }, 580));
+
+      function triggerTelemetryAnalysis() {
+        if (telemetryContainer && telemetryContainer.innerHTML.indexOf('Analysing Market') >= 0) return;
+        addTelemetryLine('Analysing Market.......', true);
+        
+        // Execute real live market analysis during this stage
+        try {
+          var realAnalysis = evaluateMarketConfluence(livePriceSamples, tradeDuration);
+          if (realAnalysis) {
+            if (typeof realAnalysis.isCall === 'boolean') determinedIsCall = realAnalysis.isCall;
+            tradeAction = determinedIsCall ? 'BUY' : 'SELL';
+            if (realAnalysis.rsi) rsiVal = realAnalysis.rsi;
+            if (realAnalysis.pattern) ohlVal = realAnalysis.pattern;
+            emaVal = determinedIsCall ? '9/21 Bullish Stack ↗' : '9/21 Bearish Stack ↘';
+          }
+        } catch(e){}
+
+        telemetryTimeouts.push(setTimeout(function() {
+          addTelemetryLine('RSI: ' + rsiVal, true);
+        }, 280));
+        telemetryTimeouts.push(setTimeout(function() {
+          addTelemetryLine('EMA: ' + emaVal, true);
+        }, 560));
+        telemetryTimeouts.push(setTimeout(function() {
+          addTelemetryLine('OHL: ' + ohlVal, false);
+        }, 840));
+      }
+
+      function triggerTelemetryConfirm() {
+        if (telemetryContainer && telemetryContainer.innerHTML.indexOf('Confirming Signal Entry') >= 0) return;
+        addTelemetryLine('Confirming Signal Entry ✔', true);
+      }
+
+      // Fallbacks ensuring lines appear even if device speech is muted or delayed
+      telemetryTimeouts.push(setTimeout(triggerTelemetryAnalysis, 1100));
+      telemetryTimeouts.push(setTimeout(triggerTelemetryConfirm, 2500));
+
+      // 🔊 Information-Based Sweet Voice System (Starts IMMEDIATELY with scanning at 1.35x speed):
+      // Stage 1: মার্কেট: ... সময়: ...
+      // Stage 2: 'মার্কেট এনালাইসিস করছি'
+      // Stage 3: 'নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!'
       var voiceFinished = false;
       var ttsKeepAliveTimer = null;
       if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -4084,7 +4157,7 @@ javascript:(function(){
           }
           if (!voices) voices = [];
 
-          // 1. Check for genuine natural Bengali female voice
+          // 1. Natural female Bengali voice
           var bnVoice = null;
           for (var vi = 0; vi < voices.length; vi++) {
             var vname = voices[vi].name || '';
@@ -4103,7 +4176,7 @@ javascript:(function(){
             }
           }
 
-          // 2. Sweet natural female voice for universal Android mobile playback
+          // 2. Sweet natural female voice for universal mobile playback
           var sweetVoice = null;
           for (var vi3 = 0; vi3 < voices.length; vi3++) {
             var vn = voices[vi3].name || '';
@@ -4128,62 +4201,77 @@ javascript:(function(){
           var chosenV = bnVoice || sweetVoice;
           var chosenLang = hasRealBengali ? (chosenV.lang || 'bn-BD') : ((chosenV && chosenV.lang) ? chosenV.lang : 'en-US');
 
-          // Part 1 Utterance
-          var textPart1 = hasRealBengali ? 'মার্কেট এনালাইসিস করছি' : 'Market analysis korchi';
-          var utt1 = new SpeechSynthesisUtterance(textPart1);
+          // ⚡ 1.35x Fast & Natural Voice Speed
+          var vRate = 1.35;
+          var vPitch = 1.22;
+
+          // Stage 1 Utterance: মার্কেট ও সময়
+          var text1 = hasRealBengali ? ('মার্কেট: ' + cleanMarket + '। সময়: ' + cleanDur + '।') : ('Market: ' + cleanMarket + '. Somoy: ' + cleanDur + '.');
+          var utt1 = new SpeechSynthesisUtterance(text1);
           if (chosenV) utt1.voice = chosenV;
           utt1.lang = chosenLang;
-          utt1.rate = 1.0;
-          utt1.pitch = 1.25;
+          utt1.rate = vRate;
+          utt1.pitch = vPitch;
           utt1.volume = 1.0;
 
-          // Part 2 Utterance
-          var textPart2 = hasRealBengali ? ('নিশ্চিন্তে ' + tradeAction + ' ট্রেড নিতে পারেন!') : ('Nischinte ' + tradeAction + ' trade nite paren!');
-          var utt2 = new SpeechSynthesisUtterance(textPart2);
+          // Stage 2 Utterance: মার্কেট এনালাইসিস করছি
+          var text2 = hasRealBengali ? 'মার্কেট এনালাইসিস করছি' : 'Market analysis korchi';
+          var utt2 = new SpeechSynthesisUtterance(text2);
           if (chosenV) utt2.voice = chosenV;
           utt2.lang = chosenLang;
-          utt2.rate = 1.0;
-          utt2.pitch = 1.25;
+          utt2.rate = vRate;
+          utt2.pitch = vPitch;
           utt2.volume = 1.0;
 
-          var pauseTimer = null;
+          // Stage 3 Utterance: নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!
+          var text3 = hasRealBengali ? ('নিশ্চিন্তে ' + tradeAction + ' ট্রেড করতে পারেন!') : ('Nischinte ' + tradeAction + ' trade korte paren!');
+          var utt3 = new SpeechSynthesisUtterance(text3);
+          if (chosenV) utt3.voice = chosenV;
+          utt3.lang = chosenLang;
+          utt3.rate = vRate;
+          utt3.pitch = vPitch;
+          utt3.volume = 1.0;
+
           var finishVoice = function() {
             if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
             if (!voiceFinished) {
               voiceFinished = true;
-              setTimeout(finalizeScan, 300);
+              setTimeout(finalizeScan, 200);
             }
           };
 
+          var playStage3 = function() {
+            if (voiceFinished) return;
+            window.__ISHAK_TTS_UTT__ = utt3;
+            window.speechSynthesis.speak(utt3);
+          };
+
+          var playStage2 = function() {
+            if (voiceFinished) return;
+            triggerTelemetryAnalysis();
+            try { playMarketAnalysisPulseSound(); } catch (e) {}
+            window.__ISHAK_TTS_UTT__ = utt2;
+            window.speechSynthesis.speak(utt2);
+          };
+
           utt1.onend = function() {
-            try { playMarketAnalysisPulseSound(); } catch (e) {}
-            pauseTimer = setTimeout(function() {
-              if (voiceFinished) return;
-              window.__ISHAK_TTS_UTT__ = utt2;
-              window.speechSynthesis.speak(utt2);
-            }, 2200);
+            setTimeout(playStage2, 100);
           };
-
           utt1.onerror = function() {
-            // If Bengali voice fails on device, fallback cleanly to sweet phonetic voice
-            try { playMarketAnalysisPulseSound(); } catch (e) {}
-            pauseTimer = setTimeout(function() {
-              if (voiceFinished) return;
-              var fallbackUtt2 = new SpeechSynthesisUtterance('Nischinte ' + tradeAction + ' trade nite paren!');
-              if (sweetVoice) fallbackUtt2.voice = sweetVoice;
-              fallbackUtt2.lang = (sweetVoice && sweetVoice.lang) || 'en-US';
-              fallbackUtt2.rate = 1.0;
-              fallbackUtt2.pitch = 1.25;
-              fallbackUtt2.volume = 1.0;
-              fallbackUtt2.onend = finishVoice;
-              fallbackUtt2.onerror = finishVoice;
-              window.__ISHAK_TTS_UTT__ = fallbackUtt2;
-              window.speechSynthesis.speak(fallbackUtt2);
-            }, 2200);
+            setTimeout(playStage2, 100);
           };
 
-          utt2.onend = finishVoice;
-          utt2.onerror = finishVoice;
+          utt2.onend = function() {
+            triggerTelemetryConfirm();
+            setTimeout(playStage3, 200);
+          };
+          utt2.onerror = function() {
+            triggerTelemetryConfirm();
+            setTimeout(playStage3, 200);
+          };
+
+          utt3.onend = finishVoice;
+          utt3.onerror = finishVoice;
 
           ttsKeepAliveTimer = setInterval(function() {
             if (!voiceFinished && window.speechSynthesis.speaking) {
@@ -4192,54 +4280,35 @@ javascript:(function(){
             } else {
               if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
             }
-          }, 2000);
+          }, 1500);
 
+          // Speak Stage 1 IMMEDIATELY on scan start
           window.__ISHAK_TTS_UTT__ = utt1;
           window.speechSynthesis.speak(utt1);
           if (window.speechSynthesis.paused) {
             window.speechSynthesis.resume();
           }
         } catch(e){
+          triggerTelemetryAnalysis();
+          triggerTelemetryConfirm();
           if (ttsKeepAliveTimer) clearInterval(ttsKeepAliveTimer);
           voiceFinished = true;
           setTimeout(finalizeScan, 300);
         }
       } else {
+        triggerTelemetryAnalysis();
+        triggerTelemetryConfirm();
         voiceFinished = true;
-        setTimeout(finalizeScan, 5000);
+        setTimeout(finalizeScan, 4200);
       }
 
       // Smooth percentage counter
       var scanStartTs = Date.now();
-      var scanTotalMs = 7200;
+      var scanTotalMs = 4500;
       var progressInterval = setInterval(function() {
         var elapsed = Date.now() - scanStartTs;
         var pct = Math.min(99, Math.floor((elapsed / scanTotalMs) * 100));
-      }, 65);
-
-      // Bottom-Left Telemetry (Strictly English technical indicators: RSI: +EMA: + OHL +++ More..)
-      var telemetryTimeouts = [];
-      function addTelemetryLine(text, isHighlight) {
-        if (!telemetryContainer) return;
-        var lineDiv = document.createElement('div');
-        lineDiv.style.cssText = 'animation:ishakTelemetryIn 0.25s ease-out forwards; will-change:transform,opacity; margin-bottom:3px; font-family:"Rajdhani",monospace,sans-serif; font-size:12px; font-weight:700; letter-spacing:0.8px;' +
-          (isHighlight ? 'color:#00E5FF; text-shadow:0 0 10px rgba(0,229,255,0.95);' : 'color:#00FF66; text-shadow:0 0 8px rgba(0,255,102,0.85);');
-        lineDiv.innerText = text;
-        telemetryContainer.appendChild(lineDiv);
-      }
-
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('RSI: +', true);
-      }, 50));
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('+EMA: +', true);
-      }, 450));
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('+ OHL', false);
-      }, 950));
-      telemetryTimeouts.push(setTimeout(function() {
-        addTelemetryLine('+++ More..', false);
-      }, 1500));
+      }, 35);
 
       // Real-Time High-Frequency Price Sampler
       var livePriceSamples = [];

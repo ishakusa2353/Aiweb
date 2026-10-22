@@ -309,15 +309,24 @@ export function speakScanTelemetry(
   market: string,
   durationStr: string,
   direction: 'BUY' | 'SELL' | 'UP' | 'DOWN',
-  onComplete?: () => void
+  callbacksOrComplete?: {
+    onMarketAnnounced?: () => void;
+    onAnalysisAnnounced?: () => void;
+    onComplete?: () => void;
+  } | (() => void)
 ): () => void {
+  const callbacks = typeof callbacksOrComplete === 'function'
+    ? { onComplete: callbacksOrComplete }
+    : (callbacksOrComplete || {});
+
   if (typeof window === 'undefined' || !window.speechSynthesis) {
-    if (onComplete) onComplete();
+    if (callbacks.onMarketAnnounced) callbacks.onMarketAnnounced();
+    if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
+    if (callbacks.onComplete) callbacks.onComplete();
     return () => {};
   }
 
   let completed = false;
-  let pauseTimer: any = null;
   let ttsKeepAlive: any = null;
 
   const cleanupKeepAlive = () => {
@@ -331,14 +340,10 @@ export function speakScanTelemetry(
     if (!completed) {
       completed = true;
       cleanupKeepAlive();
-      if (pauseTimer) {
-        clearTimeout(pauseTimer);
-        pauseTimer = null;
-      }
       if (typeof window !== 'undefined') {
         (window as any).__ACTIVE_TTS__ = null;
       }
-      if (onComplete) onComplete();
+      if (callbacks.onComplete) callbacks.onComplete();
     }
   };
 
@@ -346,7 +351,6 @@ export function speakScanTelemetry(
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
-    window.speechSynthesis.cancel();
 
     const cleanMarket = market
       .replace(/[\/\-_]/g, ' ')
@@ -363,26 +367,25 @@ export function speakScanTelemetry(
 
     const tradeAction = (direction === 'BUY' || direction === 'UP') ? 'BUY' : 'SELL';
 
-    // Get latest voices
+    // Get available voices
     let voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) {
       try {
         voices = window.speechSynthesis.getVoices();
       } catch (e) {}
     }
+    if (!voices) voices = [];
 
-    // NEVER use robotic default Bengali voice (avoid Desktop, default, eSpeak, harsh speech)
-    // Manually select a sweet, enchanting, melodic female voice (মেয়ের মায়াবী কন্ঠ)
     const isRobotic = (name: string) => /desktop|espeak|offline|robotic/i.test(name);
 
-    // 1. High-grade neural / natural female Bengali voice
+    // 1. Natural female Bengali voice
     const bnFemaleVoice = voices.find(v =>
       v.lang.startsWith('bn') &&
       !isRobotic(v.name) &&
       (v.name.includes('Female') || v.name.includes('Natural') || v.name.includes('Wavenet') || (v.name.includes('Google') && !v.name.includes('Desktop')))
-    );
+    ) || voices.find(v => v.lang.startsWith('bn') && !isRobotic(v.name));
 
-    // 2. High-grade sweet melodic female natural voices (Jenny, Sonia, Aria, Samantha, Google UK English Female, Victoria)
+    // 2. Sweet natural female voice for universal mobile fallback
     const sweetFemaleVoice = voices.find(v =>
       !isRobotic(v.name) &&
       (v.name.includes('Google UK English Female') ||
@@ -398,72 +401,85 @@ export function speakScanTelemetry(
       || voices.find(v => !isRobotic(v.name) && v.name.includes('Natural'))
       || voices[0];
 
-    const chosenVoice = bnFemaleVoice || sweetFemaleVoice;
     const hasRealBengali = !!bnFemaleVoice;
+    const chosenVoice = bnFemaleVoice || sweetFemaleVoice;
+    const chosenLang = hasRealBengali ? (chosenVoice?.lang || 'bn-BD') : (chosenVoice?.lang || 'en-US');
 
-    // Phase 1: Market Announcement & Analysis Start
-    const textPart1 = hasRealBengali
-      ? `মার্কেট এনালাইসিস করছি`
-      : `Market analysis korchi`;
-    const utt1 = new SpeechSynthesisUtterance(textPart1);
+    // ⚡ Voice Speed: 1.35x (1.3X/1.4X fast & energetic scan completion)
+    const voiceRate = 1.35;
+    const voicePitch = 1.22;
 
-    if (chosenVoice) {
-      utt1.voice = chosenVoice;
-      utt1.lang = hasRealBengali ? (chosenVoice.lang || 'bn-BD') : (chosenVoice.lang || 'en-US');
-    } else {
-      utt1.lang = 'en-US';
-    }
-    utt1.rate = 1.05;
-    utt1.pitch = 1.25;
+    // Stage 1 Utterance: মার্কেট ও সময় ঘোষণা (Starts IMMEDIATELY with scanning)
+    const text1 = hasRealBengali
+      ? `মার্কেট: ${cleanMarket}। সময়: ${cleanDur}।`
+      : `Market: ${cleanMarket}. Somoy: ${cleanDur}.`;
+    const utt1 = new SpeechSynthesisUtterance(text1);
+    if (chosenVoice) utt1.voice = chosenVoice;
+    utt1.lang = chosenLang;
+    utt1.rate = voiceRate;
+    utt1.pitch = voicePitch;
     utt1.volume = 1.0;
 
-    // Phase 2: Decision Announcement
-    const textPart2 = hasRealBengali
-      ? `নিশ্চিন্তে ${tradeAction} ট্রেড নিতে পারেন!`
-      : `Nischinte ${tradeAction} trade nite paren!`;
-    const utt2 = new SpeechSynthesisUtterance(textPart2);
-    if (chosenVoice) {
-      utt2.voice = chosenVoice;
-      utt2.lang = hasRealBengali ? (chosenVoice.lang || 'bn-BD') : (chosenVoice.lang || 'en-US');
-    } else {
-      utt2.lang = 'en-US';
-    }
-    utt2.rate = 1.05;
-    utt2.pitch = 1.25;
+    // Stage 2 Utterance: 'মার্কেট এনালাইসিস করছি'
+    const text2 = hasRealBengali
+      ? `মার্কেট এনালাইসিস করছি`
+      : `Market analysis korchi`;
+    const utt2 = new SpeechSynthesisUtterance(text2);
+    if (chosenVoice) utt2.voice = chosenVoice;
+    utt2.lang = chosenLang;
+    utt2.rate = voiceRate;
+    utt2.pitch = voicePitch;
     utt2.volume = 1.0;
 
-    utt1.onend = () => {
-      // 2.2-Second Analysis Wait + Analysis Sound Effect
+    // Stage 3 Utterance: 'নিশ্চিন্তে BUY/SELL ট্রেড করতে পারেন!'
+    const text3 = hasRealBengali
+      ? `নিশ্চিন্তে ${tradeAction} ট্রেড করতে পারেন!`
+      : `Nischinte ${tradeAction} trade korte paren!`;
+    const utt3 = new SpeechSynthesisUtterance(text3);
+    if (chosenVoice) utt3.voice = chosenVoice;
+    utt3.lang = chosenLang;
+    utt3.rate = voiceRate;
+    utt3.pitch = voicePitch;
+    utt3.volume = 1.0;
+
+    const playStage3 = () => {
+      if (completed) return;
+      (window as any).__ACTIVE_TTS__ = utt3;
+      window.speechSynthesis.speak(utt3);
+    };
+
+    const playStage2 = () => {
+      if (completed) return;
+      if (callbacks.onMarketAnnounced) callbacks.onMarketAnnounced();
       playMarketAnalysisPulseSound();
-      pauseTimer = setTimeout(() => {
-        if (completed) return;
-        (window as any).__ACTIVE_TTS__ = utt2;
-        window.speechSynthesis.speak(utt2);
-      }, 2200);
+      (window as any).__ACTIVE_TTS__ = utt2;
+      window.speechSynthesis.speak(utt2);
+    };
+
+    utt1.onend = () => {
+      setTimeout(playStage2, 100);
     };
 
     utt1.onerror = () => {
-      // Fallback if Bengali failed on device: retry with phonetic sweet voice
-      playMarketAnalysisPulseSound();
-      pauseTimer = setTimeout(() => {
-        if (completed) return;
-        const fallbackUtt2 = new SpeechSynthesisUtterance(`Nischinte ${tradeAction} trade nite paren!`);
-        if (sweetFemaleVoice) fallbackUtt2.voice = sweetFemaleVoice;
-        fallbackUtt2.lang = (sweetFemaleVoice && sweetFemaleVoice.lang) || 'en-US';
-        fallbackUtt2.pitch = 1.25;
-        fallbackUtt2.rate = 1.05;
-        fallbackUtt2.onend = finish;
-        fallbackUtt2.onerror = finish;
-        (window as any).__ACTIVE_TTS__ = fallbackUtt2;
-        window.speechSynthesis.speak(fallbackUtt2);
-      }, 2200);
+      // Fallback if Bengali failed on mobile: immediately continue sequence
+      setTimeout(playStage2, 100);
     };
 
     utt2.onend = () => {
-      finish();
+      if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
+      setTimeout(playStage3, 200);
     };
 
     utt2.onerror = () => {
+      if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
+      setTimeout(playStage3, 200);
+    };
+
+    utt3.onend = () => {
+      finish();
+    };
+
+    utt3.onerror = () => {
       finish();
     };
 
@@ -477,35 +493,33 @@ export function speakScanTelemetry(
           cleanupKeepAlive();
         }
       }
-    }, 2000);
+    }, 1500);
 
-    // Prevent Chromium garbage collection
+    // Speak Stage 1 IMMEDIATELY
     (window as any).__ACTIVE_TTS__ = utt1;
     window.speechSynthesis.speak(utt1);
-
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
-
-    // Generous safety timer
-    const maxSafetyTimer = setTimeout(() => {
-      finish();
-    }, 18000);
-
-    return () => {
-      clearTimeout(maxSafetyTimer);
-      if (pauseTimer) clearTimeout(pauseTimer);
-      cleanupKeepAlive();
-      try {
-        window.speechSynthesis.cancel();
-      } catch (e) {}
-      (window as any).__ACTIVE_TTS__ = null;
-    };
   } catch (e) {
-    console.warn('Speech synthesis error', e);
+    if (callbacks.onMarketAnnounced) callbacks.onMarketAnnounced();
+    if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
     finish();
-    return () => {};
   }
+
+  // Generous safety timer
+  const maxSafetyTimer = setTimeout(() => {
+    finish();
+  }, 12000);
+
+  return () => {
+    clearTimeout(maxSafetyTimer);
+    cleanupKeepAlive();
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+    (window as any).__ACTIVE_TTS__ = null;
+  };
 }
 
 export function stopSpeechSynthesis(): void {
