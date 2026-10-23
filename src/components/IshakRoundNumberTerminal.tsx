@@ -209,8 +209,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
 
   /**
    * START BUTTON:
-   * Moves the candle smoothly from currentPrice to targetPrice over 1.5 seconds travel time,
-   * then holds at target price until duration expires!
+   * Instantly snaps / moves to target round price and holds there until Stop is clicked!
    */
   const handleStart = () => {
     const target = parseFloat(roundPriceInput);
@@ -220,7 +219,6 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       return;
     }
 
-    const duration = durationInput || 5;
     const startP = currentPrice > 0 ? currentPrice : target;
     startPriceRef.current = startP;
     targetPriceRef.current = target;
@@ -231,10 +229,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     setStatusText(`● VEX ACTIVE: ${target.toFixed(target > 50 ? 2 : 4)}`);
     setInterceptsCount(0);
     setProgressPercent(100);
-    setCountdown(duration);
 
-    // Smooth sinusoidal travel time towards the target price
-    const travelTimeMs = 1500;
+    // Fast smooth snap to the target round price (300ms) then hold
+    const travelTimeMs = 300;
     if (animationIntervalRef.current) clearInterval(animationIntervalRef.current);
     
     animationIntervalRef.current = setInterval(() => {
@@ -255,20 +252,6 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
       setSimulatedMarketPrice(simulatedPrice);
       setCurrentPrice(simulatedPrice);
     }, 40);
-
-    let remaining = duration;
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-
-    countdownIntervalRef.current = setInterval(() => {
-      remaining -= 1;
-      setCountdown(remaining);
-      const pct = Math.max(0, Math.round((remaining / duration) * 100));
-      setProgressPercent(pct);
-
-      if (remaining <= 0) {
-        handleStop();
-      }
-    }, 1000);
   };
 
   /**
@@ -770,62 +753,8 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           </div>
         </div>
 
-        {/* 3. Duration & Chip Selectors */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
-              DURATION (SECONDS)
-            </span>
-            <span style={{ fontSize: '10px', fontWeight: 900, color: countdown > 0 ? '#ff2e54' : '#00e5ff', fontFamily: 'monospace' }}>
-              {countdown > 0 ? `[00:${String(countdown).padStart(2, '0')}]` : `[${durationInput}s READY]`}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {[5, 10, 15, 30, 60].map((sec) => (
-              <button
-                key={sec}
-                type="button"
-                onClick={() => handleSelectChip(sec)}
-                style={{
-                  flex: 1,
-                  padding: '5px 0',
-                  textAlign: 'center',
-                  background: selectedChip === sec
-                    ? 'linear-gradient(135deg, #00e5ff, #0088cc)'
-                    : 'rgba(11, 18, 38, 0.85)',
-                  border: `1px solid ${selectedChip === sec ? '#00e5ff' : 'rgba(255, 255, 255, 0.1)'}`,
-                  color: selectedChip === sec ? '#040818' : '#94a3b8',
-                  borderRadius: '6px',
-                  fontSize: '9.5px',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  fontFamily: 'monospace',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {sec}s
-              </button>
-            ))}
-          </div>
-
-          {/* Progress Indicator when Running */}
-          {isRunning && (
-            <div style={{ height: '3px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${progressPercent}%`,
-                  background: 'linear-gradient(90deg, #ff2e54, #00e5ff)',
-                  transition: 'width 1s linear',
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* 4. Action Buttons: Restructured Tactical Control */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+        {/* Action Buttons: Strictly Start / Stop */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
           {!isRunning ? (
             <button
               id="btnStart"
@@ -833,13 +762,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               onClick={handleStart}
               style={{
                 flex: 1,
-                padding: '11px 0',
+                padding: '12px 0',
                 borderRadius: '10px',
                 border: 'none',
                 fontWeight: 900,
-                fontSize: '12px',
+                fontSize: '13px',
                 cursor: 'pointer',
-                letterSpacing: '0.8px',
+                letterSpacing: '1px',
                 textTransform: 'uppercase',
                 background: 'linear-gradient(135deg, #00e5ff 0%, #0284c7 100%)',
                 color: '#030718',
@@ -848,7 +777,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 transition: 'all 0.15s',
               }}
             >
-              ⚡ START VEX TRAVEL
+              Start
             </button>
           ) : (
             <button
@@ -857,13 +786,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               onClick={handleStop}
               style={{
                 flex: 1,
-                padding: '11px 0',
+                padding: '12px 0',
                 borderRadius: '10px',
                 border: '1.5px solid #ff2e54',
                 fontWeight: 900,
-                fontSize: '12px',
+                fontSize: '13px',
                 cursor: 'pointer',
-                letterSpacing: '0.8px',
+                letterSpacing: '1px',
                 textTransform: 'uppercase',
                 background: 'linear-gradient(135deg, rgba(255, 46, 84, 0.25), rgba(139, 0, 41, 0.4))',
                 color: '#ffffff',
@@ -872,7 +801,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 transition: 'all 0.15s',
               }}
             >
-              ⏹ STOP & REVERT PRICE
+              Stop
             </button>
           )}
         </div>

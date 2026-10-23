@@ -426,7 +426,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
   // Primary Single Click Handler: Setup & Instant Scan
   const triggerScan = async () => {
-    if (isScanning) return;
+    if (isScanning || verifying) return;
 
     try {
       setInjectedTradesCount(999);
@@ -438,33 +438,63 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     if (freshBg?.currentPair) setDetectedAsset(freshBg.currentPair);
     if (freshBg?.currentPrice) setDetectedPrice(freshBg.currentPrice);
 
-    // Auto-provision VIP session if testing or uninitialized so scan never hangs or fails to open
+    // 1. Check local license
     let curLicense = activeLicense;
     if (!curLicense || !curLicense.key) {
-      curLicense = {
-        key: 'TRADEPILOT-VIP-ACTIVE',
-        tier: 'VIP',
-        duration: 'lifetime',
-        exp: null,
-        active: true
-      };
-      setActiveLicense(curLicense);
-      try { localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(curLicense)); } catch (e) {}
+      try {
+        const raw = localStorage.getItem('ISHAK_AI_LICENSE');
+        if (raw) curLicense = JSON.parse(raw);
+      } catch (e) {}
+    }
+
+    if (!curLicense || !curLicense.key) {
+      setShowKeyModal(true);
+      showToast('বট ব্যবহারের পূর্বে আপনার VIP লাইসেন্স কি প্রবেশ করান।', true);
+      return;
+    }
+
+    // Check expiration locally
+    if (curLicense.exp && Date.now() >= curLicense.exp) {
+      setShowKeyModal(true);
+      showToast('আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!', true);
+      return;
     }
 
     const dur = tradeDuration || 5;
     setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
 
-    // Non-blocking background verification check
-    if (curLicense.key && curLicense.key !== 'TRADEPILOT-VIP-ACTIVE') {
-      supabaseService.verifyLicense(curLicense.key, curLicense.traderId || '').then((res) => {
-        if (res && res.valid === false) {
-          showToast(res.reason || 'লাইসেন্সটি সক্রিয় নয়!', true);
-        }
-      }).catch(() => {});
+    // 🛡️ STRICT DATABASE-ONLY LIVE LICENSE VERIFICATION (Shows VERIFYING inside logo)
+    setVerifying(true);
+    try {
+      const res = await supabaseService.verifyLicense(curLicense.key, curLicense.traderId || '');
+      setVerifying(false);
+      if (res && res.valid) {
+        const updated = {
+          key: curLicense.key,
+          exp: res.exp,
+          duration: res.duration || curLicense.duration || '30d',
+          traderId: res.traderId || curLicense.traderId || '',
+          tier: res.tier || curLicense.tier || 'VIP',
+          active: true,
+        };
+        setActiveLicense(updated);
+        try { localStorage.setItem('ISHAK_AI_LICENSE', JSON.stringify(updated)); } catch (e) {}
+        startScanProcess();
+      } else {
+        try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch (e) {}
+        setActiveLicense(null);
+        setShowKeyModal(true);
+        showToast(res?.reason || 'লাইসেন্স যাচাই ব্যর্থ হয়েছে!', true);
+      }
+    } catch (err: any) {
+      setVerifying(false);
+      if (curLicense && (!curLicense.exp || Date.now() < curLicense.exp)) {
+        startScanProcess();
+      } else {
+        setShowKeyModal(true);
+        showToast('লাইসেন্স যাচাই করা যায়নি! ইন্টারনেট চেক করুন।', true);
+      }
     }
-
-    startScanProcess();
   };
 
   const startScanProcess = () => {
@@ -482,7 +512,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const dur = tradeDuration || 5;
     const durationStr = dur >= 60 ? `${dur / 60}M` : `${dur}S`;
 
-    // Pre-evaluate candle stream for direction to feed speech accurately
+    // Pre-evaluate candle stream for direction
     let parsedCandles: Candle[] = [...bgMarket.candles];
     if (bgMarket.runningCandle) {
       parsedCandles.push(bgMarket.runningCandle);
@@ -491,7 +521,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const determinedIsCall = (initialAnalysis.isCall !== null && typeof initialAnalysis.isCall === 'boolean')
       ? initialAnalysis.isCall
       : (liveCandle.close >= liveCandle.open);
-    const signalDir: 'BUY' | 'SELL' = determinedIsCall ? 'BUY' : 'SELL';
 
     const calculatedRsi = initialAnalysis.indicators.rsi14;
     const calculatedEma = determinedIsCall ? '9/21 Bullish Stack ↗' : '9/21 Bearish Stack ↘';
@@ -499,30 +528,30 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const livePriceStr = bgMarket.currentPrice > 0 ? bgMarket.currentPrice.toFixed(bgMarket.currentPrice < 10 ? 5 : 2) : liveCandle.close.toFixed(liveCandle.close < 10 ? 5 : 2);
     const chartTimeStr = new Date().toLocaleTimeString('en-US', { hour12: true });
 
-    // 🎯 Clean, Sequential Onscreen Telemetry (Strictly matching user spec):
-    // 1. Market:(রানিং যে মার্কেট থাকবে সেটা)
-    // 2. Trade Duration:(যত সময় সিলেক্ট থাকবে)
-    // 3. Chart Time:(চার্টের টাইম)
-    // 4. Live Quote:(রানিং লাইভ প্রাইস)
+    // 🎯 Clean, Sequential Onscreen Telemetry (5 to 6 seconds duration):
+    // 1. Market:
+    // 2. Trade Duration:
+    // 3. Chart Time:
+    // 4. Live Quote:
     // 5. Analysing Market.......
-    // 6. RSI:(এনালাইসিস করে যা আসবে তা)
-    // 7. EMA:(এনালাইসিস করে যা আসবে তা)
-    // 8. OHL:(এনালাইসিস করে যা আসবে তা)
+    // 6. RSI:
+    // 7. EMA:
+    // 8. OHL:
     // 9. Confirming Signal Entry ✔
     setMatrixTelemetryLines([`Market: ${liveAsset}`]);
 
     const timeouts: any[] = [];
     timeouts.push(setTimeout(() => {
       setMatrixTelemetryLines(prev => [...prev, `Trade Duration: ${durationStr}`]);
-    }, 200));
+    }, 400));
 
     timeouts.push(setTimeout(() => {
       setMatrixTelemetryLines(prev => [...prev, `Chart Time: ${chartTimeStr}`]);
-    }, 450));
+    }, 900));
 
     timeouts.push(setTimeout(() => {
       setMatrixTelemetryLines(prev => [...prev, `Live Quote: ${livePriceStr}`]);
-    }, 700));
+    }, 1400));
 
     const triggerAnalysisStage = () => {
       setMatrixTelemetryLines(prev => {
@@ -535,21 +564,21 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           if (prev.some(l => l.startsWith('RSI:'))) return prev;
           return [...prev, `RSI: ${calculatedRsi}`];
         });
-      }, 300));
+      }, 900));
 
       timeouts.push(setTimeout(() => {
         setMatrixTelemetryLines(prev => {
           if (prev.some(l => l.startsWith('EMA:'))) return prev;
           return [...prev, `EMA: ${calculatedEma}`];
         });
-      }, 600));
+      }, 1700));
 
       timeouts.push(setTimeout(() => {
         setMatrixTelemetryLines(prev => {
           if (prev.some(l => l.startsWith('OHL:'))) return prev;
           return [...prev, `OHL: ${ohlText}`];
         });
-      }, 900));
+      }, 2500));
     };
 
     const triggerConfirmEntry = () => {
@@ -559,12 +588,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       });
     };
 
-    // Fallbacks in case TTS is delayed or muted
-    timeouts.push(setTimeout(triggerAnalysisStage, 1100));
-    timeouts.push(setTimeout(triggerConfirmEntry, 2500));
+    timeouts.push(setTimeout(triggerAnalysisStage, 2000));
+    timeouts.push(setTimeout(triggerConfirmEntry, 5100));
 
     const scanStartTime = Date.now();
-    const scanDurationMs = 4500;
+    const scanDurationMs = 5500; // 5.5 seconds (within 5-6s specification)
 
     // High-Frequency Real-Time Price Action Sampler
     let samplePrices: number[] = [];
@@ -704,7 +732,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     // 🔊 100% Web Audio Synthesizer Soundscape (Pure matching audio, Zero Voice):
     let stopSpeech: (() => void) | null = null;
     if (soundEnabled) {
-      stopSpeech = speakScanTelemetry(liveAsset, durationStr, signalDir, {
+      stopSpeech = speakScanTelemetry(liveAsset, durationStr, determinedIsCall ? 'BUY' : 'SELL', {
         onMarketAnnounced: () => {
           triggerAnalysisStage();
         },
@@ -717,8 +745,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       });
     }
 
-    // Safety timeout ensuring scan completes crisply at 3.5s
-    const fallbackTimer = setTimeout(finalizeScan, 3500);
+    // Safety timeout ensuring scan completes at 5.5s
+    const fallbackTimer = setTimeout(finalizeScan, 5500);
 
     return () => {
       clearTimeout(fallbackTimer);
@@ -772,7 +800,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         setTimeout(() => {
           setShowKeyModal(false);
           setKeyInputSuccess(false);
-          if (!tradeDuration) setShowTimeModal(true);
         }, 1200);
       } else {
         const rawReason = data.reason || '';
@@ -1117,21 +1144,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             <div className="space-y-2.5 relative z-10">
               <button
                 onClick={() => {
-                  setShowHub(false);
-                  setShowTimeModal(true);
-                }}
-                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-t border-t-cyan-300/40 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] hover:border-t-cyan-300/80 hover:shadow-[0_6px_20px_rgba(0,229,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.35)] active:translate-y-0.5 cursor-pointer group"
-              >
-                <span className="text-gray-100 font-semibold flex items-center gap-2">
-                  <span className="text-base group-hover:scale-110 transition-transform">⏱️</span> Trade Duration
-                </span>
-                <b className="text-amber-300 font-mono font-bold bg-gradient-to-b from-amber-400/25 to-amber-950/70 px-2.5 py-1 rounded-xl border-t border-t-amber-300/60 border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.4)] text-[11px]">
-                  {tradeDuration ? (tradeDuration >= 60 ? `${tradeDuration / 60} Min` : `${tradeDuration} Sec`) : '5 Sec ⚡'}
-                </b>
-              </button>
-
-              <button
-                onClick={() => {
                   const next = !autoPilotMode;
                   setAutoPilotMode(next);
                   if (next) {
@@ -1218,49 +1230,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* ⏱️ 6. TIME SELECTION MODAL */}
-      {showTimeModal && (
-        <div className="fixed inset-0 bg-[#060a1e]/70 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-          <div className="w-full max-w-xs bg-gradient-to-b from-[#141c48]/95 via-[#0e163d]/95 to-[#090f2d]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/60 border-x border-x-indigo-500/35 border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_35px_rgba(99,102,241,0.25),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-2.5px_5px_rgba(0,0,0,0.7)]">
-            <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-indigo-400/25 relative z-10">
-              <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-indigo-200 to-amber-200 font-['Orbitron',sans-serif] tracking-widest">
-                SELECT TIMEFRAME
-              </h3>
-              <button
-                onClick={() => setShowTimeModal(false)}
-                className="w-7 h-7 rounded-xl bg-gradient-to-b from-rose-500/35 to-rose-950/90 border-t border-t-rose-400/70 border-b border-b-black/90 text-rose-200 hover:text-white flex items-center justify-center text-xs font-black transition-all cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 relative z-10">
-              {TIME_OPTIONS.map((opt) => (
-                <button
-                  key={opt.sec}
-                  onClick={() => {
-                    setTradeDuration(opt.sec);
-                    setBadgeText(opt.label);
-                    try {
-                      localStorage.setItem('ISHAK_TRADE_DURATION', String(opt.sec));
-                    } catch (e) {}
-                    setShowTimeModal(false);
-                    showToast(`✅ Timeframe set to ${opt.label}`, false);
-                  }}
-                  className={`p-3 rounded-2xl border text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
-                    tradeDuration === opt.sec
-                      ? 'bg-gradient-to-b from-cyan-400/30 to-indigo-950/80 border-cyan-400 text-cyan-200 shadow-[0_0_15px_rgba(0,229,255,0.35)]'
-                      : 'bg-[#10173d]/80 border-indigo-400/20 text-gray-200 hover:border-cyan-400/40'
-                  }`}
-                >
-                  <span>⏱️ {opt.label}</span>
-                  {tradeDuration === opt.sec && <span className="text-cyan-400">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 🔑 7. VIP LICENSE KEY MODAL */}
       {showKeyModal && (

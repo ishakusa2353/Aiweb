@@ -308,7 +308,7 @@ export function playMarketAnalysisPulseSound(): void {
  * - Ascending signal entry lock chime
  * - Zero voice glitches, 100% reliable on every device
  */
-export function playScanSoundscape(totalDuration: number = 3.4): () => void {
+export function playScanSoundscape(totalDuration: number = 5.5): () => void {
   try {
     const ctx = getAudioContext();
     if (!ctx) return () => {};
@@ -362,14 +362,14 @@ export function playScanSoundscape(totalDuration: number = 3.4): () => void {
 
     // Multi-stage radar rotation sweep
     sweepOsc.frequency.setValueAtTime(220, t);
-    sweepOsc.frequency.linearRampToValueAtTime(440, t + 0.8);
-    sweepOsc.frequency.linearRampToValueAtTime(290, t + 1.6);
-    sweepOsc.frequency.linearRampToValueAtTime(520, t + 2.4);
+    sweepOsc.frequency.linearRampToValueAtTime(440, t + 1.2);
+    sweepOsc.frequency.linearRampToValueAtTime(290, t + 2.5);
+    sweepOsc.frequency.linearRampToValueAtTime(520, t + 3.8);
     sweepOsc.frequency.linearRampToValueAtTime(320, t + dur);
 
-    sweepFilter.frequency.linearRampToValueAtTime(1200, t + 0.8);
-    sweepFilter.frequency.linearRampToValueAtTime(650, t + 1.6);
-    sweepFilter.frequency.linearRampToValueAtTime(1400, t + 2.4);
+    sweepFilter.frequency.linearRampToValueAtTime(1200, t + 1.2);
+    sweepFilter.frequency.linearRampToValueAtTime(650, t + 2.5);
+    sweepFilter.frequency.linearRampToValueAtTime(1400, t + 3.8);
     sweepFilter.frequency.linearRampToValueAtTime(700, t + dur);
 
     sweepGain.gain.setValueAtTime(0.001, t);
@@ -384,8 +384,8 @@ export function playScanSoundscape(totalDuration: number = 3.4): () => void {
     sweepOsc.stop(t + dur);
     activeNodes.push(sweepOsc);
 
-    // 3. Telemetry Click Chirps (Micro data packet arrivals for the 4 initial lines)
-    const telemetryTimes = [0.05, 0.22, 0.45, 0.70];
+    // 3. Telemetry Click Chirps (Micro data packet arrivals for initial lines)
+    const telemetryTimes = [0.05, 0.40, 0.90, 1.40];
     telemetryTimes.forEach((timeOffset, idx) => {
       const freq = 1400 + idx * 150;
       const tOsc = ctx.createOscillator();
@@ -405,16 +405,16 @@ export function playScanSoundscape(totalDuration: number = 3.4): () => void {
       activeNodes.push(tOsc);
     });
 
-    // 4. Analysing Market Deep Sonar Pings & Resonant Chimes (At 1.0s, 1.45s, 1.9s, 2.35s)
-    const analysisTimes = [1.0, 1.45, 1.9, 2.35];
+    // 4. Analysing Market Deep Sonar Pings & Resonant Chimes (At 2.0s, 2.7s, 3.4s, 4.1s, 4.7s)
+    const analysisTimes = [2.0, 2.7, 3.4, 4.1, 4.7];
     analysisTimes.forEach((timeOffset, idx) => {
       const pOsc = ctx.createOscillator();
       const pGain = ctx.createGain();
       pOsc.type = 'sine';
-      const startF = 1850 + idx * 100;
-      const endF = 750 + idx * 40;
+      const startF = 1850 + idx * 80;
+      const endF = 750 + idx * 30;
       pOsc.frequency.setValueAtTime(startF, t + timeOffset);
-      pOsc.frequency.exponentialRampToValueAtTime(endF, t + timeOffset + 0.28);
+      pOsc.frequency.exponentialRampToValueAtTime(endF, t + timeOffset + 0.32);
 
       pGain.gain.setValueAtTime(0.001, t + timeOffset);
       pGain.gain.linearRampToValueAtTime(0.35, t + timeOffset + 0.02);
@@ -443,8 +443,8 @@ export function playScanSoundscape(totalDuration: number = 3.4): () => void {
       activeNodes.push(cOsc);
     });
 
-    // 5. Signal Lock & Entry Confirmation Chimes (At 2.7s - 3.0s)
-    [2.7, 2.85, 3.0].forEach((timeOffset, idx) => {
+    // 5. Signal Lock & Entry Confirmation Chimes (At 5.0s - 5.4s)
+    [5.0, 5.2, 5.4].forEach((timeOffset, idx) => {
       const lockOsc = ctx.createOscillator();
       const lockGain = ctx.createGain();
       lockOsc.type = 'sine';
@@ -495,19 +495,19 @@ export function speakScanTelemetry(
     ? { onComplete: callbacksOrComplete }
     : (callbacksOrComplete || {});
 
-  const stopSound = playScanSoundscape(3.3);
+  const stopSound = playScanSoundscape(5.5);
 
   const t1 = setTimeout(() => {
     if (callbacks.onMarketAnnounced) callbacks.onMarketAnnounced();
-  }, 950);
+  }, 2000);
 
   const t2 = setTimeout(() => {
     if (callbacks.onAnalysisAnnounced) callbacks.onAnalysisAnnounced();
-  }, 2600);
+  }, 5000);
 
   const t3 = setTimeout(() => {
     if (callbacks.onComplete) callbacks.onComplete();
-  }, 3300);
+  }, 5500);
 
   return () => {
     clearTimeout(t1);

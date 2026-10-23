@@ -1645,7 +1645,7 @@ javascript:(function(){
         audioCtx.resume();
       }
       var t = audioCtx.currentTime;
-      var dur = totalDuration || 3.3;
+      var dur = totalDuration || 5.5;
 
       var masterGain = audioCtx.createGain();
       masterGain.gain.setValueAtTime(1.0, t);
@@ -1692,14 +1692,14 @@ javascript:(function(){
       sweepFilter.Q.setValueAtTime(5.0, t);
 
       sweepOsc.frequency.setValueAtTime(220, t);
-      sweepOsc.frequency.linearRampToValueAtTime(440, t + 0.8);
-      sweepOsc.frequency.linearRampToValueAtTime(290, t + 1.6);
-      sweepOsc.frequency.linearRampToValueAtTime(520, t + 2.4);
+      sweepOsc.frequency.linearRampToValueAtTime(440, t + 1.2);
+      sweepOsc.frequency.linearRampToValueAtTime(290, t + 2.5);
+      sweepOsc.frequency.linearRampToValueAtTime(520, t + 3.8);
       sweepOsc.frequency.linearRampToValueAtTime(320, t + dur);
 
-      sweepFilter.frequency.linearRampToValueAtTime(1200, t + 0.8);
-      sweepFilter.frequency.linearRampToValueAtTime(650, t + 1.6);
-      sweepFilter.frequency.linearRampToValueAtTime(1400, t + 2.4);
+      sweepFilter.frequency.linearRampToValueAtTime(1200, t + 1.2);
+      sweepFilter.frequency.linearRampToValueAtTime(650, t + 2.5);
+      sweepFilter.frequency.linearRampToValueAtTime(1400, t + 3.8);
       sweepFilter.frequency.linearRampToValueAtTime(700, t + dur);
 
       sweepGain.gain.setValueAtTime(0.001, t);
@@ -1715,7 +1715,7 @@ javascript:(function(){
       activeNodes.push(sweepOsc);
 
       // 3. Telemetry Click Chirps
-      var telemetryTimes = [0.05, 0.20, 0.42, 0.65];
+      var telemetryTimes = [0.05, 0.40, 0.90, 1.40];
       telemetryTimes.forEach(function(timeOffset, idx) {
         var freq = 1400 + idx * 150;
         var tOsc = audioCtx.createOscillator();
@@ -1735,16 +1735,16 @@ javascript:(function(){
         activeNodes.push(tOsc);
       });
 
-      // 4. Analysing Market Deep Sonar Pings & Resonant Chimes
-      var analysisTimes = [0.95, 1.4, 1.85, 2.3];
+      // 4. Analysing Market Deep Sonar Pings & Resonant Chimes (2.0s, 2.7s, 3.4s, 4.1s, 4.7s)
+      var analysisTimes = [2.0, 2.7, 3.4, 4.1, 4.7];
       analysisTimes.forEach(function(timeOffset, idx) {
         var pOsc = audioCtx.createOscillator();
         var pGain = audioCtx.createGain();
         pOsc.type = 'sine';
-        var startF = 1850 + idx * 100;
-        var endF = 750 + idx * 40;
+        var startF = 1850 + idx * 80;
+        var endF = 750 + idx * 30;
         pOsc.frequency.setValueAtTime(startF, t + timeOffset);
-        pOsc.frequency.exponentialRampToValueAtTime(endF, t + timeOffset + 0.28);
+        pOsc.frequency.exponentialRampToValueAtTime(endF, t + timeOffset + 0.32);
 
         pGain.gain.setValueAtTime(0.001, t + timeOffset);
         pGain.gain.linearRampToValueAtTime(0.35, t + timeOffset + 0.02);
@@ -1772,8 +1772,8 @@ javascript:(function(){
         activeNodes.push(cOsc);
       });
 
-      // 5. Signal Lock & Entry Confirmation Chimes
-      [2.65, 2.8, 2.95].forEach(function(timeOffset, idx) {
+      // 5. Signal Lock & Entry Confirmation Chimes (5.0s, 5.2s, 5.4s)
+      [5.0, 5.2, 5.4].forEach(function(timeOffset, idx) {
         var lockOsc = audioCtx.createOscillator();
         var lockGain = audioCtx.createGain();
         lockOsc.type = 'sine';
@@ -2642,7 +2642,7 @@ javascript:(function(){
   var isDragging = false, startX = 0, startY = 0, initX = 0, initY = 0;
   var dragMoved = false;
   var pointerDownTime = 0;
-  var lastScanTriggerTs = 0;
+  var isVerifyingLicense = false;
 
   function triggerMainBotScan(e) {
     if (e) {
@@ -2657,7 +2657,65 @@ javascript:(function(){
       showMaintenanceModal();
       return;
     }
-    triggerScanAndTrade();
+    if (isVerifyingLicense || isScanning) return;
+
+    var innerStat = document.getElementById('ishak-inner-status');
+    var innerStatTxt = document.getElementById('ishak-inner-status-text');
+
+    var local = getLocalLicense();
+    if (!local || !local.key) {
+      if (innerStat) innerStat.style.display = 'none';
+      showKeyModal(function() {
+        triggerMainBotScan();
+      });
+      return;
+    }
+
+    if (local.exp && now >= local.exp) {
+      if (innerStat) innerStat.style.display = 'none';
+      try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
+      showKeyModal(function() {
+        triggerMainBotScan();
+      });
+      return;
+    }
+
+    // 🔒 Show VERIFYING inside squircle logo
+    isVerifyingLicense = true;
+    if (innerStat) {
+      if (innerStatTxt) {
+        innerStatTxt.innerText = 'VERIFYING';
+        innerStatTxt.style.color = '#FFE066';
+      }
+      innerStat.style.display = 'flex';
+    }
+
+    verifyLicenseStatus(local.key, local.traderId)
+      .then(function(result) {
+        isVerifyingLicense = false;
+        if (innerStat) innerStat.style.display = 'none';
+
+        if (result && result.valid) {
+          saveLocalLicense(local.key, result.exp, result.duration, result.traderId, result.tier);
+          triggerScanAndTrade();
+        } else {
+          try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
+          showKeyModal(function() {
+            triggerMainBotScan();
+          });
+        }
+      })
+      .catch(function(err) {
+        isVerifyingLicense = false;
+        if (innerStat) innerStat.style.display = 'none';
+        if (local && (!local.exp || now < local.exp)) {
+          triggerScanAndTrade();
+        } else {
+          showKeyModal(function() {
+            triggerMainBotScan();
+          });
+        }
+      });
   }
 
   function clampBotPosition(x, y) {
@@ -3085,9 +3143,6 @@ javascript:(function(){
       '<div class="ishak-close-btn" id="hub-close" style="width:26px;height:26px;border-radius:10px;background:linear-gradient(180deg,rgba(239,68,68,0.4),rgba(153,27,27,0.8));border-top:1px solid rgba(248,113,113,0.7);border-bottom:1.5px solid #000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4);">✕</div>' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:9px;">' +
-      '<button id="hub-btn-time" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
-      '<span style="display:flex;align-items:center;gap:6px;">⏱️ Trade Duration</span><b style="color:#FFE066;background:rgba(255,214,0,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(255,224,102,0.6);border-bottom:1px solid #000;font-size:10.5px;">' + (tradeDuration ? (tradeDuration >= 60 ? (tradeDuration / 60) + ' Min' : tradeDuration + ' Sec') : '5 Sec ⚡') + '</b>' +
-      '</button>' +
       '<button id="hub-btn-autotrade" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (autoTradeEnabled ? 'rgba(0,255,102,0.8)' : 'rgba(255,23,68,0.8)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">⚡ Auto-Trade Execution</span><b style="color:' + (autoTradeEnabled ? '#00FF66' : '#FF1744') + ';background:' + (autoTradeEnabled ? 'rgba(0,255,102,0.2)' : 'rgba(255,23,68,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (autoTradeEnabled ? 'rgba(0,255,102,0.6)' : 'rgba(255,23,68,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoTradeEnabled ? '● ENABLED' : '○ DISABLED') + '</b>' +
       '</button>' +
@@ -3112,7 +3167,6 @@ javascript:(function(){
       hub.remove();
       showSettingsHub();
     };
-    document.getElementById('hub-btn-time').onclick = function(e) { e.stopPropagation(); hub.remove(); showDurationSelectionModal(); };
     document.getElementById('hub-btn-autopilot').onclick = function(e) {
       e.stopPropagation();
       autoPilotMode = !autoPilotMode;
@@ -3837,39 +3891,57 @@ javascript:(function(){
 
       // 🌟 5-SECOND FORWARD HOLDING HORIZON (Assesses if price will sustain above/below entry for full 5 seconds)
       if (callPathProb >= 0.52 && expectedTerminalPrice > entryPrice) {
-        buyScore += 38;
-        upFactorsList.push('5S Timeframe Horizon: Price path modeled to hold ABOVE entry price for full 5s duration (+38)');
+        buyScore += 40;
+        upFactorsList.push('5S Timeframe Horizon: Price path modeled to hold ABOVE entry price for full 5s duration (+40)');
       } else if (callPathProb <= 0.48 && expectedTerminalPrice < entryPrice) {
-        sellScore += 38;
-        downFactorsList.push('5S Timeframe Horizon: Price path modeled to hold BELOW entry price for full 5s duration (+38)');
+        sellScore += 40;
+        downFactorsList.push('5S Timeframe Horizon: Price path modeled to hold BELOW entry price for full 5s duration (+40)');
       }
 
-      // 🛡️ 5S WICK EXHAUSTION & REVERSAL DEFENSE (Prevents buying at peak of green candle that reverses in 5s)
-      if (runningClose > runningOpen && (upperWick >= candleRange * 0.28 || midPathPullbackRisk === 'HIGH' || tickAcceleration < -0.000001)) {
-        sellScore += 32;
-        downFactorsList.push('5S Wick Rejection Defense: Green candle upper exhaustion indicates imminent 5s pullback below entry [+32]');
+      // 🛡️ 5S REVERSAL PIN-BAR FILTER (Only trigger on extreme exhaustion with genuine pin-bar)
+      var isUpperPinBar = upperWick >= candleRange * 0.65 && (bodySize / candleRange) <= 0.25;
+      var isLowerPinBar = lowerWick >= candleRange * 0.65 && (bodySize / candleRange) <= 0.25;
+
+      if (isUpperPinBar && calculatedRsi >= 76) {
+        sellScore += 35;
+        downFactorsList.push('5S Shooting Star Pin-Bar Exhaustion at RSI ' + calculatedRsi + ' [+35]');
       }
-      if (runningClose < runningOpen && (lowerWick >= candleRange * 0.28 || midPathPullbackRisk === 'HIGH' || tickAcceleration > 0.000001)) {
-        buyScore += 32;
-        upFactorsList.push('5S Wick Absorption Defense: Red candle lower absorption indicates imminent 5s bounce above entry [+32]');
+      if (isLowerPinBar && calculatedRsi <= 24) {
+        buyScore += 35;
+        upFactorsList.push('5S Hammer Pin-Bar Absorption at RSI ' + calculatedRsi + ' [+35]');
       }
 
-      // D. RSI Extreme Exhaustion only (Reversal Trigger)
-      if (calculatedRsi >= 72) {
+      // Micro-Trend Continuity (Consecutive candle momentum in 5s)
+      if (candleData.length >= 3) {
+        var c1 = candleData[candleData.length - 2];
+        var c2 = candleData[candleData.length - 3];
+        if (c1 && c2) {
+          if (runningClose > runningOpen && c1.close > c1.open && c2.close > c2.open) {
+            buyScore += 35;
+            upFactorsList.push('5S Triple Bullish Candle Flow (Momentum Surge) [+35]');
+          } else if (runningClose < runningOpen && c1.close < c1.open && c2.close < c2.open) {
+            sellScore += 35;
+            downFactorsList.push('5S Triple Bearish Candle Flow (Momentum Surge) [+35]');
+          }
+        }
+      }
+
+      // D. RSI Extreme Boundaries (Exhaustion & Mean Reversion only)
+      if (calculatedRsi >= 78) {
         sellScore += 24;
         downFactorsList.push('5S RSI Overbought Peak Exhaustion [+24]');
-      } else if (calculatedRsi <= 28) {
+      } else if (calculatedRsi <= 22) {
         buyScore += 24;
         upFactorsList.push('5S RSI Oversold Floor Exhaustion [+24]');
       }
 
-      // E. Micro Context (Fast EMA5 vs EMA9)
+      // E. Micro Context (Fast EMA5 vs EMA9 - Strong momentum weight in 5s)
       if (ema5 > ema9) {
-        buyScore += 8;
-        upFactorsList.push('5S Micro EMA5 > EMA9 [+8]');
+        buyScore += 18;
+        upFactorsList.push('5S Micro EMA5 > EMA9 Vector Bullish [+18]');
       } else if (ema5 < ema9) {
-        sellScore += 8;
-        downFactorsList.push('5S Micro EMA5 < EMA9 [+8]');
+        sellScore += 18;
+        downFactorsList.push('5S Micro EMA5 < EMA9 Vector Bearish [+18]');
       }
 
     } else if (dur <= 15) {
@@ -3883,11 +3955,11 @@ javascript:(function(){
         var pEnd10 = priceSamples[priceSamples.length - 1];
         var pDelta10 = pEnd10 - pStart10;
         if (pDelta10 > 0.0000004) {
-          buyScore += 40;
-          upFactorsList.push('10S/15S Fresh Scan Ticks Net Gain (+' + pDelta10.toFixed(5) + ') [+40]');
+          buyScore += 42;
+          upFactorsList.push('10S/15S Fresh Scan Ticks Net Gain (+' + pDelta10.toFixed(5) + ') [+42]');
         } else if (pDelta10 < -0.0000004) {
-          sellScore += 40;
-          downFactorsList.push('10S/15S Fresh Scan Ticks Net Loss (' + pDelta10.toFixed(5) + ') [+40]');
+          sellScore += 42;
+          downFactorsList.push('10S/15S Fresh Scan Ticks Net Loss (' + pDelta10.toFixed(5) + ') [+42]');
         }
 
         var scanUp10 = 0, scanDown10 = 0;
@@ -4196,29 +4268,19 @@ javascript:(function(){
 
     var local = getLocalLicense();
     if (!local || !local.key) {
-      local = {
-        key: 'TRADEPILOT-VIP-ACTIVE',
-        tier: 'VIP',
-        duration: 'lifetime',
-        exp: null,
-        active: true
-      };
-      saveLocalLicense(local.key, null, 'lifetime', 'VIP-USER', 'VIP');
+      showKeyModal(function() {
+        triggerMainBotScan();
+      });
+      return;
+    }
+
+    if (local.exp && Date.now() >= local.exp) {
+      terminateExpiredBot('আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!');
+      return;
     }
 
     if (isBotTerminated) {
       isBotTerminated = false;
-    }
-
-    // Non-blocking background verification check
-    if (local.key && local.key !== 'TRADEPILOT-VIP-ACTIVE') {
-      verifyLicenseStatus(local.key, local.traderId).then(function(status) {
-        if (status && status.valid === false) {
-          terminateExpiredBot(status.reason || 'লাইসেন্সটি সক্রিয় নয়!');
-        } else if (status && status.exp && Date.now() >= status.exp) {
-          terminateExpiredBot('আপনার VIP লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!');
-        }
-      }).catch(function() {});
     }
 
     // Maintain background auto-injected intelligence for deadly accuracy
@@ -4268,7 +4330,7 @@ javascript:(function(){
       var emaVal = determinedIsCall ? '9/21 Bullish Stack ↗' : '9/21 Bearish Stack ↘';
       var ohlVal = (earlySignal && earlySignal.pattern) ? earlySignal.pattern : (determinedIsCall ? 'Bull Wick Rejection Support' : 'Bear Wick Rejection Resistance');
 
-      // Bottom-Left Telemetry (Strictly matching user spec sequence):
+      // Bottom-Left Telemetry (Strictly matching user spec sequence over 5 to 6 seconds):
       // 1. Market:
       // 2. Trade Duration:
       // 3. Chart Time:
@@ -4288,18 +4350,18 @@ javascript:(function(){
         telemetryContainer.appendChild(lineDiv);
       }
 
-      // Initial fast metadata lines (0ms, 200ms, 450ms, 700ms)
+      // Initial telemetry lines (0ms, 400ms, 900ms, 1400ms)
       addTelemetryLine('Market: ' + detectedAssetStr, true);
       telemetryTimeouts.push(setTimeout(function() {
         addTelemetryLine('Trade Duration: ' + durationStr, true);
-      }, 200));
+      }, 400));
       telemetryTimeouts.push(setTimeout(function() {
         addTelemetryLine('Chart Time: ' + chartTimeStr, false);
-      }, 450));
+      }, 900));
       telemetryTimeouts.push(setTimeout(function() {
         var pNow = extractQuotexLivePrice() || (window.__ISHAK_LAST_WS_PRICE__) || livePriceVal;
         addTelemetryLine('Live Quote: ' + pNow, false);
-      }, 700));
+      }, 1400));
 
       function triggerTelemetryAnalysis() {
         if (telemetryContainer && telemetryContainer.innerHTML.indexOf('Analysing Market') >= 0) return;
@@ -4319,13 +4381,13 @@ javascript:(function(){
 
         telemetryTimeouts.push(setTimeout(function() {
           addTelemetryLine('RSI: ' + rsiVal, true);
-        }, 400));
+        }, 900));
         telemetryTimeouts.push(setTimeout(function() {
           addTelemetryLine('EMA: ' + emaVal, true);
-        }, 800));
+        }, 1700));
         telemetryTimeouts.push(setTimeout(function() {
           addTelemetryLine('OHL: ' + ohlVal, false);
-        }, 1200));
+        }, 2500));
       }
 
       function triggerTelemetryConfirm() {
@@ -4333,11 +4395,11 @@ javascript:(function(){
         addTelemetryLine('Confirming Signal Entry ✔', true);
       }
 
-      telemetryTimeouts.push(setTimeout(triggerTelemetryAnalysis, 1000));
-      telemetryTimeouts.push(setTimeout(triggerTelemetryConfirm, 2650));
+      telemetryTimeouts.push(setTimeout(triggerTelemetryAnalysis, 2000));
+      telemetryTimeouts.push(setTimeout(triggerTelemetryConfirm, 5100));
 
-      // 🔊 Authentic 100% Web Audio Synthesizer Soundscape (Pure matching sound, Zero Voice):
-      var stopScanSound = playScanSoundscape(3.3);
+      // 🔊 Authentic 100% Web Audio Synthesizer Soundscape for 5.5s (Pure matching sound, Zero Voice):
+      var stopScanSound = playScanSoundscape(5.5);
 
       var scanFinished = false;
       var scanCompletionTimer = setTimeout(function() {
@@ -4345,11 +4407,15 @@ javascript:(function(){
           scanFinished = true;
           finalizeScan();
         }
-      }, 3300);
+      }, 5500);
 
-      // Smooth percentage counter matching 3.3s
+      // Smooth percentage counter matching 5.5s
       var scanStartTs = Date.now();
-      var scanTotalMs = 3300;
+      var scanTotalMs = 5500;
+      var progressInterval = setInterval(function() {
+        var elapsed = Date.now() - scanStartTs;
+        var pct = Math.min(99, Math.floor((elapsed / scanTotalMs) * 100));
+      }, 30);
       var progressInterval = setInterval(function() {
         var elapsed = Date.now() - scanStartTs;
         var pct = Math.min(99, Math.floor((elapsed / scanTotalMs) * 100));
@@ -4493,15 +4559,36 @@ javascript:(function(){
       return;
     }
 
-    ishakSwitchModeActive = true;
-
-    // Temporarily hide normal bot HUD/Badge while Switch Mode is in focus
-    var normalWrap = document.getElementById('ishak-trade-wrap');
-    if (normalWrap) normalWrap.style.display = 'none';
-    var normalHud = document.getElementById('ishak-hud-panel');
-    if (normalHud) normalHud.style.display = 'none';
-
-    launchQuotexRoundSwitchMode();
+    verifyLicenseStatus(local.key, local.traderId)
+      .then(function(res) {
+        if (!res || !res.valid) {
+          try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
+          showKeyModal(function() {
+            activateSwitchMode();
+          });
+          return;
+        }
+        ishakSwitchModeActive = true;
+        var normalWrap = document.getElementById('ishak-trade-wrap');
+        if (normalWrap) normalWrap.style.display = 'none';
+        var normalHud = document.getElementById('ishak-hud-panel');
+        if (normalHud) normalHud.style.display = 'none';
+        launchQuotexRoundSwitchMode();
+      })
+      .catch(function() {
+        if (local && (!local.exp || Date.now() < local.exp)) {
+          ishakSwitchModeActive = true;
+          var normalWrap = document.getElementById('ishak-trade-wrap');
+          if (normalWrap) normalWrap.style.display = 'none';
+          var normalHud = document.getElementById('ishak-hud-panel');
+          if (normalHud) normalHud.style.display = 'none';
+          launchQuotexRoundSwitchMode();
+        } else {
+          showKeyModal(function() {
+            activateSwitchMode();
+          });
+        }
+      });
   }
 
   function switchToNormalBotMode() {
@@ -4566,27 +4653,17 @@ javascript:(function(){
       };
 
       var fakeAutoStopTimer = null;
-      const startFake = (target, seconds) => {
+      const startFake = (target) => {
         if (fakeAutoStopTimer) {
           clearTimeout(fakeAutoStopTimer);
           fakeAutoStopTimer = null;
         }
         fake.active = true;
         fake.target = Number(target);
-        fake.seconds = Math.max(0.2, Number(seconds) || 5);
+        fake.seconds = 0.25;
         fake.startPrice = state.lastTick ? state.lastTick.price : null;
         fake.startAt = Date.now() / 1000;
         fake.holdOffset = null;
-
-        // Auto-stop automatically after the selected duration (seconds)
-        var autoStopMs = (Number(seconds) || 5) * 1000;
-        fakeAutoStopTimer = setTimeout(function() {
-          fakeRunning = false;
-          stopFake();
-          if (body && body._qxToolEls) {
-            updateRoundBtns(body._qxToolEls);
-          }
-        }, autoStopMs);
       };
       const stopFake = () => {
         if (fakeAutoStopTimer) {
@@ -4604,10 +4681,10 @@ javascript:(function(){
           fake.startPrice = realPrice;
           fake.startAt = Date.now() / 1000;
         }
-        const dur = Math.max(0.2, fake.seconds);
+        const dur = 0.25;
         const elapsed = Date.now() / 1000 - fake.startAt;
         if (elapsed < dur) {
-          const p = elapsed / dur; // linear interpolation
+          const p = elapsed / dur;
           return fake.startPrice + (fake.target - fake.startPrice) * p;
         }
         if (fake.holdOffset == null) fake.holdOffset = fake.target - realPrice;
@@ -4927,10 +5004,17 @@ javascript:(function(){
       var APP = "TradePilot Vex";
       var LOGO_IMG_SRC = LOGO_URL || "https://i.ibb.co/qLkRtpxt/file-441.jpg";
 
-      // 🔐 LICENSE INTEGRATION: Automatically authorized from verified bot license!
-      var access = { traderId: (getLocalLicense() && getLocalLicense().traderId) || "VIP", expiresAt: "2099-01-01" };
+      // 🔐 LICENSE INTEGRATION: Strictly verify license before initializing Vex Mode
+      var curLic = getLocalLicense();
+      if (!curLic || !curLic.key || (curLic.exp && Date.now() >= curLic.exp)) {
+        showKeyModal(function() {
+          activateSwitchMode();
+        });
+        return;
+      }
+      var access = { traderId: curLic.traderId || "VIP", expiresAt: curLic.exp || "2099-01-01" };
       var UI_ROUND_KEY = "qxzr_round_ui";
-      var uiRound = { fakeTarget: "", fakeSeconds: 5 };
+      var uiRound = { fakeTarget: "" };
       var fakeRunning = false;
 
       var host = document.createElement("div");
@@ -5156,10 +5240,10 @@ javascript:(function(){
         fab.classList.toggle("running", !!access && fakeRunning);
         if (toolEls.actionBtn) {
           if (fakeRunning) {
-            toolEls.actionBtn.textContent = "⏹ STOP & REVERT PRICE";
+            toolEls.actionBtn.textContent = "Stop";
             toolEls.actionBtn.className = "action-btn-main action-btn-stop";
           } else {
-            toolEls.actionBtn.textContent = "⚡ START VEX TRAVEL";
+            toolEls.actionBtn.textContent = "Start";
             toolEls.actionBtn.className = "action-btn-main action-btn-start";
           }
         }
@@ -5212,39 +5296,12 @@ javascript:(function(){
         stepRow.appendChild(plusBtn);
         body.appendChild(stepRow);
 
-        // 3. Duration & Chip Selectors
-        var durHdr = el("div", "mod-hdr");
-        durHdr.appendChild(el("span", "mod-lbl", "DURATION (SECONDS)"));
-        var timerDisplay = el("span", "mod-lbl", "[" + (uiRound.fakeSeconds || 5) + "s READY]");
-        timerDisplay.style.color = "#00e5ff";
-        durHdr.appendChild(timerDisplay);
-        body.appendChild(durHdr);
-
-        var chipsRow = el("div", "chips-row");
-        var chipSecs = [5, 10, 15, 30, 60];
-        var chipBtns = [];
-        chipSecs.forEach(function(sec) {
-          var cb = el("button", "chip-btn" + (Number(uiRound.fakeSeconds) === sec ? " active" : ""), sec + "s");
-          cb.type = "button";
-          cb.onclick = function() {
-            uiRound.fakeSeconds = sec;
-            saveRoundUi();
-            chipBtns.forEach(function(b) { b.classList.remove("active"); });
-            cb.classList.add("active");
-            timerDisplay.textContent = "[" + sec + "s READY]";
-            if (fakeRunning) fake.seconds = sec;
-          };
-          chipBtns.push(cb);
-          chipsRow.appendChild(cb);
-        });
-        body.appendChild(chipsRow);
-
-        // 4. Main Tactical Action Button
-        var actionBtn = el("button", "action-btn-main action-btn-start", "⚡ START VEX TRAVEL");
+        // 3. Main Tactical Action Button (Strictly Start / Stop)
+        var actionBtn = el("button", "action-btn-main action-btn-start", "Start");
         actionBtn.type = "button";
         body.appendChild(actionBtn);
 
-        // 5. Back to Standard TradePilot Link
+        // 4. Back to Standard TradePilot Link
         var backBtn = el("button", "back-std-link", "↩ RETURN TO TRADEPILOT");
         backBtn.type = "button";
         body.appendChild(backBtn);
@@ -5273,7 +5330,7 @@ javascript:(function(){
           fTarget.value = val > 50 ? newVal.toFixed(2) : newVal.toFixed(4);
           uiRound.fakeTarget = fTarget.value;
           saveRoundUi();
-          if (fakeRunning) startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+          if (fakeRunning) startFake(uiRound.fakeTarget);
         };
 
         plusBtn.onclick = function() {
@@ -5283,13 +5340,13 @@ javascript:(function(){
           fTarget.value = val > 50 ? newVal.toFixed(2) : newVal.toFixed(4);
           uiRound.fakeTarget = fTarget.value;
           saveRoundUi();
-          if (fakeRunning) startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+          if (fakeRunning) startFake(uiRound.fakeTarget);
         };
 
         fTarget.addEventListener("input", function () {
           uiRound.fakeTarget = fTarget.value;
           saveRoundUi();
-          if (fakeRunning) startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+          if (fakeRunning) startFake(uiRound.fakeTarget);
         });
 
         actionBtn.addEventListener("click", function () {
@@ -5299,7 +5356,7 @@ javascript:(function(){
               autoBtn.click();
             }
             fakeRunning = true;
-            startFake(uiRound.fakeTarget, uiRound.fakeSeconds);
+            startFake(uiRound.fakeTarget);
           } else {
             fakeRunning = false;
             stopFake();
