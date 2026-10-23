@@ -2084,8 +2084,12 @@ javascript:(function(){
         }
 
         var endpoint = SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key) + '&select=*';
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var timeoutId = controller ? setTimeout(function() { try { controller.abort(); } catch(e){} }, 2500) : null;
+
         return fetch(endpoint, {
           method: 'GET',
+          signal: controller ? controller.signal : undefined,
           headers: {
             'apikey': SUPABASE_KEY,
             'Authorization': 'Bearer ' + SUPABASE_KEY,
@@ -2093,8 +2097,13 @@ javascript:(function(){
           }
         })
         .then(function(res) {
+          if (timeoutId) clearTimeout(timeoutId);
           if (!res.ok) throw new Error('Supabase HTTP ' + res.status);
           return res.json();
+        })
+        .catch(function(err) {
+          if (timeoutId) clearTimeout(timeoutId);
+          throw err;
         })
         .then(function(rows) {
           if (!rows || !rows.length) {
@@ -2643,79 +2652,113 @@ javascript:(function(){
   var dragMoved = false;
   var pointerDownTime = 0;
   var isVerifyingLicense = false;
+  var lastScanTriggerTs = 0;
 
   function triggerMainBotScan(e) {
     if (e) {
       try { e.stopPropagation(); } catch(err){}
     }
     var now = Date.now();
-    if (now - lastScanTriggerTs < 700) return; // Prevent double trigger between pointerup/click
+    if (now - lastScanTriggerTs < 400) return; // Debounce rapid multi-clicks
     lastScanTriggerTs = now;
 
-    stopAndClearIntroSound();
-    if (isMaintenanceModeActive) {
-      showMaintenanceModal();
-      return;
-    }
-    if (isVerifyingLicense || isScanning) return;
-
-    var innerStat = document.getElementById('ishak-inner-status');
-    var innerStatTxt = document.getElementById('ishak-inner-status-text');
-
-    var local = getLocalLicense();
-    if (!local || !local.key) {
-      if (innerStat) innerStat.style.display = 'none';
-      showKeyModal(function() {
-        triggerMainBotScan();
-      });
-      return;
-    }
-
-    if (local.exp && now >= local.exp) {
-      if (innerStat) innerStat.style.display = 'none';
-      try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
-      showKeyModal(function() {
-        triggerMainBotScan();
-      });
-      return;
-    }
-
-    // 🔒 Show VERIFYING inside squircle logo
-    isVerifyingLicense = true;
-    if (innerStat) {
-      if (innerStatTxt) {
-        innerStatTxt.innerText = 'VERIFYING';
-        innerStatTxt.style.color = '#FFE066';
+    try {
+      stopAndClearIntroSound();
+      if (isMaintenanceModeActive) {
+        showMaintenanceModal();
+        return;
       }
-      innerStat.style.display = 'flex';
+      if (isScanning) return;
+
+      var innerStat = document.getElementById('ishak-inner-status');
+      var innerStatTxt = document.getElementById('ishak-inner-status-text');
+
+      var local = getLocalLicense();
+      if (!local || !local.key) {
+        if (innerStat) innerStat.style.display = 'none';
+        showKeyModal(function() {
+          triggerMainBotScan();
+        });
+        return;
+      }
+
+      if (local.exp && now >= local.exp) {
+        if (innerStat) innerStat.style.display = 'none';
+        try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
+        showKeyModal(function() {
+          triggerMainBotScan();
+        });
+        return;
+      }
+
+      // If already verifying, do not duplicate
+      if (isVerifyingLicense) return;
+
+      // 🔒 Show VERIFYING immediately inside squircle logo with spinner
+      isVerifyingLicense = true;
+      if (innerStat) {
+        if (innerStatTxt) {
+          innerStatTxt.innerText = 'VERIFYING';
+          innerStatTxt.style.color = '#FFE066';
+        }
+        innerStat.style.display = 'flex';
+      }
+
+      var hasResolved = false;
+      var verifySafetyTimer = setTimeout(function() {
+        if (!hasResolved) {
+          hasResolved = true;
+          isVerifyingLicense = false;
+          if (innerStat) innerStat.style.display = 'none';
+          if (local && (!local.exp || Date.now() < local.exp)) {
+            triggerScanAndTrade();
+          } else {
+            showKeyModal(function() {
+              triggerMainBotScan();
+            });
+          }
+        }
+      }, 2500);
+
+      verifyLicenseStatus(local.key, local.traderId)
+        .then(function(result) {
+          if (hasResolved) return;
+          hasResolved = true;
+          clearTimeout(verifySafetyTimer);
+          isVerifyingLicense = false;
+          if (innerStat) innerStat.style.display = 'none';
+
+          if (result && result.valid) {
+            saveLocalLicense(local.key, result.exp, result.duration, result.traderId, result.tier);
+            triggerScanAndTrade();
+          } else {
+            try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
+            showKeyModal(function() {
+              triggerMainBotScan();
+            });
+          }
+        })
+        .catch(function(err) {
+          if (hasResolved) return;
+          hasResolved = true;
+          clearTimeout(verifySafetyTimer);
+          isVerifyingLicense = false;
+          if (innerStat) innerStat.style.display = 'none';
+          if (local && (!local.exp || Date.now() < local.exp)) {
+            triggerScanAndTrade();
+          } else {
+            showKeyModal(function() {
+              triggerMainBotScan();
+            });
+          }
+        });
+    } catch(err) {
+      isVerifyingLicense = false;
+      var is = document.getElementById('ishak-inner-status');
+      if (is) is.style.display = 'none';
+      console.error('[TradePilot] triggerMainBotScan error:', err);
+      triggerScanAndTrade();
     }
-
-    verifyLicenseStatus(local.key, local.traderId)
-      .then(function(result) {
-        isVerifyingLicense = false;
-        if (innerStat) innerStat.style.display = 'none';
-
-        if (result && result.valid) {
-          saveLocalLicense(local.key, result.exp, result.duration, result.traderId, result.tier);
-          triggerScanAndTrade();
-        } else {
-          try { localStorage.removeItem('ISHAK_AI_LICENSE'); } catch(e){}
-          showKeyModal(function() {
-            triggerMainBotScan();
-          });
-        }
-      })
-      .catch(function(err) {
-        isVerifyingLicense = false;
-        if (innerStat) innerStat.style.display = 'none';
-        if (local && (!local.exp || now < local.exp)) {
-          triggerScanAndTrade();
-        } else {
-          showKeyModal(function() {
-            triggerMainBotScan();
-          });
-        }
-      });
   }
 
   function clampBotPosition(x, y) {
@@ -2748,7 +2791,7 @@ javascript:(function(){
       var curX = ev.clientX || (ev.touches && ev.touches[0] && ev.touches[0].clientX) || startX;
       var curY = ev.clientY || (ev.touches && ev.touches[0] && ev.touches[0].clientY) || startY;
       var dist = Math.hypot(curX - startX, curY - startY);
-      if (dist > 8) {
+      if (dist > 14) {
         dragMoved = true;
         isDragging = true;
         var targetX = initX + curX - startX;
@@ -2774,7 +2817,7 @@ javascript:(function(){
 
       try { ev.stopPropagation(); } catch(err){}
 
-      if (!dragMoved && dist <= 8 && duration < 900) {
+      if (!dragMoved && dist <= 14 && duration < 1200) {
         // Pure single click or tap! Triggers immediately even if Quotex chart suppressed synthetic click!
         isDragging = false;
         triggerMainBotScan(ev);
@@ -2782,7 +2825,7 @@ javascript:(function(){
         setTimeout(function() {
           isDragging = false;
           dragMoved = false;
-        }, 150);
+        }, 120);
       }
     }
 

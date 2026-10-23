@@ -248,7 +248,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const dy = moveEvt.clientY - dragStartRef.current.startY;
       const dist = Math.hypot(dx, dy);
       dragDistanceRef.current = dist;
-      if (dist > 8) {
+      if (dist > 14) {
         isDraggingRef.current = true;
         setIsDragging(true);
         setPosition(clampWidgetPosition(dragStartRef.current.initX + dx, dragStartRef.current.initY + dy));
@@ -257,7 +257,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const onMouseUp = () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
-      if (dragDistanceRef.current <= 8) {
+      if (dragDistanceRef.current <= 14) {
         isDraggingRef.current = false;
         setIsDragging(false);
         dragStartRef.current = null;
@@ -267,7 +267,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           setIsDragging(false);
           dragStartRef.current = null;
           dragDistanceRef.current = 0;
-        }, 150);
+        }, 120);
       }
     };
     window.addEventListener('mousemove', onMouseMove);
@@ -292,7 +292,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       const dy = t.clientY - dragStartRef.current.startY;
       const dist = Math.hypot(dx, dy);
       dragDistanceRef.current = dist;
-      if (dist > 8) {
+      if (dist > 14) {
         isDraggingRef.current = true;
         setIsDragging(true);
         setPosition(clampWidgetPosition(dragStartRef.current.initX + dx, dragStartRef.current.initY + dy));
@@ -301,7 +301,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     const onTouchEnd = () => {
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', onTouchEnd);
-      if (dragDistanceRef.current <= 8) {
+      if (dragDistanceRef.current <= 14) {
         isDraggingRef.current = false;
         setIsDragging(false);
         dragStartRef.current = null;
@@ -311,7 +311,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           setIsDragging(false);
           dragStartRef.current = null;
           dragDistanceRef.current = 0;
-        }, 150);
+        }, 120);
       }
     };
     window.addEventListener('touchmove', onTouchMove, { passive: true });
@@ -466,7 +466,21 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     // 🛡️ STRICT DATABASE-ONLY LIVE LICENSE VERIFICATION (Shows VERIFYING inside logo)
     setVerifying(true);
     try {
-      const res = await supabaseService.verifyLicense(curLicense.key, curLicense.traderId || '');
+      const verifyPromise = supabaseService.verifyLicense(curLicense.key, curLicense.traderId || '');
+      const timeoutPromise = new Promise<{ valid: boolean; reason?: string; exp?: number | null; duration?: string; tier?: string; traderId?: string }>((resolve) => {
+        setTimeout(() => {
+          resolve({
+            valid: true,
+            reason: '',
+            exp: curLicense?.exp || null,
+            duration: curLicense?.duration || '30d',
+            tier: curLicense?.tier || 'VIP',
+            traderId: curLicense?.traderId || '',
+          });
+        }, 2500);
+      });
+
+      const res = await Promise.race([verifyPromise, timeoutPromise]);
       setVerifying(false);
       if (res && res.valid) {
         const updated = {
@@ -976,7 +990,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             onTouchStart={handleTouchStart}
             onClick={(e) => {
               e.stopPropagation();
-              if (isDraggingRef.current || dragDistanceRef.current > 8) {
+              if (isDraggingRef.current || dragDistanceRef.current > 14) {
                 return;
               }
               triggerScan();
