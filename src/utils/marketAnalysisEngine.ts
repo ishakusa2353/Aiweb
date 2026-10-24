@@ -148,6 +148,34 @@ export interface IndicatorMetrics {
   ema21: number;
   ema50: number;
   sma20: number;
+  sma50: number;
+  vwap: number;
+  trendLine: {
+    slope: number;
+    angleDeg: number;
+    isUp: boolean;
+    isDown: boolean;
+  };
+  pivots: {
+    pp: number;
+    r1: number;
+    s1: number;
+    r2: number;
+    s2: number;
+  };
+  priceChannel: {
+    channelHigh: number;
+    channelLow: number;
+    channelMid: number;
+  };
+  fibonacci: {
+    high: number;
+    low: number;
+    fib236: number;
+    fib382: number;
+    fib500: number;
+    fib618: number;
+  };
   rsi14: number;
   qqe: QQEInfo;
   macd: {
@@ -573,6 +601,112 @@ export function calculateBollingerBands(
     bandWidthPct: parseFloat(bandWidthPct.toFixed(4)),
     isSqueeze,
     isDeadFlat,
+  };
+}
+
+/**
+ * VWAP (Volume-Weighted Average Price)
+ */
+export function calculateVWAP(candles: Candle[]): number {
+  if (candles.length === 0) return 0;
+  let cumTypicalVolume = 0;
+  let cumVolume = 0;
+  for (let i = 0; i < candles.length; i++) {
+    const c = candles[i];
+    const typicalPrice = (c.high + c.low + c.close) / 3;
+    const vol = Math.max(1, Math.round((c.high - c.low) * 100000) || 10);
+    cumTypicalVolume += typicalPrice * vol;
+    cumVolume += vol;
+  }
+  return parseFloat((cumTypicalVolume / (cumVolume || 1)).toFixed(5));
+}
+
+/**
+ * Trend Line (Linear Regression Trajectory of recent bars)
+ */
+export function calculateTrendLine(closes: number[]): { slope: number; angleDeg: number; isUp: boolean; isDown: boolean } {
+  if (closes.length < 3) return { slope: 0, angleDeg: 0, isUp: false, isDown: false };
+  const slice = closes.slice(-Math.min(15, closes.length));
+  const n = slice.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += i;
+    sumY += slice[i];
+    sumXY += i * slice[i];
+    sumX2 += i * i;
+  }
+  const denom = n * sumX2 - sumX * sumX;
+  const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
+  const avg = sumY / n || 1;
+  const normSlope = (slope / avg) * 1000;
+  const angleDeg = Math.atan(normSlope) * (180 / Math.PI);
+  return {
+    slope,
+    angleDeg: parseFloat(angleDeg.toFixed(2)),
+    isUp: slope > 0.000015,
+    isDown: slope < -0.000015,
+  };
+}
+
+/**
+ * Floor Pivot Points (PP, R1, S1, R2, S2)
+ */
+export function calculatePivotPoints(candles: Candle[]): { pp: number; r1: number; s1: number; r2: number; s2: number } {
+  if (candles.length === 0) return { pp: 0, r1: 0, s1: 0, r2: 0, s2: 0 };
+  const last = candles[candles.length - 1];
+  const pp = (last.high + last.low + last.close) / 3;
+  const r1 = 2 * pp - last.low;
+  const s1 = 2 * pp - last.high;
+  const r2 = pp + (last.high - last.low);
+  const s2 = pp - (last.high - last.low);
+  return {
+    pp: parseFloat(pp.toFixed(5)),
+    r1: parseFloat(r1.toFixed(5)),
+    s1: parseFloat(s1.toFixed(5)),
+    r2: parseFloat(r2.toFixed(5)),
+    s2: parseFloat(s2.toFixed(5)),
+  };
+}
+
+/**
+ * Price Channel (Donchian 20-period High/Low Channel)
+ */
+export function calculatePriceChannel(candles: Candle[], period: number = 20): { channelHigh: number; channelLow: number; channelMid: number } {
+  if (candles.length === 0) return { channelHigh: 0, channelLow: 0, channelMid: 0 };
+  const slice = candles.slice(-Math.min(period, candles.length));
+  const channelHigh = Math.max(...slice.map(c => c.high));
+  const channelLow = Math.min(...slice.map(c => c.low));
+  const channelMid = (channelHigh + channelLow) / 2;
+  return {
+    channelHigh: parseFloat(channelHigh.toFixed(5)),
+    channelLow: parseFloat(channelLow.toFixed(5)),
+    channelMid: parseFloat(channelMid.toFixed(5)),
+  };
+}
+
+/**
+ * Fibonacci Retracement Levels (from swing high to swing low)
+ */
+export function calculateFibonacciRetracement(candles: Candle[], lookback: number = 25): {
+  high: number;
+  low: number;
+  fib236: number;
+  fib382: number;
+  fib500: number;
+  fib618: number;
+} {
+  if (candles.length === 0) return { high: 0, low: 0, fib236: 0, fib382: 0, fib500: 0, fib618: 0 };
+  const slice = candles.slice(-Math.min(lookback, candles.length));
+  const high = Math.max(...slice.map(c => c.high));
+  const low = Math.min(...slice.map(c => c.low));
+  const diff = Math.max(0.00005, high - low);
+  return {
+    high: parseFloat(high.toFixed(5)),
+    low: parseFloat(low.toFixed(5)),
+    fib236: parseFloat((high - diff * 0.236).toFixed(5)),
+    fib382: parseFloat((high - diff * 0.382).toFixed(5)),
+    fib500: parseFloat((high - diff * 0.500).toFixed(5)),
+    fib618: parseFloat((high - diff * 0.618).toFixed(5)), // Golden Pocket
   };
 }
 
@@ -1330,7 +1464,12 @@ export function evaluateMarketData(
   }
 
   const emptyMetrics: IndicatorMetrics = {
-    ema5: 0, ema9: 0, ema13: 0, ema21: 0, ema50: 0, sma20: 0, rsi14: 50,
+    ema5: 0, ema9: 0, ema13: 0, ema21: 0, ema50: 0, sma20: 0, sma50: 0, vwap: 0,
+    trendLine: { slope: 0, angleDeg: 0, isUp: false, isDown: false },
+    pivots: { pp: 0, r1: 0, s1: 0, r2: 0, s2: 0 },
+    priceChannel: { channelHigh: 0, channelLow: 0, channelMid: 0 },
+    fibonacci: { high: 0, low: 0, fib236: 0, fib382: 0, fib500: 0, fib618: 0 },
+    rsi14: 50,
     qqe: { rsi1: 50, smoothRsi: 50, qqeLine: 50, isBullish: false, isBearish: false, scoreImpact: 0, description: 'No Data' },
     macd: { macdLine: 0, signalLine: 0, histogram: 0, isBullishCross: false, isBearishCross: false },
     atr14: 0, isHighVolatility: false,
@@ -1428,13 +1567,14 @@ export function evaluateMarketData(
   const closes = workingCandles.map((c) => c.close);
   if (closes.length > 0) closes[closes.length - 1] = currentPrice;
 
-  // 2. Technical Indicators (EMA 5/9/13/21/50, SMA20, RSI, MACD, QQE, ATR, BB)
+  // 2. Technical Indicators (EMA 5/9/13/21/50, SMA20/50, RSI, MACD, QQE, ATR, BB, VWAP, TrendLine, Pivots, PriceChannel, Fibonacci)
   const ema5Series = calculateEMA(closes, 5);
   const ema9Series = calculateEMA(closes, 9);
   const ema13Series = calculateEMA(closes, 13);
   const ema21Series = calculateEMA(closes, Math.min(21, closes.length));
   const ema50Series = calculateEMA(closes, Math.min(50, closes.length));
   const sma20Series = calculateSMA(closes, Math.min(20, closes.length));
+  const sma50Series = calculateSMA(closes, Math.min(50, closes.length));
 
   const ema5 = ema5Series[ema5Series.length - 1] || currentPrice;
   const ema9 = ema9Series[ema9Series.length - 1] || currentPrice;
@@ -1442,6 +1582,13 @@ export function evaluateMarketData(
   const ema21 = ema21Series[ema21Series.length - 1] || currentPrice;
   const ema50 = ema50Series[ema50Series.length - 1] || currentPrice;
   const sma20 = sma20Series[sma20Series.length - 1] || currentPrice;
+  const sma50 = sma50Series[sma50Series.length - 1] || currentPrice;
+
+  const vwap = calculateVWAP(workingCandles);
+  const trendLine = calculateTrendLine(closes);
+  const pivots = calculatePivotPoints(workingCandles);
+  const priceChannel = calculatePriceChannel(workingCandles, 20);
+  const fibonacci = calculateFibonacciRetracement(workingCandles, 25);
 
   const { rsi: rsi14, series: rsiSeries } = calculateRSI(closes, 14);
   const qqeData = calculateQQE(closes, 14, 5, 4.238);
@@ -1561,6 +1708,153 @@ export function evaluateMarketData(
   }
 
   const candleRange = Math.max(0.00002, runningCandleObj.high - runningCandleObj.low);
+
+  // =========================================================================
+  // 🎯 11 CORE TECHNICAL INDICATORS CONFLUENCE ANALYSIS
+  // 1. Support / Resistance
+  // 2. RSI
+  // 3. SMA
+  // 4. EMA
+  // 5. Trend Line
+  // 6. Pivot Lines
+  // 7. Bollinger Bands
+  // 8. VWAP
+  // 9. Price Channel
+  // 10. Fibonacci Retracement
+  // 11. MACD Signal
+  // =========================================================================
+
+  // 1. Support / Resistance
+  if (sr.isRetestBounce || (sr.distToSupportPct <= 0.15 && runningCandleObj.lowerWick > runningCandleObj.upperWick)) {
+    buyScore += 26;
+    upFactors.push(`Support Line Bounce (Support: ${sr.support}) [+26]`);
+  } else if (sr.isRetestRejection || (sr.distToResistancePct <= 0.15 && runningCandleObj.upperWick > runningCandleObj.lowerWick)) {
+    sellScore += 26;
+    downFactors.push(`Resistance Line Rejection (Resistance: ${sr.resistance}) [+26]`);
+  }
+  if (sr.isBreakoutAbove) {
+    buyScore += 20;
+    upFactors.push('Resistance Breakout Above [+20]');
+  } else if (sr.isBreakdownBelow) {
+    sellScore += 20;
+    downFactors.push('Support Breakdown Below [+20]');
+  }
+
+  // 2. RSI (14-period Wilder's)
+  if (rsi14 <= 32) {
+    buyScore += 24;
+    upFactors.push(`RSI Oversold Level (${rsi14}) Bouncing [+24]`);
+  } else if (rsi14 >= 68) {
+    sellScore += 24;
+    downFactors.push(`RSI Overbought Level (${rsi14}) Rejecting [+24]`);
+  } else if (rsi14 > 50 && rsi14 < 68) {
+    buyScore += 12;
+    upFactors.push(`RSI Bullish Momentum (${rsi14}) [+12]`);
+  } else if (rsi14 < 50 && rsi14 > 32) {
+    sellScore += 12;
+    downFactors.push(`RSI Bearish Momentum (${rsi14}) [+12]`);
+  }
+
+  // 3. SMA (SMA 20 & SMA 50)
+  if (currentPrice > sma20 && sma20 > sma50) {
+    buyScore += 20;
+    upFactors.push('SMA Bullish Alignment (Price > SMA20 > SMA50) [+20]');
+  } else if (currentPrice < sma20 && sma20 < sma50) {
+    sellScore += 20;
+    downFactors.push('SMA Bearish Alignment (Price < SMA20 < SMA50) [+20]');
+  } else if (currentPrice > sma20) {
+    buyScore += 10;
+    upFactors.push('SMA 20 Bullish Support [+10]');
+  } else if (currentPrice < sma20) {
+    sellScore += 10;
+    downFactors.push('SMA 20 Bearish Resistance [+10]');
+  }
+
+  // 4. EMA (EMA 5, 9, 13, 21, 50)
+  if (ema5 > ema9 && ema9 > ema13 && ema13 > ema21) {
+    buyScore += 24;
+    upFactors.push('EMA Ribbon Bullish Stack (5>9>13>21) [+24]');
+  } else if (ema5 < ema9 && ema9 < ema13 && ema13 < ema21) {
+    sellScore += 24;
+    downFactors.push('EMA Ribbon Bearish Stack (5<9<13<21) [+24]');
+  }
+
+  // 5. Trend Line (Linear Regression Trajectory)
+  if (trendLine.isUp) {
+    buyScore += 22;
+    upFactors.push(`Ascending Trend Line Support (${trendLine.angleDeg}°) [+22]`);
+  } else if (trendLine.isDown) {
+    sellScore += 22;
+    downFactors.push(`Descending Trend Line Resistance (${trendLine.angleDeg}°) [+22]`);
+  }
+
+  // 6. Pivot Lines (Floor Pivot Points PP, R1, S1, R2, S2)
+  if (currentPrice > pivots.pp && currentCandle.open <= pivots.pp) {
+    buyScore += 18;
+    upFactors.push(`Pivot Point (PP: ${pivots.pp}) Bullish Cross [+18]`);
+  } else if (currentPrice < pivots.pp && currentCandle.open >= pivots.pp) {
+    sellScore += 18;
+    downFactors.push(`Pivot Point (PP: ${pivots.pp}) Bearish Cross [+18]`);
+  } else if (Math.abs(currentPrice - pivots.s1) <= candleRange * 0.4 && runningCandleObj.isBullish) {
+    buyScore += 18;
+    upFactors.push(`Pivot S1 Support Rebound (${pivots.s1}) [+18]`);
+  } else if (Math.abs(currentPrice - pivots.r1) <= candleRange * 0.4 && !runningCandleObj.isBullish) {
+    sellScore += 18;
+    downFactors.push(`Pivot R1 Resistance Rejection (${pivots.r1}) [+18]`);
+  }
+
+  // 7. Bollinger Bands
+  if (currentPrice <= bb.lower || (runningCandleObj.low <= bb.lower && runningCandleObj.isBullish)) {
+    buyScore += 24;
+    upFactors.push('Bollinger Lower Band Dip Reversal [+24]');
+  } else if (currentPrice >= bb.upper || (runningCandleObj.high >= bb.upper && !runningCandleObj.isBullish)) {
+    sellScore += 24;
+    downFactors.push('Bollinger Upper Band Rejection [+24]');
+  }
+
+  // 8. VWAP (Volume-Weighted Average Price)
+  if (currentPrice > vwap) {
+    buyScore += 18;
+    upFactors.push(`VWAP Institutional Flow Bullish (Price > VWAP: ${vwap}) [+18]`);
+  } else if (currentPrice < vwap) {
+    sellScore += 18;
+    downFactors.push(`VWAP Institutional Flow Bearish (Price < VWAP: ${vwap}) [+18]`);
+  }
+
+  // 9. Price Channel (Donchian 20-period High/Low Channel)
+  if (currentPrice >= priceChannel.channelHigh - candleRange * 0.2) {
+    buyScore += 20;
+    upFactors.push(`Price Channel Upper Band Expansion (${priceChannel.channelHigh}) [+20]`);
+  } else if (currentPrice <= priceChannel.channelLow + candleRange * 0.2) {
+    sellScore += 20;
+    downFactors.push(`Price Channel Lower Band Breakdown (${priceChannel.channelLow}) [+20]`);
+  } else if (currentPrice > priceChannel.channelMid) {
+    buyScore += 12;
+    upFactors.push('Price Channel Holding Above Midline [+12]');
+  } else if (currentPrice < priceChannel.channelMid) {
+    sellScore += 12;
+    downFactors.push('Price Channel Pressure Below Midline [+12]');
+  }
+
+  // 10. Fibonacci Retracement (Golden Pocket & Key Levels)
+  const fibPocketDistBuy = Math.abs(currentPrice - fibonacci.fib618);
+  const fibPocketDistSell = Math.abs(currentPrice - fibonacci.fib382);
+  if (fibPocketDistBuy <= candleRange * 0.5 && runningCandleObj.isBullish) {
+    buyScore += 26;
+    upFactors.push(`Fibonacci 61.8% Golden Pocket Support (${fibonacci.fib618}) [+26]`);
+  } else if (fibPocketDistSell <= candleRange * 0.5 && !runningCandleObj.isBullish) {
+    sellScore += 26;
+    downFactors.push(`Fibonacci 61.8% / 38.2% Golden Zone Rejection (${fibonacci.fib382}) [+26]`);
+  }
+
+  // 11. MACD Signal (12, 26, 9)
+  if (macdData.isBullishCross || (macdData.histogram > 0 && macdData.macdLine > macdData.signalLine)) {
+    buyScore += 22;
+    upFactors.push('MACD Bullish Signal Cross & Expanding Histogram [+22]');
+  } else if (macdData.isBearishCross || (macdData.histogram < 0 && macdData.macdLine < macdData.signalLine)) {
+    sellScore += 22;
+    downFactors.push('MACD Bearish Signal Cross & Contracting Histogram [+22]');
+  }
 
   if (timeframeSec <= 5) {
     // =========================================================
@@ -2054,6 +2348,12 @@ export function evaluateMarketData(
       ema21: parseFloat(ema21.toFixed(5)),
       ema50: parseFloat(ema50.toFixed(5)),
       sma20: parseFloat(sma20.toFixed(5)),
+      sma50: parseFloat(sma50.toFixed(5)),
+      vwap,
+      trendLine,
+      pivots,
+      priceChannel,
+      fibonacci,
       rsi14: Math.round(rsi14),
       qqe: qqeData,
       macd: macdData,

@@ -2431,9 +2431,9 @@ javascript:(function(){
       '68% { transform: translate(-50%, calc(-50% + 18px)); opacity: 1; filter: blur(0px); } ' +
       '100% { transform: translate(-50%, calc(-50% + 75px)); opacity: 0; filter: blur(6px); } ' +
     '}' +
-    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 62px; height: 62px; transform: translate(-50%, -50%); pointer-events: none !important; z-index: 1 !important; display: flex; align-items: center; justify-content: center; }' +
+    '#ishak-orbital-wrap { position: absolute; top: 50%; left: 50%; width: 66px; height: 66px; transform: translate(-50%, -50%); pointer-events: none !important; z-index: 1 !important; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 20px; background: linear-gradient(175deg, rgba(255,255,255,0.2) 0%, rgba(14,24,64,0.3) 50%, rgba(3,7,24,0.45) 100%); border-top: 1.5px solid rgba(255,255,255,0.6); border-left: 1px solid rgba(0,229,255,0.25); border-right: 1px solid rgba(0,229,255,0.25); border-bottom: 1.5px solid rgba(0,0,0,0.75); box-shadow: 0 12px 32px rgba(0,0,0,0.7), inset 0 1.5px 2px rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.6); }' +
     '#ishak-orbital-wrap *, .ishak-orbital-svg, .ishak-orbital-svg * { pointer-events: none !important; }' +
-    '#ishak-orbital-glow-ring { position: absolute; inset: -2px; border-radius: 17px; pointer-events: none !important; animation: ishakSpinCW 3.2s linear infinite; background: conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%); mask: radial-gradient(circle, transparent 63%, black 64%); -webkit-mask: radial-gradient(circle, transparent 63%, black 64%); filter: drop-shadow(0 0 8px #00E5FF); }' +
+    '#ishak-orbital-glow-ring { position: absolute; inset: -2px; border-radius: 20px; pointer-events: none !important; animation: ishakSpinCW 3.2s linear infinite; background: conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%); mask: radial-gradient(circle, transparent 63%, black 64%); -webkit-mask: radial-gradient(circle, transparent 63%, black 64%); filter: drop-shadow(0 0 8px #00E5FF); }' +
     '.ishak-orbital-svg { width: 100%; height: 100%; overflow: visible; position: relative; z-index: 2; pointer-events: none !important; }' +
     '@keyframes ishakSpinCW { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
     '@keyframes ishakSquareDash { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }' +
@@ -2443,7 +2443,7 @@ javascript:(function(){
     '#ishak-btn-box { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }' +
     '#ishak-logo-aura { position: absolute; inset: -14px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; }' +
     '#ishak-logo-aura.aura-active { opacity: 1; background: radial-gradient(circle, rgba(255,184,0,0.85) 0%, rgba(255,158,11,0.5) 40%, rgba(255,184,0,0.15) 75%, transparent 100%); animation: ishakAuraPulse 1.2s infinite ease-in-out; }' +
-    '#ishak-circle-btn { position: relative; z-index: 10 !important; width: 50px; height: 50px; border-radius: 15px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.75); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 0 10px rgba(0,229,255,0.25); cursor: pointer !important; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); touch-action: manipulation; }' +
+    '#ishak-circle-btn { position: relative; z-index: 10 !important; width: 50px; height: 50px; border-radius: 15px; background: #070D1E url("' + LOGO_URL + '") center/100% 100% no-repeat; border: 2px solid rgba(0,229,255,0.8); box-shadow: 0 8px 25px rgba(0,0,0,0.9), 0 0 20px rgba(0,229,255,0.45), inset 0 1.5px 2px rgba(255,255,255,0.35); cursor: pointer !important; transition: transform 0.2s, box-shadow 0.25s, border-color 0.25s; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); touch-action: manipulation; }' +
     '#ishak-circle-btn:hover { transform: scale(1.08); box-shadow: 0 0 28px rgba(0,229,255,0.65); border-color: #00E5FF; }' +
     '#ishak-circle-btn.working-pulse { animation: ishakLogoFloat 1.6s ease-in-out infinite; border-color: #00E5FF; box-shadow: 0 0 35px #00E5FF, 0 0 55px rgba(217,70,239,0.8), inset 0 0 14px rgba(0,229,255,0.5); }' +
     '#ishak-pill-badge { margin-top: 4px; background: rgba(7,13,30,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1.2px solid #00E5FF; border-radius: 14px; padding: 2px 7px; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 16px rgba(0,0,0,0.85); cursor: pointer; transform: none !important; animation: none !important; font-family: "Orbitron","Rajdhani",system-ui,sans-serif; }' +
@@ -2615,11 +2615,11 @@ javascript:(function(){
     '</svg>';
   btnBox.appendChild(orbitalWrap);
 
-  // 🌟 1. Sleek Floating Brand Name with elegant dark shape (Makes name float clearly and distinctly against any chart)
+  // 🌟 1. Sleek Floating Brand Name with Liquid Glassmorphism Shape & Slender Font
   var brandNameEl = document.createElement('div');
   brandNameEl.id = 'ishak-brand-name';
-  brandNameEl.style.cssText = 'margin-top:6px; cursor:pointer; user-select:none; font-family:"Rajdhani",sans-serif; font-size:12px; font-weight:600; letter-spacing:1.8px; display:flex; align-items:center; justify-content:center; line-height:1; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-radius:9999px; padding:2.5px 9px; border:1px solid rgba(255,255,255,0.14); box-shadow:0 4px 14px rgba(0,0,0,0.85), inset 0 1px 1px rgba(255,255,255,0.15); filter:drop-shadow(0 2px 4px rgba(0,0,0,0.95)); transition:transform 0.2s, background 0.2s, border-color 0.2s;';
-  brandNameEl.innerHTML = '<span style="color:#00E5FF; filter:drop-shadow(0 0 10px rgba(0,229,255,0.85));">Trade</span><span style="color:#FF2E54; filter:drop-shadow(0 0 10px rgba(255,46,84,0.85));">Pilot</span>';
+  brandNameEl.style.cssText = 'margin-top:7px; cursor:pointer; user-select:none; font-family:-apple-system,BlinkMacSystemFont,"Inter","Montserrat","Segoe UI",sans-serif; font-size:11.5px; font-weight:300; letter-spacing:2.4px; display:flex; align-items:center; justify-content:center; line-height:1; background:linear-gradient(175deg,rgba(255,255,255,0.18) 0%,rgba(14,24,64,0.35) 50%,rgba(4,8,28,0.55) 100%); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border-radius:9999px; padding:2.5px 10px; border-top:1px solid rgba(255,255,255,0.55); border-left:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.2); border-bottom:1.5px solid rgba(0,0,0,0.7); box-shadow:0 8px 20px rgba(0,0,0,0.75), inset 0 1px 1.5px rgba(255,255,255,0.45), inset 0 -1.5px 2px rgba(0,0,0,0.5); filter:drop-shadow(0 2px 4px rgba(0,0,0,0.95)); transition:transform 0.2s, background 0.2s, border-color 0.2s;';
+  brandNameEl.innerHTML = '<span style="color:#00E5FF; font-weight:300; filter:drop-shadow(0 0 10px rgba(0,229,255,0.9)); margin-right:1px;">Trade</span><span style="color:#FF2E54; font-weight:300; filter:drop-shadow(0 0 10px rgba(255,46,84,0.9));">Pilot</span>';
   brandNameEl.onclick = function(e) {
     e.stopPropagation();
     showSettingsHub();
@@ -3176,30 +3176,30 @@ javascript:(function(){
 
     var hub = document.createElement('div');
     hub.id = 'ishak-opt-modal'; hub.className = 'ishak-dialog-modal';
-    hub.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 36px);max-width:340px;padding:22px;border-radius:26px;border-top:2px solid rgba(0,229,255,0.6);border-bottom:3px solid #020512;border-left:1px solid rgba(99,102,241,0.35);border-right:1px solid rgba(99,102,241,0.35);background:linear-gradient(175deg,rgba(20,28,72,0.95) 0%,rgba(14,22,60,0.95) 50%,rgba(10,16,48,0.98) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px -10px rgba(2,6,23,0.95), 0 0 35px rgba(99,102,241,0.25), inset 0 1.5px 1.5px rgba(255,255,255,0.4), inset 0 -3px 6px rgba(0,0,0,0.7);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;animation:ishakModalIn 0.22s cubic-bezier(0.16,1,0.3,1);';
+    hub.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 36px);max-width:340px;padding:22px;border-radius:26px;border-top:2px solid rgba(255,255,255,0.5);border-bottom:2px solid rgba(0,0,0,0.8);border-left:1px solid rgba(255,255,255,0.15);border-right:1px solid rgba(255,255,255,0.15);background:linear-gradient(175deg,rgba(16,26,74,0.45) 0%,rgba(10,17,51,0.50) 50%,rgba(4,8,28,0.55) 100%);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px -10px rgba(0,0,0,0.85), 0 0 35px rgba(0,229,255,0.2), inset 0 1.5px 2px rgba(255,255,255,0.45), inset 0 -2.5px 5px rgba(0,0,0,0.7);font-family:\'Orbitron\',monospace,sans-serif;box-sizing:border-box;animation:ishakModalIn 0.22s cubic-bezier(0.16,1,0.3,1);';
 
-    hub.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(99,102,241,0.3);padding-bottom:12px;margin-bottom:14px;">' +
+    hub.innerHTML = '<div style="position:relative;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:12px;margin-bottom:14px;">' +
       '<div style="display:flex;align-items:center;gap:8px;">' +
-        '<div style="width:32px;height:32px;border-radius:12px;background:linear-gradient(180deg,rgba(0,229,255,0.25),rgba(79,70,229,0.25));border-top:1.5px solid rgba(0,229,255,0.7);border-bottom:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">⚙️</div>' +
-        '<div><b style="color:#00E5FF;font-size:12px;letter-spacing:1px;display:block;">SETTINGS HUB</b><span style="color:#94A3B8;font-size:9px;font-family:sans-serif;font-weight:600;">Cosmic Quantum Engine</span></div>' +
+        '<div style="width:32px;height:32px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,0.2),rgba(0,229,255,0.2));backdrop-filter:blur(10px);border-top:1.5px solid rgba(255,255,255,0.6);border-bottom:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4);">⚙️</div>' +
+        '<div><b style="color:#00E5FF;font-size:12px;letter-spacing:1px;display:block;">SETTINGS HUB</b><span style="color:#94A3B8;font-size:9px;font-family:-apple-system,BlinkMacSystemFont,\'Inter\',sans-serif;font-weight:300;">TradePilot Cosmic Engine</span></div>' +
       '</div>' +
-      '<div class="ishak-close-btn" id="hub-close" style="width:26px;height:26px;border-radius:10px;background:linear-gradient(180deg,rgba(239,68,68,0.4),rgba(153,27,27,0.8));border-top:1px solid rgba(248,113,113,0.7);border-bottom:1.5px solid #000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4);">✕</div>' +
+      '<div class="ishak-close-btn" id="hub-close" style="width:26px;height:26px;border-radius:10px;background:linear-gradient(180deg,rgba(239,68,68,0.4),rgba(153,27,27,0.7));backdrop-filter:blur(10px);border-top:1px solid rgba(248,113,113,0.7);border-bottom:1.5px solid #000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4);">✕</div>' +
       '</div>' +
       '<div style="display:flex;flex-direction:column;gap:9px;">' +
-      '<button id="hub-btn-autotrade" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (autoTradeEnabled ? 'rgba(0,255,102,0.8)' : 'rgba(255,23,68,0.8)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
+      '<button id="hub-btn-autotrade" style="background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,rgba(20,32,85,0.3) 50%,rgba(7,13,40,0.45) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-top:1.5px solid ' + (autoTradeEnabled ? 'rgba(0,255,102,0.85)' : 'rgba(255,255,255,0.35)') + ';border-bottom:1.5px solid rgba(0,0,0,0.6);border-left:1px solid rgba(255,255,255,0.1);border-right:1px solid rgba(255,255,255,0.1);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">⚡ Auto-Trade Execution</span><b style="color:' + (autoTradeEnabled ? '#00FF66' : '#FF1744') + ';background:' + (autoTradeEnabled ? 'rgba(0,255,102,0.2)' : 'rgba(255,23,68,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (autoTradeEnabled ? 'rgba(0,255,102,0.6)' : 'rgba(255,23,68,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoTradeEnabled ? '● ENABLED' : '○ DISABLED') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-autopilot" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.8)' : 'rgba(0,229,255,0.4)') + ';border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
+      '<button id="hub-btn-autopilot" style="background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,rgba(20,32,85,0.3) 50%,rgba(7,13,40,0.45) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-top:1.5px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.85)' : 'rgba(255,255,255,0.35)') + ';border-bottom:1.5px solid rgba(0,0,0,0.6);border-left:1px solid rgba(255,255,255,0.1);border-right:1px solid rgba(255,255,255,0.1);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🤖 Auto-Pilot Continuous</span><b style="color:' + (autoPilotMode ? '#00FF66' : '#FFD600') + ';background:' + (autoPilotMode ? 'rgba(0,255,102,0.2)' : 'rgba(255,214,0,0.2)') + ';padding:3px 9px;border-radius:8px;border-top:1px solid ' + (autoPilotMode ? 'rgba(0,255,102,0.6)' : 'rgba(255,214,0,0.6)') + ';border-bottom:1px solid #000;font-size:10px;">' + (autoPilotMode ? '▶ RUNNING' : '⏹ STOPPED') + '</b>' +
       '</button>' +
-      '<button id="hub-btn-switch-mode" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(255,46,84,0.6);border-bottom:2px solid #000;border-left:1px solid rgba(255,46,84,0.25);border-right:1px solid rgba(255,46,84,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
+      '<button id="hub-btn-switch-mode" style="background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,rgba(20,32,85,0.3) 50%,rgba(7,13,40,0.45) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-top:1.5px solid rgba(255,46,84,0.7);border-bottom:1.5px solid rgba(0,0,0,0.6);border-left:1px solid rgba(255,46,84,0.25);border-right:1px solid rgba(255,46,84,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">⚡ TP Vex Mode</span><b style="color:#FF2E54;background:rgba(255,46,84,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(255,46,84,0.6);border-bottom:1px solid #000;font-size:10px;">VEX CORE ⚡</b>' +
       '</button>' +
-      '<button id="hub-btn-license" style="background:linear-gradient(180deg,rgba(24,35,82,0.9),rgba(14,21,54,0.95));color:#fff;border-top:1px solid rgba(0,229,255,0.4);border-bottom:2px solid #000;border-left:1px solid rgba(99,102,241,0.25);border-right:1px solid rgba(99,102,241,0.25);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">' +
+      '<button id="hub-btn-license" style="background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,rgba(20,32,85,0.3) 50%,rgba(7,13,40,0.45) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;border-top:1.5px solid rgba(255,255,255,0.35);border-bottom:1.5px solid rgba(0,0,0,0.6);border-left:1px solid rgba(255,255,255,0.1);border-right:1px solid rgba(255,255,255,0.1);padding:12px;border-radius:14px;font-weight:bold;font-size:11px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.25);">' +
       '<span style="display:flex;align-items:center;gap:6px;">🔑 VIP License Key</span><b style="color:#00E5FF;background:rgba(0,229,255,0.2);padding:3px 9px;border-radius:8px;border-top:1px solid rgba(0,229,255,0.6);border-bottom:1px solid #000;font-size:10px;">' + (local && local.key ? local.key.substring(0, 10) + '..' : 'Verify 🔓') + '</b>' +
       '</button>' +
-      (local && local.exp ? '<div style="background:linear-gradient(180deg,rgba(18,25,62,0.9),rgba(7,12,36,0.95));border-top:1px solid rgba(255,214,0,0.3);border-bottom:1px solid #000;border-radius:12px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;box-shadow:inset 0 2px 4px rgba(0,0,0,0.7);"><span style="color:#94A3B8;font-size:10px;font-weight:bold;">⌛ Live Expiry:</span><b style="color:#FFE066;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
-      '<a href="https://t.me/IshakVhai" target="_blank" style="color:#00E5FF;text-align:center;font-size:11px;font-weight:bold;text-decoration:none;padding:11px;border-top:1px solid rgba(0,229,255,0.45);border-bottom:1px solid #000;border-radius:14px;background:linear-gradient(180deg,rgba(0,229,255,0.15),rgba(79,70,229,0.1));box-shadow:0 3px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25);">⚡ Telegram Support (@IshakVhai)</a>' +
+      (local && local.exp ? '<div style="background:linear-gradient(180deg,rgba(255,255,255,0.08) 0%,rgba(10,16,45,0.4) 100%);backdrop-filter:blur(10px);border-top:1px solid rgba(255,214,0,0.35);border-bottom:1px solid rgba(0,0,0,0.6);border-radius:12px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;box-shadow:inset 0 1.5px 3px rgba(0,0,0,0.5);"><span style="color:#94A3B8;font-size:10px;font-weight:bold;">⌛ Live Expiry:</span><b style="color:#FFE066;font-size:11px;font-family:monospace;">' + formatCountdown(local.exp) + '</b></div>' : '') +
+      '<a href="https://t.me/IshakVhai" target="_blank" style="color:#00E5FF;text-align:center;font-size:11px;font-weight:bold;text-decoration:none;padding:11px;border-top:1.5px solid rgba(255,255,255,0.35);border-bottom:1.5px solid rgba(0,0,0,0.6);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,0.1) 0%,rgba(0,229,255,0.15) 100%);backdrop-filter:blur(12px);box-shadow:0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.25);">⚡ Telegram Support (@IshakVhai)</a>' +
       '</div>';
 
     document.body.appendChild(hub);
@@ -3521,13 +3521,71 @@ javascript:(function(){
       return sum / p;
     }
 
-    // Moving Averages: EMA 5, 9, 13, 21, 50 & SMA 20
+    // Moving Averages: EMA 5, 9, 13, 21, 50 & SMA 20, 50
     var ema5 = calcEMA(closes, 5);
     var ema9 = calcEMA(closes, 9);
     var ema13 = calcEMA(closes, 13);
     var ema21 = calcEMA(closes, Math.min(21, closes.length));
     var ema50 = calcEMA(closes, Math.min(50, closes.length));
     var sma20 = calcSMA(closes, Math.min(20, closes.length));
+    var sma50 = calcSMA(closes, Math.min(50, closes.length));
+
+    // 8. VWAP (Volume-Weighted Average Price)
+    var vwapSumPriceVol = 0, vwapSumVol = 0;
+    for (var vwi = 0; vwi < candleData.length; vwi++) {
+      var vC = candleData[vwi];
+      var vTyp = (vC.high + vC.low + vC.close) / 3;
+      var vVol = (vC.volume && vC.volume > 0) ? vC.volume : 1;
+      vwapSumPriceVol += vTyp * vVol;
+      vwapSumVol += vVol;
+    }
+    var vwap = vwapSumVol > 0 ? (vwapSumPriceVol / vwapSumVol) : runningClose;
+
+    // 5. Trend Line (Linear Regression Trajectory of Closes)
+    var tlWindow = Math.min(closes.length, 25);
+    var tlSlice = closes.slice(-tlWindow);
+    var tlSumX = 0, tlSumY = 0, tlSumXY = 0, tlSumX2 = 0;
+    var tlN = tlSlice.length;
+    for (var tli = 0; tli < tlN; tli++) {
+      tlSumX += tli;
+      tlSumY += tlSlice[tli];
+      tlSumXY += tli * tlSlice[tli];
+      tlSumX2 += tli * tli;
+    }
+    var tlDenom = tlN * tlSumX2 - tlSumX * tlSumX;
+    var tlSlope = tlDenom !== 0 ? (tlN * tlSumXY - tlSumX * tlSumY) / tlDenom : 0;
+    var tlIsUp = tlSlope > 0.000005;
+    var tlIsDown = tlSlope < -0.000005;
+
+    // 6. Pivot Lines (PP, R1, S1, R2, S2)
+    var pivLookback = Math.min(15, candleData.length);
+    var pivSlice = candleData.slice(-pivLookback);
+    var pivHigh = Math.max.apply(null, pivSlice.map(function(c){return c.high;}));
+    var pivLow = Math.min.apply(null, pivSlice.map(function(c){return c.low;}));
+    var pivClose = pivSlice[pivSlice.length - 1].close;
+    var pp = (pivHigh + pivLow + pivClose) / 3;
+    var r1 = 2 * pp - pivLow;
+    var s1 = 2 * pp - pivHigh;
+    var r2 = pp + (pivHigh - pivLow);
+    var s2 = pp - (pivHigh - pivLow);
+
+    // 9. Price Channel (Donchian 20-period Range)
+    var pcPeriod = Math.min(20, candleData.length);
+    var pcSlice = candleData.slice(-pcPeriod);
+    var pcHigh = Math.max.apply(null, pcSlice.map(function(c){return c.high;}));
+    var pcLow = Math.min.apply(null, pcSlice.map(function(c){return c.low;}));
+    var pcMid = (pcHigh + pcLow) / 2;
+
+    // 10. Fibonacci Retracement (23.6%, 38.2%, 50%, 61.8% Golden Pocket)
+    var fibLookback = Math.min(25, candleData.length);
+    var fibSlice = candleData.slice(-fibLookback);
+    var fibHigh = Math.max.apply(null, fibSlice.map(function(c){return c.high;}));
+    var fibLow = Math.min.apply(null, fibSlice.map(function(c){return c.low;}));
+    var fibDiff = fibHigh - fibLow;
+    var fib236 = fibHigh - fibDiff * 0.236;
+    var fib382 = fibHigh - fibDiff * 0.382;
+    var fib500 = fibHigh - fibDiff * 0.500;
+    var fib618 = fibHigh - fibDiff * 0.618;
 
     // RSI 14-period Wilder's
     var rsiSeries = [];
@@ -3844,6 +3902,148 @@ javascript:(function(){
         sellScore += Math.abs(qqeScoreImpact);
         downFactorsList.push('QQE Trailing Line Bearish [+' + Math.abs(qqeScoreImpact) + ']');
       }
+    }
+
+    // =========================================================================
+    // 🎯 11 CORE TECHNICAL INDICATORS CONFLUENCE ANALYSIS
+    // 1. Support / Resistance
+    // 2. RSI
+    // 3. SMA
+    // 4. EMA
+    // 5. Trend Line
+    // 6. Pivot Lines
+    // 7. Bollinger Bands
+    // 8. VWAP
+    // 9. Price Channel
+    // 10. Fibonacci Retracement
+    // 11. MACD Signal
+    // =========================================================================
+
+    // 1. Support / Resistance
+    if (isRetestBounce || (distToSupport <= 0.15 && lowerWickRatio > upperWickRatio)) {
+      buyScore += 26;
+      upFactorsList.push('Support Line Bounce (Support: ' + support.toFixed(5) + ') [+26]');
+    } else if (isRetestRejection || (distToResistance <= 0.15 && upperWickRatio > lowerWickRatio)) {
+      sellScore += 26;
+      downFactorsList.push('Resistance Line Rejection (Resistance: ' + resistance.toFixed(5) + ') [+26]');
+    }
+    if (isBreakoutAbove) {
+      buyScore += 20;
+      upFactorsList.push('Resistance Breakout Above [+20]');
+    } else if (isBreakdownBelow) {
+      sellScore += 20;
+      downFactorsList.push('Support Breakdown Below [+20]');
+    }
+
+    // 2. RSI (14-period Wilder's)
+    if (calculatedRsi <= 32) {
+      buyScore += 24;
+      upFactorsList.push('RSI Oversold Level (' + calculatedRsi + ') Bouncing [+24]');
+    } else if (calculatedRsi >= 68) {
+      sellScore += 24;
+      downFactorsList.push('RSI Overbought Level (' + calculatedRsi + ') Rejecting [+24]');
+    } else if (calculatedRsi > 50 && calculatedRsi < 68) {
+      buyScore += 12;
+      upFactorsList.push('RSI Bullish Momentum (' + calculatedRsi + ') [+12]');
+    } else if (calculatedRsi < 50 && calculatedRsi > 32) {
+      sellScore += 12;
+      downFactorsList.push('RSI Bearish Momentum (' + calculatedRsi + ') [+12]');
+    }
+
+    // 3. SMA (SMA 20 & SMA 50)
+    if (runningClose > sma20 && sma20 > sma50) {
+      buyScore += 20;
+      upFactorsList.push('SMA Bullish Alignment (Price > SMA20 > SMA50) [+20]');
+    } else if (runningClose < sma20 && sma20 < sma50) {
+      sellScore += 20;
+      downFactorsList.push('SMA Bearish Alignment (Price < SMA20 < SMA50) [+20]');
+    } else if (runningClose > sma20) {
+      buyScore += 10;
+      upFactorsList.push('SMA 20 Bullish Support [+10]');
+    } else if (runningClose < sma20) {
+      sellScore += 10;
+      downFactorsList.push('SMA 20 Bearish Resistance [+10]');
+    }
+
+    // 4. EMA (EMA 5, 9, 13, 21, 50)
+    if (ema5 > ema9 && ema9 > ema13 && ema13 > ema21) {
+      buyScore += 24;
+      upFactorsList.push('EMA Ribbon Bullish Stack (5>9>13>21) [+24]');
+    } else if (ema5 < ema9 && ema9 < ema13 && ema13 < ema21) {
+      sellScore += 24;
+      downFactorsList.push('EMA Ribbon Bearish Stack (5<9<13<21) [+24]');
+    }
+
+    // 5. Trend Line (Linear Regression Trajectory)
+    if (tlIsUp) {
+      buyScore += 22;
+      upFactorsList.push('Trend Line Regression Bullish Trajectory (Slope: +' + (tlSlope * 1000).toFixed(3) + ') [+22]');
+    } else if (tlIsDown) {
+      sellScore += 22;
+      downFactorsList.push('Trend Line Regression Bearish Trajectory (Slope: ' + (tlSlope * 1000).toFixed(3) + ') [+22]');
+    }
+
+    // 6. Pivot Lines (PP, R1, S1, R2, S2)
+    var candleR = Math.max(0.00002, runningHigh - runningLow);
+    if (Math.abs(runningClose - s1) <= candleR * 0.4 && isUp) {
+      buyScore += 18;
+      upFactorsList.push('Pivot S1 Support Rebound (' + s1.toFixed(5) + ') [+18]');
+    } else if (Math.abs(runningClose - r1) <= candleR * 0.4 && isDown) {
+      sellScore += 18;
+      downFactorsList.push('Pivot R1 Resistance Rejection (' + r1.toFixed(5) + ') [+18]');
+    }
+
+    // 7. Bollinger Bands
+    if (runningClose <= bbLower || (runningLow <= bbLower && isUp)) {
+      buyScore += 24;
+      upFactorsList.push('Bollinger Lower Band Dip Reversal [+24]');
+    } else if (runningClose >= bbUpper || (runningHigh >= bbUpper && isDown)) {
+      sellScore += 24;
+      downFactorsList.push('Bollinger Upper Band Rejection [+24]');
+    }
+
+    // 8. VWAP (Volume-Weighted Average Price)
+    if (runningClose > vwap) {
+      buyScore += 18;
+      upFactorsList.push('VWAP Institutional Flow Bullish (Price > VWAP: ' + vwap.toFixed(5) + ') [+18]');
+    } else if (runningClose < vwap) {
+      sellScore += 18;
+      downFactorsList.push('VWAP Institutional Flow Bearish (Price < VWAP: ' + vwap.toFixed(5) + ') [+18]');
+    }
+
+    // 9. Price Channel (Donchian 20-period High/Low Channel)
+    if (runningClose >= pcHigh - candleR * 0.2) {
+      buyScore += 20;
+      upFactorsList.push('Price Channel Upper Band Expansion (' + pcHigh.toFixed(5) + ') [+20]');
+    } else if (runningClose <= pcLow + candleR * 0.2) {
+      sellScore += 20;
+      downFactorsList.push('Price Channel Lower Band Breakdown (' + pcLow.toFixed(5) + ') [+20]');
+    } else if (runningClose > pcMid) {
+      buyScore += 12;
+      upFactorsList.push('Price Channel Holding Above Midline [+12]');
+    } else if (runningClose < pcMid) {
+      sellScore += 12;
+      downFactorsList.push('Price Channel Pressure Below Midline [+12]');
+    }
+
+    // 10. Fibonacci Retracement (Golden Pocket & Key Levels)
+    var fibPocketDistBuy = Math.abs(runningClose - fib618);
+    var fibPocketDistSell = Math.abs(runningClose - fib382);
+    if (fibPocketDistBuy <= candleR * 0.5 && isUp) {
+      buyScore += 26;
+      upFactorsList.push('Fibonacci 61.8% Golden Pocket Support (' + fib618.toFixed(5) + ') [+26]');
+    } else if (fibPocketDistSell <= candleR * 0.5 && isDown) {
+      sellScore += 26;
+      downFactorsList.push('Fibonacci 61.8% / 38.2% Golden Zone Rejection (' + fib382.toFixed(5) + ') [+26]');
+    }
+
+    // 11. MACD Signal (12, 26, 9)
+    if (macdHist > 0 && macdLine > macdSignal) {
+      buyScore += 22;
+      upFactorsList.push('MACD Bullish Signal Cross & Expanding Histogram [+22]');
+    } else if (macdHist < 0 && macdLine < macdSignal) {
+      sellScore += 22;
+      downFactorsList.push('MACD Bearish Signal Cross & Contracting Histogram [+22]');
     }
 
     // --- 8. TIMEFRAME-SPECIALIZED CONFLUENCE (5s > 10s > 15s > 30s > 1m) ---
@@ -5082,11 +5282,11 @@ javascript:(function(){
         ".fab.running .vex-crest .dot{background:#ff2e54;box-shadow:0 0 10px #ff2e54;animation:blink 1s steps(2) infinite}" +
         ".vex-tag{margin-top:3px;padding:2px 7px;border-radius:999px;background:linear-gradient(90deg,#00e5ff,#0088cc);color:#020617;font:900 7.5px monospace;letter-spacing:.8px;box-shadow:0 0 8px rgba(0,229,255,.6);text-transform:uppercase}" +
         ".fab.running .vex-tag{background:linear-gradient(90deg,#ff2e54,#ff5e7e);color:#fff;box-shadow:0 0 8px #ff2e54}" +
-        ".panel{position:fixed;z-index:2147483646;width:min(265px,calc(100vw - 16px));padding:10px 12px;border-radius:16px;color:#e6eefc;font:11.5px/1.35 system-ui,-apple-system,sans-serif;transform-origin:0 0;pointer-events:auto;" +
-        "background:linear-gradient(165deg,rgba(8,14,36,.98) 0%,rgba(4,7,20,.99) 100%);border:1.5px solid rgba(0,229,255,.4);box-shadow:0 25px 60px rgba(0,0,0,.95),0 0 30px rgba(0,229,255,.25);overflow:hidden;user-select:none;-webkit-user-select:none;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}" +
+        ".panel{position:fixed;z-index:2147483646;width:min(265px,calc(100vw - 16px));padding:10px 12px;border-radius:20px;color:#e6eefc;font:11.5px/1.35 system-ui,-apple-system,sans-serif;transform-origin:0 0;pointer-events:auto;" +
+        "background:linear-gradient(165deg,rgba(14,24,60,.45) 0%,rgba(6,12,32,.55) 100%);border-top:1.5px solid rgba(255,255,255,.45);border-left:1px solid rgba(255,255,255,.18);border-right:1px solid rgba(255,255,255,.18);border-bottom:2px solid rgba(0,0,0,.8);box-shadow:0 25px 60px rgba(0,0,0,.85),0 0 30px rgba(0,229,255,.2),inset 0 1.5px 2px rgba(255,255,255,.45),inset 0 -2.5px 5px rgba(0,0,0,.7);overflow:hidden;user-select:none;-webkit-user-select:none;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}" +
         ".panel[hidden]{display:none}" +
         ".top-strip{height:2px;width:calc(100% + 24px);margin:-10px -12px 10px;background:linear-gradient(90deg,#00e5ff,#a855f7,#ff2e54);box-shadow:0 0 10px #00e5ff}" +
-        ".head{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:grab;touch-action:none;padding-bottom:8px;border-bottom:1px solid rgba(0,229,255,.18)}" +
+        ".head{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:grab;touch-action:none;padding:6px 8px 8px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.08) 0%,rgba(10,18,45,.25) 100%);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.15)}" +
         ".head.dragging{cursor:grabbing}" +
         ".mini{width:28px;height:28px;border-radius:8px;overflow:hidden;border:1.5px solid #00e5ff;box-shadow:0 0 10px rgba(0,229,255,.4);flex:none;cursor:pointer}" +
         ".mini img{width:100%;height:100%;object-fit:cover}" +
@@ -5096,29 +5296,32 @@ javascript:(function(){
         ".ttl-v{font-size:8px;font-weight:900;padding:1px 4px;border-radius:4px;background:linear-gradient(135deg,#ff2e54,#8b0029);color:#fff;letter-spacing:.5px;font-family:monospace;box-shadow:0 0 8px rgba(255,46,84,.5)}" +
         ".sub{margin-top:2px;font-size:7px;font-weight:800;letter-spacing:.7px;color:#94a3b8;text-transform:uppercase}" +
         ".head-ctrls{margin-left:auto;display:flex;align-items:center;gap:4px}" +
-        ".std-btn{padding:3px 6px;border-radius:6px;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.35);color:#00e5ff;font:800 8px monospace;cursor:pointer}" +
+        ".std-btn{padding:3px 6px;border-radius:6px;background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(0,229,255,.15));border:1px solid rgba(0,229,255,.35);color:#00e5ff;font:800 8px monospace;cursor:pointer;backdrop-filter:blur(8px)}" +
         ".chip{padding:2px 5px;border-radius:999px;font-size:7.5px;font-weight:800;color:#94a3b8;border:1px solid rgba(148,163,184,.35)}" +
         ".chip.live{color:#052e1c;border-color:transparent;background:linear-gradient(135deg,#34d399,#22d3ee)}" +
-        ".min-btn{width:20px;height:20px;border-radius:6px;background:rgba(15,23,42,.8);border:1px solid rgba(255,255,255,.12);color:#94a3b8;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}" +
-        ".hud-card{background:rgba(4,9,24,.85);border:1px solid rgba(0,229,255,.25);border-radius:10px;padding:6px 8px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}" +
-        ".hud-lbl{font-size:7px;color:#64748b;font-weight:800;letter-spacing:.7px;text-transform:uppercase}" +
-        ".hud-asset{font-size:11px;font-weight:900;color:#00e5ff;text-shadow:0 0 10px rgba(0,229,255,.4)}" +
+        ".min-btn{width:20px;height:20px;border-radius:6px;background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(15,23,42,.6));border:1px solid rgba(255,255,255,.15);color:#94a3b8;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}" +
+        ".hud-card{background:linear-gradient(135deg,rgba(255,255,255,.12) 0%,rgba(8,14,38,.4) 100%);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.3);border-bottom:1.5px solid rgba(0,0,0,.6);border-left:1px solid rgba(255,255,255,.12);border-right:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px 8px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;box-shadow:0 4px 14px rgba(0,0,0,.4),inset 0 1px 1px rgba(255,255,255,.2)}" +
+        ".hud-lbl{font-size:7px;color:#94a3b8;font-weight:800;letter-spacing:.7px;text-transform:uppercase}" +
+        ".hud-asset{font-size:11px;font-weight:900;color:#00e5ff;text-shadow:0 0 10px rgba(0,229,255,.45)}" +
         ".hud-quote{font-size:11px;font-weight:800;color:#fff;font-family:monospace}" +
         ".mod-hdr{display:flex;justify-content:space-between;align-items:center;margin:4px 0 2px}" +
-        ".mod-lbl{font-size:8px;font-weight:800;color:#94a3b8;letter-spacing:.5px;text-transform:uppercase}" +
-        ".auto-btn{font-size:7.5px;color:#00e5ff;background:rgba(0,229,255,.12);border:1px solid rgba(0,229,255,.3);border-radius:5px;padding:2px 5px;cursor:pointer;font-weight:700}" +
+        ".mod-lbl{font-size:8px;font-weight:800;color:#cbd5e1;letter-spacing:.5px;text-transform:uppercase}" +
+        ".auto-btn{font-size:7.5px;color:#00e5ff;background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(0,229,255,.15));border-top:1px solid rgba(255,255,255,.35);border-bottom:1px solid rgba(0,0,0,.5);border-left:1px solid rgba(0,229,255,.3);border-right:1px solid rgba(0,229,255,.3);border-radius:5px;padding:2px 6px;cursor:pointer;font-weight:700;backdrop-filter:blur(8px)}" +
         ".step-row{display:flex;gap:4px}" +
-        ".step-btn{width:28px;background:rgba(15,23,42,.9);border:1px solid rgba(255,255,255,.15);border-radius:7px;color:#94a3b8;font-weight:900;font-size:12px;cursor:pointer}" +
-        ".step-in{flex:1;background:#040715;border:1.5px solid rgba(0,229,255,.35);border-radius:7px;padding:5px 8px;color:#fff;font-size:12px;font-weight:800;font-family:monospace;text-align:center;outline:none}" +
+        ".step-btn{width:28px;background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,rgba(15,23,42,.5) 100%);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.3);border-bottom:1.5px solid rgba(0,0,0,.6);border-left:1px solid rgba(255,255,255,.1);border-right:1px solid rgba(255,255,255,.1);border-radius:7px;color:#cbd5e1;font-weight:900;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.25)}" +
+        ".step-in{flex:1;background:rgba(5,10,28,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid rgba(255,255,255,.25);border-left:1px solid rgba(0,229,255,.3);border-right:1px solid rgba(0,229,255,.3);border-bottom:1.5px solid rgba(0,0,0,.6);border-radius:7px;padding:5px 8px;color:#fff;font-size:12px;font-weight:800;font-family:monospace;text-align:center;outline:none;box-shadow:inset 0 1.5px 3px rgba(0,0,0,.5)}" +
         ".chips-row{display:flex;gap:4px;margin-top:2px}" +
         ".chip-btn{flex:1;padding:4px 0;text-align:center;background:rgba(11,18,38,.85);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:6px;font-size:8.5px;font-weight:900;cursor:pointer;font-family:monospace;transition:all .15s}" +
         ".chip-btn.active{background:linear-gradient(135deg,#00e5ff,#0088cc);border-color:#00e5ff;color:#040818}" +
         ".prog-bar{height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-top:3px}" +
         ".prog-fill{height:100%;background:linear-gradient(90deg,#ff2e54,#00e5ff);transition:width 1s linear}" +
-        ".action-btn-main{width:100%;margin-top:8px;padding:9px 0;border-radius:8px;border:none;font-weight:900;font-size:11px;cursor:pointer;letter-spacing:.7px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .15s}" +
-        ".action-btn-start{background:linear-gradient(135deg,#00e5ff 0%,#0284c7 100%);color:#030718;box-shadow:0 6px 20px rgba(0,229,255,.45)}" +
-        ".action-btn-stop{background:linear-gradient(135deg,rgba(255,46,84,.25),rgba(139,0,41,.4));color:#fff;border:1.5px solid #ff2e54;box-shadow:0 0 20px rgba(255,46,84,.5)}" +
-        ".back-std-link{margin-top:6px;padding:6px 0;border-radius:7px;background:rgba(15,23,42,.7);border:1px solid rgba(0,229,255,.25);color:#7dd3fc;font:800 9px system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;text-align:center;width:100%}" +
+        ".action-btn-row{display:flex;gap:8px;margin-top:8px;width:100%}" +
+        ".action-btn-sub{flex:1;padding:9px 0;border-radius:10px;font-weight:900;font-size:11px;cursor:pointer;letter-spacing:.7px;text-transform:uppercase;font-family:'Orbitron',sans-serif;transition:all .18s;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}" +
+        ".action-btn-stop{border-top:1px solid rgba(255,46,84,.5);border-left:1px solid rgba(255,46,84,.3);border-right:1px solid rgba(255,46,84,.3);border-bottom:2px solid rgba(0,0,0,.7);background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,rgba(139,0,41,.4) 100%);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.4),inset 0 1px 1px rgba(255,255,255,.25)}" +
+        ".action-btn-stop.active{border-top:1.5px solid rgba(255,100,130,.8);background:linear-gradient(135deg,rgba(255,46,84,.85) 0%,rgba(139,0,41,.95) 100%);box-shadow:0 6px 20px rgba(255,46,84,.6),inset 0 1px 1px rgba(255,255,255,.4)}" +
+        ".action-btn-start{border-top:1.5px solid rgba(255,255,255,.6);border-left:1px solid rgba(0,229,255,.3);border-right:1px solid rgba(0,229,255,.3);border-bottom:2px solid rgba(0,0,0,.7);background:linear-gradient(135deg,rgba(0,229,255,.9) 0%,rgba(2,132,199,.95) 100%);color:#030718;box-shadow:0 6px 20px rgba(0,229,255,.45),inset 0 1.5px 2px rgba(255,255,255,.5)}" +
+        ".action-btn-start.idle{border-top:1px solid rgba(0,229,255,.4);background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,rgba(0,229,255,.35) 100%);color:#7dd3fc;box-shadow:0 4px 12px rgba(0,0,0,.4),inset 0 1px 1px rgba(255,255,255,.25)}" +
+        ".back-std-link{margin-top:6px;padding:6px 0;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.08) 0%,rgba(15,23,42,.4) 100%);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.25);border-bottom:1.5px solid rgba(0,0,0,.6);border-left:1px solid rgba(0,229,255,.2);border-right:1px solid rgba(0,229,255,.2);color:#7dd3fc;font:800 9px system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;text-align:center;width:100%}" +
         "@keyframes blink{50%{opacity:.25}}" +
         "@keyframes pulse{50%{box-shadow:0 0 24px 4px rgba(255,46,84,.85)}}" +
         "</style>" +
@@ -5281,13 +5484,13 @@ javascript:(function(){
       function updateRoundBtns(toolEls) {
         if (!toolEls) return;
         fab.classList.toggle("running", !!access && fakeRunning);
-        if (toolEls.actionBtn) {
+        if (toolEls.stopBtn && toolEls.startBtn) {
           if (fakeRunning) {
-            toolEls.actionBtn.textContent = "Stop";
-            toolEls.actionBtn.className = "action-btn-main action-btn-stop";
+            toolEls.stopBtn.className = "action-btn-sub action-btn-stop active";
+            toolEls.startBtn.className = "action-btn-sub action-btn-start idle";
           } else {
-            toolEls.actionBtn.textContent = "Start";
-            toolEls.actionBtn.className = "action-btn-main action-btn-start";
+            toolEls.stopBtn.className = "action-btn-sub action-btn-stop";
+            toolEls.startBtn.className = "action-btn-sub action-btn-start";
           }
         }
       }
@@ -5339,10 +5542,15 @@ javascript:(function(){
         stepRow.appendChild(plusBtn);
         body.appendChild(stepRow);
 
-        // 3. Main Tactical Action Button (Strictly Start / Stop)
-        var actionBtn = el("button", "action-btn-main action-btn-start", "Start");
-        actionBtn.type = "button";
-        body.appendChild(actionBtn);
+        // 3. Main Tactical Action Buttons: Dual Side-by-Side: STOP (Left) and START (Right)
+        var btnRow = el("div", "action-btn-row");
+        var stopBtn = el("button", "action-btn-sub action-btn-stop", "Stop");
+        stopBtn.type = "button";
+        var startBtn = el("button", "action-btn-sub action-btn-start", "Start");
+        startBtn.type = "button";
+        btnRow.appendChild(stopBtn);
+        btnRow.appendChild(startBtn);
+        body.appendChild(btnRow);
 
         // 4. Back to Standard TradePilot Link
         var backBtn = el("button", "back-std-link", "↩ RETURN TO TRADEPILOT");
@@ -5353,7 +5561,8 @@ javascript:(function(){
           market: marketEl,
           quote: quoteEl,
           fTarget: fTarget,
-          actionBtn: actionBtn,
+          stopBtn: stopBtn,
+          startBtn: startBtn,
         };
         body._qxToolEls = toolEls;
 
@@ -5392,18 +5601,19 @@ javascript:(function(){
           if (fakeRunning) startFake(uiRound.fakeTarget);
         });
 
-        actionBtn.addEventListener("click", function () {
-          if (!fakeRunning) {
-            var t = Number(uiRound.fakeTarget);
-            if (!uiRound.fakeTarget || !isFinite(t)) {
-              autoBtn.click();
-            }
-            fakeRunning = true;
-            startFake(uiRound.fakeTarget);
-          } else {
-            fakeRunning = false;
-            stopFake();
+        stopBtn.addEventListener("click", function () {
+          fakeRunning = false;
+          stopFake();
+          updateRoundBtns(toolEls);
+        });
+
+        startBtn.addEventListener("click", function () {
+          var t = Number(uiRound.fakeTarget);
+          if (!uiRound.fakeTarget || !isFinite(t)) {
+            autoBtn.click();
           }
+          fakeRunning = true;
+          startFake(uiRound.fakeTarget);
           updateRoundBtns(toolEls);
         });
 

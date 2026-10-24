@@ -421,7 +421,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
     );
   }
 
-  // 2. EXPANDED STATE: Slimmer, Handier Obsidian Glass & Neon VEX Terminal (265px)
+  // 2. EXPANDED STATE: Premium Liquid Glassmorphism & Neon VEX Terminal (265px)
   return (
     <div
       id="appCard"
@@ -433,18 +433,21 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         width: '265px',
         maxWidth: 'calc(100vw - 16px)',
         maxHeight: 'calc(100vh - 20px)',
-        background: 'linear-gradient(165deg, rgba(8, 14, 36, 0.98) 0%, rgba(4, 7, 20, 0.99) 100%)',
-        border: `1.5px solid ${isRunning ? '#ff2e54' : 'rgba(0, 229, 255, 0.4)'}`,
-        borderRadius: '16px',
+        background: 'linear-gradient(165deg, rgba(14, 24, 60, 0.45) 0%, rgba(6, 12, 32, 0.55) 100%)',
+        borderTop: isRunning ? '2px solid rgba(255, 46, 84, 0.85)' : '1.5px solid rgba(255, 255, 255, 0.45)',
+        borderLeft: '1px solid rgba(255, 255, 255, 0.18)',
+        borderRight: '1px solid rgba(255, 255, 255, 0.18)',
+        borderBottom: '2px solid rgba(0, 0, 0, 0.8)',
+        borderRadius: '20px',
         boxShadow: isRunning
-          ? '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(255, 46, 84, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15)'
-          : '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 30px rgba(0, 229, 255, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
+          ? '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 46, 84, 0.35), inset 0 1.5px 2px rgba(255, 255, 255, 0.45), inset 0 -2.5px 5px rgba(0, 0, 0, 0.7)'
+          : '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 229, 255, 0.2), inset 0 1.5px 2px rgba(255, 255, 255, 0.45), inset 0 -2.5px 5px rgba(0, 0, 0, 0.7)',
         color: '#e2e8f0',
         fontSize: '11.5px',
         overflow: 'hidden',
         touchAction: 'none',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         userSelect: 'none',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
@@ -460,7 +463,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         }}
       />
 
-      {/* HEADER: Draggable Grip Handle */}
+      {/* HEADER: Draggable Grip Handle with Glassmorphism */}
       <div
         id="panelHeader"
         onMouseDown={handleMouseDown}
@@ -471,8 +474,9 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           alignItems: 'center',
           justifyContent: 'space-between',
           cursor: isDragging ? 'grabbing' : 'grab',
-          background: 'rgba(6, 11, 28, 0.9)',
-          borderBottom: '1px solid rgba(0, 229, 255, 0.18)',
+          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(10, 18, 45, 0.3) 100%)',
+          backdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -632,25 +636,31 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         </div>
       </div>
 
-      {/* BODY CONTENT: Restructured layout & colors */}
+      {/* BODY CONTENT: Restructured layout & colors with Liquid Glassmorphism */}
       <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {/* 1. Market & Live Price Bar */}
+        {/* 1. Market & Live Price Bar - 3D Glassmorphic Bevel */}
         <div
           style={{
-            background: 'rgba(4, 9, 24, 0.85)',
-            border: '1px solid rgba(0, 229, 255, 0.25)',
-            borderRadius: '12px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(8, 14, 38, 0.4) 100%)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            borderTop: '1px solid rgba(255, 255, 255, 0.3)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+            borderBottom: '1.5px solid rgba(0, 0, 0, 0.6)',
+            borderRadius: '14px',
             padding: '8px 10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ fontSize: '7.5px', color: '#64748b', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '7.5px', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
               MARKET ASSET
             </span>
-            <span style={{ fontSize: '13px', fontWeight: 900, color: '#00e5ff', letterSpacing: '0.2px', textShadow: '0 0 10px rgba(0,229,255,0.4)' }}>
+            <span style={{ fontSize: '13px', fontWeight: 900, color: '#00e5ff', letterSpacing: '0.2px', textShadow: '0 0 10px rgba(0,229,255,0.45)' }}>
               {activePair}
             </span>
           </div>
@@ -668,7 +678,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
         {/* 2. Target Round Number Input with Quick Adjust Stepper */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '9px', fontWeight: 800, color: '#cbd5e1', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
               TARGET ROUND PRICE
             </span>
             <button
@@ -677,32 +687,42 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               style={{
                 fontSize: '8.5px',
                 color: '#00e5ff',
-                background: 'rgba(0, 229, 255, 0.12)',
-                border: '1px solid rgba(0, 229, 255, 0.3)',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(0, 229, 255, 0.15) 100%)',
+                backdropFilter: 'blur(8px)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.35)',
+                borderLeft: '1px solid rgba(0, 229, 255, 0.3)',
+                borderRight: '1px solid rgba(0, 229, 255, 0.3)',
+                borderBottom: '1px solid rgba(0, 0, 0, 0.5)',
                 borderRadius: '6px',
-                padding: '2px 6px',
+                padding: '2px 7px',
                 cursor: 'pointer',
                 fontWeight: 700,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.3)',
               }}
             >
               🎯 Auto Snap
             </button>
           </div>
 
-          {/* Stepper + Input */}
+          {/* Stepper + Input with Glassmorphism */}
           <div style={{ display: 'flex', gap: '4px' }}>
             <button
               onClick={() => adjustRoundPrice(currentPrice > 50 ? -0.1 : -0.001)}
               type="button"
               style={{
                 width: '32px',
-                background: 'rgba(15, 23, 42, 0.9)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(15, 23, 42, 0.5) 100%)',
+                backdropFilter: 'blur(10px)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.3)',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+                borderBottom: '1.5px solid rgba(0, 0, 0, 0.6)',
                 borderRadius: '8px',
-                color: '#94a3b8',
+                color: '#cbd5e1',
                 fontWeight: 900,
                 fontSize: '12px',
                 cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
               }}
             >
               -
@@ -720,8 +740,13 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               placeholder={`e.g. ${(currentPrice || 122.500).toFixed(currentPrice > 50 ? 2 : 4)}`}
               style={{
                 flex: 1,
-                background: '#040715',
-                border: `1.5px solid ${inputError ? '#ff2e54' : 'rgba(0, 229, 255, 0.35)'}`,
+                background: 'rgba(5, 10, 28, 0.55)',
+                backdropFilter: 'blur(14px)',
+                WebkitBackdropFilter: 'blur(14px)',
+                borderTop: inputError ? '1.5px solid #ff2e54' : '1px solid rgba(255, 255, 255, 0.25)',
+                borderLeft: '1px solid rgba(0, 229, 255, 0.3)',
+                borderRight: '1px solid rgba(0, 229, 255, 0.3)',
+                borderBottom: '1.5px solid rgba(0, 0, 0, 0.6)',
                 borderRadius: '8px',
                 padding: '8px 10px',
                 color: '#ffffff',
@@ -730,7 +755,7 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
                 fontFamily: 'monospace',
                 textAlign: 'center',
                 outline: 'none',
-                boxShadow: inputError ? '0 0 12px rgba(255,46,84,0.45)' : 'none',
+                boxShadow: inputError ? '0 0 14px rgba(255,46,84,0.5), inset 0 1px 2px rgba(0,0,0,0.5)' : 'inset 0 1.5px 3px rgba(0,0,0,0.5)',
               }}
             />
 
@@ -739,13 +764,18 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
               type="button"
               style={{
                 width: '32px',
-                background: 'rgba(15, 23, 42, 0.9)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(15, 23, 42, 0.5) 100%)',
+                backdropFilter: 'blur(10px)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.3)',
+                borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+                borderBottom: '1.5px solid rgba(0, 0, 0, 0.6)',
                 borderRadius: '8px',
-                color: '#94a3b8',
+                color: '#cbd5e1',
                 fontWeight: 900,
                 fontSize: '12px',
                 cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
               }}
             >
               +
@@ -753,57 +783,73 @@ export const IshakRoundNumberTerminal: React.FC<IshakRoundNumberTerminalProps> =
           </div>
         </div>
 
-        {/* Action Buttons: Strictly Start / Stop */}
+        {/* 3. Action Buttons: Dual Side-by-Side: STOP (Left) and START (Right) */}
         <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-          {!isRunning ? (
-            <button
-              id="btnStart"
-              type="button"
-              onClick={handleStart}
-              style={{
-                flex: 1,
-                padding: '12px 0',
-                borderRadius: '10px',
-                border: 'none',
-                fontWeight: 900,
-                fontSize: '13px',
-                cursor: 'pointer',
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                background: 'linear-gradient(135deg, #00e5ff 0%, #0284c7 100%)',
-                color: '#030718',
-                boxShadow: '0 6px 20px rgba(0, 229, 255, 0.45)',
-                fontFamily: '"Orbitron", sans-serif',
-                transition: 'all 0.15s',
-              }}
-            >
-              Start
-            </button>
-          ) : (
-            <button
-              id="btnStop"
-              type="button"
-              onClick={handleStop}
-              style={{
-                flex: 1,
-                padding: '12px 0',
-                borderRadius: '10px',
-                border: '1.5px solid #ff2e54',
-                fontWeight: 900,
-                fontSize: '13px',
-                cursor: 'pointer',
-                letterSpacing: '1px',
-                textTransform: 'uppercase',
-                background: 'linear-gradient(135deg, rgba(255, 46, 84, 0.25), rgba(139, 0, 41, 0.4))',
-                color: '#ffffff',
-                boxShadow: '0 0 20px rgba(255, 46, 84, 0.5)',
-                fontFamily: '"Orbitron", sans-serif',
-                transition: 'all 0.15s',
-              }}
-            >
-              Stop
-            </button>
-          )}
+          {/* STOP Button on the LEFT */}
+          <button
+            id="btnStop"
+            type="button"
+            onClick={handleStop}
+            style={{
+              flex: 1,
+              padding: '11px 0',
+              borderRadius: '12px',
+              borderTop: isRunning ? '1.5px solid rgba(255, 100, 130, 0.8)' : '1px solid rgba(255, 46, 84, 0.5)',
+              borderLeft: '1px solid rgba(255, 46, 84, 0.3)',
+              borderRight: '1px solid rgba(255, 46, 84, 0.3)',
+              borderBottom: '2px solid rgba(0, 0, 0, 0.7)',
+              fontWeight: 900,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              background: isRunning
+                ? 'linear-gradient(135deg, rgba(255, 46, 84, 0.85) 0%, rgba(139, 0, 41, 0.95) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(139, 0, 41, 0.4) 100%)',
+              color: '#ffffff',
+              boxShadow: isRunning
+                ? '0 6px 20px rgba(255, 46, 84, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.4)'
+                : '0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)',
+              backdropFilter: 'blur(14px)',
+              fontFamily: '"Orbitron", sans-serif',
+              transition: 'all 0.18s ease-in-out',
+            }}
+          >
+            Stop
+          </button>
+
+          {/* START Button on the RIGHT */}
+          <button
+            id="btnStart"
+            type="button"
+            onClick={handleStart}
+            style={{
+              flex: 1,
+              padding: '11px 0',
+              borderRadius: '12px',
+              borderTop: !isRunning ? '1.5px solid rgba(255, 255, 255, 0.6)' : '1px solid rgba(0, 229, 255, 0.4)',
+              borderLeft: '1px solid rgba(0, 229, 255, 0.3)',
+              borderRight: '1px solid rgba(0, 229, 255, 0.3)',
+              borderBottom: '2px solid rgba(0, 0, 0, 0.7)',
+              fontWeight: 900,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              background: !isRunning
+                ? 'linear-gradient(135deg, rgba(0, 229, 255, 0.9) 0%, rgba(2, 132, 199, 0.95) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 229, 255, 0.35) 100%)',
+              color: !isRunning ? '#030718' : '#7dd3fc',
+              boxShadow: !isRunning
+                ? '0 6px 20px rgba(0, 229, 255, 0.45), inset 0 1.5px 2px rgba(255, 255, 255, 0.5)'
+                : '0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25)',
+              backdropFilter: 'blur(14px)',
+              fontFamily: '"Orbitron", sans-serif',
+              transition: 'all 0.18s ease-in-out',
+            }}
+          >
+            Start
+          </button>
         </div>
 
         {/* 5. Footer Strip */}

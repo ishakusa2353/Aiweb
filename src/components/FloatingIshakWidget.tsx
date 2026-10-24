@@ -928,10 +928,10 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         style={{ left: `${position.x}px`, top: `${position.y}px` }}
       >
         <div className="relative flex items-center justify-center">
-          {/* 🔲 Continuous Running Square Border Beam Animation (CSS Keyframes + Orbital Ring - Perfectly Proportioned) */}
-          <div className="absolute -inset-2 rounded-[20px] pointer-events-none flex items-center justify-center">
+          {/* 🌊 Liquid 3D Glassmorphism Outer Halo Bezel & Beam (Blurred Market Passes Through) */}
+          <div className="absolute -inset-2.5 rounded-[22px] pointer-events-none flex items-center justify-center backdrop-blur-xl bg-gradient-to-b from-white/20 via-[#0e1840]/30 to-[#030718]/45 border-t border-t-white/60 border-x border-x-cyan-400/25 border-b border-b-black/75 shadow-[0_12px_32px_rgba(0,0,0,0.7),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-2px_4px_rgba(0,0,0,0.6)]">
             {/* Spinning Neon Beam Ring */}
-            <div className="absolute inset-0 rounded-[20px] pointer-events-none animate-[ishakSpinCW_3.2s_linear_infinite] opacity-80"
+            <div className="absolute inset-0 rounded-[22px] pointer-events-none animate-[ishakSpinCW_3.2s_linear_infinite] opacity-75"
               style={{
                 background: 'conic-gradient(from 0deg, transparent 0%, rgba(0,229,255,0.85) 25%, transparent 50%, rgba(255,46,84,0.85) 75%, transparent 100%)',
                 mask: 'radial-gradient(circle, transparent 65%, black 66%)',
@@ -983,7 +983,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             </svg>
           </div>
 
-          {/* Squircle Tactical Button - Slightly More Compact (50x50 / 54x54) */}
+          {/* Squircle Tactical Button - 3D Glassmorphism Specular Accent */}
           <button
             id="btn-ishak-logo"
             onMouseDown={handleMouseDown}
@@ -999,7 +999,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
               e.stopPropagation();
               setShowHub(true);
             }}
-            className={`relative z-10 w-[50px] h-[50px] sm:w-[54px] sm:h-[54px] rounded-2xl border-2 border-cyan-400/80 bg-gradient-to-b from-[#0e163d] via-[#070b22] to-[#040614] shadow-[0_8px_25px_rgba(0,0,0,0.9),0_0_20px_rgba(0,229,255,0.45),inset_0_0_12px_rgba(0,229,255,0.3)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden select-none touch-manipulation ${
+            className={`relative z-10 w-[50px] h-[50px] sm:w-[54px] sm:h-[54px] rounded-2xl border-2 border-cyan-400/80 bg-gradient-to-b from-[#0e163d]/85 via-[#070b22]/90 to-[#040614] shadow-[0_8px_25px_rgba(0,0,0,0.9),0_0_20px_rgba(0,229,255,0.45),inset_0_1.5px_2px_rgba(255,255,255,0.35)] cursor-pointer transition-all hover:scale-108 active:scale-95 flex items-center justify-center overflow-hidden select-none touch-manipulation ${
               isScanning
                 ? 'animate-[ishakLogoFloat_1.6s_infinite_ease-in-out] border-cyan-300 shadow-[0_0_35px_#00E5FF,0_0_45px_rgba(168,85,247,0.7),inset_0_0_16px_rgba(0,229,255,0.6)]'
                 : 'hover:border-cyan-300 hover:shadow-[0_0_28px_rgba(0,229,255,0.6)]'
@@ -1026,14 +1026,17 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
           </button>
         </div>
 
-        {/* 🌟 1. Sleek Floating Brand Name with subtle dark shape for maximum crisp visibility */}
+        {/* 🌟 1. Sleek Floating Brand Name with Premium Liquid Glassmorphism Capsule & Slender Font */}
         <div
           onClick={() => setShowHub(true)}
-          className="mt-1.5 cursor-pointer select-none font-['Rajdhani',sans-serif] text-[12px] font-semibold tracking-[0.16em] flex items-center justify-center leading-none transition-transform hover:scale-105 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/12 shadow-[0_4px_14px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.15)] filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]"
-          style={{ textRendering: 'optimizeLegibility' }}
+          className="mt-2 cursor-pointer select-none text-[11.5px] font-light tracking-[2.4px] flex items-center justify-center leading-none transition-all hover:scale-108 active:scale-95 px-3 py-1 rounded-full backdrop-blur-xl bg-gradient-to-b from-white/18 via-[#0e1840]/35 to-[#04081c]/55 border-t border-t-white/55 border-x border-x-white/20 border-b border-b-black/70 shadow-[0_8px_20px_rgba(0,0,0,0.75),inset_0_1px_1.5px_rgba(255,255,255,0.45),inset_0_-1.5px_2px_rgba(0,0,0,0.5)]"
+          style={{
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Montserrat", "Segoe UI", sans-serif',
+            textRendering: 'optimizeLegibility',
+          }}
         >
-          <span className="text-[#00E5FF] drop-shadow-[0_0_10px_rgba(0,229,255,0.85)]">Trade</span>
-          <span className="text-[#FF2E54] drop-shadow-[0_0_10px_rgba(255,46,84,0.85)]">Pilot</span>
+          <span className="font-light text-[#00E5FF] drop-shadow-[0_0_10px_rgba(0,229,255,0.9)] mr-[1px]">Trade</span>
+          <span className="font-light text-[#FF2E54] drop-shadow-[0_0_10px_rgba(255,46,84,0.9)]">Pilot</span>
         </div>
       </div>
 
@@ -1127,29 +1130,29 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
         </div>
       )}
 
-      {/* ⚙️ 5. SETTINGS HUB MODAL */}
+      {/* ⚙️ 5. SETTINGS HUB MODAL (PREMIUM WATER-LIKE 3D GLASSMORPHISM) */}
       {showHub && (
-        <div className="fixed inset-0 bg-[#060a1e]/70 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-          <div className="w-full max-w-xs bg-gradient-to-b from-[#141c48]/95 via-[#0e163d]/95 to-[#090f2d]/98 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t border-t-cyan-300/60 border-x border-x-indigo-500/35 border-b border-b-[#020512] shadow-[0_25px_60px_-10px_rgba(2,6,23,0.95),0_0_35px_rgba(99,102,241,0.25),inset_0_1.5px_1.5px_rgba(255,255,255,0.4),inset_0_-2.5px_5px_rgba(0,0,0,0.7)]">
-            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent pointer-events-none" />
-            <div className="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="fixed inset-0 bg-[#020512]/50 backdrop-blur-2xl z-[999996] flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-xs bg-gradient-to-b from-[#101a4a]/45 via-[#0a1133]/50 to-[#04081c]/55 backdrop-blur-2xl rounded-3xl p-5 relative overflow-hidden border-t-2 border-t-white/50 border-x border-x-white/15 border-b-2 border-b-black/80 shadow-[0_25px_60px_-10px_rgba(0,0,0,0.85),0_0_35px_rgba(0,229,255,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.45),inset_0_-2.5px_5px_rgba(0,0,0,0.7)]">
+            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent pointer-events-none" />
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
             <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-indigo-400/25 relative z-10">
+            <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-white/15 relative z-10">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-cyan-400/25 via-indigo-600/30 to-indigo-950/80 border-t border-t-cyan-300/70 border-b border-b-black/90 flex items-center justify-center text-cyan-300 shadow-[0_4px_10px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.4)]">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-white/20 via-cyan-500/20 to-indigo-950/40 backdrop-blur-md border-t border-t-white/60 border-b border-b-black/70 flex items-center justify-center text-cyan-300 shadow-[0_4px_10px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)]">
                   <span className="text-sm filter drop-shadow-[0_0_6px_#00E5FF]">⚙️</span>
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-indigo-200 to-amber-200 font-['Orbitron',sans-serif] tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                  <h3 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-amber-200 font-['Orbitron',sans-serif] tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     SETTINGS HUB
                   </h3>
-                  <p className="text-[9px] text-cyan-300/80 font-semibold tracking-wide">TradePilot</p>
+                  <p className="text-[9px] text-cyan-300/90 font-light tracking-wider" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", sans-serif' }}>TradePilot</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowHub(false)}
-                className="w-7 h-7 rounded-xl bg-gradient-to-b from-rose-500/35 to-rose-950/90 border-t border-t-rose-400/70 border-b border-b-black/90 text-rose-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.4)] active:translate-y-0.5 cursor-pointer"
+                className="w-7 h-7 rounded-xl bg-gradient-to-b from-rose-500/35 via-rose-900/40 to-black/60 backdrop-blur-md border-t border-t-rose-300/60 border-b border-b-black/80 text-rose-200 hover:text-white flex items-center justify-center text-xs font-black transition-all shadow-[0_4px_8px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.35)] active:translate-y-0.5 cursor-pointer"
               >
                 ✕
               </button>
@@ -1165,19 +1168,19 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     triggerScan();
                   }
                 }}
-                className={`w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${
+                className={`w-full p-3.5 rounded-2xl backdrop-blur-xl bg-gradient-to-b from-white/12 via-[#142055]/30 to-[#070d28]/45 hover:from-white/18 hover:via-[#1a296d]/40 border-x border-x-white/10 border-b border-b-black/60 flex items-center justify-between text-xs transition-all shadow-[0_4px_14px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${
                   autoPilotMode
-                    ? 'border-t border-t-emerald-400/90 shadow-[0_6px_22px_rgba(16,185,129,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
-                    : 'border-t border-t-cyan-300/40 hover:border-t-cyan-300/80'
+                    ? 'border-t-2 border-t-emerald-400 shadow-[0_6px_22px_rgba(16,185,129,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                    : 'border-t border-t-white/35 hover:border-t-cyan-300/80'
                 }`}
               >
-                <span className="text-gray-100 font-semibold flex items-center gap-2">
+                <span className="text-gray-100 font-medium flex items-center gap-2">
                   <span className="text-base group-hover:scale-110 transition-transform">🤖</span> Auto-Pilot Mode
                 </span>
-                <b className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
+                <b className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.3)] ${
                   autoPilotMode
-                    ? 'text-emerald-300 bg-gradient-to-b from-emerald-400/25 to-emerald-950/70 border-t-emerald-300/70'
-                    : 'text-amber-400 bg-gradient-to-b from-amber-400/20 to-amber-950/70 border-t-amber-300/60'
+                    ? 'text-emerald-300 bg-gradient-to-b from-emerald-400/25 to-emerald-950/50 border-t-emerald-300/70'
+                    : 'text-amber-400 bg-gradient-to-b from-amber-400/20 to-amber-950/50 border-t-amber-300/60'
                 }`}>
                   {autoPilotMode ? '▶ ACTIVE' : '⏹ OFF'}
                 </b>
@@ -1198,21 +1201,21 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                     false
                   );
                 }}
-                className={`w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${
+                className={`w-full p-3.5 rounded-2xl backdrop-blur-xl bg-gradient-to-b from-white/12 via-[#142055]/30 to-[#070d28]/45 hover:from-white/18 hover:via-[#1a296d]/40 border-x border-x-white/10 border-b border-b-black/60 flex items-center justify-between text-xs transition-all shadow-[0_4px_14px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${
                   botMode === 'ROUND_NUMBER'
-                    ? 'border-t border-t-rose-400/90 shadow-[0_6px_22px_rgba(244,63,94,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
-                    : 'border-t border-t-cyan-300/40 hover:border-t-cyan-300/80'
+                    ? 'border-t-2 border-t-rose-400 shadow-[0_6px_22px_rgba(244,63,94,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                    : 'border-t border-t-white/35 hover:border-t-cyan-300/80'
                 }`}
               >
-                <span className="text-gray-100 font-semibold flex items-center gap-2">
+                <span className="text-gray-100 font-medium flex items-center gap-2">
                   <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
                   <span className="tracking-wide font-['Orbitron',sans-serif] text-[11px]">TP Vex Mode</span>
                 </span>
                 <b
-                  className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
+                  className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.3)] ${
                     botMode === 'ROUND_NUMBER'
-                      ? 'text-rose-300 bg-gradient-to-b from-rose-500/30 to-rose-950/80 border-t-rose-400/70'
-                      : 'text-cyan-300 bg-gradient-to-b from-cyan-400/20 to-indigo-950/70 border-t-cyan-300/60'
+                      ? 'text-rose-300 bg-gradient-to-b from-rose-500/30 to-rose-950/50 border-t-rose-400/70'
+                      : 'text-cyan-300 bg-gradient-to-b from-cyan-400/20 to-indigo-950/50 border-t-cyan-300/60'
                   }`}
                 >
                   {botMode === 'ROUND_NUMBER' ? '⚡ VEX ON' : 'STANDBY'}
@@ -1224,16 +1227,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   setShowHub(false);
                   setShowKeyModal(true);
                 }}
-                className="w-full p-3.5 rounded-2xl bg-gradient-to-b from-[#182352]/90 via-[#101944]/95 to-[#0c1334]/98 border-t border-t-cyan-300/40 border-x border-x-indigo-400/25 border-b border-b-black/90 flex items-center justify-between text-xs transition-all shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.25)] hover:border-t-cyan-300/80 active:translate-y-0.5 cursor-pointer group"
+                className="w-full p-3.5 rounded-2xl backdrop-blur-xl bg-gradient-to-b from-white/12 via-[#142055]/30 to-[#070d28]/45 hover:from-white/18 hover:via-[#1a296d]/40 border-t border-t-white/35 border-x border-x-white/10 border-b border-b-black/60 flex items-center justify-between text-xs transition-all shadow-[0_4px_14px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.25)] hover:border-t-cyan-300/80 active:translate-y-0.5 cursor-pointer group"
               >
-                <span className="text-gray-100 font-semibold flex items-center gap-2">
+                <span className="text-gray-100 font-medium flex items-center gap-2">
                   <span className="text-base group-hover:scale-110 transition-transform">🔑</span> VIP License Key
                 </span>
                 <b
-                  className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.3)] ${
+                  className={`font-mono font-bold px-2.5 py-1 rounded-xl text-[10px] border-t border-b border-b-black/80 shadow-[0_2px_6px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.3)] ${
                     activeLicense && activeLicense.key
-                      ? 'text-emerald-300 bg-gradient-to-b from-emerald-400/25 to-emerald-950/70 border-t-emerald-300/70'
-                      : 'text-rose-300 bg-gradient-to-b from-rose-400/20 to-rose-950/70 border-t-rose-300/60'
+                      ? 'text-emerald-300 bg-gradient-to-b from-emerald-400/25 to-emerald-950/50 border-t-emerald-300/70'
+                      : 'text-rose-300 bg-gradient-to-b from-rose-400/20 to-rose-950/50 border-t-rose-300/60'
                   }`}
                 >
                   {activeLicense && activeLicense.key ? 'ACTIVE ✅' : 'VERIFY ⚠️'}
