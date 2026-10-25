@@ -456,7 +456,6 @@ export const BookmarkletView: React.FC = () => {
               <strong>পিসি শর্টকাট:</strong> নিচের বাটনটিকে মাউস দিয়ে ড্র্যাগ করে আপনার ব্রাউজারের বুকমার্কস বারে ছেড়ে দিন!
             </span>
           </div>
-
           <a
             href={obfuscatedLoader || '#'}
             onClick={(e) => {
@@ -466,6 +465,86 @@ export const BookmarkletView: React.FC = () => {
           >
             <span>⚡ TradePilot</span>
           </a>
+        </div>
+      </div>
+
+      {/* 👑 DEDICATED QUOTEX CUSTOMIZER & LEADERBOARD TOOL (tpdtol.js) */}
+      <div className="bg-gradient-to-br from-[#120B24] via-[#1A0E38] to-[#25104B] border-2 border-purple-500/40 rounded-3xl p-5 sm:p-7 shadow-[0_15px_40px_rgba(131,51,255,0.25)] space-y-5">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-purple-500/20">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-black tracking-wide border border-purple-400/40">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span>QUOTEX PROFILE & LEADERBOARD TOOL (tpdtol.js)</span>
+            </div>
+            <h3 className="text-white font-black text-lg sm:text-xl flex items-center gap-2">
+              <span>Quotex প্রোফাইল ও ব্যালেন্স কাস্টমাইজেশন টুল</span>
+              <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">Direct Workflow Ready</span>
+            </h3>
+            <p className="text-xs text-gray-300 leading-relaxed max-w-3xl">
+              ডেভেলপার <strong>@IshakVhai</strong> এর Quotex Profile & Leaderboard স্ক্রিপ্ট। লাইসেন্স ভেরিফাই করার পর <strong>SAVE SETTINGS</strong> এ ক্লিক করলেই কোনো পেমেন্ট অপশন বা বাধা ছাড়াই সরাসরি মূল ওয়ার্কফ্লো সক্রিয় হয়ে যাবে।
+            </p>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <a
+              href="/tpdtol.js"
+              download="tpdtol.user.js"
+              className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:brightness-110 active:scale-95 transition"
+            >
+              <Download className="w-4 h-4" />
+              <span>tpdtol.js ডাউনলোড করুন</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Feature Highlights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="bg-black/40 border border-purple-500/20 rounded-2xl p-4 space-y-1.5">
+            <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold text-[10px]">১. জিরো পেমেন্ট প্রম্পট</span>
+            <h4 className="text-white font-bold text-sm">সরাসরি মূল ওয়ার্কফ্লো</h4>
+            <p className="text-gray-400 text-[11px] leading-relaxed">
+              লাইসেন্স ভেরিফাই করে SAVE SETTINGS এ ক্লিক করা মাত্রই পেমেন্ট অপশন বাদ দিয়ে সোজা Quotex কাস্টমাইজেশন ইঞ্জিন চালু হয়ে যায়।
+            </p>
+          </div>
+          <div className="bg-black/40 border border-purple-500/20 rounded-2xl p-4 space-y-1.5">
+            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">২. লাইসেন্স রিকোয়ার্ড</span>
+            <h4 className="text-white font-bold text-sm">Supabase ভেরিফিকেশন</h4>
+            <p className="text-gray-400 text-[11px] leading-relaxed">
+              একমাত্র শর্ত হলো একটি ভ্যালিড Ishak Vhai লাইসেন্স কি। ভেরিফাই হলেই সেভ বাটন সক্রিয় হবে ও সব সেটিংস কাজ করবে।
+            </p>
+          </div>
+          <div className="bg-black/40 border border-purple-500/20 rounded-2xl p-4 space-y-1.5">
+            <span className="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 font-bold text-[10px]">৩. আপলোডেড অবতার</span>
+            <h4 className="text-white font-bold text-sm">নতুন প্রোফাইল পিকচার</h4>
+            <p className="text-gray-400 text-[11px] leading-relaxed">
+              ইন্টারফেসের শীর্ষে ছোট ছবি পরিবর্তন করে আপনার আপলোডকৃত ডেভেলপার @IshakVhai এর ছবি সরাসরি এম্বেড করা হয়েছে।
+            </p>
+          </div>
+        </div>
+
+        {/* Direct Link Endpoint */}
+        <div className="p-3.5 rounded-xl bg-black/50 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-purple-400 shrink-0" />
+            <span className="text-gray-300">সরাসরি tpdtol স্ক্রিপ্ট লিংক:</span>
+            <code className="text-purple-300 font-mono font-bold break-all">{`${baseUrl || window.location.origin}/tpdtol.js`}</code>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <button
+              onClick={() => handleCopy(`${baseUrl || window.location.origin}/tpdtol.js`, 'tpdtol-url')}
+              className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-400/40 hover:bg-purple-500/30 transition text-[11px] font-bold flex items-center gap-1"
+            >
+              {copiedType === 'tpdtol-url' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedType === 'tpdtol-url' ? 'লিংক কপি হয়েছে!' : 'লিংক কপি করুন'}</span>
+            </button>
+            <a
+              href="/tpdtol.js"
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 rounded-lg bg-pink-500/20 text-pink-300 border border-pink-400/40 hover:bg-pink-500/30 transition text-[11px] font-bold"
+            >
+              কোড দেখুন ↗
+            </a>
+          </div>
         </div>
       </div>
     </div>
