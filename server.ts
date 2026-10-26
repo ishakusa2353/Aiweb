@@ -639,6 +639,24 @@ ON CONFLICT (key) DO NOTHING;`
   app.get("/bot.js", serveBotScript);
   app.get("/loader.js", serveBotScript);
 
+  // 4b. DIRECT TPDTOL.JS SERVING ENDPOINT (Quotex Profile & Leaderboard Tool)
+  app.get("/tpdtol.js", (req: express.Request, res: express.Response) => {
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    const filePath = path.join(process.cwd(), "public", "tpdtol.js");
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      const rootPath = path.join(process.cwd(), "tpdtol.js");
+      if (fs.existsSync(rootPath)) {
+        res.sendFile(rootPath);
+      } else {
+        res.status(404).send("// tpdtol.js not found");
+      }
+    }
+  });
+
   // 5. BOOKMARKLET GENERATION ENDPOINT
   app.get("/api/bookmarklet-code", async (req, res) => {
     const host = req.get("host") || "localhost:3000";
