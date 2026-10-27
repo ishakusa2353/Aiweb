@@ -7,6 +7,7 @@ import { supabaseService } from '../lib/supabaseService';
 import { evaluateMarketData, Candle } from '../utils/marketAnalysisEngine';
 import { getBackgroundMarketData } from '../utils/backgroundMarketStream';
 import { IshakRoundNumberTerminal } from './IshakRoundNumberTerminal';
+import { TradePilotGlassWorkflow, WorkflowSlide } from './TradePilotGlassWorkflow';
 
 interface FloatingIshakWidgetProps {
   soundEnabled: boolean;
@@ -35,6 +36,34 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const [scanProgress, setScanProgress] = useState<number>(0);
   const [scanDots, setScanDots] = useState<string>('.......');
   const [badgeText, setBadgeText] = useState<string>('5S');
+
+  // 4-Slide Glassmorphism Workflow State
+  const [workflowSlide, setWorkflowSlide] = useState<WorkflowSlide>('IDLE');
+  const [workflowData, setWorkflowData] = useState<{
+    pairName: string;
+    candles: Candle[];
+    runningCandle: Candle | null;
+    currentPrice: number;
+    isCall: boolean;
+    confidenceScore: number;
+    resistancePrice: number;
+    supportPrice: number;
+    trendLabel: string;
+    patternLabel: string;
+    timeframeLabel: string;
+  }>({
+    pairName: 'USD/ARS (OTC)',
+    candles: [],
+    runningCandle: null,
+    currentPrice: 1627.50,
+    isCall: true,
+    confidenceScore: 80,
+    resistancePrice: 1628.37,
+    supportPrice: 1627.00,
+    trendLabel: 'Uptrend',
+    patternLabel: 'Bullish Continuation...',
+    timeframeLabel: '1m',
+  });
 
   // Background chart & real-time detected market data
   const [detectedAsset, setDetectedAsset] = useState<string>('USD/BDT (OTC)');
@@ -843,84 +872,22 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
   return (
     <>
-      {/* 🎯 1. CLEAN MINIMALIST ROUND RADAR SCANNER OVERLAY (ZERO TEXT INSIDE RADAR) */}
-      {isScanning && (
-        <div className="fixed inset-0 z-[999998] pointer-events-none flex items-center justify-center overflow-hidden select-none">
-          {/* Background Screen Blur */}
-          <div className="absolute inset-0 bg-[#020512]/65 backdrop-blur-md" />
-
-          {/* Central Modern Round Scanner Radar (Completely Clean, No Text Inside) */}
-          <div className="relative w-[300px] h-[300px] sm:w-[420px] sm:h-[420px] flex items-center justify-center">
-            {/* Outer Subtle Radar Perimeter Ring */}
-            <div className="absolute inset-0 rounded-full border-2 border-cyan-400/40 shadow-[0_0_35px_rgba(0,229,255,0.25)]" />
-
-            {/* Concentric Radar Rings */}
-            <div className="absolute inset-8 sm:inset-12 rounded-full border border-dashed border-cyan-400/35 animate-[spin_25s_linear_infinite]" />
-            <div className="absolute inset-16 sm:inset-24 rounded-full border border-cyan-500/45 shadow-[inset_0_0_20px_rgba(0,229,255,0.15)]" />
-            <div className="absolute inset-24 sm:inset-36 rounded-full border border-emerald-400/30 animate-[spin_15s_linear_infinite_reverse]" />
-            <div className="absolute inset-32 sm:inset-48 rounded-full border-2 border-cyan-300/60 shadow-[0_0_25px_rgba(0,229,255,0.4)]" />
-
-            {/* Subtle Crosshair Laser Axes */}
-            <div className="absolute inset-x-0 top-1/2 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/80 to-transparent shadow-[0_0_6px_#00E5FF]" />
-            <div className="absolute inset-y-0 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-cyan-400/80 to-transparent shadow-[0_0_6px_#00E5FF]" />
-
-            {/* Smooth 360° Rotating Radar Sweep Beam */}
-            <div
-              className="absolute inset-0 rounded-full animate-[spin_2.4s_linear_infinite]"
-              style={{
-                background: 'conic-gradient(from 0deg, rgba(0, 229, 255, 0.4) 0deg, rgba(0, 255, 102, 0.25) 30deg, rgba(0, 229, 255, 0.05) 70deg, transparent 90deg, transparent 360deg)',
-                filter: 'drop-shadow(0 0 12px rgba(0,229,255,0.5))',
-              }}
-            />
-
-            {/* Leading Edge Laser Ray of Radar Sweep */}
-            <div className="absolute inset-0 rounded-full animate-[spin_2.4s_linear_infinite] flex items-center justify-center pointer-events-none">
-              <div
-                className="w-1/2 h-[2px] self-center ml-auto"
-                style={{
-                  background: 'linear-gradient(90deg, #FFFFFF 0%, #00FF66 40%, #00E5FF 90%, transparent 100%)',
-                  boxShadow: '0 0 10px #FFFFFF, 0 0 20px #00FF66, 0 0 30px #00E5FF',
-                }}
-              />
-            </div>
-
-            {/* Center Pulsating Diamond Target Reticle (Clean, Minimal, Zero Text) */}
-            <div className="relative z-10 flex items-center justify-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl border border-cyan-300/80 rotate-45 flex items-center justify-center bg-cyan-950/40 shadow-[0_0_18px_#00E5FF,inset_0_0_10px_rgba(0,229,255,0.4)] animate-pulse">
-                <div className="w-3.5 h-3.5 bg-gradient-to-tr from-cyan-400 to-emerald-400 rounded-sm shadow-[0_0_10px_#00FF66]" />
-              </div>
-            </div>
-          </div>
-
-          {/* 💻 2. CLEAN UPWARD-STREAMING TELEMETRY (STRICTLY PINNED TO BOTTOM-LEFT) */}
-          <div
-            className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-[999999] max-w-[280px] sm:max-w-[320px] pointer-events-none select-none font-mono text-[10.5px] sm:text-[11.5px] leading-relaxed space-y-1"
-            style={{
-              height: '32vh',
-              maxHeight: '240px',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-end',
-              maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 65%, rgba(0,0,0,0.15) 90%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.9) 65%, rgba(0,0,0,0.15) 90%, transparent 100%)',
-            }}
-          >
-            {matrixTelemetryLines.map((line, idx) => (
-              <div
-                key={idx}
-                className="text-cyan-300/90 font-medium drop-shadow-[0_0_6px_rgba(0,229,255,0.6)] transition-all duration-300"
-                style={{
-                  animation: 'ishakToastIn 0.25s ease-out forwards',
-                }}
-              >
-                {line}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* 🌟 4-SLIDE GLASSMORPHISM WORKFLOW (Initial Scan, Chart Capture, AI Circuit, Direction Result) */}
+      <TradePilotGlassWorkflow
+        currentSlide={workflowSlide}
+        pairName={workflowData.pairName}
+        candles={workflowData.candles}
+        runningCandle={workflowData.runningCandle}
+        currentPrice={workflowData.currentPrice}
+        isCall={workflowData.isCall}
+        confidenceScore={workflowData.confidenceScore}
+        resistancePrice={workflowData.resistancePrice}
+        supportPrice={workflowData.supportPrice}
+        trendLabel={workflowData.trendLabel}
+        patternLabel={workflowData.patternLabel}
+        timeframeLabel={workflowData.timeframeLabel}
+        onClose={() => setWorkflowSlide('IDLE')}
+      />
       {/* 🚀 3. STYLISH SQUIRCLE BOT BADGE WITH MODERN SQUARE ANIMATION */}
       <div
         id="ishak-robot-anchor"
@@ -1076,56 +1043,6 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
             >
               {flySignal === 'UP' ? '↑' : '↓'}
             </span>
-          </div>
-        </div>
-      )}
-
-      {/* 📊 4. DRAGGABLE 3D HUD BANNER (Shows Detected Market & Confluence Result) */}
-      {hudResult && (
-        <div
-          onMouseDown={handleHudMouseDown}
-          onTouchStart={handleHudTouchStart}
-          className="fixed z-[999980] w-[290px] sm:w-[320px] rounded-2xl bg-gradient-to-b from-[#121a48]/95 via-[#0b1233]/98 to-[#060a1e] border-t-2 border-t-cyan-300/80 border-b-2 border-b-black/90 border-x border-cyan-500/40 p-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_25px_rgba(0,229,255,0.25)] select-none cursor-grab active:cursor-grabbing"
-          style={{ left: `${hudPosition.x}px`, top: `${hudPosition.y}px` }}
-        >
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-cyan-500/30">
-            <div className="flex items-center gap-1.5">
-              <span className="text-cyan-300 text-xs">❖</span>
-              <span className="text-[11px] font-black text-white font-['Orbitron',sans-serif] tracking-wide">
-                TRADEPILOT HUD
-              </span>
-            </div>
-            <span className="text-[9px] font-mono text-cyan-300 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
-              {detectedAsset}
-            </span>
-          </div>
-
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-300 text-[10px]">Signal Direction:</span>
-              <span className={`font-black font-['Orbitron',sans-serif] text-[11px] ${
-                hudResult.isCall === true ? 'text-[#00FF66]' : hudResult.isCall === false ? 'text-[#FF1744]' : 'text-amber-400'
-              }`}>
-                {hudResult.isCall === true ? 'CALL / BUY ⬆' : hudResult.isCall === false ? 'PUT / SELL ⬇' : 'NO SIGNAL ⏸'}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-gray-300">Accuracy Vector:</span>
-              <span className="text-cyan-300 font-mono font-bold">{hudResult.accuracy}% Confluence</span>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-gray-300">Live Quote Price:</span>
-              <span className="text-amber-300 font-mono font-bold">
-                {hudResult.livePrice > 0 ? hudResult.livePrice.toFixed(hudResult.livePrice > 50 ? 3 : 5) : detectedPrice.toFixed(4)}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-gray-300">Entry Time:</span>
-              <span className="text-emerald-400 font-mono font-bold">{hudResult.liveExecutionTime || chartClockTime}</span>
-            </div>
           </div>
         </div>
       )}

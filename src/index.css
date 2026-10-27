@@ -470,3 +470,46 @@
     border-color: rgba(168, 85, 247, 0.9);
   }
 }
+
+@keyframes ishakLaserSweepAcross {
+  0% {
+    left: -10px;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: 100vw;
+    opacity: 0;
+  }
+}
+
+@keyframes ishakLaserVerticalSweep {
+  0% {
+    top: 5%;
+    opacity: 0.6;
+  }
+  50% {
+    top: 90%;
+    opacity: 1;
+  }
+  100% {
+    top: 5%;
+    opacity: 0.6;
+  }
+}
+
+@keyframes ishakModalScaleFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
