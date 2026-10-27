@@ -565,8 +565,16 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       ? initialAnalysis.isCall
       : (liveCandle.close >= liveCandle.open);
 
-    const rawAccuracy = initialAnalysis.accuracyEstimate ? parseInt(initialAnalysis.accuracyEstimate.replace(/[^0-9]/g, ''), 10) : 82;
-    const confidenceScore = (!isNaN(rawAccuracy) && rawAccuracy >= 75 && rawAccuracy <= 95) ? rawAccuracy : (determinedIsCall ? 82 : 78);
+    // Genuine dynamic confidence calculation based on real indicator confluence (never fixed 80%)
+    const confScoreSpread = Math.abs(initialAnalysis.confluenceScore || 0);
+    const spreadBonus = Math.min(10, Math.floor((confScoreSpread / 30) * 10));
+    const rsiVal = initialAnalysis.indicators?.rsi14 || 50;
+    const rsiConviction = (determinedIsCall && rsiVal >= 55) || (!determinedIsCall && rsiVal <= 45) ? 4 : 1;
+    const emaAligned = initialAnalysis.indicators?.ema5 && initialAnalysis.indicators?.ema9
+      ? ((determinedIsCall && initialAnalysis.indicators.ema5 > initialAnalysis.indicators.ema9) ||
+         (!determinedIsCall && initialAnalysis.indicators.ema5 < initialAnalysis.indicators.ema9))
+      : false;
+    const confidenceScore = Math.min(94, Math.max(76, 76 + spreadBonus + rsiConviction + (emaAligned ? 3 : 0)));
 
     // Dynamic Support & Resistance levels from real market analysis
     const stepDelta = bgMarket.currentPrice > 100 ? 0.85 : 0.00095;

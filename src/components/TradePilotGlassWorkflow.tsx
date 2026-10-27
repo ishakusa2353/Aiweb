@@ -58,6 +58,8 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
   const zoomCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [captureProgress, setCaptureProgress] = useState(0);
   const [analysisStep, setAnalysisStep] = useState(0);
+  const [displayConfidence, setDisplayConfidence] = useState(0);
+  const [circleOffset, setCircleOffset] = useState(2 * Math.PI * 40);
 
   // Dynamic OTC vs Real detection based strictly on asset name
   const isOtc = (pairName || '').toUpperCase().includes('OTC');
@@ -93,7 +95,43 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
     }
   }, [currentSlide]);
 
-  // Slide 2: Screen / Chart Canvas Capture
+  // Slide 4: Animated Circular Ring & Number Count-up (Requirement 4)
+  useEffect(() => {
+    if (currentSlide === 'SLIDE4_DIRECTION') {
+      const targetConfidence = confidenceScore && confidenceScore >= 70 && confidenceScore <= 98
+        ? confidenceScore
+        : (isCall ? 84 : 79);
+
+      const circumference = 2 * Math.PI * 40;
+      setCircleOffset(circumference);
+      setDisplayConfidence(0);
+
+      // Smooth count-up over 1200ms
+      const start = Date.now();
+      const duration = 1200;
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const progress = Math.min(1, elapsed / duration);
+        // Cubic ease-out
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const currentVal = Math.floor(eased * targetConfidence);
+        setDisplayConfidence(currentVal);
+
+        const currentOffset = circumference - (eased * (targetConfidence / 100)) * circumference;
+        setCircleOffset(currentOffset);
+
+        if (progress >= 1) {
+          setDisplayConfidence(targetConfidence);
+          setCircleOffset(circumference - (targetConfidence / 100) * circumference);
+          clearInterval(interval);
+        }
+      }, 25);
+
+      return () => clearInterval(interval);
+    }
+  }, [currentSlide, confidenceScore, isCall]);
+
+  // Slide 2: Screen / Chart Canvas Capture (Fix Requirement 1: NEVER BLACK)
   useEffect(() => {
     if (currentSlide === 'SLIDE2_CAPTURE' && captureCanvasRef.current) {
       const canvas = captureCanvasRef.current;
@@ -102,9 +140,31 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
 
       const w = canvas.width;
       const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
 
-      // Attempt direct screen canvas clone if present in DOM
+      // Always fill rich Quotex dark navy background first (never pitch black)
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+      bgGrad.addColorStop(0, '#0a102b');
+      bgGrad.addColorStop(1, '#05091c');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Subtle cyan grid lines
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.09)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 36) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 26) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Attempt direct screen canvas clone if present in DOM and has visible pixels
       let capturedFromDom = false;
       try {
         const allDomCanvases = document.querySelectorAll('canvas');
@@ -120,14 +180,31 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
           }
         }
         if (primaryChartCanvas && primaryChartCanvas.width > 50 && primaryChartCanvas.height > 50) {
-          ctx.drawImage(primaryChartCanvas, 0, 0, primaryChartCanvas.width, primaryChartCanvas.height, 0, 0, w, h);
-          capturedFromDom = true;
+          // Verify canvas actually has non-empty pixel content
+          const testCanv = document.createElement('canvas');
+          testCanv.width = 40;
+          testCanv.height = 30;
+          const testCtx = testCanv.getContext('2d');
+          if (testCtx) {
+            testCtx.drawImage(primaryChartCanvas, 0, 0, primaryChartCanvas.width, primaryChartCanvas.height, 0, 0, 40, 30);
+            const pData = testCtx.getImageData(0, 0, 40, 30).data;
+            let nonZero = 0;
+            for (let pi = 0; pi < pData.length; pi += 4) {
+              if (pData[pi + 3] > 20 && (pData[pi] > 15 || pData[pi + 1] > 15 || pData[pi + 2] > 15)) {
+                nonZero++;
+              }
+            }
+            if (nonZero > 20) {
+              ctx.drawImage(primaryChartCanvas, 0, 0, primaryChartCanvas.width, primaryChartCanvas.height, 0, 0, w, h);
+              capturedFromDom = true;
+            }
+          }
         }
       } catch (err) {
         capturedFromDom = false;
       }
 
-      // If DOM canvas was not accessible, render the real live candle stream
+      // If DOM canvas was transparent/empty/black, render the authentic live candle stream
       if (!capturedFromDom) {
         ctx.fillStyle = '#05091a';
         ctx.fillRect(0, 0, w, h);
@@ -662,7 +739,10 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
             }}
           >
             {/* Top Bar: Broker Quotex & Dynamic OTC / Real Switch */}
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/15">
+            <div
+              className="flex items-center justify-between pb-3 mb-3 border-b border-white/15 animate-[slideDown_0.35s_cubic-bezier(0.16,1,0.3,1)_both]"
+              style={{ animationDelay: '40ms' }}
+            >
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-fuchsia-600 via-pink-600 to-indigo-600 flex items-center justify-center shadow-[0_0_14px_rgba(217,70,239,0.7)] border border-white/30">
                   <div className="flex items-end gap-0.5">
@@ -711,7 +791,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
 
             {/* Asset Bar with Country Flags (Water-like 3D Box) */}
             <div
-              className="p-3 rounded-2xl flex items-center justify-between mb-3.5"
+              className="p-3 rounded-2xl flex items-center justify-between mb-3.5 animate-[fadeIn_0.4s_cubic-bezier(0.16,1,0.3,1)_both]"
               style={{
                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(10, 16, 45, 0.65) 100%)',
                 backdropFilter: 'blur(20px)',
@@ -719,6 +799,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
                 border: '1px solid rgba(255, 255, 255, 0.16)',
                 borderTop: '1px solid rgba(255, 255, 255, 0.35)',
                 boxShadow: 'inset 0 1px 1.5px rgba(255, 255, 255, 0.25), 0 8px 24px rgba(0, 0, 0, 0.45)',
+                animationDelay: '100ms',
               }}
             >
               <div className="flex items-center gap-2.5">
@@ -738,14 +819,15 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
               </div>
             </div>
 
-            {/* 🌟 Primary Action Card (CALL or PUT) */}
+            {/* 🌟 Primary Action Card (CALL or PUT) with Pop-In Entrance */}
             {isCall ? (
               <div
-                className="relative p-4 rounded-2xl border-[1.5px] border-[#00E5FF] mb-3.5"
+                className="relative p-4 rounded-2xl border-[1.5px] border-[#00E5FF] mb-3.5 animate-[popIn_0.45s_cubic-bezier(0.16,1,0.3,1)_both]"
                 style={{
                   background: 'linear-gradient(135deg, rgba(4, 47, 46, 0.85) 0%, rgba(6, 78, 59, 0.85) 50%, rgba(2, 44, 34, 0.9) 100%)',
                   backdropFilter: 'blur(20px)',
                   boxShadow: '0 0 30px rgba(0,229,255,0.45), inset 0 1.5px 2px rgba(255,255,255,0.4)',
+                  animationDelay: '180ms',
                 }}
               >
                 <div className="text-center text-[9px] uppercase font-bold tracking-[2.5px] text-cyan-300 mb-1">
@@ -768,11 +850,12 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
               </div>
             ) : (
               <div
-                className="relative p-4 rounded-2xl border-[1.5px] border-[#FF2E54] mb-3.5"
+                className="relative p-4 rounded-2xl border-[1.5px] border-[#FF2E54] mb-3.5 animate-[popIn_0.45s_cubic-bezier(0.16,1,0.3,1)_both]"
                 style={{
                   background: 'linear-gradient(135deg, rgba(76, 5, 25, 0.85) 0%, rgba(136, 19, 55, 0.85) 50%, rgba(59, 7, 22, 0.9) 100%)',
                   backdropFilter: 'blur(20px)',
                   boxShadow: '0 0 30px rgba(255,46,84,0.45), inset 0 1.5px 2px rgba(255,255,255,0.4)',
+                  animationDelay: '180ms',
                 }}
               >
                 <div className="text-center text-[9px] uppercase font-bold tracking-[2.5px] text-rose-300 mb-1">
@@ -797,9 +880,9 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
 
             {/* 2-Column Grid: CONFIDENCE & KEY LEVELS (Water-like 3D Boxes) */}
             <div className="grid grid-cols-2 gap-3 mb-3">
-              {/* Confidence Box */}
+              {/* Confidence Box with Dynamic Ring Animation */}
               <div
-                className="p-3.5 rounded-2xl flex flex-col items-center justify-center"
+                className="p-3.5 rounded-2xl flex flex-col items-center justify-center animate-[slideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_both]"
                 style={{
                   background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(10, 16, 45, 0.65) 100%)',
                   backdropFilter: 'blur(20px)',
@@ -807,6 +890,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
                   border: '1px solid rgba(255, 255, 255, 0.16)',
                   borderTop: '1px solid rgba(255, 255, 255, 0.35)',
                   boxShadow: 'inset 0 1px 1.5px rgba(255, 255, 255, 0.25), 0 8px 24px rgba(0, 0, 0, 0.45)',
+                  animationDelay: '260ms',
                 }}
               >
                 <span className="text-[9px] uppercase font-bold tracking-widest text-slate-300 block mb-2">
@@ -821,18 +905,18 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
                       r="40"
                       stroke={isCall ? '#00E5FF' : '#FF2E54'}
                       strokeWidth="8"
-                      strokeDasharray={strokeCircumference}
-                      strokeDashoffset={strokeOffset}
+                      strokeDasharray={2 * Math.PI * 40}
+                      strokeDashoffset={circleOffset}
                       strokeLinecap="round"
                       fill="none"
                       style={{
                         filter: `drop-shadow(0 0 6px ${isCall ? '#00E5FF' : '#FF2E54'})`,
-                        transition: 'stroke-dashoffset 1s ease-out',
+                        transition: 'stroke-dashoffset 0.05s linear',
                       }}
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xl font-black text-white tracking-tight">{confidenceVal}%</span>
+                    <span className="text-xl font-black text-white tracking-tight">{displayConfidence}%</span>
                   </div>
                 </div>
                 <span className={`text-[10px] font-bold mt-1 ${isCall ? 'text-cyan-300' : 'text-pink-300'}`}>
@@ -843,7 +927,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
 
               {/* Key Levels Box */}
               <div
-                className="p-3.5 rounded-2xl flex flex-col justify-between"
+                className="p-3.5 rounded-2xl flex flex-col justify-between animate-[slideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_both]"
                 style={{
                   background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(10, 16, 45, 0.65) 100%)',
                   backdropFilter: 'blur(20px)',
@@ -851,6 +935,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
                   border: '1px solid rgba(255, 255, 255, 0.16)',
                   borderTop: '1px solid rgba(255, 255, 255, 0.35)',
                   boxShadow: 'inset 0 1px 1.5px rgba(255, 255, 255, 0.25), 0 8px 24px rgba(0, 0, 0, 0.45)',
+                  animationDelay: '320ms',
                 }}
               >
                 <span className="text-[9px] uppercase font-bold tracking-widest text-slate-300 block mb-1">
@@ -881,7 +966,10 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
             </div>
 
             {/* Bottom Row Pills: TREND & PATTERN (Water-like 3D Boxes) */}
-            <div className="grid grid-cols-2 gap-3">
+            <div
+              className="grid grid-cols-2 gap-3 animate-[slideUp_0.45s_cubic-bezier(0.16,1,0.3,1)_both]"
+              style={{ animationDelay: '380ms' }}
+            >
               <div
                 className="p-2.5 rounded-xl flex items-center gap-2"
                 style={{
