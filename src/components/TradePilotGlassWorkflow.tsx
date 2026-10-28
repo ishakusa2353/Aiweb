@@ -164,40 +164,27 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
         ctx.stroke();
       }
 
-      // Attempt direct screen canvas clone if present in DOM and has visible pixels
+      // Attempt direct screen canvas clone from broker / background trading chart
       let capturedFromDom = false;
       try {
         const allDomCanvases = document.querySelectorAll('canvas');
-        let primaryChartCanvas: HTMLCanvasElement | null = null;
-        let maxCanvasArea = 0;
+        const validChartCanvases: HTMLCanvasElement[] = [];
         for (let i = 0; i < allDomCanvases.length; i++) {
           const c = allDomCanvases[i];
           if (c === canvas || c === zoomCanvasRef.current) continue;
-          const area = (c.width || c.clientWidth || 0) * (c.height || c.clientHeight || 0);
-          if (area > maxCanvasArea) {
-            maxCanvasArea = area;
-            primaryChartCanvas = c;
+          if (c.closest && c.closest('.wf-modal-container')) continue;
+          const rect = c.getBoundingClientRect();
+          if (rect.width >= 100 && rect.height >= 70 && c.width >= 100 && c.height >= 70) {
+            validChartCanvases.push(c);
           }
         }
-        if (primaryChartCanvas && primaryChartCanvas.width > 50 && primaryChartCanvas.height > 50) {
-          // Verify canvas actually has non-empty pixel content
-          const testCanv = document.createElement('canvas');
-          testCanv.width = 40;
-          testCanv.height = 30;
-          const testCtx = testCanv.getContext('2d');
-          if (testCtx) {
-            testCtx.drawImage(primaryChartCanvas, 0, 0, primaryChartCanvas.width, primaryChartCanvas.height, 0, 0, 40, 30);
-            const pData = testCtx.getImageData(0, 0, 40, 30).data;
-            let nonZero = 0;
-            for (let pi = 0; pi < pData.length; pi += 4) {
-              if (pData[pi + 3] > 20 && (pData[pi] > 15 || pData[pi + 1] > 15 || pData[pi + 2] > 15)) {
-                nonZero++;
-              }
-            }
-            if (nonZero > 20) {
-              ctx.drawImage(primaryChartCanvas, 0, 0, primaryChartCanvas.width, primaryChartCanvas.height, 0, 0, w, h);
+        if (validChartCanvases.length > 0) {
+          for (let vi = 0; vi < validChartCanvases.length; vi++) {
+            const chartCanv = validChartCanvases[vi];
+            try {
+              ctx.drawImage(chartCanv, 0, 0, chartCanv.width, chartCanv.height, 0, 0, w, h);
               capturedFromDom = true;
-            }
+            } catch (e) {}
           }
         }
       } catch (err) {

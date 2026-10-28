@@ -2244,20 +2244,23 @@ export function evaluateMarketData(
     } else {
       isCall = true;
     }
-  } else if (buyScore > sellScore) {
+  } else if (buyScore > sellScore + 8) {
     isCall = true;
-  } else if (sellScore > buyScore) {
+  } else if (sellScore > buyScore + 8) {
     isCall = false;
+  } else if (Math.abs(pricePath.expectedTerminalPrice - entryPrice) > 0.000002) {
+    // Primary tie-breaker: Where will quote settle at expiration?
+    isCall = pricePath.expectedTerminalPrice > entryPrice;
+  } else if (pricePath.callPathProbability !== 0.5) {
+    isCall = pricePath.callPathProbability > 0.5;
   } else if (livePrices && livePrices.length >= 2 && livePrices[livePrices.length - 1] !== livePrices[0]) {
     isCall = livePrices[livePrices.length - 1] > livePrices[0];
   } else if (Math.abs(tickSlope) > 0.0000001) {
     isCall = tickSlope > 0;
   } else if (velocity !== 0) {
     isCall = velocity > 0;
-  } else if (currentPrice !== currentCandle.open) {
-    isCall = currentPrice > currentCandle.open;
   } else {
-    isCall = lastEngineDirection === 'PUT' ? true : false;
+    isCall = isMacroBull ? true : false;
   }
 
   if (isCall === true) {

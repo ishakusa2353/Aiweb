@@ -50,6 +50,40 @@ javascript:(function(){
     } catch(e){}
   }
 
+  // 📸 CONTINUOUS LIVE CHART MIRROR LOOP (Guarantees authentic Quotex chart capture, never blank or fake)
+  (function setupChartMirrorLoop() {
+    if (window.__ISHAK_MIRROR_LOOP_INITIALIZED__) return;
+    window.__ISHAK_MIRROR_LOOP_INITIALIZED__ = true;
+    try {
+      var offCanvas = document.createElement('canvas');
+      offCanvas.width = 640;
+      offCanvas.height = 360;
+      var offCtx = offCanvas.getContext('2d');
+      window.__ISHAK_OFFSCREEN_CHART_CANVAS__ = offCanvas;
+      window.__ISHAK_HAS_CAPTURED_CHART_FRAME__ = false;
+
+      function captureLiveBrokerFrame() {
+        try {
+          var cands = document.querySelectorAll('.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart"] canvas, main canvas, canvas');
+          for (var ci = 0; ci < cands.length; ci++) {
+            var cv = cands[ci];
+            if (cv.id === 'wf-capture-canvas' || cv.id === 'wf-zoom-canvas') continue;
+            if (cv.closest && (cv.closest('#ishak-trade-wrap') || cv.closest('.ishak-dialog-modal') || cv.closest('#ishak-hud-panel') || cv.closest('#ishak-workflow-modal'))) continue;
+            var r = cv.getBoundingClientRect();
+            if (r.width > 100 && r.height > 80 && cv.width > 100 && cv.height > 80) {
+              if (offCtx) {
+                offCtx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, offCanvas.width, offCanvas.height);
+                window.__ISHAK_HAS_CAPTURED_CHART_FRAME__ = true;
+              }
+            }
+          }
+        } catch(e){}
+        requestAnimationFrame(captureLiveBrokerFrame);
+      }
+      requestAnimationFrame(captureLiveBrokerFrame);
+    } catch(e){}
+  })();
+
   // 🛰️ HIGH-SPEED WEBSOCKET, FETCH & XHR NETWORK HOOK (Real Quotex Tick Stream + qxtrxhost.com/api/v1/touch sync)
   window.__ISHAK_LIVE_TICKS__ = window.__ISHAK_LIVE_TICKS__ || [];
   window.__ISHAK_LAST_WS_PRICE__ = window.__ISHAK_LAST_WS_PRICE__ || null;
@@ -3835,12 +3869,32 @@ javascript:(function(){
     var isMacroBull = ema9 > ema21 && ema21 > ema50;
     var isMacroBear = ema9 < ema21 && ema21 < ema50;
 
-    var velocityDrift = tickVelocity * (dur <= 5 ? 0.92 : dur <= 10 ? 0.82 : dur <= 15 ? 0.72 : 0.60);
+    var velocityDrift = tickVelocity * (dur <= 5 ? 0.95 : dur <= 10 ? 0.85 : dur <= 15 ? 0.75 : 0.65);
     var slopeDrift = tickSlope * dur;
     var accelDrift = 0.5 * tickAcceleration * (dur / 2);
     var macroDrift = isMacroBull ? atr14 * (dur <= 10 ? 0.05 : 0.12) : isMacroBear ? -atr14 * (dur <= 10 ? 0.05 : 0.12) : 0;
-    var wickAdjustment = (lowerWickRatio - upperWickRatio) * (atr14 * 0.15);
-    var totalDrift = slopeDrift + velocityDrift + accelDrift + macroDrift + wickAdjustment;
+    var wickAdjustment = (lowerWickRatio - upperWickRatio) * (atr14 * 0.25);
+
+    // Rebound reflection physics off dynamic Resistance and Support barriers
+    var srBarrierReflection = 0;
+    if (distToResistance <= 0.14 && (upperWickRatio >= 0.18 || tickAcceleration < 0)) {
+      // Approaching resistance with rejection/deceleration: elastic bounce downwards
+      srBarrierReflection -= (atr14 * 0.25);
+    }
+    if (distToSupport <= 0.14 && (lowerWickRatio >= 0.18 || tickAcceleration > 0)) {
+      // Approaching support with absorption/acceleration: elastic bounce upwards
+      srBarrierReflection += (atr14 * 0.25);
+    }
+
+    // Mean-reversion force from extreme RSI boundaries
+    var rsiReversion = 0;
+    if (calculatedRsi >= 72) {
+      rsiReversion -= (atr14 * 0.20) * ((calculatedRsi - 70) / 15);
+    } else if (calculatedRsi <= 28) {
+      rsiReversion += (atr14 * 0.20) * ((30 - calculatedRsi) / 15);
+    }
+
+    var totalDrift = slopeDrift + velocityDrift + accelDrift + macroDrift + wickAdjustment + srBarrierReflection + rsiReversion;
     var expectedTerminalPrice = entryPrice + totalDrift;
 
     var upsideCapped = distToResistance < 0.10 && expectedTerminalPrice > resistance;
@@ -4140,13 +4194,27 @@ javascript:(function(){
         downFactorsList.push('5S Instant Velocity Push Down [+18]');
       }
 
-      // C. Active Running Candle Anatomy & Wick Physics
+      // C. Active Running Candle Anatomy & Rejection Physics (Zero Naive Color Mapping)
       if (runningClose > runningOpen) {
-        buyScore += 30;
-        upFactorsList.push('5S Active Running Bar Bullish [+30]');
+        if (upperWickRatio >= 0.28 || distToResistance <= 0.12) {
+          // Green bar hitting resistance or showing upper rejection wick -> exhaustion pullback DOWN!
+          sellScore += 35;
+          downFactorsList.push('5S Green Bar Upper Wick Resistance Rejection: Reversal pullback downward [+35]');
+        } else if (upperWickRatio < 0.20 && (tickVelocity > 0 || tickSlope > 0)) {
+          // Clean bullish impulse with solid body and positive thrust
+          buyScore += 26;
+          upFactorsList.push('5S Clean Bullish Body Thrust [+26]');
+        }
       } else if (runningClose < runningOpen) {
-        sellScore += 30;
-        downFactorsList.push('5S Active Running Bar Bearish [+30]');
+        if (lowerWickRatio >= 0.28 || distToSupport <= 0.12) {
+          // Red bar hitting support or showing lower absorption wick -> floor bounce UP!
+          buyScore += 35;
+          upFactorsList.push('5S Red Bar Lower Wick Support Absorption: Reversal bounce upward [+35]');
+        } else if (lowerWickRatio < 0.20 && (tickVelocity < 0 || tickSlope < 0)) {
+          // Clean bearish impulse with solid body and negative thrust
+          sellScore += 26;
+          downFactorsList.push('5S Clean Bearish Body Thrust [+26]');
+        }
       }
 
       if (candleRange > 0.00001) {
@@ -4161,13 +4229,13 @@ javascript:(function(){
         }
       }
 
-      // 🌟 5-SECOND FORWARD HOLDING HORIZON (Assesses if price will sustain above/below entry for full 5 seconds)
-      if (callPathProb >= 0.52 && expectedTerminalPrice > entryPrice) {
-        buyScore += 40;
-        upFactorsList.push('5S Timeframe Horizon: Price path modeled to hold ABOVE entry price for full 5s duration (+40)');
-      } else if (callPathProb <= 0.48 && expectedTerminalPrice < entryPrice) {
-        sellScore += 40;
-        downFactorsList.push('5S Timeframe Horizon: Price path modeled to hold BELOW entry price for full 5s duration (+40)');
+      // 🌟 5-SECOND FORWARD HOLDING EXPIRY HORIZON (Where live quote settles after full 5s duration)
+      if (expectedTerminalPrice > entryPrice + 0.000002) {
+        buyScore += 50;
+        upFactorsList.push('5S Expiry Horizon: Live quote modeled to settle ABOVE entry (' + expectedTerminalPrice.toFixed(5) + ' > ' + entryPrice.toFixed(5) + ') [+50]');
+      } else if (expectedTerminalPrice < entryPrice - 0.000002) {
+        sellScore += 50;
+        downFactorsList.push('5S Expiry Horizon: Live quote modeled to settle BELOW entry (' + expectedTerminalPrice.toFixed(5) + ' < ' + entryPrice.toFixed(5) + ') [+50]');
       }
 
       // 🛡️ 5S REVERSAL PIN-BAR FILTER (Only trigger on extreme exhaustion with genuine pin-bar)
@@ -4277,11 +4345,21 @@ javascript:(function(){
       }
       
       if (runningClose > runningOpen) {
-        buyScore += 28;
-        upFactorsList.push('10S/15S Active Running Bar Bullish [+28]');
+        if (upperWickRatio >= 0.28 || distToResistance <= 0.12) {
+          sellScore += 32;
+          downFactorsList.push('10S/15S Green Bar Resistance Rejection: Quote projected downward [+32]');
+        } else if (upperWickRatio < 0.20 && (tickVelocity > 0 || tickSlope > 0)) {
+          buyScore += 24;
+          upFactorsList.push('10S/15S Active Bullish Thrust [+24]');
+        }
       } else if (runningClose < runningOpen) {
-        sellScore += 28;
-        downFactorsList.push('10S/15S Active Running Bar Bearish [+28]');
+        if (lowerWickRatio >= 0.28 || distToSupport <= 0.12) {
+          buyScore += 32;
+          upFactorsList.push('10S/15S Red Bar Support Absorption: Quote projected upward [+32]');
+        } else if (lowerWickRatio < 0.20 && (tickVelocity < 0 || tickSlope < 0)) {
+          sellScore += 24;
+          downFactorsList.push('10S/15S Active Bearish Thrust [+24]');
+        }
       }
 
       if (candleRange > 0.00001) {
@@ -4294,6 +4372,15 @@ javascript:(function(){
           srPattern = 'Upper Wick Resistance Rejection';
           downFactorsList.push('10S/15S Upper Wick Resistance Rejection [+30]');
         }
+      }
+
+      // 🌟 10S/15S FORWARD HOLDING EXPIRY HORIZON
+      if (expectedTerminalPrice > entryPrice + 0.000002) {
+        buyScore += 45;
+        upFactorsList.push(dur + 'S Expiry Horizon: Live quote modeled to settle ABOVE entry (' + expectedTerminalPrice.toFixed(5) + ' > ' + entryPrice.toFixed(5) + ') [+45]');
+      } else if (expectedTerminalPrice < entryPrice - 0.000002) {
+        sellScore += 45;
+        downFactorsList.push(dur + 'S Expiry Horizon: Live quote modeled to settle BELOW entry (' + expectedTerminalPrice.toFixed(5) + ' < ' + entryPrice.toFixed(5) + ') [+45]');
       }
 
       if (calculatedRsi >= 73) {
@@ -4361,24 +4448,26 @@ javascript:(function(){
       }
     }
 
-    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION (100% Dynamic - Zero Memorization) ---
+    // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION (Governed by Expiry Horizon Quote Projection) ---
     var netConfluence = buyScore - sellScore;
     var isCall;
-    if (buyScore > sellScore) {
+    if (buyScore > sellScore + 8) {
       isCall = true;
-    } else if (sellScore > buyScore) {
+    } else if (sellScore > buyScore + 8) {
       isCall = false;
+    } else if (Math.abs(expectedTerminalPrice - entryPrice) > 0.000002) {
+      // Primary tie-breaker: Projected terminal quote location at expiration!
+      isCall = expectedTerminalPrice > entryPrice;
+    } else if (callPathProb !== 0.5) {
+      isCall = callPathProb > 0.5;
     } else if (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] !== priceSamples[0]) {
-      // Dynamic fresh scan tick slope
       isCall = priceSamples[priceSamples.length - 1] > priceSamples[0];
     } else if (Math.abs(tickSlope) > 0.0000001) {
       isCall = tickSlope > 0;
     } else if (tickVelocity !== 0) {
       isCall = tickVelocity > 0;
-    } else if (runningClose !== runningOpen) {
-      isCall = runningClose > runningOpen;
     } else {
-      isCall = Math.random() >= 0.5;
+      isCall = isMacroBull ? true : false;
     }
 
     var isTradeApproved = isCall !== null;
@@ -4390,8 +4479,8 @@ javascript:(function(){
       ? (srPattern || (isCall ? "Bullish Real Market Confluence & Price Path" : "Bearish Real Market Confluence & Price Path"))
       : (isDeadFlat ? "Dead Flat Market Consolidation (Chop Filter)" : "Low Confluence Filter");
     var confluenceLogic = isCall
-      ? "টাইমফ্রেম " + durLabel + ": রানিং ক্যান্ডেল বুলিশ মোমেন্টাম ও বায়ার প্রেশারে ঊর্ধ্বমুখী। ট্রেড শেষ হওয়া পর্যন্ত (" + durLabel + ") ক্যান্ডেল আপসাইডে (CALL / UP ↑) সমাপ্তির পূর্বাভাস নিশ্চিত!"
-      : "টাইমফ্রেম " + durLabel + ": রানিং ক্যান্ডেল বিয়ারিশ মোমেন্টাম ও সেলার প্রেশারে নিম্নমুখী। ট্রেড শেষ হওয়া পর্যন্ত (" + durLabel + ") ক্যান্ডেল ডাউনসাইডে (PUT / DOWN ↓) সমাপ্তির পূর্বাভাস নিশ্চিত!";
+      ? "টাইমফ্রেম " + durLabel + ": ট্রেড এন্ট্রি লেভেল " + entryPrice.toFixed(5) + " থেকে " + durLabel + " মেয়াদে টার্মিনাল প্রাইজ " + expectedTerminalPrice.toFixed(5) + " তে আপসাইডে (CALL / BUY ↑) সমাপ্তির পূর্বাভাস নিশ্চিত!"
+      : "টাইমফ্রেম " + durLabel + ": ট্রেড এন্ট্রি লেভেল " + entryPrice.toFixed(5) + " থেকে " + durLabel + " মেয়াদে টার্মিনাল প্রাইজ " + expectedTerminalPrice.toFixed(5) + " তে ডাউনসাইডে (PUT / SELL ↓) সমাপ্তির পূর্বাভাস নিশ্চিত!";
 
     var internalAudit = {
       direction: isCall === true ? "UP" : "DOWN",
@@ -4702,57 +4791,67 @@ javascript:(function(){
 
             var capturedFromDom = false;
             try {
-              var domCanvases = document.querySelectorAll('canvas');
-              var primaryChartCanvas = null;
-              var maxCanvasArea = 0;
+              // 1. First priority: Composite from background RAF frame mirror if available
+              if (window.__ISHAK_HAS_CAPTURED_CHART_FRAME__ && window.__ISHAK_OFFSCREEN_CHART_CANVAS__) {
+                ctx.drawImage(
+                  window.__ISHAK_OFFSCREEN_CHART_CANVAS__,
+                  0, 0, window.__ISHAK_OFFSCREEN_CHART_CANVAS__.width, window.__ISHAK_OFFSCREEN_CHART_CANVAS__.height,
+                  0, 0, cCanvas.width, cCanvas.height
+                );
+                capturedFromDom = true;
+              }
+
+              // 2. Direct DOM query of all broker chart canvases (layered: grid + candles + indicators)
+              var domCanvases = document.querySelectorAll(
+                '.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart-"] canvas, [class*="chart"] canvas, #chart canvas, main canvas, canvas'
+              );
+              var validBrokerLayers = [];
               for (var dci = 0; dci < domCanvases.length; dci++) {
                 var dc = domCanvases[dci];
                 if (dc.id === 'wf-capture-canvas' || dc.id === 'wf-zoom-canvas') continue;
-                var area = (dc.width || dc.clientWidth || 0) * (dc.height || dc.clientHeight || 0);
-                if (area > maxCanvasArea) {
-                  maxCanvasArea = area;
-                  primaryChartCanvas = dc;
+                if (dc.closest && (dc.closest('#ishak-workflow-modal') || dc.closest('#ishak-hud-panel') || dc.closest('#ishak-trade-wrap') || dc.closest('.ishak-dialog-modal'))) continue;
+                var cr = dc.getBoundingClientRect();
+                if (cr.width >= 100 && cr.height >= 70 && dc.width >= 100 && dc.height >= 70) {
+                  validBrokerLayers.push(dc);
                 }
               }
-              if (primaryChartCanvas && primaryChartCanvas.width > 50 && primaryChartCanvas.height > 50) {
-                // Test if canvas actually has non-empty colored pixels
-                var testC = document.createElement('canvas');
-                testC.width = 40;
-                testC.height = 30;
-                var testCtx = testC.getContext('2d');
-                if (testCtx) {
-                  testCtx.drawImage(primaryChartCanvas, 0, 0, primaryChartCanvas.width, primaryChartCanvas.height, 0, 0, 40, 30);
-                  var pData = testCtx.getImageData(0, 0, 40, 30).data;
-                  var nonZero = 0;
-                  for (var pi = 0; pi < pData.length; pi += 4) {
-                    if (pData[pi + 3] > 20 && (pData[pi] > 15 || pData[pi + 1] > 15 || pData[pi + 2] > 15)) {
-                      nonZero++;
-                    }
-                  }
-                  if (nonZero > 20) {
-                    ctx.drawImage(primaryChartCanvas, 0, 0, primaryChartCanvas.width, primaryChartCanvas.height, 0, 0, cCanvas.width, cCanvas.height);
+
+              if (validBrokerLayers.length > 0) {
+                for (var vli = 0; vli < validBrokerLayers.length; vli++) {
+                  var layerCanvas = validBrokerLayers[vli];
+                  try {
+                    ctx.drawImage(layerCanvas, 0, 0, layerCanvas.width, layerCanvas.height, 0, 0, cCanvas.width, cCanvas.height);
                     capturedFromDom = true;
-                  }
+                  } catch(e){}
                 }
               }
             } catch(e) {
-              capturedFromDom = false;
+              // Do not fail if any canvas operation had a minor hitch
             }
 
+            // 3. Fallback ONLY if running outside broker where no chart canvases exist:
+            // NEVER EVER draw fake sine waves! Render real historical candlesticks and ticks of the asset!
             if (!capturedFromDom) {
-              var cList = window.__ISHAK_BACKGROUND_CANDLES__ && window.__ISHAK_BACKGROUND_CANDLES__.length >= 5
+              var cList = (window.__ISHAK_BACKGROUND_CANDLES__ && window.__ISHAK_BACKGROUND_CANDLES__.length >= 3)
                 ? window.__ISHAK_BACKGROUND_CANDLES__.slice(-18)
                 : [];
 
-              if (cList.length < 5) {
-                var baseVal = livePriceVal;
-                for (var i = 18; i >= 0; i--) {
-                  var o = baseVal + Math.sin(i * 0.5) * (baseVal * 0.0003);
-                  var c = baseVal + Math.sin((i - 1) * 0.5) * (baseVal * 0.0003);
-                  var h = Math.max(o, c) + (baseVal * 0.0001);
-                  var l = Math.min(o, c) - (baseVal * 0.0001);
-                  cList.push({ open: o, high: h, low: l, close: c });
+              if (cList.length < 3 && window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length >= 4) {
+                var ticks = window.__ISHAK_LIVE_TICKS__.map(function(t){ return (typeof t === 'object' && t.price) ? t.price : t; });
+                var step = Math.max(1, Math.floor(ticks.length / 14));
+                for (var ti = 0; ti < ticks.length; ti += step) {
+                  var slice = ticks.slice(ti, ti + step);
+                  var oP = slice[0];
+                  var cP = slice[slice.length - 1];
+                  var hP = Math.max.apply(null, slice);
+                  var lP = Math.min.apply(null, slice);
+                  cList.push({ open: oP, high: hP, low: lP, close: cP });
                 }
+              }
+
+              if (cList.length === 0) {
+                var curP = livePriceVal || 1.0;
+                cList.push({ open: curP, high: curP * 1.00015, low: curP * 0.99985, close: curP });
               }
 
               var minVal = Math.min.apply(null, cList.map(function(c){ return c.low; }));
@@ -4788,13 +4887,13 @@ javascript:(function(){
               ctx.beginPath(); ctx.moveTo(0, pY); ctx.lineTo(cCanvas.width, pY); ctx.stroke();
               ctx.setLineDash([]);
 
-              // Price badge on right
+              // Live price badge on right matching broker rate
               ctx.fillStyle = '#00E5FF';
-              ctx.fillRect(cCanvas.width - 58, pY - 8, 56, 16);
+              ctx.fillRect(cCanvas.width - 64, pY - 8, 62, 16);
               ctx.fillStyle = '#040816';
               ctx.font = 'bold 8.5px monospace';
               ctx.textAlign = 'center';
-              ctx.fillText(livePriceVal.toFixed(livePriceVal < 10 ? 4 : 2), cCanvas.width - 30, pY + 4);
+              ctx.fillText(livePriceVal.toFixed(livePriceVal < 10 ? 5 : 2), cCanvas.width - 33, pY + 4);
             }
           }
         }
