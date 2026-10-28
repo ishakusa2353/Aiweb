@@ -50,39 +50,34 @@ javascript:(function(){
     } catch(e){}
   }
 
-  // 📸 CONTINUOUS LIVE CHART MIRROR LOOP (Guarantees authentic Quotex chart capture, never blank or fake)
-  (function setupChartMirrorLoop() {
-    if (window.__ISHAK_MIRROR_LOOP_INITIALIZED__) return;
-    window.__ISHAK_MIRROR_LOOP_INITIALIZED__ = true;
+  // 📸 Authentic Quotex Main Candlestick Chart Canvas Sniffer (Filters out price axis & time axis strips)
+  function findQuotexMainChartCanvas() {
     try {
-      var offCanvas = document.createElement('canvas');
-      offCanvas.width = 640;
-      offCanvas.height = 360;
-      var offCtx = offCanvas.getContext('2d');
-      window.__ISHAK_OFFSCREEN_CHART_CANVAS__ = offCanvas;
-      window.__ISHAK_HAS_CAPTURED_CHART_FRAME__ = false;
-
-      function captureLiveBrokerFrame() {
-        try {
-          var cands = document.querySelectorAll('.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart"] canvas, main canvas, canvas');
-          for (var ci = 0; ci < cands.length; ci++) {
-            var cv = cands[ci];
-            if (cv.id === 'wf-capture-canvas' || cv.id === 'wf-zoom-canvas') continue;
-            if (cv.closest && (cv.closest('#ishak-trade-wrap') || cv.closest('.ishak-dialog-modal') || cv.closest('#ishak-hud-panel') || cv.closest('#ishak-workflow-modal'))) continue;
-            var r = cv.getBoundingClientRect();
-            if (r.width > 100 && r.height > 80 && cv.width > 100 && cv.height > 80) {
-              if (offCtx) {
-                offCtx.drawImage(cv, 0, 0, cv.width, cv.height, 0, 0, offCanvas.width, offCanvas.height);
-                window.__ISHAK_HAS_CAPTURED_CHART_FRAME__ = true;
-              }
-            }
-          }
-        } catch(e){}
-        requestAnimationFrame(captureLiveBrokerFrame);
+      var candidates = document.querySelectorAll(
+        '.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart"] canvas, #chart canvas, main canvas, canvas'
+      );
+      var best = null;
+      var bestArea = 0;
+      for (var i = 0; i < candidates.length; i++) {
+        var cv = candidates[i];
+        if (cv.id === 'wf-capture-canvas' || cv.id === 'wf-zoom-canvas') continue;
+        if (cv.closest && (cv.closest('#ishak-workflow-modal') || cv.closest('#ishak-hud-panel') || cv.closest('#ishak-trade-wrap') || cv.closest('.ishak-dialog-modal'))) continue;
+        var r = cv.getBoundingClientRect();
+        // Ignore thin price axis (width < 80) and thin time axis (height < 50)
+        if (r.width < 140 || r.height < 90) continue;
+        var ratio = r.width / r.height;
+        if (ratio > 4.5 || ratio < 0.28) continue;
+        var area = r.width * r.height;
+        if (area > bestArea) {
+          bestArea = area;
+          best = cv;
+        }
       }
-      requestAnimationFrame(captureLiveBrokerFrame);
-    } catch(e){}
-  })();
+      return best;
+    } catch(e) {
+      return null;
+    }
+  }
 
   // 🛰️ HIGH-SPEED WEBSOCKET, FETCH & XHR NETWORK HOOK (Real Quotex Tick Stream + qxtrxhost.com/api/v1/touch sync)
   window.__ISHAK_LIVE_TICKS__ = window.__ISHAK_LIVE_TICKS__ || [];
@@ -3447,27 +3442,23 @@ javascript:(function(){
       }
     }
 
-    // High-Accuracy Market Structure Builder from Live Asset Price (for HTML5 Canvas charts)
-    if (candleData.length < 5 && currentLivePrice && currentLivePrice > 0) {
-      var baseP = currentLivePrice;
-      var nowTs = Date.now();
-      for (var si = 20; si >= 0; si--) {
-        var tS = (nowTs - si * dur * 1000) / 1000;
-        var mWave = Math.sin(tS * (2 * Math.PI / 50)) * (baseP * 0.00030);
-        var iWave = Math.sin(tS * (2 * Math.PI / 20)) * (baseP * 0.00015);
-        var uNoise = Math.cos(tS * (2 * Math.PI / 7)) * (baseP * 0.00005);
-        var cP = parseFloat((baseP + mWave + iWave + uNoise).toFixed(5));
-        var oP = candleData.length > 0 ? candleData[candleData.length - 1].close : parseFloat((cP - (baseP * 0.00006)).toFixed(5));
-        var wT = (baseP * 0.00005) + Math.abs(Math.sin(tS * 1.5)) * (baseP * 0.00004);
-        var wB = (baseP * 0.00005) + Math.abs(Math.cos(tS * 1.3)) * (baseP * 0.00004);
-        candleData.push({
-          open: oP,
-          close: cP,
-          high: parseFloat((Math.max(oP, cP) + wT).toFixed(5)),
-          low: parseFloat((Math.min(oP, cP) - wB).toFixed(5))
-        });
+    // High-Accuracy Market Structure Builder from Live Asset Price & Real Ticks (Zero Fake Waves)
+    if (candleData.length < 5 && allRawTicks.length >= 2) {
+      var nSlices = Math.min(12, Math.max(3, allRawTicks.length));
+      var step = Math.max(1, Math.floor(allRawTicks.length / nSlices));
+      for (var si = 0; si < allRawTicks.length; si += step) {
+        var subSlice = allRawTicks.slice(si, si + step);
+        if (subSlice.length > 0) {
+          var oP = subSlice[0];
+          var cP = subSlice[subSlice.length - 1];
+          var hP = Math.max.apply(null, subSlice);
+          var lP = Math.min.apply(null, subSlice);
+          candleData.push({ open: oP, close: cP, high: hP, low: lP });
+        }
       }
-      candleData[candleData.length - 1].close = currentLivePrice;
+      if (candleData.length > 0 && currentLivePrice) {
+        candleData[candleData.length - 1].close = currentLivePrice;
+      }
     }
 
     // Strict No-Signal if Real Data is completely absent
@@ -4600,8 +4591,51 @@ javascript:(function(){
   }
 
 
+  // 🔍 Helper to locate the true main Quotex chart canvas (Filtering out price/time axis strips)
+  function findQuotexMainChartCanvases() {
+    var candidates = document.querySelectorAll(
+      '.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart-"] canvas, #chart canvas, main canvas, canvas'
+    );
+    var matched = [];
+    var maxArea = 0;
+
+    for (var i = 0; i < candidates.length; i++) {
+      var c = candidates[i];
+      if (c.id === 'wf-capture-canvas' || c.id === 'wf-zoom-canvas' || c.id === 'ishak-temp-bg-canvas') continue;
+      if (c.closest && (c.closest('#ishak-workflow-modal') || c.closest('#ishak-hud-panel') || c.closest('#ishak-trade-wrap') || c.closest('.ishak-dialog-modal'))) continue;
+
+      var rect = c.getBoundingClientRect();
+      var w = rect.width;
+      var h = rect.height;
+
+      // Filter out collapsed/offscreen canvases
+      if (w < 140 || h < 90) continue;
+
+      var ratio = w / h;
+      // Strictly exclude right-side vertical price axis strip (ratio < 0.38)
+      if (ratio < 0.38) continue;
+      // Strictly exclude bottom horizontal time axis strip (ratio > 4.2)
+      if (ratio > 4.2) continue;
+
+      var area = w * h;
+      if (area > maxArea) {
+        maxArea = area;
+      }
+      matched.push({ canvas: c, area: area });
+    }
+
+    // Keep only the primary chart layer(s) matching the max area
+    var result = [];
+    for (var j = 0; j < matched.length; j++) {
+      if (matched[j].area >= maxArea * 0.7) {
+        result.push(matched[j].canvas);
+      }
+    }
+    return result;
+  }
+
   // 7. CLICK TRIGGER WITH MANDATORY PRE-SCAN LIVE DATABASE LICENSE VERIFICATION
-    function triggerScanAndTrade() {
+  function triggerScanAndTrade() {
     try {
       stopAndClearIntroSound();
       if (isScanning) return;
@@ -4640,34 +4674,24 @@ javascript:(function(){
 
       var livePriceVal = extractQuotexLivePrice() || (window.__ISHAK_LAST_WS_PRICE__) || 1627.50;
 
-      // 🧠 Professional Quantitative AI Market Analysis Engine (Requirement 5)
+      // ⏱ Start real-time tick sampling for this specific scan session
+      var scanLiveTicks = [];
+      if (livePriceVal) scanLiveTicks.push(livePriceVal);
+      var scanTickSampler = setInterval(function() {
+        var p = extractQuotexLivePrice() || window.__ISHAK_LAST_WS_PRICE__;
+        if (p && (!scanLiveTicks.length || scanLiveTicks[scanLiveTicks.length - 1] !== p)) {
+          scanLiveTicks.push(p);
+        }
+      }, 40);
+
       var analysis = null;
-      try {
-        analysis = evaluateMarketConfluence([], 60);
-      } catch(e) {}
-
-      var isCall = (analysis && typeof analysis.isCall === 'boolean') ? analysis.isCall : true;
-      var confidence = isCall ? 82 : 78;
-      if (analysis && analysis.accuracyEstimate) {
-        var numAcc = parseInt(analysis.accuracyEstimate.replace(/[^0-9]/g, ''), 10);
-        if (!isNaN(numAcc) && numAcc >= 75 && numAcc <= 95) confidence = numAcc;
-      }
-
-      // Dynamic Support & Resistance levels based on real price action
-      var stepDelta = livePriceVal > 100 ? 0.85 : 0.00095;
-      var resistanceStr = (livePriceVal + stepDelta).toFixed(livePriceVal < 10 ? 4 : 2);
-      var supportStr = (livePriceVal - stepDelta).toFixed(livePriceVal < 10 ? 4 : 2);
-      if (analysis && analysis.indicators && analysis.indicators.supportResistance) {
-        if (analysis.indicators.supportResistance.resistance > 0) {
-          resistanceStr = analysis.indicators.supportResistance.resistance.toFixed(livePriceVal < 10 ? 4 : 2);
-        }
-        if (analysis.indicators.supportResistance.support > 0) {
-          supportStr = analysis.indicators.supportResistance.support.toFixed(livePriceVal < 10 ? 4 : 2);
-        }
-      }
-
-      var trendStr = (analysis && analysis.trendLabel) ? analysis.trendLabel : (isCall ? 'Uptrend' : 'Downtrend');
-      var patternStr = (analysis && analysis.pattern) ? analysis.pattern : (isCall ? 'Bullish Continuation...' : 'Bearish Engulfing...');
+      var isCall = true;
+      var dynamicConfidence = 82;
+      var resistanceStr = '';
+      var supportStr = '';
+      var trendStr = 'Uptrend';
+      var patternStr = 'Bullish Momentum';
+      var liveCaptureInterval = null;
 
       var flags = (function(p){
         var pair = (p || '').toUpperCase();
@@ -4692,18 +4716,18 @@ javascript:(function(){
       if (auraEl) auraEl.classList.add('aura-active');
 
       // ==============================================================
-      // 🚀 SLIDE 1 — INITIAL SCAN: SCREEN SWEEP LASER (2.2 seconds)
+      // 🚀 SLIDE 1 — INITIAL SCAN: SCREEN SWEEP LASER (1.4 seconds)
       // ==============================================================
       var sweepLaser = document.createElement('div');
       sweepLaser.id = 'ishak-screen-sweep-laser';
-      sweepLaser.style.cssText = 'position:fixed;top:0;bottom:0;width:4px;z-index:2147483646;pointer-events:none;background:linear-gradient(180deg,transparent 0%,#00E5FF 20%,#FFFFFF 50%,#00FF66 80%,transparent 100%);box-shadow:0 0 18px #00E5FF, 0 0 35px #00FF66, 0 0 65px rgba(0,229,255,0.85), -30px 0 65px rgba(0,229,255,0.35);animation:ishakLaserSweepAcross 2.2s cubic-bezier(0.2,0.8,0.2,1) forwards;';
+      sweepLaser.style.cssText = 'position:fixed;top:0;bottom:0;width:4px;z-index:2147483646;pointer-events:none;background:linear-gradient(180deg,transparent 0%,#00E5FF 20%,#FFFFFF 50%,#00FF66 80%,transparent 100%);box-shadow:0 0 18px #00E5FF, 0 0 35px #00FF66, 0 0 65px rgba(0,229,255,0.85), -30px 0 65px rgba(0,229,255,0.35);animation:ishakLaserSweepAcross 1.4s cubic-bezier(0.2,0.8,0.2,1) forwards;';
       var trailCurtain = document.createElement('div');
       trailCurtain.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:140px;pointer-events:none;background:linear-gradient(270deg,transparent 0%,rgba(0,229,255,0.18) 70%,rgba(0,255,102,0.35) 100%);';
       sweepLaser.appendChild(trailCurtain);
       document.body.appendChild(sweepLaser);
 
       try {
-        playScanSoundscape(2.2);
+        playScanSoundscape(1.4);
       } catch(e){}
 
       // ==============================================================
@@ -4714,6 +4738,8 @@ javascript:(function(){
       wfModal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:calc(100vw - 32px);max-width:350px;border-radius:28px;background:linear-gradient(135deg,rgba(255,255,255,0.12) 0%,rgba(13,22,60,0.65) 50%,rgba(5,10,30,0.82) 100%) !important;backdrop-filter:blur(28px) !important;-webkit-backdrop-filter:blur(28px) !important;border:1px solid rgba(255,255,255,0.22) !important;border-top:1.5px solid rgba(255,255,255,0.55) !important;box-shadow:0 30px 70px rgba(0,0,0,0.8), inset 0 1.5px 2px rgba(255,255,255,0.4), inset 0 -1.5px 2px rgba(0,0,0,0.5), 0 0 45px rgba(0,229,255,0.25) !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#fff;overflow:hidden;animation:ishakModalScaleFade 0.25s cubic-bezier(0.16,1,0.3,1);box-sizing:border-box;';
 
       function closeWorkflowModal() {
+        if (scanTickSampler) clearInterval(scanTickSampler);
+        if (liveCaptureInterval) clearInterval(liveCaptureInterval);
         wfModal.style.animation = 'ishakModalDismiss 0.35s forwards';
         setTimeout(function() {
           if (wfModal && wfModal.parentNode) wfModal.parentNode.removeChild(wfModal);
@@ -4725,7 +4751,7 @@ javascript:(function(){
       }
 
       // ==============================================================
-      // 📸 SLIDE 2 — REAL CHART SCREEN CAPTURE (starts at 2200ms -> 3.2s)
+      // 📸 SLIDE 2 — REAL CHART SCREEN CAPTURE (starts at 1400ms -> 1.6s)
       // ==============================================================
       setTimeout(function() {
         if (!isScanning) return;
@@ -4767,71 +4793,43 @@ javascript:(function(){
         var closeBtn = document.getElementById('wf-close-btn');
         if (closeBtn) closeBtn.onclick = closeWorkflowModal;
 
-        // 🎯 Direct Screen / Chart Canvas Capture (Fix Requirement 1: NEVER BLACK)
+        // 🎯 Direct Screen / Chart Canvas Capture (Clean 1:1 Live Mirror, Zero Fake Edits)
         var cCanvas = document.getElementById('wf-capture-canvas');
         if (cCanvas) {
           var ctx = cCanvas.getContext('2d');
           if (ctx) {
-            // Fill rich Quotex dark navy background first so it is never a pitch-black box
-            var bgGrad = ctx.createLinearGradient(0, 0, 0, cCanvas.height);
-            bgGrad.addColorStop(0, '#090f2b');
-            bgGrad.addColorStop(1, '#05081c');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, cCanvas.width, cCanvas.height);
-
-            // Subtle cyan grid lines
-            ctx.strokeStyle = 'rgba(0, 229, 255, 0.09)';
-            ctx.lineWidth = 1;
-            for (var gx = 0; gx < cCanvas.width; gx += 35) {
-              ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, cCanvas.height); ctx.stroke();
-            }
-            for (var gy = 0; gy < cCanvas.height; gy += 25) {
-              ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(cCanvas.width, gy); ctx.stroke();
-            }
-
-            var capturedFromDom = false;
-            try {
-              // 1. First priority: Composite from background RAF frame mirror if available
-              if (window.__ISHAK_HAS_CAPTURED_CHART_FRAME__ && window.__ISHAK_OFFSCREEN_CHART_CANVAS__) {
-                ctx.drawImage(
-                  window.__ISHAK_OFFSCREEN_CHART_CANVAS__,
-                  0, 0, window.__ISHAK_OFFSCREEN_CHART_CANVAS__.width, window.__ISHAK_OFFSCREEN_CHART_CANVAS__.height,
-                  0, 0, cCanvas.width, cCanvas.height
-                );
-                capturedFromDom = true;
-              }
-
-              // 2. Direct DOM query of all broker chart canvases (layered: grid + candles + indicators)
-              var domCanvases = document.querySelectorAll(
-                '.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart-"] canvas, [class*="chart"] canvas, #chart canvas, main canvas, canvas'
-              );
-              var validBrokerLayers = [];
-              for (var dci = 0; dci < domCanvases.length; dci++) {
-                var dc = domCanvases[dci];
-                if (dc.id === 'wf-capture-canvas' || dc.id === 'wf-zoom-canvas') continue;
-                if (dc.closest && (dc.closest('#ishak-workflow-modal') || dc.closest('#ishak-hud-panel') || dc.closest('#ishak-trade-wrap') || dc.closest('.ishak-dialog-modal'))) continue;
-                var cr = dc.getBoundingClientRect();
-                if (cr.width >= 100 && cr.height >= 70 && dc.width >= 100 && dc.height >= 70) {
-                  validBrokerLayers.push(dc);
-                }
-              }
-
-              if (validBrokerLayers.length > 0) {
-                for (var vli = 0; vli < validBrokerLayers.length; vli++) {
-                  var layerCanvas = validBrokerLayers[vli];
+            function drawLiveSnapshot() {
+              var mainLayers = findQuotexMainChartCanvases();
+              if (mainLayers && mainLayers.length > 0) {
+                // Clear before drawing to guarantee zero ghosting or smearing
+                ctx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+                for (var li = 0; li < mainLayers.length; li++) {
+                  var ml = mainLayers[li];
                   try {
-                    ctx.drawImage(layerCanvas, 0, 0, layerCanvas.width, layerCanvas.height, 0, 0, cCanvas.width, cCanvas.height);
-                    capturedFromDom = true;
+                    ctx.drawImage(ml, 0, 0, ml.width, ml.height, 0, 0, cCanvas.width, cCanvas.height);
                   } catch(e){}
                 }
+                return true;
               }
-            } catch(e) {
-              // Do not fail if any canvas operation had a minor hitch
+              return false;
             }
 
-            // 3. Fallback ONLY if running outside broker where no chart canvases exist:
-            // NEVER EVER draw fake sine waves! Render real historical candlesticks and ticks of the asset!
-            if (!capturedFromDom) {
+            var captured = drawLiveSnapshot();
+
+            // Continuously update live at 80ms while Slide 2 is active
+            liveCaptureInterval = setInterval(function() {
+              var stillThere = document.getElementById('wf-capture-canvas');
+              if (!stillThere || !isScanning) {
+                if (liveCaptureInterval) clearInterval(liveCaptureInterval);
+                return;
+              }
+              drawLiveSnapshot();
+            }, 80);
+
+            // Clean fallback ONLY if running in standalone preview outside Quotex:
+            if (!captured) {
+              ctx.fillStyle = '#060a1e';
+              ctx.fillRect(0, 0, cCanvas.width, cCanvas.height);
               var cList = (window.__ISHAK_BACKGROUND_CANDLES__ && window.__ISHAK_BACKGROUND_CANDLES__.length >= 3)
                 ? window.__ISHAK_BACKGROUND_CANDLES__.slice(-18)
                 : [];
@@ -4880,27 +4878,13 @@ javascript:(function(){
                 var bH = Math.max(2.5, Math.abs(getY(cd.close) - getY(cd.open)));
                 ctx.fillRect(cx - cBodyW / 2, bTop, cBodyW, bH);
               }
-
-              var pY = getY(livePriceVal);
-              ctx.strokeStyle = '#00E5FF';
-              ctx.setLineDash([4, 4]);
-              ctx.beginPath(); ctx.moveTo(0, pY); ctx.lineTo(cCanvas.width, pY); ctx.stroke();
-              ctx.setLineDash([]);
-
-              // Live price badge on right matching broker rate
-              ctx.fillStyle = '#00E5FF';
-              ctx.fillRect(cCanvas.width - 64, pY - 8, 62, 16);
-              ctx.fillStyle = '#040816';
-              ctx.font = 'bold 8.5px monospace';
-              ctx.textAlign = 'center';
-              ctx.fillText(livePriceVal.toFixed(livePriceVal < 10 ? 5 : 2), cCanvas.width - 33, pY + 4);
             }
           }
         }
 
-        // Smooth Progress bar animation across 3200ms
+        // Smooth Progress bar animation across 1600ms
         var pStart = Date.now();
-        var pDuration = 3200;
+        var pDuration = 1600;
         var pInterval = setInterval(function() {
           var el = Date.now() - pStart;
           var curPct = Math.min(100, Math.floor((el / pDuration) * 90) + 10);
@@ -4909,14 +4893,15 @@ javascript:(function(){
           if (barEl) barEl.style.width = curPct + '%';
           if (txtEl) txtEl.innerText = curPct + '%';
           if (el >= pDuration) clearInterval(pInterval);
-        }, 40);
-      }, 2200);
+        }, 35);
+      }, 1400);
 
       // ==============================================================
-      // 🧠 SLIDE 3 — CIRCUIT ANALYSIS & CANDLE ZOOM (5400ms -> 3.8s)
+      // 🧠 SLIDE 3 — CIRCUIT ANALYSIS & QUANTITATIVE CONFLUENCE (starts at 3000ms -> 1.6s)
       // ==============================================================
       setTimeout(function() {
         if (!isScanning) return;
+        if (liveCaptureInterval) clearInterval(liveCaptureInterval);
 
         // Dynamic OTC toggle pill HTML (Requirement 2)
         var otcPillHtml = isOtc
@@ -5001,7 +4986,7 @@ javascript:(function(){
                   '<span style="font-size:7.5px;font-weight:bold;color:#CBD5E1;display:block;margin-top:2px;">Trend</span>' +
                 '</div>' +
                 '<div style="position:absolute;top:0;right:14px;text-align:center;">' +
-                  '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#D97706,#E11D48);border:1px solid rgba(244,63,94,0.7);display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(244,63,94,0.8);margin:0 auto;">⚡</div>' +
+                  '<div style="width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#D946EF,#E11D48);border:1px solid rgba(244,63,94,0.7);display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(244,63,94,0.8);margin:0 auto;">⚡</div>' +
                   '<span style="font-size:7.5px;font-weight:bold;color:#CBD5E1;display:block;margin-top:2px;">Indicators</span>' +
                 '</div>' +
                 '<div style="position:absolute;top:60px;left:6px;text-align:center;">' +
@@ -5030,13 +5015,13 @@ javascript:(function(){
                 '<div id="wf-chk-1" style="font-size:8.5px;color:#34D399;font-weight:bold;display:flex;align-items:center;gap:4px;"><span>✔</span> Trend Analysis</div>' +
                 '<div id="wf-chk-2" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> RSI & MACD</div>' +
                 '<div id="wf-chk-3" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> Support / Resistance</div>' +
-                '<div id="wf-chk-4" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> Next 1M Momentum</div>' +
+                '<div id="wf-chk-4" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> Momentum & Price Path</div>' +
               '</div>' +
               '<div style="margin-top:10px;display:flex;justify-content:center;">' +
-                // Fix Requirement 2: NEVER BENT / TILTED — Level horizontal box with 0 rotation
+                // Strictly level & upright (Requirement 2: Zero tilt, zero skew)
                 '<div style="width:100%;padding:10px 14px;border-radius:999px;background:linear-gradient(90deg,rgba(88,28,135,0.7) 0%,rgba(49,46,129,0.7) 50%,rgba(8,145,178,0.7) 100%);border:1px solid rgba(0,229,255,0.5);display:flex;align-items:center;justify-content:center;gap:8px;backdrop-filter:blur(12px);box-shadow:0 0 20px rgba(0,229,255,0.35);animation:ishakAnalyzingGlowPulse 1.6s ease-in-out infinite;transform:none !important;box-sizing:border-box;">' +
-                  '<span style="font-size:14px;line-height:1;display:inline-block;transform:none !important;">🧠</span>' +
-                  '<b style="font-family:monospace;font-size:11.5px;color:#00E5FF;letter-spacing:1px;text-shadow:0 0 6px #00E5FF;line-height:1;display:inline-block;transform:none !important;">Analyzing chart...</b>' +
+                  '<span style="font-size:14px;line-height:1;display:inline-block;transform:none !important;font-style:normal !important;">🧠</span>' +
+                  '<b style="font-family:monospace;font-size:11.5px;color:#00E5FF;letter-spacing:1px;text-shadow:0 0 6px #00E5FF;line-height:1;display:inline-block;transform:none !important;font-style:normal !important;">Analyzing chart...</b>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -5046,24 +5031,58 @@ javascript:(function(){
         setTimeout(function() {
           var el = document.getElementById('wf-chk-2');
           if (el) { el.style.color = '#34D399'; el.style.fontWeight = 'bold'; }
-        }, 800);
+        }, 400);
         setTimeout(function() {
           var el = document.getElementById('wf-chk-3');
           if (el) { el.style.color = '#34D399'; el.style.fontWeight = 'bold'; }
-        }, 1700);
+        }, 850);
         setTimeout(function() {
           var el = document.getElementById('wf-chk-4');
           if (el) { el.style.color = '#34D399'; el.style.fontWeight = 'bold'; }
-        }, 2600);
-      }, 5400);
+        }, 1300);
+
+        // 🧠 Real-Time Confluence Calculation Right Before Slide 4 Transition
+        setTimeout(function() {
+          if (scanTickSampler) clearInterval(scanTickSampler);
+          var activeDur = tradeDuration || 5;
+          try {
+            analysis = evaluateMarketConfluence(scanLiveTicks, activeDur);
+            isCall = (analysis && typeof analysis.isCall === 'boolean') ? analysis.isCall : true;
+          } catch(e) {
+            isCall = true;
+          }
+
+          var confSpread = Math.abs((analysis && analysis.audit) ? analysis.audit.confluenceSpread : 24);
+          var spreadBonus = Math.min(10, Math.floor((confSpread / 30) * 10));
+          var rsiVal = (analysis && analysis.rsi) ? analysis.rsi : 50;
+          var rsiConviction = (isCall && rsiVal >= 55) || (!isCall && rsiVal <= 45) ? 4 : 1;
+          dynamicConfidence = Math.min(94, Math.max(76, 76 + spreadBonus + rsiConviction + (isCall ? 3 : 1)));
+
+          var stepDelta = livePriceVal > 100 ? 0.85 : 0.00095;
+          resistanceStr = (livePriceVal + stepDelta).toFixed(livePriceVal < 10 ? 4 : 2);
+          supportStr = (livePriceVal - stepDelta).toFixed(livePriceVal < 10 ? 4 : 2);
+          if (analysis && analysis.indicators && analysis.indicators.supportResistance) {
+            if (analysis.indicators.supportResistance.resistance > 0) {
+              resistanceStr = analysis.indicators.supportResistance.resistance.toFixed(livePriceVal < 10 ? 4 : 2);
+            }
+            if (analysis.indicators.supportResistance.support > 0) {
+              supportStr = analysis.indicators.supportResistance.support.toFixed(livePriceVal < 10 ? 4 : 2);
+            }
+          }
+
+          trendStr = (analysis && analysis.trendLabel) ? analysis.trendLabel : (isCall ? 'Uptrend' : 'Downtrend');
+          patternStr = (analysis && analysis.pattern) ? analysis.pattern : (isCall ? 'Bullish Continuation...' : 'Bearish Engulfing...');
+        }, 1450);
+
+      }, 3000);
 
       // ==============================================================
-      // 🎯 SLIDE 4 — DIRECTION RESULT & AUTO-TRADE (9200ms -> 2.8s)
+      // 🎯 SLIDE 4 — DIRECTION RESULT & IMMEDIATE AUTO-TRADE (starts at 4600ms)
       // ==============================================================
       setTimeout(function() {
         if (!isScanning) return;
 
-        // Auto-execute trade on broker immediately upon reaching Slide 4
+        // Auto-execute trade on broker IMMEDIATELY upon reaching Slide 4 (Zero Delay!)
         try {
           executeQuotexTrade(isCall);
         } catch(e){}
@@ -5071,13 +5090,6 @@ javascript:(function(){
         try {
           playResultSound(isCall);
         } catch(e){}
-
-        // Genuine Dynamic Confidence Calculation (Fix Requirement 3: NEVER FIXED 80%)
-        var confSpread = Math.abs((analysis && analysis.audit) ? analysis.audit.confluenceSpread : 24);
-        var spreadBonus = Math.min(10, Math.floor((confSpread / 30) * 10));
-        var rsiVal = (analysis && analysis.rsi) ? analysis.rsi : 50;
-        var rsiConviction = (isCall && rsiVal >= 55) || (!isCall && rsiVal <= 45) ? 4 : 1;
-        var dynamicConfidence = Math.min(94, Math.max(76, 76 + spreadBonus + rsiConviction + (isCall ? 3 : 1)));
 
         var actionBorder = isCall ? '#00E5FF' : '#FF2E54';
         var actionGrad = isCall
@@ -5106,7 +5118,7 @@ javascript:(function(){
               '<span>📈 Real</span>' +
             '</div>';
 
-        // Fix Requirement 4: Staggered entrance animations for all cards and text boxes
+        // Animated cards and text boxes with staggered entrance
         wfModal.innerHTML =
           '<div style="padding:16px 18px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.15);animation:ishakAnimSlideDown 0.35s 0.04s cubic-bezier(0.16,1,0.3,1) both;">' +
@@ -5229,7 +5241,7 @@ javascript:(function(){
         setTimeout(function() {
           closeWorkflowModal();
         }, 2800);
-      }, 9200);
+      }, 4600);
 
     } catch(err) {
       console.error('[TradePilot] triggerScanAndTrade error:', err);

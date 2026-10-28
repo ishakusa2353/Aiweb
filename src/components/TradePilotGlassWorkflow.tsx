@@ -64,29 +64,29 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
   // Dynamic OTC vs Real detection based strictly on asset name
   const isOtc = (pairName || '').toUpperCase().includes('OTC');
 
-  // Slide 2: Paced Capture Progress Animation (~3.2 seconds)
+  // Slide 2: Paced Capture Progress Animation (1.6s)
   useEffect(() => {
     if (currentSlide === 'SLIDE2_CAPTURE') {
       setCaptureProgress(8);
       const start = Date.now();
-      const duration = 3200; // 3.2s deep scanning duration
+      const duration = 1600;
       const interval = setInterval(() => {
         const elapsed = Date.now() - start;
         const pct = Math.min(100, Math.floor((elapsed / duration) * 92) + 8);
         setCaptureProgress(pct);
         if (elapsed >= duration) clearInterval(interval);
-      }, 40);
+      }, 35);
       return () => clearInterval(interval);
     }
   }, [currentSlide]);
 
-  // Slide 3: Paced Multi-Stage Circuit Analysis (~3.8 seconds)
+  // Slide 3: Paced Multi-Stage Circuit Analysis (1.6s)
   useEffect(() => {
     if (currentSlide === 'SLIDE3_CIRCUIT_ANALYSIS') {
       setAnalysisStep(1);
-      const t1 = setTimeout(() => setAnalysisStep(2), 700);
-      const t2 = setTimeout(() => setAnalysisStep(3), 1600);
-      const t3 = setTimeout(() => setAnalysisStep(4), 2500);
+      const t1 = setTimeout(() => setAnalysisStep(2), 400);
+      const t2 = setTimeout(() => setAnalysisStep(3), 850);
+      const t3 = setTimeout(() => setAnalysisStep(4), 1300);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
@@ -131,7 +131,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
     }
   }, [currentSlide, confidenceScore, isCall]);
 
-  // Slide 2: Screen / Chart Canvas Capture (Fix Requirement 1: NEVER BLACK)
+  // Slide 2: Screen / Chart Canvas Capture (Clean 1:1 Live Mirror, Zero Fake Edits)
   useEffect(() => {
     if (currentSlide === 'SLIDE2_CAPTURE' && captureCanvasRef.current) {
       const canvas = captureCanvasRef.current;
@@ -141,58 +141,60 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
       const w = canvas.width;
       const h = canvas.height;
 
-      // Always fill rich Quotex dark navy background first (never pitch black)
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-      bgGrad.addColorStop(0, '#0a102b');
-      bgGrad.addColorStop(1, '#05091c');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, w, h);
+      const findMainBrokerLayers = (): HTMLCanvasElement[] => {
+        const all = document.querySelectorAll(
+          '.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart-"] canvas, #chart canvas, main canvas, canvas'
+        );
+        const matched: { canvas: HTMLCanvasElement; area: number }[] = [];
+        let maxArea = 0;
 
-      // Subtle cyan grid lines
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.09)';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < w; x += 36) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-        ctx.stroke();
-      }
-      for (let y = 0; y < h; y += 26) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-      }
-
-      // Attempt direct screen canvas clone from broker / background trading chart
-      let capturedFromDom = false;
-      try {
-        const allDomCanvases = document.querySelectorAll('canvas');
-        const validChartCanvases: HTMLCanvasElement[] = [];
-        for (let i = 0; i < allDomCanvases.length; i++) {
-          const c = allDomCanvases[i];
+        for (let i = 0; i < all.length; i++) {
+          const c = all[i] as HTMLCanvasElement;
           if (c === canvas || c === zoomCanvasRef.current) continue;
-          if (c.closest && c.closest('.wf-modal-container')) continue;
+          if (c.closest && (c.closest('.wf-modal-container') || c.closest('#ishak-workflow-modal'))) continue;
+
           const rect = c.getBoundingClientRect();
-          if (rect.width >= 100 && rect.height >= 70 && c.width >= 100 && c.height >= 70) {
-            validChartCanvases.push(c);
-          }
+          if (rect.width < 140 || rect.height < 90) continue;
+
+          const ratio = rect.width / rect.height;
+          // Strictly exclude vertical price axis strip (ratio < 0.38) and time axis strip (ratio > 4.2)
+          if (ratio < 0.38 || ratio > 4.2) continue;
+
+          const area = rect.width * rect.height;
+          if (area > maxArea) maxArea = area;
+          matched.push({ canvas: c, area });
         }
-        if (validChartCanvases.length > 0) {
-          for (let vi = 0; vi < validChartCanvases.length; vi++) {
-            const chartCanv = validChartCanvases[vi];
+
+        return matched.filter(m => m.area >= maxArea * 0.7).map(m => m.canvas);
+      };
+
+      const drawLiveSnapshot = (): boolean => {
+        const layers = findMainBrokerLayers();
+        if (layers.length > 0) {
+          ctx.clearRect(0, 0, w, h);
+          layers.forEach(layer => {
             try {
-              ctx.drawImage(chartCanv, 0, 0, chartCanv.width, chartCanv.height, 0, 0, w, h);
-              capturedFromDom = true;
+              ctx.drawImage(layer, 0, 0, layer.width, layer.height, 0, 0, w, h);
             } catch (e) {}
-          }
+          });
+          return true;
         }
-      } catch (err) {
-        capturedFromDom = false;
-      }
+        return false;
+      };
+
+      const captured = drawLiveSnapshot();
+
+      // Continuously update live while Slide 2 is open
+      const liveInterval = setInterval(() => {
+        if (!captureCanvasRef.current) {
+          clearInterval(liveInterval);
+          return;
+        }
+        drawLiveSnapshot();
+      }, 80);
 
       // If DOM canvas was transparent/empty/black, render the authentic live candle stream
-      if (!capturedFromDom) {
+      if (!captured) {
         ctx.fillStyle = '#05091a';
         ctx.fillRect(0, 0, w, h);
 
@@ -276,6 +278,10 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
           }
         }
       }
+
+      return () => {
+        clearInterval(liveInterval);
+      };
     }
   }, [currentSlide, candles, runningCandle, currentPrice]);
 
