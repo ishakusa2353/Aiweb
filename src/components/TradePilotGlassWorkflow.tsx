@@ -51,7 +51,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
   supportPrice,
   trendLabel,
   patternLabel,
-  timeframeLabel = '1m',
+  timeframeLabel = '5s',
   onClose,
 }) => {
   const captureCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -64,12 +64,12 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
   // Dynamic OTC vs Real detection based strictly on asset name
   const isOtc = (pairName || '').toUpperCase().includes('OTC');
 
-  // Slide 2: Paced Capture Progress Animation (1.6s)
+  // Slide 2: Extended Capture Progress Animation (3.2s)
   useEffect(() => {
     if (currentSlide === 'SLIDE2_CAPTURE') {
       setCaptureProgress(8);
       const start = Date.now();
-      const duration = 1600;
+      const duration = 3200;
       const interval = setInterval(() => {
         const elapsed = Date.now() - start;
         const pct = Math.min(100, Math.floor((elapsed / duration) * 92) + 8);
@@ -80,13 +80,13 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
     }
   }, [currentSlide]);
 
-  // Slide 3: Paced Multi-Stage Circuit Analysis (1.6s)
+  // Slide 3: Extended Multi-Stage Circuit Analysis (3.6s)
   useEffect(() => {
     if (currentSlide === 'SLIDE3_CIRCUIT_ANALYSIS') {
       setAnalysisStep(1);
-      const t1 = setTimeout(() => setAnalysisStep(2), 400);
-      const t2 = setTimeout(() => setAnalysisStep(3), 850);
-      const t3 = setTimeout(() => setAnalysisStep(4), 1300);
+      const t1 = setTimeout(() => setAnalysisStep(2), 900);
+      const t2 = setTimeout(() => setAnalysisStep(3), 1800);
+      const t3 = setTimeout(() => setAnalysisStep(4), 2700);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
@@ -145,7 +145,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
         const all = document.querySelectorAll(
           '.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart-"] canvas, #chart canvas, main canvas, canvas'
         );
-        const matched: { canvas: HTMLCanvasElement; area: number }[] = [];
+        const valid: { canvas: HTMLCanvasElement; w: number; h: number; area: number }[] = [];
         let maxArea = 0;
 
         for (let i = 0; i < all.length; i++) {
@@ -154,49 +154,92 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
           if (c.closest && (c.closest('.wf-modal-container') || c.closest('#ishak-workflow-modal'))) continue;
 
           const rect = c.getBoundingClientRect();
-          if (rect.width < 140 || rect.height < 90) continue;
+          if (rect.width < 40 || rect.height < 30) continue;
 
-          const ratio = rect.width / rect.height;
-          // Strictly exclude vertical price axis strip (ratio < 0.38) and time axis strip (ratio > 4.2)
-          if (ratio < 0.38 || ratio > 4.2) continue;
+          // Exclude price scale strip: narrow column (width <= 75 and height is tall)
+          if (rect.width <= 75 && rect.height >= 65) continue;
+          // Exclude time scale strip: short horizontal row (height <= 40 and width is wide)
+          if (rect.height <= 40 && rect.width >= 80) continue;
 
           const area = rect.width * rect.height;
           if (area > maxArea) maxArea = area;
-          matched.push({ canvas: c, area });
+          valid.push({ canvas: c, w: rect.width, h: rect.height, area });
         }
 
-        return matched.filter(m => m.area >= maxArea * 0.7).map(m => m.canvas);
+        if (valid.length === 0) return [];
+        valid.sort((a, b) => b.area - a.area);
+        const primary = valid[0];
+        const res: HTMLCanvasElement[] = [primary.canvas];
+        for (let j = 1; j < valid.length; j++) {
+          const item = valid[j];
+          if (Math.abs(item.w - primary.w) <= primary.w * 0.25 && Math.abs(item.h - primary.h) <= primary.h * 0.25) {
+            res.push(item.canvas);
+          }
+        }
+        return res;
       };
 
       const drawLiveSnapshot = (): boolean => {
+        // Always fill authentic Quotex dark navy background first (never black)
+        ctx.fillStyle = '#070d24';
+        ctx.fillRect(0, 0, w, h);
+
+        // Grid lines
+        ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 36) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 28) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+
         const layers = findMainBrokerLayers();
+        let drawnCount = 0;
         if (layers.length > 0) {
-          ctx.clearRect(0, 0, w, h);
           layers.forEach(layer => {
             try {
-              ctx.drawImage(layer, 0, 0, layer.width, layer.height, 0, 0, w, h);
+              if (layer.width > 0 && layer.height > 0) {
+                ctx.drawImage(layer, 0, 0, layer.width, layer.height, 0, 0, w, h);
+                drawnCount++;
+              }
             } catch (e) {}
           });
-          return true;
         }
-        return false;
+
+        let hasContent = false;
+        if (drawnCount > 0) {
+          try {
+            const testPoints = [
+              [Math.floor(w * 0.25), Math.floor(h * 0.5)],
+              [Math.floor(w * 0.5), Math.floor(h * 0.5)],
+              [Math.floor(w * 0.75), Math.floor(h * 0.5)]
+            ];
+            for (const pt of testPoints) {
+              const pix = ctx.getImageData(pt[0], pt[1], 1, 1).data;
+              if (pix[3] > 0 && (Math.abs(pix[0] - 7) > 10 || Math.abs(pix[1] - 13) > 10 || Math.abs(pix[2] - 36) > 10)) {
+                hasContent = true;
+                break;
+              }
+            }
+          } catch (e) {
+            hasContent = true;
+          }
+        }
+
+        if (!hasContent) {
+          renderAuthenticLiveCandles();
+        }
+        return true;
       };
 
-      const captured = drawLiveSnapshot();
-
-      // Continuously update live while Slide 2 is open
-      const liveInterval = setInterval(() => {
-        if (!captureCanvasRef.current) {
-          clearInterval(liveInterval);
-          return;
-        }
-        drawLiveSnapshot();
-      }, 80);
-
-      // If DOM canvas was transparent/empty/black, render the authentic live candle stream
-      if (!captured) {
-        ctx.fillStyle = '#05091a';
-        ctx.fillRect(0, 0, w, h);
+      const renderAuthenticLiveCandles = () => {
 
         // Grid lines
         ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
@@ -277,7 +320,18 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
             ctx.fillText(currentPrice.toFixed(currentPrice < 10 ? 4 : 2), w - 32, curY + 3);
           }
         }
-      }
+      };
+
+      drawLiveSnapshot();
+
+      // Continuously update live while Slide 2 is open
+      const liveInterval = setInterval(() => {
+        if (!captureCanvasRef.current) {
+          clearInterval(liveInterval);
+          return;
+        }
+        drawLiveSnapshot();
+      }, 80);
 
       return () => {
         clearInterval(liveInterval);
@@ -692,7 +746,7 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
                 </div>
                 <div className={`flex items-center gap-1.5 text-[9.5px] font-medium transition-all ${analysisStep >= 4 ? 'text-emerald-300 font-bold' : 'text-slate-500'}`}>
                   <CheckCircle2 className={`w-3 h-3 ${analysisStep >= 4 ? 'text-emerald-400 shadow-[0_0_8px_#00FF66]' : 'text-slate-600'}`} />
-                  <span>Next 1M Momentum</span>
+                  <span>Next {(timeframeLabel || '5s').toUpperCase()} Momentum</span>
                 </div>
               </div>
 

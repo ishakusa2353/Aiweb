@@ -4596,7 +4596,7 @@ javascript:(function(){
     var candidates = document.querySelectorAll(
       '.section-deal__chart canvas, .chart-container canvas, [class*="trading-chart"] canvas, [class*="chart-"] canvas, #chart canvas, main canvas, canvas'
     );
-    var matched = [];
+    var valid = [];
     var maxArea = 0;
 
     for (var i = 0; i < candidates.length; i++) {
@@ -4609,26 +4609,32 @@ javascript:(function(){
       var h = rect.height;
 
       // Filter out collapsed/offscreen canvases
-      if (w < 140 || h < 90) continue;
+      if (w < 40 || h < 30) continue;
 
-      var ratio = w / h;
-      // Strictly exclude right-side vertical price axis strip (ratio < 0.38)
-      if (ratio < 0.38) continue;
-      // Strictly exclude bottom horizontal time axis strip (ratio > 4.2)
-      if (ratio > 4.2) continue;
+      // Exclude price scale strip: narrow column (width <= 75 and height is tall)
+      if (w <= 75 && h >= 65) continue;
+      // Exclude time scale strip: short horizontal row (height <= 40 and width is wide)
+      if (h <= 40 && w >= 80) continue;
 
       var area = w * h;
       if (area > maxArea) {
         maxArea = area;
       }
-      matched.push({ canvas: c, area: area });
+      valid.push({ canvas: c, w: w, h: h, area: area });
     }
 
-    // Keep only the primary chart layer(s) matching the max area
-    var result = [];
-    for (var j = 0; j < matched.length; j++) {
-      if (matched[j].area >= maxArea * 0.7) {
-        result.push(matched[j].canvas);
+    if (valid.length === 0) return [];
+
+    // Sort by area descending: the largest canvas is the primary chart canvas
+    valid.sort(function(a, b) { return b.area - a.area; });
+    var primary = valid[0];
+
+    // Keep primary canvas and any overlapping layer of similar dimensions (within 25%)
+    var result = [primary.canvas];
+    for (var j = 1; j < valid.length; j++) {
+      var item = valid[j];
+      if (Math.abs(item.w - primary.w) <= primary.w * 0.25 && Math.abs(item.h - primary.h) <= primary.h * 0.25) {
+        result.push(item.canvas);
       }
     }
     return result;
@@ -4671,6 +4677,20 @@ javascript:(function(){
 
       // 🔍 Dynamic OTC vs Real Detection (Requirement 2)
       var isOtc = (detectedAssetStr || '').toUpperCase().indexOf('OTC') !== -1;
+
+      // ⏱ Dynamic Timeframe Detection (Requirement 3: Never default to 1M)
+      var activeDur = extractQuotexDuration() || tradeDuration || 5;
+      tradeDuration = activeDur;
+      var activeTimeframeLabel = (function(s) {
+        var sec = Number(s) || 5;
+        if (sec >= 60) {
+          var m = Math.floor(sec / 60);
+          var rem = sec % 60;
+          return rem > 0 ? (m + 'm ' + rem + 's') : (m + 'm');
+        }
+        return sec + 's';
+      })(activeDur);
+      var tfUpper = activeTimeframeLabel.toUpperCase();
 
       var livePriceVal = extractQuotexLivePrice() || (window.__ISHAK_LAST_WS_PRICE__) || 1627.50;
 
@@ -4716,18 +4736,18 @@ javascript:(function(){
       if (auraEl) auraEl.classList.add('aura-active');
 
       // ==============================================================
-      // 🚀 SLIDE 1 — INITIAL SCAN: SCREEN SWEEP LASER (1.4 seconds)
+      // 🚀 SLIDE 1 — INITIAL SCAN: SCREEN SWEEP LASER (1.6 seconds)
       // ==============================================================
       var sweepLaser = document.createElement('div');
       sweepLaser.id = 'ishak-screen-sweep-laser';
-      sweepLaser.style.cssText = 'position:fixed;top:0;bottom:0;width:4px;z-index:2147483646;pointer-events:none;background:linear-gradient(180deg,transparent 0%,#00E5FF 20%,#FFFFFF 50%,#00FF66 80%,transparent 100%);box-shadow:0 0 18px #00E5FF, 0 0 35px #00FF66, 0 0 65px rgba(0,229,255,0.85), -30px 0 65px rgba(0,229,255,0.35);animation:ishakLaserSweepAcross 1.4s cubic-bezier(0.2,0.8,0.2,1) forwards;';
+      sweepLaser.style.cssText = 'position:fixed;top:0;bottom:0;width:4px;z-index:2147483646;pointer-events:none;background:linear-gradient(180deg,transparent 0%,#00E5FF 20%,#FFFFFF 50%,#00FF66 80%,transparent 100%);box-shadow:0 0 18px #00E5FF, 0 0 35px #00FF66, 0 0 65px rgba(0,229,255,0.85), -30px 0 65px rgba(0,229,255,0.35);animation:ishakLaserSweepAcross 1.6s cubic-bezier(0.2,0.8,0.2,1) forwards;';
       var trailCurtain = document.createElement('div');
       trailCurtain.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:140px;pointer-events:none;background:linear-gradient(270deg,transparent 0%,rgba(0,229,255,0.18) 70%,rgba(0,255,102,0.35) 100%);';
       sweepLaser.appendChild(trailCurtain);
       document.body.appendChild(sweepLaser);
 
       try {
-        playScanSoundscape(1.4);
+        playScanSoundscape(1.6);
       } catch(e){}
 
       // ==============================================================
@@ -4751,7 +4771,7 @@ javascript:(function(){
       }
 
       // ==============================================================
-      // 📸 SLIDE 2 — REAL CHART SCREEN CAPTURE (starts at 1400ms -> 1.6s)
+      // 📸 SLIDE 2 — REAL CHART SCREEN CAPTURE (starts at 1600ms -> 3.2s duration)
       // ==============================================================
       setTimeout(function() {
         if (!isScanning) return;
@@ -4771,10 +4791,10 @@ javascript:(function(){
                 '<div id="wf-close-btn" style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,0.25);border:1px solid rgba(239,68,68,0.5);color:#FCA5A5;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer;backdrop-filter:blur(10px);">✕</div>' +
               '</div>' +
             '</div>' +
-            '<div style="position:relative;width:100%;height:165px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.2);background:#05091a;box-shadow:inset 0 2px 10px rgba(0,0,0,0.85);">' +
+            '<div style="position:relative;width:100%;height:165px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.2);background:#070d24;box-shadow:inset 0 2px 10px rgba(0,0,0,0.85);">' +
               '<canvas id="wf-capture-canvas" width="314" height="165" style="width:100%;height:100%;display:block;"></canvas>' +
               '<div style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#00E5FF,transparent);box-shadow:0 0 14px #00E5FF;animation:ishakLaserVerticalSweep 1.5s ease-in-out infinite alternate;"></div>' +
-              '<div style="position:absolute;top:6px;left:6px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,0.65);border:1px solid rgba(0,229,255,0.4);font-size:8.5px;font-family:monospace;color:#00E5FF;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;">● Screen Capture</div>' +
+              '<div style="position:absolute;top:6px;left:6px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,0.65);border:1px solid rgba(0,229,255,0.4);font-size:8.5px;font-family:monospace;color:#00E5FF;backdrop-filter:blur(8px);display:flex;align-items:center;gap:4px;">● Screen Capture (' + tfUpper + ')</div>' +
             '</div>' +
             '<div style="margin-top:14px;text-align:center;">' +
               '<div style="font-size:13px;font-weight:bold;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;text-shadow:0 0 8px rgba(0,229,255,0.5);">' +
@@ -4783,10 +4803,10 @@ javascript:(function(){
               '<p style="font-size:10px;color:rgba(203,213,225,0.8);margin:3px 0 0 0;">Analyzing price action, indicators and market conditions...</p>' +
             '</div>' +
             '<div style="margin-top:12px;position:relative;width:100%;height:8px;border-radius:999px;background:rgba(5,10,30,0.8);border:1px solid rgba(255,255,255,0.2);overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,0.7);">' +
-              '<div id="wf-progress-bar" style="height:100%;border-radius:999px;width:10%;background:linear-gradient(90deg,#00E5FF 0%,#00FF66 70%,#FFFFFF 100%);box-shadow:0 0 12px #00E5FF;transition:width 0.1s linear;"></div>' +
+              '<div id="wf-progress-bar" style="height:100%;border-radius:999px;width:8%;background:linear-gradient(90deg,#00E5FF 0%,#00FF66 70%,#FFFFFF 100%);box-shadow:0 0 12px #00E5FF;transition:width 0.1s linear;"></div>' +
             '</div>' +
             '<div style="margin-top:4px;display:flex;justify-content:flex-end;">' +
-              '<span id="wf-progress-txt" style="font-size:10px;font-family:monospace;font-weight:bold;color:#00E5FF;text-shadow:0 0 6px #00E5FF;">10%</span>' +
+              '<span id="wf-progress-txt" style="font-size:10px;font-family:monospace;font-weight:bold;color:#00E5FF;text-shadow:0 0 6px #00E5FF;">8%</span>' +
             '</div>' +
           '</div>';
 
@@ -4798,38 +4818,8 @@ javascript:(function(){
         if (cCanvas) {
           var ctx = cCanvas.getContext('2d');
           if (ctx) {
-            function drawLiveSnapshot() {
-              var mainLayers = findQuotexMainChartCanvases();
-              if (mainLayers && mainLayers.length > 0) {
-                // Clear before drawing to guarantee zero ghosting or smearing
-                ctx.clearRect(0, 0, cCanvas.width, cCanvas.height);
-                for (var li = 0; li < mainLayers.length; li++) {
-                  var ml = mainLayers[li];
-                  try {
-                    ctx.drawImage(ml, 0, 0, ml.width, ml.height, 0, 0, cCanvas.width, cCanvas.height);
-                  } catch(e){}
-                }
-                return true;
-              }
-              return false;
-            }
-
-            var captured = drawLiveSnapshot();
-
-            // Continuously update live at 80ms while Slide 2 is active
-            liveCaptureInterval = setInterval(function() {
-              var stillThere = document.getElementById('wf-capture-canvas');
-              if (!stillThere || !isScanning) {
-                if (liveCaptureInterval) clearInterval(liveCaptureInterval);
-                return;
-              }
-              drawLiveSnapshot();
-            }, 80);
-
-            // Clean fallback ONLY if running in standalone preview outside Quotex:
-            if (!captured) {
-              ctx.fillStyle = '#060a1e';
-              ctx.fillRect(0, 0, cCanvas.width, cCanvas.height);
+            // Helper to render live authentic candles if canvas is cleared/blank
+            function renderAuthenticLiveCandles(targetCtx, w, h) {
               var cList = (window.__ISHAK_BACKGROUND_CANDLES__ && window.__ISHAK_BACKGROUND_CANDLES__.length >= 3)
                 ? window.__ISHAK_BACKGROUND_CANDLES__.slice(-18)
                 : [];
@@ -4857,47 +4847,142 @@ javascript:(function(){
               if (minVal === maxVal) { minVal *= 0.9995; maxVal *= 1.0005; }
               var rangeP = maxVal - minVal;
               var padY = 16;
-              var plotHeight = cCanvas.height - padY * 2;
+              var plotHeight = h - padY * 2;
               function getY(val) { return padY + plotHeight - ((val - minVal) / rangeP) * plotHeight; }
 
-              var stepW = (cCanvas.width - 30) / cList.length;
+              var stepW = (w - 30) / cList.length;
               var cBodyW = Math.max(4, stepW - 3);
 
               for (var ci = 0; ci < cList.length; ci++) {
                 var cd = cList[ci];
                 var cx = 15 + ci * stepW + stepW / 2;
                 var isGreen = cd.close >= cd.open;
-                ctx.strokeStyle = isGreen ? '#00FF66' : '#FF1744';
-                ctx.fillStyle = isGreen ? '#00FF66' : '#FF1744';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(cx, getY(cd.high));
-                ctx.lineTo(cx, getY(cd.low));
-                ctx.stroke();
+                targetCtx.strokeStyle = isGreen ? '#00FF66' : '#FF1744';
+                targetCtx.fillStyle = isGreen ? '#00FF66' : '#FF1744';
+                targetCtx.lineWidth = 1.5;
+                targetCtx.beginPath();
+                targetCtx.moveTo(cx, getY(cd.high));
+                targetCtx.lineTo(cx, getY(cd.low));
+                targetCtx.stroke();
                 var bTop = Math.min(getY(cd.open), getY(cd.close));
                 var bH = Math.max(2.5, Math.abs(getY(cd.close) - getY(cd.open)));
-                ctx.fillRect(cx - cBodyW / 2, bTop, cBodyW, bH);
+                targetCtx.fillRect(cx - cBodyW / 2, bTop, cBodyW, bH);
+              }
+
+              // Live price dashed line
+              var lastCandle = cList[cList.length - 1];
+              var lastP = lastCandle ? (lastCandle.close || livePriceVal) : livePriceVal;
+              if (lastP) {
+                var py = getY(lastP);
+                targetCtx.strokeStyle = '#00E5FF';
+                targetCtx.setLineDash([4, 4]);
+                targetCtx.lineWidth = 1;
+                targetCtx.beginPath();
+                targetCtx.moveTo(0, py);
+                targetCtx.lineTo(w, py);
+                targetCtx.stroke();
+                targetCtx.setLineDash([]);
+
+                targetCtx.fillStyle = '#00E5FF';
+                targetCtx.fillRect(w - 60, py - 9, 58, 18);
+                targetCtx.fillStyle = '#070d24';
+                targetCtx.font = 'bold 9px monospace';
+                targetCtx.textAlign = 'center';
+                targetCtx.fillText(Number(lastP).toFixed(lastP < 10 ? 4 : 2), w - 31, py + 3);
               }
             }
+
+            function drawLiveSnapshot() {
+              // Always fill authentic Quotex dark navy background first (Guarantees NEVER black)
+              ctx.fillStyle = '#070d24';
+              ctx.fillRect(0, 0, cCanvas.width, cCanvas.height);
+
+              // Grid lines
+              ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
+              ctx.lineWidth = 1;
+              for (var gx = 0; gx < cCanvas.width; gx += 35) {
+                ctx.beginPath();
+                ctx.moveTo(gx, 0);
+                ctx.lineTo(gx, cCanvas.height);
+                ctx.stroke();
+              }
+              for (var gy = 0; gy < cCanvas.height; gy += 28) {
+                ctx.beginPath();
+                ctx.moveTo(0, gy);
+                ctx.lineTo(cCanvas.width, gy);
+                ctx.stroke();
+              }
+
+              var mainLayers = findQuotexMainChartCanvases();
+              var drawnCount = 0;
+              if (mainLayers && mainLayers.length > 0) {
+                for (var li = 0; li < mainLayers.length; li++) {
+                  var ml = mainLayers[li];
+                  try {
+                    if (ml.width > 0 && ml.height > 0) {
+                      ctx.drawImage(ml, 0, 0, ml.width, ml.height, 0, 0, cCanvas.width, cCanvas.height);
+                      drawnCount++;
+                    }
+                  } catch(e){}
+                }
+              }
+
+              var hasContent = false;
+              if (drawnCount > 0) {
+                try {
+                  var testPoints = [
+                    [Math.floor(cCanvas.width * 0.25), Math.floor(cCanvas.height * 0.5)],
+                    [Math.floor(cCanvas.width * 0.5), Math.floor(cCanvas.height * 0.5)],
+                    [Math.floor(cCanvas.width * 0.75), Math.floor(cCanvas.height * 0.5)]
+                  ];
+                  for (var pi = 0; pi < testPoints.length; pi++) {
+                    var pix = ctx.getImageData(testPoints[pi][0], testPoints[pi][1], 1, 1).data;
+                    if (pix[3] > 0 && (Math.abs(pix[0] - 7) > 10 || Math.abs(pix[1] - 13) > 10 || Math.abs(pix[2] - 36) > 10)) {
+                      hasContent = true;
+                      break;
+                    }
+                  }
+                } catch(e) {
+                  hasContent = true;
+                }
+              }
+
+              if (!hasContent) {
+                renderAuthenticLiveCandles(ctx, cCanvas.width, cCanvas.height);
+              }
+              return true;
+            }
+
+            drawLiveSnapshot();
+
+            // Continuously update live at 80ms while Slide 2 is active
+            liveCaptureInterval = setInterval(function() {
+              var stillThere = document.getElementById('wf-capture-canvas');
+              if (!stillThere || !isScanning) {
+                if (liveCaptureInterval) clearInterval(liveCaptureInterval);
+                return;
+              }
+              drawLiveSnapshot();
+            }, 80);
           }
         }
 
-        // Smooth Progress bar animation across 1600ms
+        // Smooth Progress bar animation across extended 3.2s duration (Requirement 2)
         var pStart = Date.now();
-        var pDuration = 1600;
+        var pDuration = 3200;
         var pInterval = setInterval(function() {
           var el = Date.now() - pStart;
-          var curPct = Math.min(100, Math.floor((el / pDuration) * 90) + 10);
+          var curPct = Math.min(100, Math.floor((el / pDuration) * 92) + 8);
           var barEl = document.getElementById('wf-progress-bar');
           var txtEl = document.getElementById('wf-progress-txt');
           if (barEl) barEl.style.width = curPct + '%';
           if (txtEl) txtEl.innerText = curPct + '%';
           if (el >= pDuration) clearInterval(pInterval);
         }, 35);
-      }, 1400);
+      }, 1600);
 
       // ==============================================================
-      // 🧠 SLIDE 3 — CIRCUIT ANALYSIS & QUANTITATIVE CONFLUENCE (starts at 3000ms -> 1.6s)
+      // 🧠 SLIDE 3 — CIRCUIT ANALYSIS & QUANTITATIVE CONFLUENCE (starts at 4800ms -> 3.6s duration)
       // ==============================================================
       setTimeout(function() {
         if (!isScanning) return;
@@ -4919,7 +5004,8 @@ javascript:(function(){
               '<span>📈 Real</span>' +
             '</div>';
 
-        var windowTitle = (detectedAssetStr.split(' ')[0] || 'TradePilot') + ' - ' + (isOtc ? 'Otc' : 'Real') + ' Chart Analyze';
+        // Dynamic timeframe in window title (Requirement 3: Never default to 1M)
+        var windowTitle = (detectedAssetStr.split(' ')[0] || 'TradePilot') + ' - ' + (isOtc ? 'Otc' : 'Real') + ' Chart Analyze (' + tfUpper + ')';
 
         wfModal.innerHTML =
           '<div style="padding:14px 16px;">' +
@@ -5015,7 +5101,7 @@ javascript:(function(){
                 '<div id="wf-chk-1" style="font-size:8.5px;color:#34D399;font-weight:bold;display:flex;align-items:center;gap:4px;"><span>✔</span> Trend Analysis</div>' +
                 '<div id="wf-chk-2" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> RSI & MACD</div>' +
                 '<div id="wf-chk-3" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> Support / Resistance</div>' +
-                '<div id="wf-chk-4" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> Momentum & Price Path</div>' +
+                '<div id="wf-chk-4" style="font-size:8.5px;color:#94A3B8;font-weight:medium;display:flex;align-items:center;gap:4px;"><span>✔</span> Next ' + tfUpper + ' Momentum</div>' +
               '</div>' +
               '<div style="margin-top:10px;display:flex;justify-content:center;">' +
                 // Strictly level & upright (Requirement 2: Zero tilt, zero skew)
@@ -5027,26 +5113,26 @@ javascript:(function(){
             '</div>' +
           '</div>';
 
-        // Paced checklist activations
+        // Paced checklist activations across 3.6s duration (Requirement 2)
         setTimeout(function() {
           var el = document.getElementById('wf-chk-2');
           if (el) { el.style.color = '#34D399'; el.style.fontWeight = 'bold'; }
-        }, 400);
+        }, 900);
         setTimeout(function() {
           var el = document.getElementById('wf-chk-3');
           if (el) { el.style.color = '#34D399'; el.style.fontWeight = 'bold'; }
-        }, 850);
+        }, 1800);
         setTimeout(function() {
           var el = document.getElementById('wf-chk-4');
           if (el) { el.style.color = '#34D399'; el.style.fontWeight = 'bold'; }
-        }, 1300);
+        }, 2700);
 
         // 🧠 Real-Time Confluence Calculation Right Before Slide 4 Transition
         setTimeout(function() {
           if (scanTickSampler) clearInterval(scanTickSampler);
-          var activeDur = tradeDuration || 5;
+          var activeTradeDur = tradeDuration || 5;
           try {
-            analysis = evaluateMarketConfluence(scanLiveTicks, activeDur);
+            analysis = evaluateMarketConfluence(scanLiveTicks, activeTradeDur);
             isCall = (analysis && typeof analysis.isCall === 'boolean') ? analysis.isCall : true;
           } catch(e) {
             isCall = true;
@@ -5072,12 +5158,12 @@ javascript:(function(){
 
           trendStr = (analysis && analysis.trendLabel) ? analysis.trendLabel : (isCall ? 'Uptrend' : 'Downtrend');
           patternStr = (analysis && analysis.pattern) ? analysis.pattern : (isCall ? 'Bullish Continuation...' : 'Bearish Engulfing...');
-        }, 1450);
+        }, 3100);
 
-      }, 3000);
+      }, 4800);
 
       // ==============================================================
-      // 🎯 SLIDE 4 — DIRECTION RESULT & IMMEDIATE AUTO-TRADE (starts at 4600ms)
+      // 🎯 SLIDE 4 — DIRECTION RESULT & IMMEDIATE AUTO-TRADE (starts at 8400ms)
       // ==============================================================
       setTimeout(function() {
         if (!isScanning) return;
@@ -5099,7 +5185,7 @@ javascript:(function(){
         var arrowBtnBg = isCall ? 'linear-gradient(180deg,#10B981,#047857)' : 'linear-gradient(180deg,#F43F5E,#BE123C)';
         var arrowChar = isCall ? '↑' : '↓';
         var dirTitle = isCall ? 'CALL' : 'PUT';
-        var dirSub = isCall ? 'Upward move expected · enter on the next candle' : 'Downward move expected · enter on the next candle';
+        var dirSub = isCall ? ('Upward move expected · ' + tfUpper + ' expiry') : ('Downward move expected · ' + tfUpper + ' expiry');
         var strokeC = 2 * Math.PI * 34;
         var strokeOff = strokeC - (dynamicConfidence / 100) * strokeC;
 
@@ -5148,7 +5234,7 @@ javascript:(function(){
                 '<b style="font-size:14px;color:#fff;display:block;line-height:1.1;">' + detectedAssetStr + '</b>' +
                 '<div style="display:flex;align-items:center;gap:5px;margin-top:3px;">' +
                   '<span style="width:6px;height:6px;border-radius:50%;background:#EF4444;box-shadow:0 0 6px #EF4444;"></span>' +
-                  '<span style="font-size:9.5px;color:#CBD5E1;">Live read · 1m</span>' +
+                  '<span style="font-size:9.5px;color:#CBD5E1;">Live read · ' + activeTimeframeLabel + '</span>' +
                 '</div>' +
               '</div>' +
             '</div>' +
@@ -5241,7 +5327,7 @@ javascript:(function(){
         setTimeout(function() {
           closeWorkflowModal();
         }, 2800);
-      }, 4600);
+      }, 8400);
 
     } catch(err) {
       console.error('[TradePilot] triggerScanAndTrade error:', err);

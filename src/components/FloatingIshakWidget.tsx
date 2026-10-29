@@ -601,25 +601,25 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       playScanSoundscape(2.2);
     }
 
-    // 🌟 4-SLIDE SEQUENCING WITH EXTENDED PACING (~9.2s analysis, 12s total workflow)
-    // Slide 1: Initial Scan (0 - 2200ms)
+    // 🌟 4-SLIDE SEQUENCING WITH EXTENDED PACING
+    // Slide 1: Initial Scan (0 - 1600ms)
     setWorkflowSlide('SLIDE1_SWEEP');
 
-    // Slide 2: Chart Capture (2200ms - 5400ms -> 3200ms)
+    // Slide 2: Chart Capture (1600ms - 4800ms -> 3200ms)
     const tSlide2 = setTimeout(() => {
       setWorkflowSlide('SLIDE2_CAPTURE');
-    }, 2200);
+    }, 1600);
 
-    // Slide 3: Circuit Analysis & Candlestick Zoom (5400ms - 9200ms -> 3800ms)
+    // Slide 3: Circuit Analysis & Candlestick Zoom (4800ms - 8400ms -> 3600ms)
     const tSlide3 = setTimeout(() => {
       setWorkflowSlide('SLIDE3_CIRCUIT_ANALYSIS');
-    }, 5400);
+    }, 4800);
 
-    // Slide 4: Direction Result (9200ms - 12000ms -> 2800ms)
+    // Slide 4: Direction Result (8400ms - 11200ms -> 2800ms)
     const tSlide4 = setTimeout(() => {
       setWorkflowSlide('SLIDE4_DIRECTION');
 
-      // Dispatch real trade execution on broker
+      // Dispatch real trade execution on broker immediately
       executeQuotexTrade(determinedIsCall);
       if (soundEnabled) {
         playResultSound(determinedIsCall);
@@ -627,7 +627,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
 
       setFlySignal(determinedIsCall ? 'UP' : 'DOWN');
       setBadgeText(determinedIsCall ? 'BUY ⬆' : 'SELL ⬇');
-    }, 9200);
+    }, 8400);
 
     // Finalize and Dismiss
     const tFinish = setTimeout(() => {
@@ -635,7 +635,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       setIsScanning(false);
       setFlySignal(null);
       setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
-    }, 12000);
+    }, 11200);
 
     return () => {
       clearTimeout(tSlide2);
