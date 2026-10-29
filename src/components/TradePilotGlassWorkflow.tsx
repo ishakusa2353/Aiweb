@@ -169,14 +169,8 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
         if (valid.length === 0) return [];
         valid.sort((a, b) => b.area - a.area);
         const primary = valid[0];
-        const res: HTMLCanvasElement[] = [primary.canvas];
-        for (let j = 1; j < valid.length; j++) {
-          const item = valid[j];
-          if (Math.abs(item.w - primary.w) <= primary.w * 0.25 && Math.abs(item.h - primary.h) <= primary.h * 0.25) {
-            res.push(item.canvas);
-          }
-        }
-        return res;
+        // Return only the primary candlestick chart canvas (zero stacked axis/crosshair layers)
+        return [primary.canvas];
       };
 
       const drawLiveSnapshot = (): boolean => {
@@ -213,27 +207,8 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
           });
         }
 
-        let hasContent = false;
-        if (drawnCount > 0) {
-          try {
-            const testPoints = [
-              [Math.floor(w * 0.25), Math.floor(h * 0.5)],
-              [Math.floor(w * 0.5), Math.floor(h * 0.5)],
-              [Math.floor(w * 0.75), Math.floor(h * 0.5)]
-            ];
-            for (const pt of testPoints) {
-              const pix = ctx.getImageData(pt[0], pt[1], 1, 1).data;
-              if (pix[3] > 0 && (Math.abs(pix[0] - 7) > 10 || Math.abs(pix[1] - 13) > 10 || Math.abs(pix[2] - 36) > 10)) {
-                hasContent = true;
-                break;
-              }
-            }
-          } catch (e) {
-            hasContent = true;
-          }
-        }
-
-        if (!hasContent) {
+        // Only draw synthetic candles if no live broker chart canvas exists in the DOM
+        if (drawnCount === 0) {
           renderAuthenticLiveCandles();
         }
         return true;

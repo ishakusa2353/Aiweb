@@ -104,6 +104,23 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
   const [flySignal, setFlySignal] = useState<'UP' | 'DOWN' | null>(null);
 
   const [autoPilotMode, setAutoPilotMode] = useState<boolean>(false);
+  const autoPilotRef = useRef<boolean>(false);
+  const autoPilotTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    autoPilotRef.current = autoPilotMode;
+    if (autoPilotMode) {
+      setBadgeText('AUTO 🤖');
+    } else {
+      if (autoPilotTimerRef.current) {
+        clearTimeout(autoPilotTimerRef.current);
+        autoPilotTimerRef.current = null;
+      }
+      const dur = tradeDuration || 5;
+      setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
+    }
+  }, [autoPilotMode, tradeDuration]);
+
   const [botMode, setBotMode] = useState<'CONFLUENCE' | 'ROUND_NUMBER'>(() => {
     try {
       return (localStorage.getItem('ishak_active_mode') as 'CONFLUENCE' | 'ROUND_NUMBER') || 'CONFLUENCE';
@@ -634,7 +651,20 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       setWorkflowSlide('IDLE');
       setIsScanning(false);
       setFlySignal(null);
-      setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
+
+      // 🤖 Auto-Pilot Continuous Mode Loop
+      if (autoPilotRef.current) {
+        setBadgeText('AUTO 🤖');
+        if (autoPilotTimerRef.current) clearTimeout(autoPilotTimerRef.current);
+        const autoCooldown = Math.max(2500, dur * 1000);
+        autoPilotTimerRef.current = setTimeout(() => {
+          if (autoPilotRef.current) {
+            triggerScan();
+          }
+        }, autoCooldown);
+      } else {
+        setBadgeText(dur >= 60 ? `${dur / 60}M` : `${dur}S`);
+      }
     }, 11200);
 
     return () => {
@@ -928,6 +958,11 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
                   if (next) {
                     setShowHub(false);
                     triggerScan();
+                  } else {
+                    if (autoPilotTimerRef.current) {
+                      clearTimeout(autoPilotTimerRef.current);
+                      autoPilotTimerRef.current = null;
+                    }
                   }
                 }}
                 className={`w-full p-3.5 rounded-2xl backdrop-blur-xl bg-gradient-to-b from-white/12 via-[#142055]/30 to-[#070d28]/45 hover:from-white/18 hover:via-[#1a296d]/40 border-x border-x-white/10 border-b border-b-black/60 flex items-center justify-between text-xs transition-all shadow-[0_4px_14px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.25)] active:translate-y-0.5 cursor-pointer group ${

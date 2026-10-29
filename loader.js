@@ -686,6 +686,8 @@ javascript:(function(){
   var autoTradeEnabled = true; // Auto-click Quotex CALL/PUT button (Default: ON)
   var autoPilotMode = false; // Continuous auto-trading loop
   var autoPilotTimer = null;
+  var lastTradeDirection = null;
+  var consecutiveTradeCount = 0;
   var cachedTtsVoices = [];
   function populateCachedVoices() {
     try {
@@ -861,15 +863,16 @@ javascript:(function(){
     window.__ISHAK_BACKGROUND_CANDLES__ = [];
     window.__ISHAK_LIVE_TICKS__ = [];
     var nowT = Date.now();
-    var cPrice = pRef;
     var tickStep = pRef > 100 ? pRef * 0.00015 : pRef > 10 ? 0.005 : 0.00008;
 
     for (var ci = 30; ci >= 0; ci--) {
-      var cOpen = cPrice;
-      var cWave = Math.sin(ci * 0.42) * (tickStep * 2.5) + Math.cos(ci * 0.22) * (tickStep * 1.5) + ((ci % 3) - 1) * (tickStep * 0.8);
-      var cClose = parseFloat((cOpen + cWave).toFixed(5));
-      var cHigh = parseFloat((Math.max(cOpen, cClose) + tickStep * 1.2).toFixed(5));
-      var cLow = parseFloat((Math.min(cOpen, cClose) - tickStep * 1.2).toFixed(5));
+      // Balanced two-way oscillation around base price (zero cumulative bias)
+      var cycle = Math.sin(ci * 0.52) * 1.4 - Math.cos(ci * 0.28) * 1.1;
+      var cOpen = parseFloat((pRef + (cycle * tickStep)).toFixed(5));
+      var delta = (Math.sin(ci * 1.15) * 1.5) * tickStep;
+      var cClose = parseFloat((cOpen + delta).toFixed(5));
+      var cHigh = parseFloat((Math.max(cOpen, cClose) + tickStep * 0.8).toFixed(5));
+      var cLow = parseFloat((Math.min(cOpen, cClose) - tickStep * 0.8).toFixed(5));
       window.__ISHAK_BACKGROUND_CANDLES__.push({
         open: cOpen,
         high: cHigh,
@@ -877,9 +880,8 @@ javascript:(function(){
         close: cClose,
         time: nowT - ci * 5000
       });
-      cPrice = cClose;
     }
-    // Seed live ticks around current close
+    // Seed live ticks
     var lastCandles = window.__ISHAK_BACKGROUND_CANDLES__.slice(-20);
     for (var bi = 0; bi < lastCandles.length; bi++) {
       window.__ISHAK_LIVE_TICKS__.push({ price: lastCandles[bi].close, time: Date.now() - (lastCandles.length - bi) * 300 });
@@ -4442,9 +4444,24 @@ javascript:(function(){
     // --- 9. DIRECTIONAL CONVERGENCE & FINAL DECISION (Governed by Expiry Horizon Quote Projection) ---
     var netConfluence = buyScore - sellScore;
     var isCall;
-    if (buyScore > sellScore + 8) {
+
+    if (consecutiveTradeCount >= 2 && lastTradeDirection === 'CALL') {
+      // Reversal / Pullback priority if market has taken multiple CALLs and has downward signs
+      if (sellScore >= buyScore - 4 || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] < priceSamples[0]) || (runningClose < runningOpen)) {
+        isCall = false;
+      } else {
+        isCall = buyScore > sellScore;
+      }
+    } else if (consecutiveTradeCount >= 2 && lastTradeDirection === 'PUT') {
+      // Rebound / Support priority if market has taken multiple PUTs and has upward signs
+      if (buyScore >= sellScore - 4 || (priceSamples && priceSamples.length >= 2 && priceSamples[priceSamples.length - 1] > priceSamples[0]) || (runningClose > runningOpen)) {
+        isCall = true;
+      } else {
+        isCall = buyScore > sellScore;
+      }
+    } else if (buyScore > sellScore + 6) {
       isCall = true;
-    } else if (sellScore > buyScore + 8) {
+    } else if (sellScore > buyScore + 6) {
       isCall = false;
     } else if (Math.abs(expectedTerminalPrice - entryPrice) > 0.000002) {
       // Primary tie-breaker: Projected terminal quote location at expiration!
@@ -4458,7 +4475,23 @@ javascript:(function(){
     } else if (tickVelocity !== 0) {
       isCall = tickVelocity > 0;
     } else {
-      isCall = isMacroBull ? true : false;
+      isCall = runningClose >= runningOpen;
+    }
+
+    if (isCall === true) {
+      if (lastTradeDirection === 'CALL') {
+        consecutiveTradeCount++;
+      } else {
+        lastTradeDirection = 'CALL';
+        consecutiveTradeCount = 1;
+      }
+    } else if (isCall === false) {
+      if (lastTradeDirection === 'PUT') {
+        consecutiveTradeCount++;
+      } else {
+        lastTradeDirection = 'PUT';
+        consecutiveTradeCount = 1;
+      }
     }
 
     var isTradeApproved = isCall !== null;
@@ -4628,16 +4661,8 @@ javascript:(function(){
     // Sort by area descending: the largest canvas is the primary chart canvas
     valid.sort(function(a, b) { return b.area - a.area; });
     var primary = valid[0];
-
-    // Keep primary canvas and any overlapping layer of similar dimensions (within 25%)
-    var result = [primary.canvas];
-    for (var j = 1; j < valid.length; j++) {
-      var item = valid[j];
-      if (Math.abs(item.w - primary.w) <= primary.w * 0.25 && Math.abs(item.h - primary.h) <= primary.h * 0.25) {
-        result.push(item.canvas);
-      }
-    }
-    return result;
+    // Return only the primary candlestick chart canvas (zero stacked axis/crosshair layers)
+    return [primary.canvas];
   }
 
   // 7. CLICK TRIGGER WITH MANDATORY PRE-SCAN LIVE DATABASE LICENSE VERIFICATION
@@ -4767,6 +4792,24 @@ javascript:(function(){
           circleBtn.classList.remove('working-pulse');
           if (auraEl) auraEl.classList.remove('aura-active');
           isScanning = false;
+
+          // 🤖 Auto-Pilot Continuous Mode Loop Trigger
+          if (autoPilotMode && !isBotTerminated) {
+            var ptAuto = document.getElementById('ishak-pill-time');
+            if (ptAuto) {
+              ptAuto.innerText = 'AUTO 🤖';
+              ptAuto.style.color = '#00FF66';
+            }
+            if (autoPilotTimer) clearTimeout(autoPilotTimer);
+            var nextWaitMs = Math.max(2500, (tradeDuration || 5) * 1000);
+            autoPilotTimer = setTimeout(function() {
+              if (autoPilotMode && !isScanning && !isBotTerminated) {
+                triggerScanAndTrade();
+              }
+            }, nextWaitMs);
+          } else {
+            updateBadgeLabel();
+          }
         }, 360);
       }
 
@@ -4927,27 +4970,8 @@ javascript:(function(){
                 }
               }
 
-              var hasContent = false;
-              if (drawnCount > 0) {
-                try {
-                  var testPoints = [
-                    [Math.floor(cCanvas.width * 0.25), Math.floor(cCanvas.height * 0.5)],
-                    [Math.floor(cCanvas.width * 0.5), Math.floor(cCanvas.height * 0.5)],
-                    [Math.floor(cCanvas.width * 0.75), Math.floor(cCanvas.height * 0.5)]
-                  ];
-                  for (var pi = 0; pi < testPoints.length; pi++) {
-                    var pix = ctx.getImageData(testPoints[pi][0], testPoints[pi][1], 1, 1).data;
-                    if (pix[3] > 0 && (Math.abs(pix[0] - 7) > 10 || Math.abs(pix[1] - 13) > 10 || Math.abs(pix[2] - 36) > 10)) {
-                      hasContent = true;
-                      break;
-                    }
-                  }
-                } catch(e) {
-                  hasContent = true;
-                }
-              }
-
-              if (!hasContent) {
+              // Only fallback if NO broker chart canvas exists in the DOM
+              if (drawnCount === 0) {
                 renderAuthenticLiveCandles(ctx, cCanvas.width, cCanvas.height);
               }
               return true;
@@ -5130,12 +5154,23 @@ javascript:(function(){
         // 🧠 Real-Time Confluence Calculation Right Before Slide 4 Transition
         setTimeout(function() {
           if (scanTickSampler) clearInterval(scanTickSampler);
-          var activeTradeDur = tradeDuration || 5;
           try {
-            analysis = evaluateMarketConfluence(scanLiveTicks, activeTradeDur);
-            isCall = (analysis && typeof analysis.isCall === 'boolean') ? analysis.isCall : true;
+            var historyTicks = (window.__ISHAK_LIVE_TICKS__ && window.__ISHAK_LIVE_TICKS__.length > 0)
+              ? window.__ISHAK_LIVE_TICKS__.slice(-35).map(function(t){ return (typeof t === 'object' && t.price) ? t.price : t; })
+              : [];
+            var combinedTicks = historyTicks.concat(scanLiveTicks);
+            analysis = evaluateMarketConfluence(combinedTicks, activeTradeDur);
+            if (analysis && typeof analysis.isCall === 'boolean') {
+              isCall = analysis.isCall;
+            } else {
+              var fP = combinedTicks.length ? combinedTicks[0] : livePriceVal;
+              var lP = combinedTicks.length ? combinedTicks[combinedTicks.length - 1] : livePriceVal;
+              isCall = lP >= fP;
+            }
           } catch(e) {
-            isCall = true;
+            var fP2 = scanLiveTicks.length ? scanLiveTicks[0] : livePriceVal;
+            var lP2 = scanLiveTicks.length ? scanLiveTicks[scanLiveTicks.length - 1] : livePriceVal;
+            isCall = lP2 >= fP2;
           }
 
           var confSpread = Math.abs((analysis && analysis.audit) ? analysis.audit.confluenceSpread : 24);
