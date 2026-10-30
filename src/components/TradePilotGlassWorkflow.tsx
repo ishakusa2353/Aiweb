@@ -207,8 +207,32 @@ export const TradePilotGlassWorkflow: React.FC<TradePilotGlassWorkflowProps> = (
           });
         }
 
-        // Only draw synthetic candles if no live broker chart canvas exists in the DOM
-        if (drawnCount === 0) {
+        // Check if drawn canvas actually rendered visible pixels (not a blank/black WebGL buffer)
+        let hasVisiblePixels = false;
+        if (drawnCount > 0) {
+          try {
+            const samplePoints = [
+              [Math.floor(w * 0.25), Math.floor(h * 0.5)],
+              [Math.floor(w * 0.5), Math.floor(h * 0.5)],
+              [Math.floor(w * 0.75), Math.floor(h * 0.5)],
+              [Math.floor(w * 0.85), Math.floor(h * 0.35)],
+              [Math.floor(w * 0.15), Math.floor(h * 0.65)]
+            ];
+            for (const pt of samplePoints) {
+              const pData = ctx.getImageData(pt[0], pt[1], 1, 1).data;
+              const r = pData[0], g = pData[1], b = pData[2], a = pData[3];
+              if (a > 30 && (r > 15 || g > 25 || b > 45)) {
+                hasVisiblePixels = true;
+                break;
+              }
+            }
+          } catch (e) {
+            hasVisiblePixels = true;
+          }
+        }
+
+        // If no broker canvas found OR WebGL buffer was cleared/black, draw authentic live candlestick chart immediately!
+        if (drawnCount === 0 || !hasVisiblePixels) {
           renderAuthenticLiveCandles();
         }
         return true;

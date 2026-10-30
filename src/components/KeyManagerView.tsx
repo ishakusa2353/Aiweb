@@ -127,7 +127,7 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
   const [customUnit, setCustomUnit] = useState<'minutes' | 'hours' | 'days' | 'lifetime'>('hours');
   
   // Device limit state
-  const [deviceLimitMode, setDeviceLimitMode] = useState<'1' | '2' | '3' | 'unlimited' | 'custom'>('1');
+  const [deviceLimitMode, setDeviceLimitMode] = useState<'1' | '2' | '3' | '4' | '5' | 'unlimited' | 'custom'>('1');
   const [customDeviceLimit, setCustomDeviceLimit] = useState<string>('4');
 
   // Custom Extend Duration Modal State (User requirement: Custom minutes/hours/days extension)
@@ -177,8 +177,15 @@ export const KeyManagerView: React.FC<KeyManagerViewProps> = ({
     else if (lic.duration === '30d') durLabel = '30 Days (৩০ দিন)';
     else if (lic.duration) durLabel = lic.duration;
 
-    const devLimit = lic.device_limit !== undefined && lic.device_limit !== null ? Number(lic.device_limit) : 1;
-    const devLimitLabel = devLimit === 0 || devLimit === -1
+    let devLimit = lic.device_limit !== undefined && lic.device_limit !== null ? Number(lic.device_limit) : 1;
+    if (lic.note && lic.note.includes('[DEV_LIMIT:')) {
+      const mDev = lic.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+      if (mDev) devLimit = Number(mDev[1]);
+    }
+    if (lic.note && (lic.note.includes('UNLIMITED') || lic.note.includes('[DEV_LIMIT:0]'))) {
+      devLimit = 0;
+    }
+    const devLimitLabel = devLimit === 0 || devLimit === -1 || devLimit >= 9999
       ? 'Unlimited Devices (সীমাহীন ডিভাইস)'
       : `${devLimit} Device${devLimit > 1 ? 's' : ''}`;
 
@@ -792,8 +799,15 @@ CREATE POLICY "Public Delete" ON public.ishak_licenses FOR DELETE USING (true);`
               .split(',')
               .map((d) => d.trim())
               .filter(Boolean);
-            const devLimit = k.device_limit !== undefined && k.device_limit !== null ? Number(k.device_limit) : 1;
-            const isUnlimitedDev = devLimit === 0 || devLimit === -1;
+            let devLimit = k.device_limit !== undefined && k.device_limit !== null ? Number(k.device_limit) : 1;
+            if (k.note && k.note.includes('[DEV_LIMIT:')) {
+              const mDev = k.note.match(/\[DEV_LIMIT:(-?\d+)\]/);
+              if (mDev) devLimit = Number(mDev[1]);
+            }
+            if (k.note && (k.note.includes('UNLIMITED') || k.note.includes('[DEV_LIMIT:0]'))) {
+              devLimit = 0;
+            }
+            const isUnlimitedDev = devLimit === 0 || devLimit === -1 || devLimit >= 9999;
             const isBound = registeredDevices.length > 0;
 
             return (

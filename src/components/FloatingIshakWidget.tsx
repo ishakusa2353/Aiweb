@@ -512,7 +512,8 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     // 🛡️ STRICT DATABASE-ONLY LIVE LICENSE VERIFICATION (Shows VERIFYING inside logo)
     setVerifying(true);
     try {
-      const verifyPromise = supabaseService.verifyLicense(curLicense.key, curLicense.traderId || '');
+      const devId = localStorage.getItem('ISHAK_DEV_ID') || '';
+      const verifyPromise = supabaseService.verifyLicense(curLicense.key, curLicense.traderId || '', devId);
       const timeoutPromise = new Promise<{ valid: boolean; reason?: string; exp?: number | null; duration?: string; tier?: string; traderId?: string }>((resolve) => {
         setTimeout(() => {
           resolve({

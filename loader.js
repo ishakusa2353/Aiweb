@@ -2111,6 +2111,19 @@ javascript:(function(){
     return 30 * 86400 * 1000;
   }
 
+  function getBotDeviceId() {
+    try {
+      var d = localStorage.getItem('ISHAK_DEV_ID');
+      if (!d) {
+        d = 'DEV_' + Math.random().toString(36).substring(2, 10).toUpperCase() + '_' + Date.now().toString(36).toUpperCase();
+        localStorage.setItem('ISHAK_DEV_ID', d);
+      }
+      return d;
+    } catch(e) {
+      return 'DEV_ANON_' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+  }
+
   // 🛡️ STRICT DATABASE-ONLY LIVE LICENSE VERIFICATION ENGINE
   function verifyLicenseStatus(keyToTest, traderId) {
     return new Promise(function(resolve) {
@@ -2120,6 +2133,7 @@ javascript:(function(){
         return;
       }
 
+      var myDeviceId = getBotDeviceId();
       var inputTid = (traderId || '').trim();
       var now = Date.now();
 
@@ -2305,6 +2319,9 @@ javascript:(function(){
                   }
                   var isUnlimited = (devLimit === 0 || devLimit === -1 || devLimit >= 9999);
 
+                  var gmUpdates = {};
+                  var gmNeedPatch = false;
+
                   if (myDeviceId) {
                     var alreadyRegistered = registeredDevices.indexOf(myDeviceId) !== -1;
                     if (!alreadyRegistered) {
@@ -2315,10 +2332,41 @@ javascript:(function(){
                         });
                         return;
                       }
+                      registeredDevices.push(myDeviceId);
+                      gmUpdates.device_id = registeredDevices.join(',');
+                      gmNeedPatch = true;
                     }
                   }
 
-                  var exp = row.exp !== null && row.exp !== undefined ? Number(row.exp) : null;
+                  if (!row.first_login_at) {
+                    gmUpdates.first_login_at = now;
+                    var durMs = row.duration_ms ? Number(row.duration_ms) : parseDurationString(row.duration || '30d');
+                    if (row.duration !== 'lifetime' && durMs) {
+                      gmUpdates.exp = now + durMs;
+                    }
+                    gmNeedPatch = true;
+                  }
+
+                  gmUpdates.last_used_at = now;
+                  gmNeedPatch = true;
+
+                  if (gmNeedPatch) {
+                    try {
+                      var patchUrl = SUPABASE_URL + '/rest/v1/ishak_licenses?key=eq.' + encodeURIComponent(key);
+                      gmXhr({
+                        method: 'PATCH',
+                        url: patchUrl,
+                        headers: {
+                          'apikey': SUPABASE_KEY,
+                          'Authorization': 'Bearer ' + SUPABASE_KEY,
+                          'Content-Type': 'application/json'
+                        },
+                        data: JSON.stringify(gmUpdates)
+                      });
+                    } catch(e){}
+                  }
+
+                  var exp = (gmUpdates.exp || row.exp) ? Number(gmUpdates.exp || row.exp) : null;
                   if (exp && now > exp) {
                     res({ valid: false, reason: '⏳ এই লাইসেন্সের মেয়াদ শেষ হয়ে গেছে!' });
                     return;
@@ -2329,7 +2377,7 @@ javascript:(function(){
                     duration: row.duration || '30d',
                     tier: row.tier || 'VIP',
                     traderId: row.trader_id || '',
-                    deviceId: row.device_id || myDeviceId
+                    deviceId: gmUpdates.device_id || row.device_id || myDeviceId
                   });
                 } else {
                   rej(new Error('Supabase status ' + response.status));
@@ -3058,7 +3106,7 @@ javascript:(function(){
       '<span style="font-size:17px;filter:drop-shadow(0 0 8px #00E5FF);">🛡️</span>' +
       '<div>' +
       '<b style="color:#00E5FF;font-size:12px;letter-spacing:1px;font-family:\'Orbitron\',monospace,sans-serif;display:block;">VIP LICENSE VAULT</b>' +
-      '<span style="color:#38BDF8;font-size:8.5px;letter-spacing:0.8px;font-family:\'JetBrains Mono\',monospace;font-weight:700;">1-DEVICE CRYPTO VERIFICATION</span>' +
+      '<span style="color:#38BDF8;font-size:8.5px;letter-spacing:0.8px;font-family:\'JetBrains Mono\',monospace;font-weight:700;">MULTI-DEVICE CRYPTO VERIFICATION</span>' +
       '</div>' +
       '</div>' +
       '<div class="ishak-close-btn" id="k-close" style="width:26px;height:26px;border-radius:10px;background:linear-gradient(180deg,rgba(239,68,68,0.4),rgba(153,27,27,0.8));border-top:1px solid rgba(248,113,113,0.7);border-bottom:1.5px solid #000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.4);">✕</div>' +
@@ -3074,7 +3122,7 @@ javascript:(function(){
       '<input id="k-input" type="text" placeholder="ENTER VIP KEY (e.g. ISHAK-VIP-...)" style="width:100%;box-sizing:border-box;background:#070b22;border:1.5px solid rgba(0,229,255,0.45);border-radius:11px;color:#00FF88;font-weight:900;font-size:12px;letter-spacing:0.18em;font-family:\'JetBrains Mono\',\'Fira Code\',\'Courier New\',monospace;text-transform:uppercase;text-align:center;outline:none;padding:9px 6px;box-shadow:inset 0 3px 8px rgba(0,0,0,0.9);" />' +
       '</div>' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 2px;font-size:9.5px;">' +
-      '<span style="color:#94A3B8;font-weight:600;">🔒 1-Device Lock</span>' +
+      '<span style="color:#94A3B8;font-weight:600;">🔒 Device-Limit Protection</span>' +
       '<span style="color:#00E5FF;font-weight:bold;">⚡ Cloud Verified</span>' +
       '</div>' +
       '</div>' +
@@ -4936,7 +4984,7 @@ javascript:(function(){
             }
 
             function drawLiveSnapshot() {
-              // Always fill authentic Quotex dark navy background first (Guarantees NEVER black)
+              // Always fill authentic Quotex dark navy background first (Guarantees NEVER pure black)
               ctx.fillStyle = '#070d24';
               ctx.fillRect(0, 0, cCanvas.width, cCanvas.height);
 
@@ -4970,8 +5018,33 @@ javascript:(function(){
                 }
               }
 
-              // Only fallback if NO broker chart canvas exists in the DOM
-              if (drawnCount === 0) {
+              // Check if drawn canvas actually rendered visual elements (not a wiped/black WebGL buffer)
+              var hasVisiblePixels = false;
+              if (drawnCount > 0) {
+                try {
+                  var samplePoints = [
+                    [Math.floor(cCanvas.width * 0.25), Math.floor(cCanvas.height * 0.5)],
+                    [Math.floor(cCanvas.width * 0.5), Math.floor(cCanvas.height * 0.5)],
+                    [Math.floor(cCanvas.width * 0.75), Math.floor(cCanvas.height * 0.5)],
+                    [Math.floor(cCanvas.width * 0.85), Math.floor(cCanvas.height * 0.35)],
+                    [Math.floor(cCanvas.width * 0.15), Math.floor(cCanvas.height * 0.65)]
+                  ];
+                  for (var si = 0; si < samplePoints.length; si++) {
+                    var pData = ctx.getImageData(samplePoints[si][0], samplePoints[si][1], 1, 1).data;
+                    // Check if pixel is not transparent, not purely black #000000, and not default background #070d24
+                    var r = pData[0], g = pData[1], b = pData[2], a = pData[3];
+                    if (a > 30 && (r > 15 || g > 25 || b > 45)) {
+                      hasVisiblePixels = true;
+                      break;
+                    }
+                  }
+                } catch(e) {
+                  hasVisiblePixels = true; // In case CORS prevents getImageData
+                }
+              }
+
+              // If no broker canvas found OR WebGL buffer was cleared/black, draw authentic live candlestick chart immediately!
+              if (drawnCount === 0 || !hasVisiblePixels) {
                 renderAuthenticLiveCandles(ctx, cCanvas.width, cCanvas.height);
               }
               return true;
