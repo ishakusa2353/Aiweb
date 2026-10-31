@@ -478,6 +478,205 @@ export function playScanSoundscape(totalDuration: number = 5.5): () => void {
 }
 
 /**
+ * 🚀 SLIDE 1 SOUND (0.0s - 1.6s): Photonic Laser Sweep & Tactical Rotary Radar
+ */
+export function playSlide1LaserSound(duration = 1.6): () => void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return () => {};
+    const t = ctx.currentTime;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.85, t);
+    masterGain.connect(ctx.destination);
+
+    // Laser sweep osc
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = 'sawtooth';
+    filter.type = 'bandpass';
+    filter.Q.setValueAtTime(4.0, t);
+    filter.frequency.setValueAtTime(260, t);
+    filter.frequency.exponentialRampToValueAtTime(1400, t + duration * 0.85);
+
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.linearRampToValueAtTime(520, t + duration * 0.7);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.24, t + 0.1);
+    gain.gain.setValueAtTime(0.24, t + duration - 0.15);
+    gain.gain.linearRampToValueAtTime(0.001, t + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + duration);
+
+    // Micro telemetry chirps
+    [0.1, 0.5, 0.9, 1.3].forEach((offset, idx) => {
+      const cOsc = ctx.createOscillator();
+      const cGain = ctx.createGain();
+      cOsc.type = 'triangle';
+      cOsc.frequency.setValueAtTime(1200 + idx * 160, t + offset);
+      cOsc.frequency.exponentialRampToValueAtTime(800, t + offset + 0.08);
+      cGain.gain.setValueAtTime(0.12, t + offset);
+      cGain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.08);
+      cOsc.connect(cGain);
+      cGain.connect(masterGain);
+      cOsc.start(t + offset);
+      cOsc.stop(t + offset + 0.09);
+    });
+
+    return () => {
+      try {
+        masterGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      } catch (e) {}
+    };
+  } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * 📸 SLIDE 2 SOUND (1.6s - 4.8s, duration 3.2s): Camera Aperture Shutter + Real-Time Candle Capture Telemetry
+ */
+export function playSlide2CaptureSound(duration = 3.2): () => void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return () => {};
+    const t = ctx.currentTime;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.9, t);
+    masterGain.connect(ctx.destination);
+
+    // 1. Double Camera Shutter Pulse at instant capture onset
+    [0.0, 0.08].forEach((offset, idx) => {
+      const sOsc = ctx.createOscillator();
+      const sGain = ctx.createGain();
+      sOsc.type = 'square';
+      sOsc.frequency.setValueAtTime(idx === 0 ? 840 : 1260, t + offset);
+      sOsc.frequency.exponentialRampToValueAtTime(140, t + offset + 0.06);
+
+      sGain.gain.setValueAtTime(0.28, t + offset);
+      sGain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.07);
+
+      sOsc.connect(sGain);
+      sGain.connect(masterGain);
+      sOsc.start(t + offset);
+      sOsc.stop(t + offset + 0.08);
+    });
+
+    // 2. High-Tech Candle Stream Telemetry pulses throughout progress bar fill
+    const pulseTimes = [0.4, 0.9, 1.5, 2.1, 2.7];
+    pulseTimes.forEach((pt, idx) => {
+      const pOsc = ctx.createOscillator();
+      const pGain = ctx.createGain();
+      pOsc.type = 'sine';
+      pOsc.frequency.setValueAtTime(950 + idx * 110, t + pt);
+      pOsc.frequency.exponentialRampToValueAtTime(600, t + pt + 0.12);
+
+      pGain.gain.setValueAtTime(0.001, t + pt);
+      pGain.gain.linearRampToValueAtTime(0.18, t + pt + 0.02);
+      pGain.gain.exponentialRampToValueAtTime(0.0001, t + pt + 0.14);
+
+      pOsc.connect(pGain);
+      pGain.connect(masterGain);
+      pOsc.start(t + pt);
+      pOsc.stop(t + pt + 0.15);
+    });
+
+    return () => {
+      try {
+        masterGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      } catch (e) {}
+    };
+  } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * 🧠 SLIDE 3 SOUND (4.8s - 8.4s, duration 3.6s): Neural Circuit Resonance + 4 Checklist Affirmative Beeps
+ */
+export function playSlide3AnalysisSound(duration = 3.6): () => void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return () => {};
+    const t = ctx.currentTime;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.92, t);
+    masterGain.connect(ctx.destination);
+
+    // Deep neural sonar drone
+    const droneOsc = ctx.createOscillator();
+    const droneGain = ctx.createGain();
+    droneOsc.type = 'sine';
+    droneOsc.frequency.setValueAtTime(110, t);
+    droneOsc.frequency.linearRampToValueAtTime(145, t + duration * 0.5);
+    droneOsc.frequency.linearRampToValueAtTime(110, t + duration);
+
+    droneGain.gain.setValueAtTime(0.001, t);
+    droneGain.gain.linearRampToValueAtTime(0.16, t + 0.2);
+    droneGain.gain.setValueAtTime(0.16, t + duration - 0.25);
+    droneGain.gain.linearRampToValueAtTime(0.001, t + duration);
+
+    droneOsc.connect(droneGain);
+    droneGain.connect(masterGain);
+    droneOsc.start(t);
+    droneOsc.stop(t + duration);
+
+    // 4 Crystal Confirmation Chimes timed EXACTLY with checklist items:
+    // Item 1: 0.1s (Trend Analysis)
+    // Item 2: 0.9s (RSI & MACD)
+    // Item 3: 1.8s (Support / Resistance)
+    // Item 4: 2.7s (Next Momentum / Terminal Quote Decision)
+    const checkTimes = [
+      { time: 0.1, freq: 880 },
+      { time: 0.9, freq: 1174.66 },
+      { time: 1.8, freq: 1396.91 },
+      { time: 2.7, freq: 1760.00 }
+    ];
+
+    checkTimes.forEach((chk) => {
+      const cOsc = ctx.createOscillator();
+      const cGain = ctx.createGain();
+      cOsc.type = 'triangle';
+      cOsc.frequency.setValueAtTime(chk.freq, t + chk.time);
+      cOsc.frequency.exponentialRampToValueAtTime(chk.freq * 1.05, t + chk.time + 0.15);
+
+      cGain.gain.setValueAtTime(0.001, t + chk.time);
+      cGain.gain.linearRampToValueAtTime(0.24, t + chk.time + 0.02);
+      cGain.gain.exponentialRampToValueAtTime(0.0001, t + chk.time + 0.22);
+
+      cOsc.connect(cGain);
+      cGain.connect(masterGain);
+      cOsc.start(t + chk.time);
+      cOsc.stop(t + chk.time + 0.24);
+    });
+
+    return () => {
+      try {
+        masterGain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      } catch (e) {}
+    };
+  } catch (e) {
+    return () => {};
+  }
+}
+
+/**
+ * 🎯 SLIDE 4 SOUND (8.4s - 11.2s): Triumphant Direction Signal Chime & Order Dispatch
+ */
+export function playSlide4ResultSound(isCall: boolean): void {
+  playResultSound(isCall);
+}
+
+/**
  * Backward-compatible wrapper running the 100% synchronized Web Audio soundscape
  * without any TTS voice errors or delays.
  */

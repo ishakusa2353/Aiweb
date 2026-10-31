@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { speakScanTelemetry, stopSpeechSynthesis, playResultSound, playRiskWarningSound, playScanSoundscape } from '../utils/audio';
+import {
+  speakScanTelemetry,
+  stopSpeechSynthesis,
+  playResultSound,
+  playRiskWarningSound,
+  playScanSoundscape,
+  playSlide1LaserSound,
+  playSlide2CaptureSound,
+  playSlide3AnalysisSound,
+  playSlide4ResultSound
+} from '../utils/audio';
 import { TIME_OPTIONS } from '../data/markets';
 import { SignalData } from '../types';
 import { Search, ShieldAlert, Sparkles, KeyRound, Cpu, Database, Zap, Activity, Crosshair } from 'lucide-react';
@@ -616,21 +626,27 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
     });
 
     if (soundEnabled) {
-      playScanSoundscape(2.2);
+      playSlide1LaserSound(1.6);
     }
 
-    // 🌟 4-SLIDE SEQUENCING WITH EXTENDED PACING
+    // 🌟 4-SLIDE SEQUENCING WITH EXACT SYNCHRONIZED AUDIO
     // Slide 1: Initial Scan (0 - 1600ms)
     setWorkflowSlide('SLIDE1_SWEEP');
 
     // Slide 2: Chart Capture (1600ms - 4800ms -> 3200ms)
     const tSlide2 = setTimeout(() => {
       setWorkflowSlide('SLIDE2_CAPTURE');
+      if (soundEnabled) {
+        playSlide2CaptureSound(3.2);
+      }
     }, 1600);
 
     // Slide 3: Circuit Analysis & Candlestick Zoom (4800ms - 8400ms -> 3600ms)
     const tSlide3 = setTimeout(() => {
       setWorkflowSlide('SLIDE3_CIRCUIT_ANALYSIS');
+      if (soundEnabled) {
+        playSlide3AnalysisSound(3.6);
+      }
     }, 4800);
 
     // Slide 4: Direction Result (8400ms - 11200ms -> 2800ms)
@@ -640,7 +656,7 @@ export const FloatingIshakWidget: React.FC<FloatingIshakWidgetProps> = ({
       // Dispatch real trade execution on broker immediately
       executeQuotexTrade(determinedIsCall);
       if (soundEnabled) {
-        playResultSound(determinedIsCall);
+        playSlide4ResultSound(determinedIsCall);
       }
 
       setFlySignal(determinedIsCall ? 'UP' : 'DOWN');
